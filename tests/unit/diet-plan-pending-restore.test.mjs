@@ -97,6 +97,19 @@ describe('pending diet restore while the real select has no options', () => {
     expect(h.collect().plan).toEqual(saved.plan);
   });
 
+  it('restores a saved manual option once, only for the select awaiting initialization', () => {
+    const h = harness({ observer: true });
+    h.restore(patient(true));
+    expect(h.api.takePendingManualDiet({})).toBeNull();
+    expect(h.api.takePendingManualDiet(h.select)).toBe('moderate');
+    expect(h.api.takePendingManualDiet(h.select)).toBeNull();
+    h.restore(patient(false));
+    expect(h.api.takePendingManualDiet(h.select)).toBeNull();
+    h.restore(patient(true));
+    h.mountOptions(['light']); h.mountOptions([]);
+    expect(h.api.takePendingManualDiet(h.select)).toBeNull();
+  });
+
   it('read-only capture preserves the pending plan without writing a session, scheduling work or changing controls', () => {
     const h = harness(), saved = patient(true); h.restore(saved);
     const before = { session: h.session(), storage: h.stored(), timers: vi.getTimerCount(), manual: h.win.__vildaDietLevelTouched };

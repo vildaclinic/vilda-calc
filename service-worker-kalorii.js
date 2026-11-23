@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.575';
+const SW_VERSION = '1.1.576';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2012,6 +2012,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_gabinet.js?v=8',
   '/vilda_home_gabinet.js?v=9',
   '/vilda_home_gabinet.js?v=10',
+  '/vilda_home_gabinet.js?v=11',
   '/vilda_home_visit_scene.css?v=1',
   '/vilda_home_visit_scene.css?v=2',
   '/vilda_home_visit_detail.css?v=1',
@@ -2036,6 +2037,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_workspace.js?v=7',
   '/vilda_home_workspace.js?v=8',
   '/vilda_home_workspace.js?v=9',
+  '/vilda_home_workspace.js?v=10',
   '/vilda_home_workspace.css?v=1',
   '/vilda_home_workspace.css?v=2',
   '/vilda_home_workspace.css?v=3',
@@ -2046,6 +2048,8 @@ const CORE_SHELL_URLS = [
   '/vilda_home_workspace.css?v=8',
   '/vilda_home_workspace.css?v=9',
   '/vilda_home_perinatal.js?v=1',
+  '/vilda_home_perinatal.js?v=2',
+  '/vilda_docpro_visit_guard.js?v=1',
   '/vilda_home_growth.js?v=1',
   '/vilda_home_growth.js?v=2',
   '/vilda_home_growth.js?v=3',
@@ -2085,6 +2089,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_growth_views.css?v=7',
   '/vilda_home_growth_charts.js?v=1',
   '/vilda_home_growth_charts.js?v=2',
+  '/vilda_home_growth_charts.js?v=3',
   '/vilda_home_tools.css?v=1',
   '/vilda_home_tools.css?v=2',
   '/vilda_home_tools.css?v=3',
@@ -2095,14 +2100,17 @@ const CORE_SHELL_URLS = [
   '/vilda_home_tools.js?v=3',
   '/vilda_home_tools.js?v=4',
   '/vilda_home_tools.js?v=5',
+  '/vilda_home_tools.js?v=6',
   '/vilda_home_tools_vitals.js?v=1',
   '/vilda_home_tools_vitals.js?v=2',
   '/vilda_home_tools_anthropometry.js?v=1',
   '/vilda_home_tools_anthropometry.js?v=2',
   '/vilda_home_tools_nutrition.js?v=1',
+  '/vilda_home_tools_nutrition.js?v=2',
   '/vilda_home_tools_intake.js?v=1',
   '/vilda_home_diet.js?v=1',
   '/vilda_home_diet.js?v=2',
+  '/vilda_home_diet.js?v=3',
   '/vilda_home_diet_bmi.css?v=1',
   '/vilda_home_diet.css?v=1',
   '/vilda_home_diet.css?v=2',
@@ -4024,6 +4032,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_shell.js?v=87',
   '/vilda_shell.js?v=88',
   '/vilda_shell.js?v=89',
+  '/vilda_shell.js?v=90',
   '/vilda_shell.css',
   '/vilda_shell.css?v=1',
   '/vilda_shell.css?v=2',
@@ -4645,6 +4654,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_data_import_export.js?v=129',
   '/vilda_data_import_export.js?v=130',
   '/vilda_data_import_export.js?v=131',
+  '/vilda_data_import_export.js?v=132',
   '/vilda_baseline_pacjenta.js?v=1',
   '/vilda_baseline_pacjenta.js?v=2',
   '/vilda_baseline_pacjenta.js?v=3',
@@ -5020,6 +5030,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=44',
   '/vilda_diet_plan_ui.js?v=45',
   '/vilda_diet_plan_ui.js?v=46',
+  '/vilda_diet_plan_ui.js?v=47',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -7154,8 +7165,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-a70e56bd8ab6.json",
-  "sha256": "a70e56bd8ab606435d39a526c45736c9f204ffc247eff8cccb0f6c0d2f3d025a",
+  "url": "/runtime/visit-ui-precache/precache-1b3200568539.json",
+  "sha256": "1b3200568539f2b88e8ebefe144407b9b44b7fd5eba28fadad150fc349c44cb6",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7174,16 +7185,20 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "97ee23baf0a0f1e35ab2aa2cdbce998a7633a916e08b09d96e6fa5810e67d3f8"
     },
     {
-      "url": "/vilda_home_workspace.js?v=9",
-      "sha256": "982c564298203069265a6beec1eba85ab278cf596979551c25b8b6fbf3461a21"
+      "url": "/vilda_docpro_visit_guard.js?v=1",
+      "sha256": "c106b4190d080e611b7ed98b6e7f94a594ae49aeb147bc3816945f788eb84be2"
+    },
+    {
+      "url": "/vilda_home_workspace.js?v=10",
+      "sha256": "a2d21bd8a5f4af85fea1541be0c61dbaff4dda787d8720ea6c34056921dd6aeb"
     },
     {
       "url": "/vilda_home_workspace.css?v=9",
       "sha256": "ba1458c81acb45d2554722ce88de25e8d821231ae226a2f120045c67cc770217"
     },
     {
-      "url": "/vilda_home_perinatal.js?v=1",
-      "sha256": "981190bbca652d74e71acd083940d3fcb2c7071ca87a9d6ca56a0a59a004633f"
+      "url": "/vilda_home_perinatal.js?v=2",
+      "sha256": "99b0a70ee134237afa89f952b31d99ed076dbc5f9d76dd8ffb8bf5fdd1789121"
     },
     {
       "url": "/vilda_sga_birth_results.css?v=1",
@@ -7202,16 +7217,16 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "14d67a5a226884bbe2cfcfd056a97c363d97fd548e7a19064543afee8f6cb219"
     },
     {
-      "url": "/vilda_home_growth_charts.js?v=2",
-      "sha256": "e03c9e1ca80bddc608ba1c1ce40025e1bb99815ce2859da7ce28afc4c916c6c9"
+      "url": "/vilda_home_growth_charts.js?v=3",
+      "sha256": "6a439006491f7e14371dc2babdcce54bb46c1c71b5cc7883b1b88a1f5707e9ab"
     },
     {
       "url": "/vilda_home_tools.css?v=5",
       "sha256": "d71163fb58ffd4d4d0783a6ed407f545d526458e15f773e6b62087297b91efea"
     },
     {
-      "url": "/vilda_home_tools.js?v=5",
-      "sha256": "e9a11888262a347e9c8a6eb79d77c97e53e4daea609dac9ebe6758f30db1f75f"
+      "url": "/vilda_home_tools.js?v=6",
+      "sha256": "9fbc72d08282f3765210735bdede1ce57b74511d467b353ab2379817472d95b7"
     },
     {
       "url": "/vilda_home_tools_vitals.js?v=2",
@@ -7222,16 +7237,16 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "ba67784374464de40194a06dac7c462d073801c9ac983eaf099aee0210198421"
     },
     {
-      "url": "/vilda_home_tools_nutrition.js?v=1",
-      "sha256": "da472c149d57776a4736ec69a7f544172b63aef58f642ca7b4b3a8a9ca3d4013"
+      "url": "/vilda_home_tools_nutrition.js?v=2",
+      "sha256": "3559b77cf58a60195485e4f8e572e35a45cf92b67686a0a07f7da73c1adf48e2"
     },
     {
       "url": "/vilda_home_tools_intake.js?v=1",
       "sha256": "98450e3b86a5aaf3f377ff3ef55882475112329036abf0d66e8e9eff4c24de20"
     },
     {
-      "url": "/vilda_home_diet.js?v=2",
-      "sha256": "ce4f774ce6f7ce2d383b2c66e7cf4b53ae6e4aedfd6a336ab82b5fc6e1447b60"
+      "url": "/vilda_home_diet.js?v=3",
+      "sha256": "134f266578ff34e2318fd6f8faf9c77a4c5490cb7a9719947bc693bd6bc086fb"
     },
     {
       "url": "/vilda_home_diet_bmi.css?v=1",
@@ -7334,8 +7349,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "fec69f9d1515304840064807be122549908d2c785187f5f6f16a970be8d51b81"
     },
     {
-      "url": "/vilda_home_gabinet.js?v=10",
-      "sha256": "858615d9d2a809422dbb258bf59c9278c9a3cf1e1e63ae581a2f0a1050586c22"
+      "url": "/vilda_home_gabinet.js?v=11",
+      "sha256": "6de8a3633b9b67057f7d8df3f263274c9403b88e5ec1f2d7744335e780aec09e"
     },
     {
       "url": "/vilda_home_visit_scene.css?v=2",
@@ -7494,6 +7509,7 @@ function createClinicalWorkspacePrecacheState(config = CLINICAL_WORKSPACE_PRECAC
 function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
   const types = new Map([
     ['/vilda_ui_intents.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_docpro_visit_guard.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_context.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.css', 'text/css; charset=utf-8'],

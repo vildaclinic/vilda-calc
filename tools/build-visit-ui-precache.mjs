@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const FILES = ['vilda_ui_intents.js', 'vilda_visit_context.js', 'vilda_visit_history_ui.js', 'vilda_visit_history_ui.css',
+const FILES = ['vilda_ui_intents.js', 'vilda_visit_context.js', 'vilda_visit_history_ui.js', 'vilda_visit_history_ui.css', 'vilda_docpro_visit_guard.js',
   'vilda_home_workspace.js', 'vilda_home_workspace.css', 'vilda_home_perinatal.js', 'vilda_sga_birth_results.css', 'vilda_home_growth.js', 'vilda_home_growth_views.js', 'vilda_home_growth_views.css', 'vilda_home_growth_charts.js',
   'vilda_home_tools.css', 'vilda_home_tools.js', 'vilda_home_tools_vitals.js',
   'vilda_home_tools_anthropometry.js', 'vilda_home_tools_nutrition.js', 'vilda_home_tools_intake.js',

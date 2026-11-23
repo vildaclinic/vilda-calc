@@ -83,15 +83,14 @@
       return true;
     } catch (_) { return false; }
   }
-  // Nutrition calculators have their own inputs. The other modules edit the
-  // measurements and reference choices of the open visit.
-  function measurementsReadOnly(id) {
-    return id !== 'food' && id !== 'nutrition' && w.VildaHomeGabinet?.visitMeasurementsReadOnly?.() === true;
+  function editMode(id) {
+    if (!w.VildaHomeGabinet?.visitMeasurementsReadOnly?.()) return 'visit';
+    return id === 'food' || id === 'nutrition' ? 'calculation' : 'readonly';
   }
   function current(item) {
     try {
       return active === item && dialog.open && item.frame?.isConnected && item.frame.contentDocument === item.view.document
-        && owned(item) && item.readOnly === measurementsReadOnly(item.id) && serialize(item.adapter.read()) === item.original;
+        && owned(item) && item.mode === editMode(item.id) && serialize(item.adapter.read()) === item.original;
     } catch (_) { return false; }
   }
   function dirty(item) { return serialize(item.values) !== item.original; }
@@ -99,7 +98,7 @@
     const item = active;
     if (!item) return true;
     if (!force && item.busy) return false;
-    if (!force && dirty(item) && !w.confirm('Odrzucić zmiany w tym module?')) return false;
+    if (!force && item.mode === 'visit' && dirty(item) && !w.confirm('Odrzucić zmiany w tym module?')) return false;
     active = null;
     w.clearInterval(item.timer);
     dialog.close();
@@ -192,7 +191,7 @@
       });
       view.actions.appendChild(button);
     });
-    dialog.querySelector('.vhome-dialog-apply').disabled = item.readOnly || item.busy || !dirty(item) || !item.adapter.apply;
+    dialog.querySelector('.vhome-dialog-apply').disabled = item.mode !== 'visit' || item.busy || !dirty(item) || !item.adapter.apply;
   }
   function valid(item) {
     const fields = focusable(item.view.input).filter(node => node.matches('input,select,textarea'));
@@ -222,12 +221,12 @@
     const item = active;
     if (!item) return;
     if (!current(item)) { close(true); return; }
-    if (item.readOnly || item.busy || !dirty(item)) return;
+    if (item.mode !== 'visit' || item.busy || !dirty(item)) return;
     if (!valid(item)) { item.view.error.textContent = 'Sprawdź dane pomiaru.'; return; }
     item.busy = true;
     dialog.querySelector('.vhome-dialog-apply').disabled = true;
     let applied = false;
-    try { applied = await item.adapter.apply(item.values, () => active === item && owned(item) && !measurementsReadOnly(item.id)); }
+    try { applied = await item.adapter.apply(item.values, () => active === item && owned(item) && editMode(item.id) === 'visit'); }
     catch (_) { /* Keep the current draft available when the native actor refuses. */ }
     finally {
       if (active === item) {
@@ -259,10 +258,11 @@
       doc.head.appendChild(link);
     });
     const layout = element(doc, 'div', 'vhome-tool-layout');
-    const inputCard = element(doc, item.readOnly ? 'fieldset' : 'section', 'vhome-tool-box');
+    const readOnly = item.mode === 'readonly';
+    const inputCard = element(doc, readOnly ? 'fieldset' : 'section', 'vhome-tool-box');
     const resultCard = element(doc, 'section', 'vhome-tool-box');
     const input = element(doc, 'div', 'vhome-tool-fields');
-    if (item.readOnly) {
+    if (readOnly) {
       inputCard.disabled = true;
       inputCard.setAttribute('aria-label', 'Zapisane pomiary');
     }
@@ -272,13 +272,15 @@
     inputCard.append(element(doc, 'h3', '', item.adapter.inputTitle || 'Dane pomiaru'), input, error);
     resultCard.append(element(doc, 'h3', '', 'Wynik'), result, actions);
     const context = patientContext(doc);
+    if (item.mode === 'calculation') context.appendChild(element(doc, 'p', '', 'Obliczenie robocze. Wynik dostępny w tym oknie.'));
     layout.append(context, inputCard, resultCard);
     doc.body.replaceChildren(layout);
-    const view = item.view = { document: doc, input, result, actions, error, context, controls: new Map() };
+    const view = item.view = { document: doc, input, result, actions, error, context, controls: new Map(),
+      calculation: item.mode === 'calculation' };
     view.makeField = (field, values, onEdit) => makeField(view, field, values, onEdit);
     view.refresh = () => updateResult(item);
     const edit = (key, value) => {
-      if (!current(item) || item.readOnly || item.busy) return;
+      if (!current(item) || readOnly || item.busy) return;
       item.values[key] = detach(value);
       error.textContent = '';
       updateResult(item);
@@ -305,10 +307,10 @@
       const original = scope && adapter.read();
       if (!original) return false;
       const title = entryFor(id)[1];
-      const item = active = { id, owner: scope, adapter, opener, readOnly: measurementsReadOnly(id),
+      const item = active = { id, owner: scope, adapter, opener, mode: editMode(id),
         values: detach(original), original: serialize(original) };
-      dialog.querySelector('.vhome-dialog-apply').hidden = item.readOnly;
-      dialog.querySelector('.vhome-dialog-cancel').textContent = item.readOnly ? 'Zamknij' : 'Anuluj';
+      dialog.querySelector('.vhome-dialog-apply').hidden = item.mode !== 'visit';
+      dialog.querySelector('.vhome-dialog-cancel').textContent = item.mode === 'visit' ? 'Anuluj' : 'Zamknij';
       byId('vhomeToolDialogTitle').textContent = title;
       dialog.querySelector('.vhome-dialog-close').setAttribute('aria-label', 'Zamknij ' + title.toLowerCase());
       w.VildaHomeWorkspace.fitDialog(dialog);

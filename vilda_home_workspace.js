@@ -287,7 +287,7 @@
         { patientId: currentPatientId(), readOnly: true }) : null };
   }
   function pubertyCommitOwner(snapshot) {
-    return snapshot && JSON.stringify([snapshot.account, snapshot.patientId, snapshot.demographic, snapshot.visit]);
+    return snapshot && JSON.stringify([snapshot.account, snapshot.patientId, snapshot.demographic, snapshot.visit, snapshot.readOnly]);
   }
   function samePubertyOwner() {
     if (!pubertyDraft) return false;
@@ -449,6 +449,11 @@
     pubertyDraft.editor = w.VildaPubertyAssessmentUI.mountEditor(editor, {
       idPrefix: 'vhomePubertyDraft', controlType: 'select', sex: function () { return pubertyDraft.sex; },
       read: function () { return pubertyDraft.context; },
+      onRender: function () {
+        if (!snapshot.readOnly) return;
+        editor.querySelectorAll('[data-puberty-select-axis], [data-puberty-stage]').forEach(function (control) { control.disabled = true; });
+        if (pubertyDraft.sex === 'M' || pubertyDraft.sex === 'F') editor.querySelector('.vpa-intro').textContent = 'Podgląd oceny dojrzewania z wizyty.';
+      },
       onEdit: function (axis, stage) {
         if (pubertyDraft.readOnly || !samePubertyOwner() || ['ready', 'absent'].indexOf(pubertyDraft.context.status) < 0) return { ok: false };
         var model = w.VildaPubertyAssessment;
@@ -473,9 +478,6 @@
     dateInput.value = context.measuredAtISO ? context.measuredAtISO.slice(8, 10) + '.' + context.measuredAtISO.slice(5, 7) + '.' + context.measuredAtISO.slice(0, 4) : ''; dateLabel.appendChild(dateInput); editor.appendChild(dateLabel);
     pubertyDialog.querySelector('.vhome-dialog-apply').hidden = snapshot.readOnly;
     pubertyDialog.querySelector('.vhome-dialog-cancel').textContent = snapshot.readOnly ? 'Zamknij' : 'Anuluj';
-    if (snapshot.readOnly) {
-      editor.querySelectorAll('input, select, button').forEach(function (control) { control.disabled = true; });
-    }
     fitDetailDialog(pubertyDialog);
     pubertyDialog.setAttribute('aria-modal', 'true');
     pubertyDialog.showModal();

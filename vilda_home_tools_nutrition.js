@@ -460,7 +460,7 @@
     var state = { panel: 'macros', controls: controls, controlsPanel: '', loadedMicro: false, group: 0 };
     nutritionViews.set(view, state);
     view.context.after(tabs);
-    view.input.previousElementSibling.textContent = 'Dane z bieżącej wizyty';
+    view.input.previousElementSibling.textContent = view.calculation ? 'Dane z zapisanej wizyty' : 'Dane z bieżącej wizyty';
     view.input.append(visitContext(doc, draft), controls);
     view.result.id = 'vhomeNutritionPanel';
     view.result.setAttribute('role', 'tabpanel');
@@ -577,6 +577,7 @@
     }
     var card = nutritionCard(doc, state.panel, model);
     var nativeControls = card.querySelector(macro ? '.nutrition-norms-toolbar' : '.nutrition-micros-control-box');
+    if (view.calculation) nativeControls?.querySelector('.nutrition-norms-toolbar-row--summary')?.remove();
     if (state.controls.childElementCount === 0) {
       if (nativeControls) state.controls.append(nativeControls);
       if (!macro && card.querySelector('.nutrition-micros-details')) {

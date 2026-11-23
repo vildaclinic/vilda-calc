@@ -4,7 +4,7 @@
 (function (w) {
   'use strict';
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomePerinatal) return;
-  var d = w.document, started = false, button, status, dialog, draft = null, refreshFrame = 0, savedBirthOwner = null, clearRefreshTimer = null;
+  var d = w.document, started = false, button, status, dialog, draft = null, refreshFrame = 0, savedBirthOwner = null, readinessTimer = null;
   var startupBirthUntouched = true, startupSequence = applySequence();
   // The native importer may keep shared form fields during anonymous startup.
   // Its guarded one-time birth recovery must end before any user edit or Clear.
@@ -32,7 +32,7 @@
   function text(value) { return value == null ? '' : String(value); }
   function patientId() { try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; } catch (_) { return null; } }
   function sex() { var field = d.getElementById('sex'); return field ? field.value : ''; }
-  function canEdit() {
+  function sessionReady() {
     try {
       return !!(w.VildaVault && w.VildaVault.isUnlocked() && w.VildaAuthUI && w.VildaAuthUI.isBootReady()
         && w.VildaProAccess && w.VildaProAccess.hasAccess() && !w.__vildaPersistRestoring && !w.__vildaLustroWpis
@@ -44,14 +44,15 @@
     } catch (_) { return false; }
   }
   function snapshot() {
-    if (!canEdit()) return null;
+    if (!sessionReady()) return null;
     var vault = w.VildaVault, user = vault.getCurrentUser(), measured = w.VildaDobAge ? w.VildaDobAge.readMeasuredAtISO() : null;
     return { account: user && user.userId, patientId: patientId(), sex: sex(), loadSequence: applySequence(),
+      readOnly: w.VildaHomeGabinet?.visitMeasurementsReadOnly?.() === true,
       birth: clone(w.vildaBirthData), perinatal: clone(w.lastLoadedData && w.lastLoadedData.perinatal),
       visit: w.VildaVisitContext ? w.VildaVisitContext.capture({ user: { measuredAtISO: measured } },
         { patientId: patientId(), readOnly: true }) : null };
   }
-  function scope(value) { return value && JSON.stringify([value.account, value.patientId, value.sex, value.visit]); }
+  function scope(value) { return value && JSON.stringify([value.account, value.patientId, value.sex, value.visit, value.readOnly]); }
   function applySequence() { return w.VildaDataImportExport.getApplyLoadedDataSequence(); }
   // The main page normally carries birth data without owning an editor. Only
   // an explicit Save in this modal grants ownership, bound to this exact value,
@@ -97,16 +98,15 @@
   }
   function refresh() {
     refreshFrame = 0; if (!started) return;
-    w.clearTimeout(clearRefreshTimer); clearRefreshTimer = null;
+    w.clearTimeout(readinessTimer); readinessTimer = null;
     var current = snapshot(), value = current ? evaluation(initialState(current)).status : 'empty';
     status.textContent = { empty: 'Nie uzupełniono', partial: 'Częściowe dane', complete: 'Uzupełnione' }[value];
     button.disabled = !current; button.dataset.birthStatus = value;
     button.setAttribute('aria-expanded', String(!!(dialog && dialog.open)));
-    // Native Clear suppresses editing for its existing timed window. Refresh
-    // once that actual boundary expires, even when the blank form emits no
-    // further input or summary event. No persistence guard is shortened.
-    var until = Number(w.__vildaPersistClearUntil || 0);
-    if (!current && until > Date.now()) clearRefreshTimer = w.setTimeout(schedule, until - Date.now() + 1);
+    // Clear and warm session restore can finish before their write pause expires.
+    // Recheck readiness when both deadlines pass, even without another form event.
+    var until = Math.max(Number(w.__vildaPersistClearUntil || 0), Number(w.__vildaPersistPauseUntil || 0));
+    if (!current && until > Date.now()) readinessTimer = w.setTimeout(schedule, until - Date.now() + 1);
   }
   function schedule() { if (!refreshFrame) refreshFrame = w.requestAnimationFrame(refresh); }
   function close(force, restoreFocus, fromHistory) {
@@ -125,8 +125,11 @@
     var result = evaluation(draft.values), host = dialog.querySelector('[data-home-birth-results]');
     var message = dialog.querySelector('[data-home-birth-status]');
     message.dataset.birthStatus = result.status;
-    message.textContent = result.status === 'empty' ? 'Wpisz dane urodzeniowe, aby zobaczyć wynik SGA.'
-      : result.view.error || 'Wyniki aktualizowane automatycznie.';
+    if (result.status === 'empty') {
+      message.textContent = draft.base.readOnly ? 'Brak zapisanych danych okołoporodowych.' : 'Wpisz dane urodzeniowe, aby zobaczyć wynik SGA.';
+    } else {
+      message.textContent = result.view.error || (draft.base.readOnly ? 'Wyniki dla zapisanych danych.' : 'Wyniki aktualizowane automatycznie.');
+    }
     host.hidden = !result.view || !!result.view.error;
     if (host.hidden) host.replaceChildren();
     else w.VildaHtml.setTrustedHtml(host, result.view.html, { context: 'sga-birth:resultsEl' });
@@ -135,6 +138,7 @@
     if (!dialog || !dialog.open || !dialog.contains(event.target)) return;
     event.stopImmediatePropagation();
     if (!draft || !stillOwned()) { close(true); return; }
+    if (draft.base.readOnly) return;
     var target = event.target, field = target.getAttribute('data-home-birth-field');
     if (field) draft.values[field] = target.value;
     else if (target.hasAttribute('data-home-birth-source')) {
@@ -146,6 +150,7 @@
   }
   function apply() {
     if (!stillOwned()) { close(true); return; }
+    if (draft.base.readOnly) return;
     var current = draft, base = current.base, values = clone(current.values), view = evaluation(values).view;
     var next = Object.assign({}, base.birth || {}, values, { hasComputed: false });
     delete next.assessment;
@@ -184,6 +189,7 @@
       input.placeholder = key === 'head' ? 'Opcjonalnie' : key === 'weight' ? 'np. 2450' : 'np. 47,5';
     }
     input.setAttribute('data-home-birth-field', key); input.value = draft.values[key];
+    input.disabled = draft.base.readOnly;
     label.appendChild(input); grid.appendChild(label);
   }
   function showDiscrepancy(host) {
@@ -195,7 +201,7 @@
     if (model) host.appendChild(api.zbuduj(d, model));
   }
   function open() {
-    if (!started || !canEdit()) return false;
+    if (!started || !sessionReady()) return false;
     if (dialog && dialog.open) return true;
     var base = snapshot(); if (!base) return false;
     if (!dialog) dialog = w.VildaHomeWorkspace.createDialog({ id: 'vhomePerinatalDialog', titleId: 'vhomePerinatalTitle',
@@ -205,10 +211,13 @@
       token: typeof vault.captureSyncOperationSession === 'function' ? vault.captureSyncOperationSession() : null,
       dirty: false, historyToken: 'perinatal-' + Date.now(), timer: null, previewTimer: null };
     var body = dialog.querySelector('.vhome-dialog-body');
+    dialog.querySelector('.vhome-dialog-apply').hidden = base.readOnly;
+    dialog.querySelector('.vhome-dialog-cancel').textContent = base.readOnly ? 'Zamknij' : 'Anuluj';
     var name = ['firstName', 'lastName'].map(function (id) { return d.getElementById(id).value; }).filter(Boolean).join(' ');
     body.appendChild(el('p', 'vhome-dialog-context', name + (name ? ' · ' : '')
       + (draft.values.sex === 'male' ? 'Chłopiec' : draft.values.sex === 'female' ? 'Dziewczynka' : 'Nie wybrano płci')));
-    body.appendChild(el('p', 'vhome-perinatal-intro', 'Dane są wspólne z kartą SGA w DocPro. Wyniki aktualizują się automatycznie podczas wpisywania.'));
+    body.appendChild(el('p', 'vhome-perinatal-intro', base.readOnly ? 'Dane okołoporodowe z kartoteki pacjenta.' :
+      'Dane są wspólne z kartą SGA w DocPro. Wyniki aktualizują się automatycznie podczas wpisywania.'));
     showDiscrepancy(body);
     var grid = el('div', 'vhome-perinatal-fields'); fields.forEach(function (entry) { control(entry[0], entry[1], grid); }); body.appendChild(grid);
     body.appendChild(el('p', 'vhome-perinatal-note', 'Do obliczenia potrzebne są płeć, wiek ciążowy i co najmniej jeden pomiar. Obwód głowy jest opcjonalny; dostępność parametrów zależy od źródła.'));
@@ -216,14 +225,16 @@
     var sources = el('div', 'vhome-perinatal-sources'); sources.setAttribute('role', 'group'); sources.setAttribute('aria-label', 'Źródła referencyjne SGA');
     w.VildaSgaBirth.SOURCE_KEYS.forEach(function (key) {
       var label = el('label'), input = el('input'); input.type = 'checkbox'; input.value = key;
-      input.checked = draft.values.sourceKeys.indexOf(key) >= 0; input.setAttribute('data-home-birth-source', '');
+      input.checked = draft.values.sourceKeys.indexOf(key) >= 0; input.disabled = base.readOnly; input.setAttribute('data-home-birth-source', '');
       label.append(input, d.createTextNode(labels[key])); sources.appendChild(label);
     }); body.appendChild(sources);
     var live = el('p', 'vhome-perinatal-status'); live.setAttribute('data-home-birth-status', ''); live.setAttribute('role', 'status'); body.appendChild(live);
     var results = el('section', 'vhome-perinatal-results'); results.setAttribute('data-home-birth-results', ''); body.appendChild(results);
     var clear = el('button', 'vhome-perinatal-clear', 'Wyczyść dane okołoporodowe'); clear.type = 'button';
+    clear.hidden = base.readOnly;
     clear.addEventListener('click', function () {
       if (!stillOwned()) { close(true); return; }
+      if (draft.base.readOnly) return;
       fields.forEach(function (entry) { var value = entry[0] === 'days' ? '0' : ''; draft.values[entry[0]] = value;
         dialog.querySelector('[data-home-birth-field="' + entry[0] + '"]').value = value; });
       draft.dirty = true; w.clearTimeout(draft.previewTimer); showPreview();
@@ -232,7 +243,9 @@
     w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: draft.historyToken }), '', w.location.href);
     button.setAttribute('aria-expanded', 'true');
     draft.timer = w.setInterval(function () { if (!stillOwned()) close(true); }, 250);
-    showPreview(); dialog.querySelector('[data-home-birth-field]').focus({ preventScroll: true }); return true;
+    showPreview();
+    dialog.querySelector(base.readOnly ? '.vhome-dialog-close' : '[data-home-birth-field]').focus({ preventScroll: true });
+    return true;
   }
   function start() {
     if (started || !w.VildaHomeWorkspace || !w.VildaSgaBirth || !w.VildaBirthAssessment) return;

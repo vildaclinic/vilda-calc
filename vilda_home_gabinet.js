@@ -737,7 +737,7 @@
   });
   d.addEventListener('vilda:auth-hidden', () => clearRegistration(true));
   ['vilda:auth-boot-settled','vilda:auth-hidden','vilda:session-changed','vilda:auth-loaded','vildaProAccessChanged',
-    'vilda:main-session-restored','vilda:initial-main-session-restore-settled','vilda:data-applied','vilda:home-patient-inline-ready',
+    'vilda:main-session-restored','vilda:initial-main-session-restore-settled','vilda:intake-restore-readiness','vilda:data-applied','vilda:home-patient-inline-ready',
     'vilda:home-encounter-changed','vilda:user-state-cleared'].forEach(name => d.addEventListener(name, schedule));
   w.addEventListener('vilda:user-state-cleared', schedule);
   w.addEventListener('pageshow', schedule);

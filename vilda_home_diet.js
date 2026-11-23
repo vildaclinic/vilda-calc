@@ -16,6 +16,7 @@
   function value(id) { var n = byId(id); return n ? n.type === 'checkbox' ? n.checked : n.value : null; }
   function setText(n, text) { if (n && n.textContent !== text) n.textContent = text; }
   function patientId() { try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; } catch (_) { return null; } }
+  function readOnlyVisit() { return w.VildaHomeGabinet?.visitMeasurementsReadOnly?.() === true; }
   function canEdit() {
     try {
       return !!(w.VildaVault?.isUnlocked() && w.VildaAuthUI?.isBootReady() && w.VildaProAccess?.hasAccess()
@@ -27,7 +28,9 @@
   function owner() {
     if (!canEdit()) return null;
     var measured = w.VildaDobAge?.readMeasuredAtISO();
-    return { account: w.VildaVault.getCurrentUser().userId, patient: patientId(),
+    var id = patientId(), saved = readOnlyVisit() && id ? w.VildaHomeEncounter?.state(id) : null;
+    return { account: w.VildaVault.getCurrentUser().userId, patient: id, readOnly: readOnlyVisit(),
+      saved: saved && !saved.busy ? [saved.visitId, saved.snapshotId, saved.revision] : null,
       load: w.VildaDataImportExport.getApplyLoadedDataSequence(),
       basics: ['firstName', 'lastName', 'sex', 'dobInput', 'age', 'ageMonths', 'ageWeeks', 'height', 'weight'].map(value),
       visit: w.VildaVisitContext ? w.VildaVisitContext.capture({ user: { measuredAtISO: measured } }, { patientId: patientId(), readOnly: true }) : null };
@@ -57,6 +60,37 @@
     try { if (!item || item.vault !== w.VildaVault) return false; item.vault.assertSyncOperationSession(item.token); return JSON.stringify(owner()) === item.ownerKey; }
     catch (_) { return false; }
   }
+  async function savedVisitSource(item, who) {
+    if (!who.readOnly) return null;
+    if (!who.saved?.[0] || !who.saved[1]) return null;
+    try {
+      var rows = await item.vault.getPatientVisits(who.patient);
+      if (!ownerValid(item)) return null;
+      var row = rows.find(entry => entry.patientId === who.patient && entry.visitId === who.saved[0]
+        && entry.snapshotId === who.saved[1] && (entry.rev ?? 0) === who.saved[2]);
+      if (row?.payload?.visit?.patientId === who.patient && row.payload.visit.visitId === row.visitId) return row.payload;
+    } catch (_) { /* The chart can still explain why this report is unavailable. */ }
+    return null;
+  }
+  function savedReportReady(item) {
+    if (!item.readOnly) return true;
+    if (!item.saved?.visit) return false;
+    // The native report uses the live calculator. Check its clinical inputs
+    // against the saved form, including options omitted from legacy records.
+    var decision = w.VildaSaveStatusIndicator?.getCurrentDecision?.();
+    if (!decision?.ready || decision.state !== 'saved') return false;
+    var plan = item.saved.plan || {};
+    if ((plan.palWybrany === true) !== (w.__vildaPlanPalTouched === true)
+        || (plan.dietaWybrana === true) !== (w.__vildaDietLevelTouched === true)
+        || plan.palFactor != null && Number(plan.palFactor) !== Number(value('palFactor'))
+        || plan.dietLevel && plan.dietLevel !== value('dietLevel')
+        || (Number(plan.customGoalKg) || null) !== (Number(value('customGoalKg')) || null)) return false;
+    if (flags.some(([id]) => { var input = byId(id); return input && input.checked !== input.defaultChecked; })) return false;
+    if (w.__vildaDietStrategyTouched && goalStrategy() !== w.dietDefaultStrategyFromDom?.()) return false;
+    var movement = hasRoad() && journeyState()?.moves;
+    return !movement || (movement.walk === true && Object.keys(movement).every(key => key === 'walk' || !movement[key]));
+  }
+  function goalStrategy() { return value('stabilizationToggle') && !value('reduceToggle') ? 'stabilization' : 'reduction'; }
   function stillOwned() { return !!(draft && ownerValid(draft) && (draft.applying || JSON.stringify(snapshot()) === draft.fingerprint)); }
   function dirty() { return !!(draft && JSON.stringify([draft.values, draft.goal, draft.moves]) !== draft.initial); }
   function sourceVisible(n) { return !!(n && !n.hidden && w.getComputedStyle(n).display !== 'none'); }
@@ -66,7 +100,8 @@
   }
   function available() { return configured() && canEdit() && sourceVisible(byId('metabolicSummarySection')) && sourceVisible(byId('dietRecommendationsBtn')) && !byId('dietRecommendationsBtn').disabled; }
   function hasRoad() { return sourceVisible(byId('toNormCard')) && !!byId('bmiJourneyMount'); }
-  function outputValid() { return !!(output && output.fingerprint === JSON.stringify(snapshot()) && output.ownerKey === JSON.stringify(owner())); }
+  function outputValid() { return !!(output && output.fingerprint === JSON.stringify(snapshot()) && output.ownerKey === JSON.stringify(owner())
+    && (!draft?.readOnly || draft.canReport)); }
   function button(text, fn, cls) { var n = el('button', cls || 'vhome-diet-action', text); n.type = 'button'; n.addEventListener('click', fn); return n; }
   function section(title, cls, host, number) { var n = el('section', 'vhome-diet-section ' + (cls || '')), heading = el('h3'); if (number) heading.appendChild(el('span', 'vhome-diet-section-number', String(number))); heading.appendChild(el('span', '', title)); n.appendChild(heading); host.appendChild(n); return n; }
   function note(text) { return el('p', 'vhome-diet-note', text); }
@@ -275,7 +310,7 @@ function readDietA1NativeProjection(options) {
     if (focus && reportReturnFocus?.isConnected && dialog?.open) reportReturnFocus.focus({ preventScroll: true });
   }
   function openReport() {
-    if (!stillOwned() || dirty() || !outputValid()) return false;
+    if (!stillOwned() || dirty() || !outputValid() || !savedReportReady(draft)) return false;
     if (reportDialog?.open) return true;
     if (!reportDialog) {
       reportDialog = w.VildaHomeWorkspace.createDialog({ id: 'vhomeDietReportDialog', titleId: 'vhomeDietReportTitle', title: 'Podgląd zaleceń', applyLabel: 'Wróć do planu', onApply: function () { closeReport(true); }, onClose: function () { closeReport(true); } });
@@ -371,7 +406,12 @@ function readDietA1NativeProjection(options) {
   function refreshFooter() {
     if (!draft || !dialog?.open) return;
     var changed = dirty(), valid = stillOwned(), apply = dialog.querySelector('.vhome-dialog-apply'); apply.disabled = !valid || !changed;
-    setText(byId('vhomeDietDraftStatus'), changed ? 'Masz niezastosowane założenia. Wyniki i dokumenty będą dostępne po ich zastosowaniu.' : 'Założenia bieżącej wizyty.');
+    apply.hidden = draft.readOnly;
+    if (draft.readOnly) apply.disabled = true;
+    setText(dialog.querySelector('.vhome-dialog-cancel'), draft.readOnly ? 'Zamknij' : 'Anuluj');
+    if (draft.readOnly && !draft.canReport) return;
+    setText(byId('vhomeDietDraftStatus'), draft.readOnly ? 'Obliczenia z zapisanych danych wizyty. Elementy dokumentu i ruch mają ustawienia domyślne.'
+      : changed ? 'Masz niezastosowane założenia. Wyniki i dokumenty będą dostępne po ich zastosowaniu.' : 'Założenia bieżącej wizyty.');
     dialog.querySelectorAll('[data-home-diet-action]').forEach(function (n) {
       var kind = n.dataset.homeDietAction;
       if (kind === 'preview') { n.disabled = !valid || changed || !outputValid(); return; }
@@ -386,6 +426,24 @@ function readDietA1NativeProjection(options) {
     var body = dialog.querySelector('.vhome-dialog-body'); body.replaceChildren(); valueChanges = new WeakMap();
     body.appendChild(el('p', 'vhome-dialog-context', [value('firstName'), value('lastName')].filter(Boolean).join(' ') || 'Bieżący pomiar'));
     var grid = el('div', 'vhome-diet-grid'), step = 1; body.appendChild(grid);
+    if (draft.readOnly && !draft.canReport) {
+      var saved = section('Założenia', 'vhome-diet-assumptions', grid, step), savedPlan = draft.saved?.plan;
+      saved.id = 'vhomeDietPlanSummary';
+      if (!draft.saved) {
+        saved.appendChild(note('Brak dostępnego zapisu założeń dla tej wizyty.'));
+      } else if (!savedPlan || ![savedPlan.palFactor, savedPlan.dietLevel, savedPlan.customGoalKg].some(value => value != null && value !== '')) {
+        saved.appendChild(note('W tej wizycie nie zapisano indywidualnych założeń żywieniowych.'));
+      } else {
+        if (savedPlan.palFactor != null) saved.appendChild(note('Poziom aktywności (PAL) · ' + savedPlan.palFactor));
+        if (savedPlan.dietLevel) {
+          var level = w.DIET_LEVELS?.[savedPlan.dietLevel]?.label || savedPlan.dietLevel;
+          saved.appendChild(note('Wariant diety · ' + level));
+        }
+        if (savedPlan.customGoalKg != null) saved.appendChild(note('Masa docelowa · ' + savedPlan.customGoalKg + ' kg'));
+      }
+      if (available()) saved.appendChild(note('Do wygenerowania zaleceń potrzebne są potwierdzone dane i ustawienia tej wizyty.'));
+      return;
+    }
     var assumptions = section('Założenia', 'vhome-diet-assumptions', grid, step++), controls = el('div', 'vhome-diet-fields'); assumptions.appendChild(controls);
     var strategies = Array.from(byId('dietRecommendationsContent').querySelectorAll('[data-diet-strategy-choice]'));
     if (strategies.length && withinVisible(strategies[0], byId('dietRecommendationsContent'))) choice('strategy', 'Strategia', strategies.map(function (n) {
@@ -416,7 +474,7 @@ function readDietA1NativeProjection(options) {
       var road = section('Droga do normy BMI', 'vhome-diet-road', grid, step++), brief = el('div', 'vhome-diet-road-brief vhome-diet-native-road'); brief.id = 'vhomeDietRoadBrief'; road.appendChild(brief);
       var moves = Array.from(byId('bmiJourneyMount').querySelectorAll('[data-journey="move"]'));
       if (moves.length) { road.appendChild(el('h4', '', 'Ruch w planie')); var row = el('div', 'vhome-diet-moves'); road.appendChild(row);
-        moves.forEach(function (original) { var key = original.getAttribute('data-key'), n = button(original.textContent, function () { draft.moves[key] = !draft.moves[key]; n.setAttribute('aria-pressed', String(draft.moves[key])); refreshFooter(); }); n.dataset.homeDietJourney = 'move'; n.dataset.key = key; n.disabled = original.disabled; n.setAttribute('aria-pressed', String(!!draft.moves[key])); row.appendChild(n); });
+        moves.forEach(function (original) { var key = original.getAttribute('data-key'), n = button(original.textContent, function () { if (!stillOwned() || draft.readOnly) return; draft.moves[key] = !draft.moves[key]; n.setAttribute('aria-pressed', String(draft.moves[key])); refreshFooter(); }); n.dataset.homeDietJourney = 'move'; n.dataset.key = key; n.disabled = original.disabled; n.setAttribute('aria-pressed', String(!!draft.moves[key])); row.appendChild(n); });
       }
       var details = el('details', 'vhome-diet-road-details'), result = el('div'); result.id = 'vhomeDietRoadResult'; details.append(el('summary', '', 'Pełne obliczenia i uwagi'), result); road.appendChild(details);
     }
@@ -439,6 +497,9 @@ function readDietA1NativeProjection(options) {
       }
     }
     var status = el('p', 'vhome-diet-draft-status'); status.id = 'vhomeDietDraftStatus'; status.setAttribute('role', 'status'); body.appendChild(status);
+    if (draft.readOnly) {
+      body.querySelectorAll('[data-home-diet-field], [data-home-diet-journey]').forEach(control => { control.disabled = true; });
+    }
   }
   function rebase() {
     var base = snapshot(); if (!base || !draft || !ownerValid(draft)) return false;
@@ -450,7 +511,7 @@ function readDietA1NativeProjection(options) {
     draft.initial = JSON.stringify([draft.values, draft.goal, draft.moves]); return true;
   }
   function apply() {
-    if (!stillOwned() || !dirty()) return;
+    if (!stillOwned() || draft.readOnly || readOnlyVisit() || !dirty()) return;
     var invalid = Array.from(dialog.querySelectorAll('input,select')).find(function (n) { return !n.disabled && !n.checkValidity(); });
     if (invalid) { invalid.reportValidity(); return; }
     var item = draft, values = Object.assign({}, item.values), desiredGoal = item.goal, moves = Object.assign({}, item.moves), changed = fields.filter(function (id) { return item.baseValues[id] !== values[id]; });
@@ -490,7 +551,7 @@ function readDietA1NativeProjection(options) {
     } finally { if (draft === item) { item.applying = false; if (!ownerValid(item)) close(true); } }
   }
   function action(kind) {
-    if (!stillOwned() || dirty() || !available() || kind !== 'generate' && !outputValid()) return;
+    if (!stillOwned() || dirty() || !available() || !savedReportReady(draft) || kind !== 'generate' && !outputValid()) return;
     if (kind === 'generate') {
       var native = byId('generateEnergyDietBtn'); if (!native || native.disabled) return;
       native.click(); if (!stillOwned()) return;
@@ -503,7 +564,7 @@ function readDietA1NativeProjection(options) {
       var task;
       try {
         task = w.VildaDietRecommendations.generatePdfReport(dialog.querySelector('[data-home-diet-action="pdf"]'), 'classic', {
-          isCurrent: function () { return draft === item && stillOwned() && !dirty() && item.fingerprint === basis && outputValid(); }
+          isCurrent: function () { return draft === item && stillOwned() && !dirty() && item.fingerprint === basis && outputValid() && savedReportReady(item); }
         });
       } catch (_) {
         item.pdfPending = false; if (draft === item) { refreshFooter(); setText(byId('vhomeDietDraftStatus'), 'Nie udało się przygotować dokumentu. Spróbuj ponownie.'); } return;
@@ -535,11 +596,15 @@ function readDietA1NativeProjection(options) {
   async function open(mode) {
     if (dialog?.open) { if (stillOwned()) { focusSection(mode); return true; } close(true); return false; }
     if (!canEdit()) return false;
-    var vault = w.VildaVault, token = vault.captureSyncOperationSession(), key = JSON.stringify(owner()), pending = { vault: vault, token: token, ownerKey: key };
+    var vault = w.VildaVault, token = vault.captureSyncOperationSession(), who = owner(), key = JSON.stringify(who), pending = { vault: vault, token: token, ownerKey: key };
+    if (!who) return false;
     try { loading = loading || w.VildaPatientReportLoader.ensure(); await loading; } catch (_) { loading = null; setText(byId('vhomeDietNote'), 'Nie udało się otworzyć zaleceń. Spróbuj ponownie.'); return false; }
-    if (!ownerValid(pending) || !available() || dialog?.open) return false;
+    if (!ownerValid(pending) || !who.readOnly && !available() || dialog?.open) return false;
+    var saved = await savedVisitSource(pending, who);
+    if (!ownerValid(pending) || dialog?.open) return false;
     if (!dialog) dialog = w.VildaHomeWorkspace.createDialog({ id: 'vhomeDietDialog', titleId: 'vhomeDietTitle', title: 'Zalecenia dietetyczne', applyLabel: 'Zastosuj założenia', onApply: apply, onClose: function () { close(false); } });
-    draft = { vault: vault, token: token, ownerKey: key, historyToken: 'diet-' + Date.now(), applying: false };
+    draft = { vault: vault, token: token, ownerKey: key, historyToken: 'diet-' + Date.now(), applying: false, readOnly: who.readOnly, saved };
+    draft.canReport = available() && savedReportReady(draft);
     if (!rebase()) { draft = null; return false; }
     render(); w.VildaHomeWorkspace.fitDialog(dialog); dialog.setAttribute('aria-modal', 'true'); dialog.showModal(); refreshFooter();
     w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: draft.historyToken }), '', w.location.href);
@@ -549,7 +614,7 @@ function readDietA1NativeProjection(options) {
     frame = 0; w.clearTimeout(readinessTimer); if (!started) return;
     var access = !!w.VildaProAccess?.hasAccess();
     card.hidden = !access || !configured();
-    var ready = available(); card.querySelectorAll('button').forEach(function (n) { n.disabled = !ready; });
+    var ready = available() || readOnlyVisit() && configured() && canEdit(); card.querySelectorAll('button').forEach(function (n) { n.disabled = !ready; });
     setText(byId('vhomeDietNote'), ready ? 'Zalecenia dla pacjenta i rodziny, założenia i dokument po wizycie.' : 'Dla bieżących danych moduł nie udostępnia zaleceń dietetycznych.');
     var preview = byId('vhomeDietRoadPreview'); preview.hidden = !hasRoad();
     setText(byId('vhomeDietRoadSummary'), hasRoad() ? 'Strategia, PAL, dieta i ruch w jednym planie.' : '');
@@ -586,7 +651,7 @@ function readDietA1NativeProjection(options) {
     ['input', 'change'].forEach(function (name) { w.addEventListener(name, function (event) {
       if (!dialog?.open || !dialog.contains(event.target)) return;
       event.stopImmediatePropagation(); if (!stillOwned()) { close(true); return; }
-      var read = valueChanges.get(event.target); if (read) { read(); refreshFooter(); }
+      var read = valueChanges.get(event.target); if (read && !draft.readOnly) { read(); refreshFooter(); }
     }, true); });
     w.addEventListener('popstate', function () { if (reportDialog?.open && w.history.state?.vildaHomeDietPreview !== draft?.historyToken) closeReport(true, true); if (!dialog?.open) return; if (w.history.state?.vildaHomeDialog !== draft.historyToken && !close(false, true, true)) w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: draft.historyToken }), '', w.location.href); });
     ['input', 'change', 'vilda:data-applied', 'vilda:user-state-cleared', 'vilda:session-changed', 'vilda:professional-summary-updated', 'vilda:state-restored', 'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled', 'vilda:auth-boot-settled', 'vildaProAccessChanged', 'vildaResultsModeChanged'].forEach(function (name) { d.addEventListener(name, schedule); });

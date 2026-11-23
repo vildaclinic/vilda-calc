@@ -7,6 +7,7 @@
   var draftChanges = new WeakMap(), watchedVaults = new WeakSet();
   function el(tag, cls, text) { var n = d.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
   function byId(id) { return d.getElementById(id); }
+  function exportOnly() { return w.VildaHomeGabinet?.visitMeasurementsReadOnly?.() === true; }
   function annotations() {
     return [{ check: byId('advCurrentArrowEnable'), comment: byId('advCurrentArrowComment'), label: 'Bieżący pomiar' }]
       .concat(Array.from(byId('advMeasurements').querySelectorAll('.measure-row')).map(function (row) {
@@ -18,6 +19,7 @@
   function values(record) { return JSON.stringify([record.points.map(function (p) { return [p.checked, p.text]; }), record.publication, record.layout]); }
   function ownerCurrent(record) {
     try { return record.options.valid() && JSON.stringify(record.options.snapshot()) === record.fingerprint
+      && record.exportOnly === exportOnly()
       && record.population === population(record.patient)
       && record.originalPublication === byId('publicationChartsToggle').checked
       && record.originalLayout === d.querySelector('input[name="palPdfLayout"]:checked')?.value
@@ -63,7 +65,7 @@
   }
   function nativeId(mode) { return mode === 'creator' ? 'openChartCreatorBtn' : 'openPublicationCreatorBtn'; }
   function canLaunch(mode, record) {
-    return hasMeasurement() && (mode !== 'publication' || record.population !== 'DS') && available(byId(nativeId(mode)));
+    return !record.exportOnly && hasMeasurement() && (mode !== 'publication' || record.population !== 'DS') && available(byId(nativeId(mode)));
   }
   function action(label, cls, click) {
     var button = el('button', cls, label); button.type = 'button';
@@ -71,12 +73,13 @@
   }
   function showStage(record, stage) {
     if (!current(record)) { close(true); return; }
-    record.stage = stage; render(record);
+    record.stage = record.exportOnly && (stage === 'creator' || stage === 'publication') ? 'choose' : stage; render(record);
     record.dialog.querySelector('[data-chart-back]')?.focus({ preventScroll: true });
   }
   function launchNative(record, id) {
     if (!current(record)) { close(true); return false; }
     var node = byId(id);
+    if (record.exportOnly && (id === nativeId('creator') || id === nativeId('publication'))) return false;
     if (dirty(record) || !hasMeasurement() || !available(node)) return false;
     close(true);
     if (!ownerCurrent(record)) return false;
@@ -92,7 +95,9 @@
     if (!hasMeasurement()) return 'Uzupełnij wiek, masę i wzrost w formularzu wizyty.';
     if (!familyAvailable(record.family)) return 'Ta siatka nie obejmuje wieku pacjenta i dostępnych pomiarów.';
     if (families[record.family].source === 'PALCZEWSKA' && record.publication)
-      return 'Zwykły PDF jest dostępny po wyłączeniu ustawienia „Siatki do publikacji”.';
+      return record.exportOnly
+        ? 'Zwykły PDF wymaga wyłączenia ustawienia użytkownika „Siatki do publikacji”.'
+        : 'Zwykły PDF jest dostępny po wyłączeniu ustawienia „Siatki do publikacji”.';
     return '';
   }
   function generate(record) {
@@ -127,6 +132,10 @@
   }
   function apply(record) {
     if (!current(record)) { close(true); return; }
+    // Publication controls and point comments belong to the clinical working
+    // copy. Browsing a saved visit only uses the native PDF request below;
+    // its family and layout never dispatch to these canonical controls.
+    if (record.exportOnly) return;
     if (!dirty(record)) return;
     close(true);
     if (!record.options.valid()) return;
@@ -193,11 +202,14 @@
       var item = mode === 'creator' ? ['Kreator siatek', 'Adnotacje i elementy wykresu'] : ['Siatki do publikacji', 'Palczewska · wersja czarno-biała'];
       var button = tile(item[0], item[1], function () { changeMode(record, mode); });
       button.dataset.chartMode = mode;
+      button.disabled = record.exportOnly;
       if (canLaunch(mode, record)) button.dataset.chartNative = nativeId(mode);
       actions.appendChild(button);
     });
     tools.appendChild(actions);
-    if (record.settingsAvailable) body.appendChild(action('Ustawienia publikacji i komentarze', 'vhome-charts-back', function () {
+    if (record.exportOnly) tools.appendChild(el('p', 'vhome-growth-field-note',
+      'W podglądzie wizyty można generować gotowe siatki PDF. Kreatory i edycja adnotacji są dostępne w nowej lub edytowanej wizycie.'));
+    if (record.settingsAvailable && !record.exportOnly) body.appendChild(action('Ustawienia publikacji i komentarze', 'vhome-charts-back', function () {
       showStage(record, 'publication');
     }));
   }
@@ -208,6 +220,18 @@
     draftChanges.set(select, function () { change(select.value); }); return select;
   }
   var layouts = [['portrait', '2 strony A4 · pion'], ['landscape', '1 strona A4 · poziom']];
+  function useRegularPdf(record) {
+    if (!current(record)) { close(true); return; }
+    if (!record.exportOnly || !record.publication || families[record.family]?.source !== 'PALCZEWSKA'
+      || typeof w.setPublicationChartsPreference !== 'function' || !w.setPublicationChartsPreference(false)) return;
+    // This is a lasting change to the user's document preference, not a
+    // temporary render flag or an Apply of the saved visit's clinical data.
+    record.publication = record.originalPublication = false;
+    record.initial = values(record);
+    if (!current(record)) { close(true); return; }
+    render(record);
+    record.dialog.querySelector('.vhome-dialog-apply')?.focus({ preventScroll: true });
+  }
   function renderPdf(record, body) {
     var panel = section(body, 'Ustawienia dokumentu'), fields = el('div', 'vhome-charts-fields');
     var choices = Object.keys(families).filter(familyAvailable).map(function (key) { return [key, families[key].title]; });
@@ -219,9 +243,14 @@
       selectField(fields, 'Układ PDF', layouts, record.pdfLayout, function (value) { record.pdfLayout = value; refresh(record); });
     }
     panel.appendChild(fields);
+    if (record.exportOnly && families[record.family].source === 'PALCZEWSKA' && record.publication
+      && typeof w.setPublicationChartsPreference === 'function')
+      panel.appendChild(action('Wyłącz „Siatki do publikacji” w ustawieniach użytkownika', 'vhome-growth-secondary', function () {
+        useRegularPdf(record);
+      }));
     if (record.family === 'palRegular' && state('PALCZEWSKA')?.palPlan.mode === 'BOTH_REQUIRED')
       panel.appendChild(el('p', 'vhome-growth-field-note', 'Historia pomiarów wymaga obu zakresów. Plik obejmie również siatkę 0–3 lata.'));
-    if (families[record.family].source === 'PALCZEWSKA' && record.publication && record.settingsAvailable)
+    if (families[record.family].source === 'PALCZEWSKA' && record.publication && record.settingsAvailable && !record.exportOnly)
       panel.appendChild(action('Ustawienia publikacji', 'vhome-charts-back', function () { showStage(record, 'publication'); }));
   }
   function renderPublication(record, body) {
@@ -290,15 +319,15 @@
     var base = options.snapshot(); if (!base) return false;
     var patient = base.owner.patient, sourcePopulation = population(patient);
     if (!sourcePopulation) return false;
-    var mode = options.mode === 'creator' || options.mode === 'publication' ? options.mode : 'choose';
-    if (!options.replaceHistory && mode !== 'choose' && canLaunch(mode, { population: sourcePopulation }) && options.valid()) {
+    var readOnly = exportOnly(), mode = !readOnly && (options.mode === 'creator' || options.mode === 'publication') ? options.mode : 'choose';
+    if (!options.replaceHistory && mode !== 'choose' && canLaunch(mode, { population: sourcePopulation, exportOnly: readOnly }) && options.valid()) {
       byId(nativeId(mode)).click(); return true;
     }
     if (w.VildaVault?.onLock && !watchedVaults.has(w.VildaVault)) {
       watchedVaults.add(w.VildaVault); w.VildaVault.onLock(function () { close(true); });
     }
     var publication = byId('publicationChartsToggle'), layout = d.querySelector('input[name="palPdfLayout"]:checked')?.value || 'portrait';
-    var record = { options: options, stage: mode, patient: patient, population: sourcePopulation, fingerprint: JSON.stringify(base),
+    var record = { options: options, stage: mode, patient: patient, population: sourcePopulation, exportOnly: readOnly, fingerprint: JSON.stringify(base),
       name: [byId('firstName').value, byId('lastName').value].filter(Boolean).join(' ') || 'Bieżący pomiar',
       publication: publication.checked, originalPublication: publication.checked, layout: layout, originalLayout: layout,
       settingsAvailable: sourcePopulation !== 'DS' && state()?.source === 'PALCZEWSKA',
