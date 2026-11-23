@@ -17,7 +17,7 @@
 #vhomeVisitDetail .vhome-dialog-body { background: #fff; font-size: 15px; scrollbar-gutter: stable; }
 #vhomeVisitDetail > :is(.vhome-dialog-heading,.vd-access,.vd-tabs,.vhome-dialog-footer) { flex: 0 0 auto; }
 #vhomeVisitDetail > .vhome-dialog-heading > div { min-width: 0; }
-#vhomeVisitDetail .vd-eyebrow { margin: 0 0 4px; color: var(--vd-muted); font-size: 14px; font-weight: 650; line-height: 1.4; text-align: start; }
+#vhomeVisitDetail .vd-eyebrow { margin: 0 0 var(--space-4px); color: var(--vd-muted); font-size: 14px; font-weight: 650; line-height: 1.4; text-align: start; }
 #vhomeVisitDetail .vd-subtitle { margin: 7px 0 0; color: var(--vd-muted); font-size: 14px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; text-align: start; }
 #vhomeVisitDetail > .vhome-dialog-body { flex: 1 1 0; min-height: 0; overflow-y: auto; }
 #vhomeVisitDetail .vd-access {
@@ -38,7 +38,7 @@
   width: 34px; height: 34px; border-radius: 7px; color: var(--vd-access-ink); background: var(--vd-access-icon-bg);
 }
 #vhomeVisitDetail .vd-access-icon svg { display: block; width: 19px; height: 19px; }
-#vhomeVisitDetail .vd-access h2 { margin: 0 0 4px; color: var(--vd-access-ink); font-size: 16px; font-weight: 650; line-height: 1.3; text-align: start; }
+#vhomeVisitDetail .vd-access h2 { margin: 0 0 var(--space-4px); color: var(--vd-access-ink); font-size: 16px; font-weight: 650; line-height: 1.3; text-align: start; }
 #vhomeVisitDetail .vd-access p { margin: 0; color: var(--vd-access-copy); font-size: 14px; font-weight: 400; line-height: 1.4; text-align: start; }
 #vhomeVisitDetail .vd-access-actions { display: grid; flex: 0 0 auto; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: stretch; gap: var(--space-8px); width: min(387px,53%); min-width: 0; }
 #vhomeVisitDetail .vd-access-actions .vd-action {
@@ -55,7 +55,7 @@
 #vhomeVisitDetail .vd-access-actions .vd-access-edit { color: #fff !important; background: var(--primary, #007d87) !important; border-color: var(--primary, #007d87) !important; }
 #vhomeVisitDetail .vd-access-actions .vd-action:hover:not(:disabled) { background: var(--card, #f2f6f7) !important; border-color: var(--primary, #007d87) !important; }
 #vhomeVisitDetail .vd-access-actions .vd-access-edit:hover:not(:disabled) { background: color-mix(in srgb,var(--primary, #007d87) 82%,#000) !important; border-color: var(--primary, #007d87) !important; }
-#vhomeVisitDetail .vd-access-actions .vd-action:disabled { opacity: .6; cursor: default; }
+#vhomeVisitDetail .vd-access-actions .vd-action:disabled { opacity: var(--opacity-slider-tick); cursor: default; }
 body:is(.dark-bg-level-1,.dark-bg-level-2) #vhomeVisitDetail .vd-access {
   --vd-access-bg: color-mix(in srgb,var(--warning-bg, #fff3e0) 60%,var(--card, #fff));
   --vd-access-line: color-mix(in srgb,var(--warning, #b45309) 30%,var(--line, #d2e0e3));
