@@ -3989,7 +3989,7 @@ if(I!=null&&I>=228&&typeof i.VildaObwodTalii=="object"&&i.VildaObwodTalii&&m.wai
 if(tt&&(D!=null||$!=null)){var SN=SDsiatka||SDo.zrodlo;At.push(xt("Skale odniesienia",SN+" \xB7 BMI","wzrost \u2014 siatki "+SN+" (18 lat)","neutral","masa cia\u0142a \u2014 standardy BMI dla doros\u0142ych"))}
 // Rata B: skoro nic juz nie przeliczamy, karta musi powiedziec wprost, z jakiej chwili sa dane.
 var Gb3="";try{if(R&&I!=null&&z&&isFinite(z.totalMonths)){var Gb4=String(S||"").trim().toUpperCase().charAt(0)==="K"?"pacjentka ma ":"pacjent ma ";Gb3="Dane z wieku "+Le(I)+" (aktualnie "+Gb4+Le(z.totalMonths)+")."}}catch{Gb3=""}
-At.length>0&&(Nt.appendChild(e("p",{class:"vilda-patient-section-h",text:"Pomiar"})),Gb3&&Nt.appendChild(e("p",{class:"vilda-patient-age-note",text:Gb3})),Nt.appendChild(e("div",{class:"vilda-patient-stats-grid"},At)));var ce=[];/* P-STATUS-DOROSLY (wlasciciel 2026-09-20): u doroslego nie ma tempa wzrastania, MPH, SDS tempa ani walidacji prognoz koncowego wzrostu — to pojecia o rosnacym dziecku. Bramka `!tt` zostawia `ce` puste, wiec naglowek „Wzrastanie i genetyka rodzinna" znika sam, bez wycinania go osobno. */if(!tt&&ut!=null){var Ee=wt?"\u26A0 deceleracja wzrastania":bt?"\u26A0 tempo poni\u017Cej normy":Tf&&Tf.ocena&&Tf.ocena.cls==="warn"?"\u26A0 do oceny":null,Ie=Ee?"improve":null,Tw=Tf?Tf.wartosc+(Tf.odstep?" ("+Tf.odstep+(Tf.pozaOknem?", poza oknem oceny normy":"")+")":""):St(ut)+" cm/rok";ce.push(xt("Tempo wzrastania",Tw,Ee,Ie))}if(!tt&&rt!=null){var Oe=vt!=null?et(vt):null;/* P-MPH-KOLOR (decyzja wlasciciela 2026-09-16): kafelek MPH podlega tej samej regule kolorow, co kafelek wzrostu — centyl MPH (na 18 lat) < 3 lub > 97 alarm, 3-10 lub 90-97 ostrzezenie. */ce.push(xt("MPH",St(rt)+" cm",Oe,Y("height",rt,vt)))}/* Kafelek „Siatki centylowe" zostaje dzieciom; doroslemu zastapil go kafelek „Skale odniesienia" w siatce pomiaru wyzej. */!tt&&lt&&ce.push(xt("Siatki centylowe",lt,null,null));
+At.length>0&&(Nt.appendChild(e("p",{class:"vilda-patient-section-h",text:"Pomiar"})),Gb3&&Nt.appendChild(e("p",{class:"vilda-patient-age-note",text:Gb3})),Nt.appendChild(e("div",{class:"vilda-patient-stats-grid"},At)));var ce=[];/* P-STATUS-DOROSLY (wlasciciel 2026-09-20): u doroslego nie ma tempa wzrastania, MPH, SDS tempa ani walidacji prognoz koncowego wzrostu — to pojecia o rosnacym dziecku. Bramka `!tt` zostawia `ce` puste, wiec naglowek „Wzrastanie i genetyka rodzinna" znika sam, bez wycinania go osobno. */if(!tt&&ut!=null){var Ee=wt?"\u26A0 deceleracja wzrastania":bt?"\u26A0 tempo poni\u017Cej normy":Tf&&Tf.ocena&&Tf.ocena.cls==="warn"?"\u26A0 do oceny":null,Ie=Ee?"improve":null,/* P-STATUS-KAFLE-ROWNE (decyzja wlasciciela 2026-11-23): w duzej czcionce sama wartosc, odstep i „poza oknem oceny normy" w podpisie — jak w kafelkach wzrostu, masy i BMI. Dlugi opis w polu wartosci wydluzal caly rzad kafelkow. */Tw=Tf?Tf.wartosc:St(ut)+" cm/rok",TwS=Tf&&Tf.odstep?Tf.odstep+(Tf.pozaOknem?" \xB7 poza oknem oceny normy":""):null,TwK=xt("Tempo wzrastania",Tw,TwS||Ee,Ie);TwS&&Ee&&TwK.appendChild(e("div",{class:"vilda-patient-stat-extra",text:Ee}));ce.push(TwK)}if(!tt&&rt!=null){var Oe=vt!=null?et(vt):null;/* P-MPH-KOLOR (decyzja wlasciciela 2026-09-16): kafelek MPH podlega tej samej regule kolorow, co kafelek wzrostu — centyl MPH (na 18 lat) < 3 lub > 97 alarm, 3-10 lub 90-97 ostrzezenie. */ce.push(xt("MPH",St(rt)+" cm",Oe,Y("height",rt,vt)))}/* Kafelek „Siatki centylowe" zostaje dzieciom; doroslemu zastapil go kafelek „Skale odniesienia" w siatce pomiaru wyzej. */!tt&&lt&&ce.push(xt("Siatki centylowe",lt,null,null));
 // GROWTH-HV-STATUS. Kafelek SDS tempa w zakladce „Status" (miejsce wskazane przez
 // wlasciciela 2026-09-09). Panel trajektorii zyje w INNEJ zakladce Karty pacjenta, wiec
 // kafelek stamtad nigdy nie byl tu widoczny — ten stoi w siatce statystyk, obok predkosci
@@ -4014,15 +4014,18 @@ var Bh3=[e("div",{class:"vilda-patient-stat-label",text:Bh0.etykieta}),
 e("div",{class:"vilda-patient-stat-value",text:Bh0.wartosc||"\u2014"})];
 Bh0.nota&&Bh3.push(e("div",{class:"vilda-patient-stat-sub",text:Bh0.nota}));
 // Podpis zrodla nie stoi na kafelku (decyzja wlasciciela 2026-09-09) — pelne cytowanie z PMID jest w rozwinieciu.
-if(Bh0.wartosc==null)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
-else{Bh3.push(e("div",{class:"vilda-patient-stat-sub",style:"margin-top:3px;",text:"kliknij, aby rozwin\u0105\u0107"}));
+// P-STATUS-KAFLE-ROWNE (2026-11-23): sama strzalka zamiast dopisku „kliknij, aby rozwinac"; „nie policzono" tez sie rozwija.
+var BhOdm=Bh0.wartosc==null,BhMa=(Bh0.linie&&Bh0.linie.length)||(Bh0.szczegoly&&Bh0.szczegoly.length);
+if(!BhMa)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
+else{
 var Bh4=[e("div",{class:"vhv-cev",text:"\u25BE"})].concat(Bh3);
-var Bh5=e("div",{class:"vilda-patient-stat vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0"},Bh4);
+var BhA={class:BhOdm?"vilda-patient-stat vhv-tile":"vilda-patient-stat vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0","aria-expanded":"false"};BhOdm&&(BhA.style="opacity:.78");
+var Bh5=e("div",BhA,Bh4);
 var Bh6=[];Bh0.linie.forEach(function(Bh7){Bh6.push(e("div",{class:"vhv-line",text:Bh7}))});
 Bh0.szczegoly.forEach(function(Bh7){Bh6.push(e("p",{class:"vhv-note",text:Bh7}))});
 BhPanel=e("div",{class:"vhv-panel",style:"display:none"},Bh6);
 var Bh8=function(){var Bh9=BhPanel.style.display!=="none";BhPanel.style.display=Bh9?"none":"block";
-try{Bh5.classList.toggle("vhv-open",!Bh9)}catch(Bha){}};
+try{Bh5.classList.toggle("vhv-open",!Bh9);Bh5.setAttribute("aria-expanded",Bh9?"false":"true")}catch(Bha){}};
 Bh5.addEventListener("click",Bh8);
 Bh5.addEventListener("keydown",function(Bh9){(Bh9.key==="Enter"||Bh9.key===" ")&&(Bh9.preventDefault(),Bh8())});
 ce.push(Bh5)}}

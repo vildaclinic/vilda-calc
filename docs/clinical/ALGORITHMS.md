@@ -47145,3 +47145,63 @@ sejf), SW 1.1.575 → 1.1.576 — `npm run podbij-wersje`; baza `origin/audyt` `
 sejf, `vilda_sync.js`, `runtime/` i `tools/` bez zmian od `a7b2920b`, więc czerwone na bazie i piny granicy
 liczone na `a7b2920b` są ważne).
 Bez nowego pliku w pamięci offline.
+
+## P-STATUS-KAFLE-ROWNE — Karta pacjenta: kafelki „Statusu” jednego rozmiaru, krótkie podpisy Tempa i SDS tempa (SW 1.1.578, `vilda_auth_ui.js` 583, `vilda_auth_ui.css` 91, 2026-11-23)
+
+**Zmiana kliniczna: NIE.** Liczby, jednostki, okna oceny (tempo: 6–15 mies.; SDS tempa: zakres odstępów normy, DONALD
+6–18 mies.), progi, flagi ostrzegawcze i decyzja „nie policzono” — bez zmian. Zmienia się układ siatki kafelków i długość
+podpisów na kafelkach. Pełne wyjaśnienia zostają: w panelu pod siatką (po strzałce ▾), w zakładce trajektorii, w opisie
+pacjenta, w podsumowaniu wyników i w schowku (`opisPowodu` bez zmian treści).
+
+**Decyzja właściciela.** Zgłoszenie 2026-11-23 ze zrzutem zakładki „Status”: kafelki sekcji „Pomiar” szersze od kafelków
+„Wzrastanie i genetyka rodzinna”, a kafelki „Tempo wzrastania” i „SDS tempa” długimi opisami wydłużały cały rząd.
+Makieta (desktop i telefon, dwa układy, po trzy wersje podpisów); właściciel wybrał układ A, podpisy A dla obu kafelków
+i samą strzałkę ▾ zamiast dopisku „kliknij, aby rozwinąć”.
+
+**Przyczyna.** Obie sekcje miały `repeat(auto-fit, minmax(150px, 1fr))`. Przy karcie ok. 790 px mieści się 5 kolumn;
+„Pomiar” z 4 kafelkami zwijał pustą kolumnę i rozciągał kafelki, „Wzrastanie” z 6 kafelkami dostawał 5 węższych kolumn.
+Rząd siatki przyjmuje wysokość najwyższego kafelka: Tempo miało cały opis w polu wartości („6,0 cm/rok (z 34 mies., poza
+oknem oceny normy)” dużą czcionką), a SDS tempa — trzy zdania powodu odmowy.
+
+**Reguła.**
+1. Siatka `.vilda-patient-stats-grid` (`vilda_auth_ui.css`): `repeat(auto-fill, minmax(max(160px, (100% − 3 odstępy) / 4),
+   1fr))` — najwyżej 4 kolumny, mniej dopiero, gdy kafelek byłby węższy niż 160 px; puste kolumny zostają (`auto-fill`,
+   nie `auto-fit`), więc szerokość kafelka nie zależy od ich liczby w sekcji; `grid-auto-rows: 1fr`; kafelek w siatce
+   `min-height: 124px`. Karta ma 880 px (okno ≥ 1280 px) albo 675 px (okno 768–1279 px, m.in. iPad poziomo) — w obu
+   4 kolumny; telefon (≤ 480 px) — dwie kolumny jak dotąd. Wariant z samym minimum 180 px odrzucony w trakcie pracy:
+   karta 675 px dostawała 3 kolumny i kafelki „Wskaźnik Cole'a” i SGA stały same w rzędzie.
+2. Kafelek „Tempo wzrastania”: w wartości sama liczba („6,0 cm/rok”), odstęp w podpisie: „z 34 mies. · poza oknem oceny
+   normy”, w oknie — „z 11 mies.”. Flaga („⚠ deceleracja wzrastania”, „⚠ tempo poniżej normy”, „⚠ do oceny”) zostaje;
+   przy podpisie z odstępem stoi pod nim. Rekord bez zapisanego modelu tempa — jak dotąd sama liczba i flaga.
+3. Kafelek „SDS tempa” przy odmowie: „—” i „nie policzono — ” + krótki powód (`OPIS_POWODU_KROTKI`
+   w `vilda_height_velocity.js`, pole wyniku `opisPowoduKrotki`; wynik policzony ma `null`). Kafelek rozwija się
+   strzałką ▾ jak wynik policzony; panel pod siatką: pełny powód (`opisPowodu`), przy odstępie poza zakresem — „Odstęp
+   pomiarów: N mies. Zakres odstępów tej normy: a–b mies.” (z danych normy: `oknoMiesMin`, `oknoMiesMax`) i cytowanie
+   z PMID. Kafelek odmowy zostaje przygaszony (`opacity: .78`), bez koloru „ok”.
+4. Bez dopisku „kliknij, aby rozwinąć” na kafelkach „SDS tempa” i „Walidacja prognoz”; kafelek SDS tempa ma
+   `aria-expanded`.
+5. „Walidacja prognoz”: liczba punktów odmieniona („1 punkt”, „2 punkty”, „5 punktów”, „22 punkty”); dotąd zawsze
+   „punktów”.
+
+| Powód (`powod`) | Na kafelku (po „nie policzono — ”) |
+|---|---|
+| `okno-poza-zakresem` | odstęp poza zakresem norm |
+| `wiek-powyzej-zakresu` | wiek powyżej zakresu norm |
+| `wiek-ponizej-zakresu` | wiek poniżej zakresu norm |
+| `brak-danych` | brak danych |
+| `brak-plci` | brak płci pacjenta |
+| `nieznane-zrodlo` | nieznane źródło norm |
+
+**Strażnicy.** `tests/unit/status-kafle-rowne.test.mjs` (nowy: komplet krótkich powodów, odmowa i wynik policzony
+w prawdziwym silniku, `hvSdsKafelek()` wycięty z pliku produkcyjnego na prawdziwych normach — odstęp 34 mies. i wiek
+powyżej normy, odmiana punktów, reguły siatki); `tests/e2e/status-kafle-rowne.spec.mjs` (nowy: pacjentka 6 lat, tempo
+z 34 mies., MPH, SGA; okno 1440 px i 1180 px — 4 kolumny, telefon 390 px — 2; wszystkie kafelki obu sekcji jednego
+rozmiaru, podpisy,
+rozwinięcie nie zmienia rozmiaru kafelków, bez przewijania w bok); `tests/unit/tempo-hv-sds-karta.test.mjs` (strażnik
+„podpis źródła nie stoi na kafelku” wycina teraz blok kafelka kotwicami zamiast okna ±1500 znaków, które pękało przy
+dopiskach w bloku).
+
+**Wersje.** `vilda_auth_ui.js` 582 → 583, `vilda_auth_ui.css` 90 → 91, `vilda_trajectory_analysis.js` 48 → 49,
+`vilda_height_velocity.js` 3 → 4, `vilda_growth_prediction_validation.js` 14 → 15, `vilda_chrome.js` 322 → 323
+i `vilda_session_bridge.js` 238 → 239 (wstrzykują pliki z nowym `?v=`), SW 1.1.577 → 1.1.578 — `npm run podbij-wersje`. Łatka zminifikowanych miejsc: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-STATUS-KAFLE-ROWNE”.
+Bez nowego pliku w pamięci offline.
