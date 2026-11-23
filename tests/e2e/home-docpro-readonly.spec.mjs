@@ -5,7 +5,7 @@ import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 test.use({ serviceWorkers: 'block' });
 
-test('DocPro assigns a medication from notes only in an explicitly opened visit', async ({ page }) => {
+test('DocPro assigns a medication from notes only in an explicitly opened visit', { tag: '@gabinet-webkit' }, async ({ page }) => {
   test.setTimeout(150_000);
   const { frame } = await prepareGabinet(page);
   const patient = {...fictionalPatient({firstName: 'Czytelny'}), obesityTherapyPoints: [{

@@ -108,7 +108,7 @@ test('editing a historical visit can cancel, trash all its versions and restore 
   await expect(weightDelta).toContainText('46');
 });
 
-test('trashing the sole visit leaves the patient available for a new consultation and restoration on a phone', async ({ page }) => {
+test('trashing the sole visit leaves the patient available for a new consultation and restoration on a phone', { tag: '@gabinet-webkit' }, async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const { frame, ids } = await prepareGabinet(page);
   const original = await frame.evaluate(async patientId => {

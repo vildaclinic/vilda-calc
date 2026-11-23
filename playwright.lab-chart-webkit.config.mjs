@@ -2,8 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 import shared from './playwright.config.mjs';
 import { zmienionePlikiE2E } from './tests/support/odlamki-e2e.mjs';
 
-// Chart geometry, M1, mobile results/dock and the opted-in home workspace run
-// in WebKit. The workspace covers Safari's hidden-parent computed-style case.
+// Chart geometry, M1, mobile results/dock and the home workspace run in WebKit.
+// The Gabinet project keeps a short set of visit and documentation flows.
 // The regular suite keeps its Chromium projects and shard count. A local
 // Chromium executable override must not be inherited by this separate browser.
 const use = { ...shared.use };
@@ -42,6 +42,12 @@ export default defineConfig({
     {
       name: 'home-workspace-webkit',
       testMatch: workspacePR ? [...workspacePR].map((plik) => '**/' + plik) : workspace,
+      use: { ...devices['Desktop Safari'], browserName: 'webkit', viewport: { width: 1440, height: 1000 } },
+    },
+    {
+      name: 'home-gabinet-webkit',
+      testMatch: /home-(?:gabinet-[a-z-]+|docpro-readonly)\.spec\.mjs$/,
+      grep: /@gabinet-webkit\b/,
       use: { ...devices['Desktop Safari'], browserName: 'webkit', viewport: { width: 1440, height: 1000 } },
     },
   ],
