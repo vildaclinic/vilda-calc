@@ -45931,7 +45931,7 @@ zapisywała się jako Increlex/IGF-1.
 | S3 luka B | W Increlex IGF-1 → K Genotropin bez programu (7;6, 8;0); karta na Genotropin 12 mg | IGF-1 (program bieżący pusty — zapas jak dotąd), karta bez zmian i bez zdarzeń: Genotropin 12 mg, lista, dawka | tak samo |
 | edycja | I→G, edycja Włączenia Increlex; edycja Kontynuacji Genotropin | Włączenie: pole IGF-1 podczas edycji (lista karty bez zmian), po zapisie edycji — SNP, Włączenie dalej IGF-1; Kontynuacja: pole IGF-1, zapis z IGF-1 — jak dotąd (stan obecny, pytanie 17) | tak samo (po zapisie edycji — IGF-1) |
 | pusta lista | brak punktów | pole odblokowane, bez wiersza programu, bez przeliczania listy | tak samo |
-| luki, zmiana programu | I→G z Kontynuacjami bez leku (SNP); Genotropin SNP → Genotropin ZT; W2 (K Increlex IGF-1 po Z) | SNP; ZT; IGF-1 | IGF-1; SNP; IGF-1 |
+| luki, zmiana programu | I→G z Kontynuacjami bez leku (SNP), karta z listą Increlex; Genotropin SNP → Genotropin ZT; W2 (K Increlex IGF-1 po Z) | SNP — lista SNP, preparat domyślny programu (Omnitrope 10 mg; w kursie brak leku rhGH do wyboru, nowa Kontynuacja z karty — Omnitrope 10 mg, SNP, o ile lekarz nie zmieni preparatu); ZT; IGF-1 | IGF-1 (karta Increlex 40 mg, Kontynuacja Increlex, IGF-1); SNP; IGF-1 |
 
 **Czego to nie zmienia (inwentarz).**
 - Edycja punktu (`O()` + `F()`): pole jak dotąd z programu Włączenia kursu edytowanego punktu — `F()` nadpisuje program
@@ -45945,8 +45945,11 @@ zapisywała się jako Increlex/IGF-1.
 - Po otwarciu karty GH/IGF-1 pole pokazuje program domyślny karty (SNP), dopóki monitor nie odświeży tabeli (zakładka
   „Monitorowanie”, zmiana listy) — `F()` przy montowaniu karty biegnie przed wypełnieniem listy programów; jak dotąd.
 - Stan formularza karty: programowe zdarzenia change pola i preparatu przy przeliczeniu listy zapisuje autozapis stanu
-  strony (`vilda_persist_runtime.js` przyjmuje też zdarzenia nie od użytkownika) — `therProg` i `therDrug` jak po ręcznej
-  zmianie w karcie, więc po F5 wraca stan przeliczony; wskaźnik zapisu pacjenta pomija zdarzenia nie od użytkownika — stan
+  strony (`vilda_persist_runtime.js` przyjmuje też zdarzenia nie od użytkownika) — `therProg` zawsze, `therDrug` tylko
+  wtedy, gdy po przeliczeniu listy monitor wybiera lek bieżący zdarzeniem zmiany preparatu (gdy przeliczona lista od razu
+  wskazuje ten lek, np. G→I — Increlex 40 mg, zapisany zostaje dawny preparat karty). Po F5 karta wraca z zapisanym stanem,
+  a monitor przy odświeżeniu tabeli przelicza listę ponownie tą samą regułą (preparat spoza programu → lista programu);
+  wskaźnik zapisu pacjenta pomija zdarzenia nie od użytkownika — stan
   zapisu zostaje „zapisano” (e2e GPB-8). Własna liczba dni i ręczna data kontroli wracają przez `restoreState` karty, bez
   zdarzeń. Rekord pacjenta, punkty, sejf i synchronizacja — bez zmian.
 - `vilda_auth_ui.js` (Karta), `vilda_gh_punkty.js`, `gh_therapy_segments.js`, `vilda_vault.js`.
@@ -45986,7 +45989,8 @@ względem `origin/audyt` a4986460. Bez nowego pliku ładowanego i bez nowych sty
 edycji tworzy stan „Genotropin z programem IGF-1” (S2: edycja ostatniej Kontynuacji po I→G zapisuje IGF-1, pole pokazuje
 IGF-1); od tej poprawki karta nie przechodzi przez to na Increlex (zostaje Genotropin), ale następna Kontynuacja z karty
 dostaje program IGF-1 jak dotąd; lek bieżący przy przeliczonej liście; program bieżący przy zmianie programu bez zmiany
-leku i przy luce w programie; powrót ręcznej daty kontroli i własnej liczby dni po przeliczeniu listy.
+leku i przy luce w programie; preparat domyślny programu, gdy w kursie nie ma leku zgodnego z programem (luka w leku —
+stare punkty bez preparatu); powrót ręcznej daty kontroli i własnej liczby dni po przeliczeniu listy.
 
 ## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.568, `vilda_vault.js` 283, 2026-11-20)
 
