@@ -270,3 +270,101 @@ test.describe('Telefon i pacjent bez dziennika', () => {
     await expect(page.locator('#advMeasurements .adv-dz-row')).toHaveCount(0);
   });
 });
+
+/** PDF siatki Palczewskiej z przycisku strony: liczba stron i ile razy narysowano legendę „dane od pacjenta”. */
+async function pdfPalczewskiej(page, poziom) {
+  return page.evaluate(async (pozioma) => {
+    window.__teksty = [];
+    window.__strony = 0;
+    if (!window.__szpieg) {
+      window.__szpieg = true;
+      const tekst = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function (t) { window.__teksty.push(String(t)); return tekst.apply(this, arguments); };
+      const obraz = HTMLCanvasElement.prototype.toDataURL;
+      HTMLCanvasElement.prototype.toDataURL = function () { if (this.width > 1500) window.__strony += 1; return obraz.apply(this, arguments); };
+      window.open = () => null;
+    }
+    window.VildaProAccess.hasAccess = () => true;
+    const pal = document.getElementById('sourcePalczewska');
+    pal.disabled = false; pal.checked = true; pal.dispatchEvent(new Event('change', { bubbles: true }));
+    window.updateCentileButtons();
+    const uklad = document.getElementById(pozioma ? 'palPdfLayoutLandscape' : 'palPdfLayoutPortrait');
+    uklad.checked = true; uklad.dispatchEvent(new Event('change', { bubbles: true }));
+    await window.generatePalczewskaCentileCharts();
+    return { strony: window.__strony, legenda: window.__teksty.filter((t) => t === 'dane od pacjenta').length,
+      gabinet: window.__teksty.filter((t) => t === 'dane z gabinetu').length };
+  }, poziom);
+}
+
+test.describe('Siatka Palczewskiej 1–18 lat (PDF) i DocPro', () => {
+  test.use({ chwila: '2026-11-20T12:00:00Z' });
+
+  test('ST-6: PDF siatki Palczewskiej 1–18 lat — romby i legenda na stronie wagi (pion) i pod stopką (poziom)', async ({ page }) => {
+    test.setTimeout(180_000);
+    await otworz(page);
+    await trybPro(page);
+    const pid = await pacjentka(page, WPISY);
+    await wczytaj(page, pid, 'odtworz', 5);
+    // Pion: dwie strony (wzrost, waga); romby tylko na wadze (wpisy bez wzrostu) — legenda raz.
+    expect(await pdfPalczewskiej(page, false)).toEqual({ strony: 2, legenda: 1, gabinet: 1 });
+    // Poziom: jedna strona z dwoma wykresami — legenda raz, pod stopką.
+    expect(await pdfPalczewskiej(page, true)).toEqual({ strony: 1, legenda: 1, gabinet: 1 });
+  });
+
+  test('ST-7: pacjent bez dziennika — PDF Palczewskiej bez legendy', async ({ page }) => {
+    test.setTimeout(150_000);
+    await otworz(page);
+    await trybPro(page);
+    const pid = await pacjentka(page, []);
+    await wczytaj(page, pid, 'odtworz', 0);
+    expect(await pdfPalczewskiej(page, false)).toEqual({ strony: 2, legenda: 0, gabinet: 0 });
+  });
+
+  test('ST-8: DocPro — linijka pod Waga, romby na siatce i analiza z wpisami; bez bloków w „Poprzednich pomiarach”', async ({ page }) => {
+    test.setTimeout(180_000);
+    page.on('dialog', (d) => d.accept().catch(() => {}));
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('vilda-terms-accepted-v1', JSON.stringify({ version: 1, acceptedAtISO: new Date().toISOString() }));
+        window.localStorage.setItem('pwzNumber', '6000001');
+      } catch (_) { /* brak storage — pomiń */ }
+    });
+    await page.goto('/docpro.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => Boolean(window.VildaVault));
+    await page.evaluate(async (pw) => window.VildaVault.createUser(pw, { label: 'e2e', iterations: 10000 }), HASLO);
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => window.VildaVault && window.VildaVault.isUnlocked() && window.VildaProAccess
+      && window.VildaDziennikOtylosci && typeof window.applyLoadedData === 'function');
+    await page.waitForFunction(() => !document.documentElement.classList.contains('vilda-auth-locked'));
+    await page.evaluate(() => {
+      window.VildaProAccess.hasAccess = () => true;
+      document.dispatchEvent(new CustomEvent('vildaProAccessChanged', { detail: { plan: 'pro' } }));
+      const t = document.getElementById('resultsModeToggle');
+      if (t && !t.checked) { t.checked = true; t.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+    await page.waitForTimeout(1200);
+    const potwierdzam = page.locator('#professionalConfirmBtn');
+    if (await potwierdzam.isVisible()) await potwierdzam.click();
+    const bezAnalityki = page.getByRole('button', { name: 'Nie zgadzam się', exact: true });
+    if (await bezAnalityki.isVisible()) await bezAnalityki.click();
+    const pid = await pacjentka(page, WPISY);
+    await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, (rekord) => { if (rekord) window.applyLoadedData(rekord); }, null), pid);
+    await page.getByRole('button', { name: 'Wczytaj tego pacjenta' }).click();
+    await page.locator('#vildaLcmRestore').click();
+    await page.waitForFunction((id) => window._vildaCurrentPatientId === id, pid);
+    await expect.poll(() => page.evaluate(() => (window.VildaDziennikOtylosci.punktyWczytanego() || []).length), { timeout: 15000 }).toBe(5);
+    await page.evaluate(() => { if (typeof window.update === 'function') window.update(); });
+
+    const karta = page.locator('#currentSummaryCard');
+    await expect(karta.locator('.professional-summary-row[data-summary-key="weight"] .professional-summary-reported'))
+      .toHaveText('od pacjenta 12.11.2026: 74,6 kg', { timeout: 15000 });
+    await siatkaWagi(page);
+    await expect(karta.locator('polygon.vilda-centile-live-preview-reported-patient')).toHaveCount(3, { timeout: 15000 });
+    await expect(karta.locator('.vilda-centile-live-legend--patient')).toHaveText('dane od pacjenta');
+
+    await page.evaluate(() => { if (typeof window.calculateGrowthAdvanced === 'function') window.calculateGrowthAdvanced(); });
+    await expect(page.locator('#advResults .vtap-mchip.vtap-pac')).toHaveText('w tym 3 od pacjenta', { timeout: 15000 });
+    // Bloki „pomiar od pacjenta” tylko na stronie głównej (lista ze zwijanym nagłówkiem); DocPro ma własny monitor.
+    await expect(page.locator('#advMeasurements .adv-dz-row')).toHaveCount(0);
+  });
+});
