@@ -50,6 +50,12 @@
 //        kopert ptomb z kartą Y i snap (applyEncryptedEvent, applyEncryptedDelta) — bez wierszy, baz vilda_sync_*,
 //        kluczy vilda-sync-* i blokad vilda-sync*.
 //
+//   Karta opróżniona kopertą ptomb z kartą Y (E3-PR0e1, decyzja 1 właściciela z 2026-11-23): A scala X → Y i poprawia
+//        x pod Y, bliźniak B (bez wiedzy) poprawia x w X; koperta ptomb(X) z kartą Y z buildera A, zanim doszły koperty
+//        wersji — u B X znika z nagrobkiem z chwilą scalenia (applyEncryptedEvent i applyEncryptedDelta; na a7b2920b
+//        czerwone: X znika bez nagrobka); kontrola: koperty w kolejności kolejki A — X opróżnia dopiero ostatnia koperta
+//        snap, której scalanie nagrobka nie zna, więc X znika bez nagrobka jak dotąd (zielona z natury).
+//
 // Czerwone na bazie (bf8edad8 — sejf przed E2-PR3c1: builder ptomb daje zawsze sam nagrobek, walidator odrzuca patients
 // w ptomb; 25 przypadków z wariantami): 17 — SZ1 (koperta bez patients), SZ2 i SZ4 (tylko część „okno, które scaliło,
 // daje kartę Y”), SZ5 ×2 (builder nie czyta karty Y — atrapa nie dochodzi do wstrzymania), SZ6 ×2 (sam nagrobek zamiast
@@ -523,6 +529,65 @@ describe('SZ11–SZ13: odbiorca koperty ptomb z kartą Y', () => {
         expect(lad.patients.some((p) => (p.snapshots || []).some((w) => w.snapshotId === s.x)), 'x w żadnej karcie B').toBe(false);
       }, CZAS);
     }
+  }
+});
+
+// ── Karta opróżniona kopertą ptomb z kartą Y znika ze znanym nagrobkiem (E3-PR0e1) ─────────────────────────────────
+// A (okno z emisją): X (x0 22 kg, x 23 kg) i Y (y 30 kg); bliźniak B. A: „Scal pacjentów” X → Y (nagrobek X), potem
+// poprawka x pod Y (31 kg; rev 2). B — bez wiedzy o scaleniu — poprawia x w X (41 kg; rev 1, po nagrobku): chwila
+// zapisu X na B jest późniejsza niż nagrobek, więc X nie jest w zbiorze N. Koperta ptomb(X) z kartą Y niesie x0 (rev 1)
+// i x (rev 2) — obie wygrywają przypisanie dla Y, faza przeniesień opróżnia X. Od E3-PR0e1 X znika razem z nagrobkiem
+// z koperty (dotąd bez nagrobka); w kolejności kolejki A (snap przed ptomb, poprawka x na końcu) X opróżnia dopiero
+// ostatnia koperta snap, której scalanie nie zna nagrobka — X znika bez nagrobka jak dotąd.
+async function scenariuszOproznionej() {
+  const A = await okno({ emisja: true });
+  const s = await dwieKarty(A);
+  await A.gotowe();
+  const B = await blizniak(A);
+  const s0 = ostatni(A);
+  tik(MIN);
+  const r = await A.v.mergePatients(s.X.P, s.Y.P);
+  tik(MIN);
+  await A.gotowe();
+  const T = (await A.v.exportSyncPayload()).tombstones.find((t) => t.patientId === s.X.P).deletedAtISO;
+  const wA = (await A.v.getPatient(s.Y.P)).snapshots.find((w) => w.snapshotId === s.x);
+  await A.v.updateSnapshotPayload(s.Y.P, s.x, { ...wA.payload, user: { ...wA.payload.user, weight: 31 } }, { preserveSavedAt: true });
+  tik(MIN);
+  await A.gotowe();
+  const wB = (await B.v.getPatient(s.X.P)).snapshots.find((w) => w.snapshotId === s.x);
+  await B.v.updateSnapshotPayload(s.X.P, s.x, { ...wB.payload, user: { ...wB.payload.user, weight: 41 } }, { preserveSavedAt: true });
+  tik(MIN);
+  await B.cisza();
+  expect((await B.v.getPatient(s.X.P)).lastSavedAtISO > T, 'kontrola: X na B poza zbiorem N').toBe(true);
+  const wiersze = wierszeOd(A, s0);
+  expect(wiersze.map((w) => w.kind), 'kontrola: wiersze A (scalenie, potem poprawka x pod Y)').toEqual(['snap', 'snap', 'snap', 'ptomb', 'snap']);
+  return { A, B, ...s, m: r.snapshotId, T, wiersze };
+}
+const nagrobekX = async (o, X) => ((await o.v.exportSyncPayload()).tombstones.find((t) => t.patientId === X) || {}).deletedAtISO || null;
+
+describe('Karta opróżniona kopertą ptomb z kartą Y (E3-PR0e1)', () => {
+  for (const [droga, metoda] of DROGI) {
+    it(`[czerwony na bazie] ${metoda}: koperta ptomb(X) z kartą Y z buildera okna, które scaliło (po poprawce x pod Y), zanim doszły koperty wersji — u B X znika z nagrobkiem z chwilą scalenia`, async () => {
+      const s = await scenariuszOproznionej();
+      const dev = (await odszyfruj(s.A, s.wiersze[3].env)).event.dev;
+      const k = await s.A.ev.buildPatientTombstoneEvent(s.X.P, dev);
+      expect((k.patients || []).map((p) => p.patientId), 'kontrola: koperta ptomb(X) z kartą Y').toEqual([s.Y.P]);
+      expect(await dostarcz(s.B, [(await s.A.ev.encryptEvent(k)).env], droga)).toEqual(['applied']);
+      expect(await s.B.v.getPatient(s.X.P), 'B: karta X usunięta').toBeFalsy();
+      expect(await wersje(s.B.v, s.Y.P), 'B: Y z wersjami jak u A').toEqual(await wersje(s.A.v, s.Y.P));
+      expect(await nagrobekX(s.B, s.X.P), 'B: nagrobek X z chwilą scalenia').toBe(s.T);
+    }, CZAS);
+
+    it(`[kontrola] ${metoda}: koperty w kolejności kolejki A (snap ×3, ptomb z kartą Y sprzed poprawki, snap poprawki x) — X opróżnia dopiero ostatnia koperta snap, bez znanego nagrobka: X znika bez nagrobka jak dotąd`, async () => {
+      const s = await scenariuszOproznionej();
+      expect(await dostarcz(s.B, s.wiersze.slice(0, 4).map((w) => w.env), droga)).toEqual(['applied', 'applied', 'applied', 'applied']);
+      expect(await wersje(s.B.v, s.X.P), 'kontrola: po ptomb X zostaje z x (poprawka B późniejsza, ta sama rev)').toEqual([s.x]);
+      expect(await nagrobekX(s.B, s.X.P), 'kontrola: nagrobek X przegrał z zapisem X na B').toBe(null);
+      expect(await dostarcz(s.B, [s.wiersze[4].env], droga)).toEqual(['applied']);
+      expect(await s.B.v.getPatient(s.X.P), 'B: karta X usunięta').toBeFalsy();
+      expect(await wersje(s.B.v, s.Y.P)).toEqual(await wersje(s.A.v, s.Y.P));
+      expect(await nagrobekX(s.B, s.X.P), 'B: bez nagrobka X — scalanie koperty snap go nie zna').toBe(null);
+    }, CZAS);
   }
 });
 

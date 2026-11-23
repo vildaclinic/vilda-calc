@@ -86,6 +86,12 @@
 //        cienia B; po zalogowaniu A i rundach x pod Z na trzech, bez X.
 //   NR-S3 stan npret, konto B z kopią kart A; przełączenie na B po odczycie karty X w Bsw_przezyteRetencji — po
 //        przełączeniu żadnego wywołania magazynu w koncie B; po zalogowaniu A x pod Y.
+//   Karta opróżniona ze znanym nagrobkiem (E3-PR0e1, decyzja 1 właściciela z 2026-11-23): K scala X → Y i poprawia x pod
+//        Y, P (bez wiedzy) poprawia x w starej X, konto B ma kopię kart A; przełączenie na B zaraz po usunięciu
+//        opróżnionej X konta A w Bsw_poOddaniu albo przy odczycie tutejszego nagrobka X tamże — SESSION_CHANGED, po
+//        przełączeniu żadnego zapisu (nagrobek X ani w koncie B, ani w koncie A); po zalogowaniu A to samo scalenie
+//        zapisuje nagrobek X z chwilą scalenia. Na a7b2920b czerwony tylko drugi (sejf bez odczytu nagrobka w
+//        Bsw_poOddaniu: przełączenie nie zachodzi, scalenie „ok”); pierwszy zielony z natury.
 //   S-K1 K dopisuje do X nową wizytę; przełączenie na B po odczycie po kluczu tej wersji (Bsw_decyzja) — żadnego zapisu
 //        po przełączeniu, konto B bez tej wersji; po zalogowaniu A wizyta pod X.
 //   R6-A, R6-B (przegląd 6) nowa karta W z ładunku (2 albo 1 wizyta); przełączenie na B po zapisie wersji W (przed
@@ -880,6 +886,54 @@ describe('P-KOSZ-PO-KLUCZU — faza przeniesień: zbiór kart usuniętych tylko 
     zeruj(u.urz);
     await rundy(u.urz, 1);
     expect(zapisy(u.urz), 'runda kontrolna bez zapisów').toEqual(bezZapisow(u.urz));
+  });
+});
+
+describe('P-KOSZ-PO-KLUCZU — karta opróżniona w fazie przeniesień ze znanym nagrobkiem: zmiana sesji (E3-PR0e1)', () => {
+  // K: „Scal pacjentów” X → Y (nagrobek X z chwilą T) i poprawka x pod Y (30 kg, rev 2); P (konto A, bez wiedzy
+  // o scaleniu) poprawia x w starej X (74 kg, rev 1, po T) — chwila zapisu X na P późniejsza niż T, X poza zbiorem N.
+  // Konto B na P ma kopię kart A. Na P x1, x i x3 wygrywają przypisanie dla Y, faza przeniesień opróżnia X, a Bsw_poOddaniu
+  // ją usuwa — od E3-PR0e1 razem ze znanym nagrobkiem X z ładunku: odczyt tutejszego nagrobka i jego zapis tylko w sesji
+  // scalania (Bses_pilnuj przed odczytem i tuż przed zapisem).
+  const nagrobekX = async (v, uid, X) => ((await v.__baza.listTombstonesForUser(uid)).find((t) => t.patientId === X) || {}).deletedAtISO || null;
+  async function oprozniona() {
+    const u = await trzyKarty();
+    przesunZegar(M); await u.K.mergePatients(u.X, u.Y);
+    const T = (await u.K.exportSyncPayload()).tombstones.find((t) => t.patientId === u.X).deletedAtISO;
+    przesunZegar(M); await poprawMase(u.K, u.sid, 30);
+    przesunZegar(M); await poprawMase(u.P, u.sid, 74);
+    przesunZegar(M);
+    await kopiaWB(u.P);
+    return { u, T };
+  }
+  async function poZalogowaniu(u, T) {
+    await zalogujA(u.P);
+    expect(await kartaX(u.P, u), 'A: karta X usunięta przed przełączeniem').toBe(false);
+    expect(await nagrobekX(u.P, u.P.__uid, u.X), 'A: bez nagrobka X (przerwane scalenie)').toBe(null);
+    expect(await nagrobekX(u.P, u.P.__uidB, u.X), 'konto B: bez nagrobka X').toBe(null);
+    expect(await kartyB(u.P), 'konto B: karty bez zmian').toBe(3);
+    expect(await scal(u.K, u.P), 'to samo scalenie po zalogowaniu A').toBe('ok');
+    expect(await kartaX(u.P, u)).toBe(false);
+    expect((await gdzie(u.P, u.sid))?.pid, 'x pod Y').toBe(u.Y);
+    expect(await nagrobekX(u.P, u.P.__uid, u.X), 'A: nagrobek X z chwilą scalenia').toBe(T);
+  }
+
+  it('[kontrola] przełączenie na konto B zaraz po usunięciu opróżnionej X konta A w Bsw_poOddaniu — SESSION_CHANGED, po przełączeniu żadnego zapisu (nagrobek X ani w koncie B, ani w koncie A); po zalogowaniu A to samo scalenie: nagrobek X z chwilą scalenia', async () => {
+    const { u, T } = await oprozniona();
+    const st = przelacz(u.P, (k, a, stos) => k === 'removePatientForUser' && a[1] === u.X && stos.includes('Bsw_poOddaniu'), true);
+    expect(await scal(u.K, u.P)).toBe('SESSION_CHANGED');
+    expect(st.zrobione, 'przełączenie po usunięciu opróżnionej X konta A (Bsw_poOddaniu)').toBe(true);
+    expect(zapisyPo(u.P, st), 'po przełączeniu żadnego zapisu').toEqual([]);
+    await poZalogowaniu(u, T);
+  });
+
+  it('[czerwony na bazie] przełączenie na konto B przy odczycie tutejszego nagrobka X w Bsw_poOddaniu (po usunięciu opróżnionej X) — SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A to samo scalenie: nagrobek X z chwilą scalenia', async () => {
+    const { u, T } = await oprozniona();
+    const st = przelacz(u.P, (k, a, stos) => k === 'listTombstonesForUser' && stos.includes('Bsw_poOddaniu'), true);
+    expect(await scal(u.K, u.P)).toBe('SESSION_CHANGED');
+    expect(st.zrobione, 'przełączenie przy odczycie nagrobka X (Bsw_poOddaniu)').toBe(true);
+    expect(zapisyPo(u.P, st), 'po przełączeniu żadnego zapisu').toEqual([]);
+    await poZalogowaniu(u, T);
   });
 });
 
