@@ -3,6 +3,26 @@ html.vilda-shell-host body {
   height: 100%
 }
 
+/* The Gabinet shell owns the viewport. Pane content has its own scrolling
+ * document and cannot change the position of the application controls. */
+html.vilda-shell-host.vilda-gabinet-shell {
+  overflow: hidden;
+  scrollbar-gutter: auto
+}
+html.vilda-shell-host.vilda-gabinet-shell body.liquid-ios26 {
+  padding-top: var(--chrome-layout-header-height,calc(var(--vilda-safe-top) + var(--chrome-strip-height) + var(--border-hairline)))
+}
+html.vilda-shell-host.vilda-gabinet-shell > body > header {
+  position: fixed!important;
+  top: var(--vilda-safe-top)!important;
+  inset-inline: var(--vilda-safe-left) var(--vilda-safe-right)
+}
+@media(min-width:992px) {
+  html.vilda-gabinet-shell:not(.vilda-phone) body.vilda-header-menu .chrome-chips {
+    right: var(--space-16px)
+  }
+}
+
 /* P-LAYOUT-12: the three form routes put their vertical clearance inside the
  * pane. The shell adds no second padding or reserved document scrollbar. */
 html.vilda-shell-host.vilda-form-layout {

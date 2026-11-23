@@ -40,6 +40,128 @@ async function horizontalEdges(locator) {
   });
 }
 
+async function hitTestPositions(locator) {
+  return locator.evaluateAll(nodes => nodes.map(node => {
+    const { left, top, right, bottom } = node.getBoundingClientRect();
+    const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+    const target = node.closest('a,button') || node;
+    return { left, top, visible: right > left && bottom > top && left >= 0 && top >= 0 &&
+      right <= innerWidth && bottom <= innerHeight && target.contains(hit) };
+  }));
+}
+
+async function scrollToVisibleFooter(frame, screen, requireOverflow = false) {
+  await expect.poll(() => frame.locator('.site-footer').evaluate(async footer => {
+    const scroller = document.scrollingElement;
+    scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'instant' });
+    await new Promise(resolve => { requestAnimationFrame(resolve); });
+    const { top, bottom } = footer.getBoundingClientRect();
+    return {
+      atEnd: Math.abs(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop) <= 1,
+      footerInView: top >= -0.5 && bottom <= innerHeight + 0.5,
+      enoughScroll: scroller.scrollTop > 100,
+    };
+  }), { message: 'Stopka przy rzeczywistym końcu przewijania · ' + screen }).toEqual(expect.objectContaining({
+    atEnd: true, footerInView: true, ...(requireOverflow ? { enoughScroll: true } : {}),
+  }));
+}
+
+test('the outer header stays visible and aligned while switching or scrolling Gabinet screens', async ({ page }) => {
+  const { frame } = await prepare(page);
+  const start = frame.locator('#vhomeGabinetStart');
+  const entryBack = frame.locator('#gbEntryHeader').getByRole('button', { name: 'Ekran startowy' });
+  const patientBack = frame.locator('#vhomeGabinetHeader [data-start]');
+  const analysis = frame.locator('#vhomeGabinetAnalysisTab');
+
+  for (const { width, height } of [{ width: 1600, height: 800 }, { width: 390, height: 480 }]) {
+    await page.setViewportSize({ width, height });
+    const leading = width > 991 ? '.chrome-brand-logo' : '[data-vilda-chrome-menu-btn]';
+    const controls = page.locator('.chrome-strip').locator(leading + ', #vildaHeaderSearchBtn, #vildaRemindersBtn');
+    await expect(controls).toHaveCount(3);
+    for (const control of await controls.all()) await expect(control).toBeInViewport({ ratio: 1 });
+    const baseline = await hitTestPositions(controls);
+    expect(baseline.every(box => box.visible)).toBe(true);
+
+    async function expectAnchored(screen) {
+      await expect.poll(() => hitTestPositions(controls), {
+        message: 'Dokładne położenie i hit-test globalnego nagłówka przy szerokości ' + width + ' px · ' + screen,
+      }).toEqual(baseline);
+    }
+    async function checkScroll(screen, requireOverflow = false, pinned) {
+      await expectAnchored(screen);
+      await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      const beforeScroll = pinned ? await hitTestPositions(pinned) : [];
+      await scrollToVisibleFooter(frame, screen, requireOverflow);
+      if (pinned) {
+        expect(beforeScroll.every(box => box.visible)).toBe(true);
+        await expect.poll(() => hitTestPositions(pinned), { message: 'Przypięta nawigacja i hit-test · ' + screen })
+          .toEqual(beforeScroll);
+      }
+      // The browser can also hand scrolling to the outer document at the pane boundary.
+      await page.evaluate(() => window.scrollTo({ top: document.scrollingElement.scrollHeight, behavior: 'instant' }));
+      await expectAnchored(screen + ' po przewinięciu');
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+      await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    }
+
+    await expect(start.locator('[data-entry="office"]')).toBeVisible();
+    await checkScroll('Ekran startowy');
+    await start.locator('[data-entry="rapid"]').click();
+    await expect(frame.locator('#gbRapidTitle')).toBeVisible();
+    await checkScroll('Szybka ścieżka', width < 500, entryBack);
+    await entryBack.click();
+    await start.locator('[data-entry="office"]').click();
+    await expect(start.locator('.vgs-office-grid')).toBeVisible();
+    await checkScroll('Gabinet', width < 500);
+    await choosePatient(frame, 'Antoni');
+    await expect(frame.locator('#vhomePatientOverview .vhome-native-patient-card')).toBeVisible();
+    await checkScroll('Przegląd', false, patientBack);
+    await analysis.click();
+    await expect(analysis).toHaveAttribute('aria-selected', 'true');
+    await checkScroll('Analiza', true, width > 991 ? patientBack.or(analysis) : patientBack);
+    if (width < 500) {
+      const stickyHeight = await frame.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop));
+      expect(stickyHeight).toBeGreaterThan(40);
+      expect(stickyHeight, 'Na telefonie pozostaje miejsce na pomiary').toBeLessThan(100);
+    }
+    await patientBack.click();
+    await entryBack.click();
+    await expect(start.locator('[data-entry="office"]')).toBeVisible();
+    await expectAnchored('Powrót na ekran startowy');
+  }
+
+  // Reuse the same fictional account and patients on the standalone entry.
+  // A restored selection may already show the patient instead of the picker.
+  for (const { width, height } of [{ width: 1440, height: 600 }, { width: 390, height: 480 }]) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/index.html', { waitUntil: 'load' });
+    await readyForPatient(page);
+    const header = page.locator('#vhomeGabinetHeader');
+    if (!await header.isVisible()) await choosePatient(page, 'Antoni');
+    else await expect(header).toContainText('Antoni');
+    const analysisTab = page.locator('#vhomeGabinetAnalysisTab');
+    await analysisTab.click();
+    await expect(analysisTab).toHaveAttribute('aria-selected', 'true');
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    const leading = width > 991 ? '.chrome-brand-logo' : '[data-vilda-chrome-menu-btn]';
+    const controls = page.locator('.chrome-strip').locator(leading + ', #vildaHeaderSearchBtn, #vildaRemindersBtn');
+    const breadcrumb = header.locator('[data-start]');
+    await expect(controls).toHaveCount(3);
+    const globalBefore = await hitTestPositions(controls);
+    const crumbBefore = await hitTestPositions(breadcrumb);
+    expect(globalBefore.every(box => box.visible)).toBe(true);
+    expect(crumbBefore.every(box => box.visible)).toBe(true);
+    await scrollToVisibleFooter(page, 'Samodzielna Analiza ' + width + '×' + height, true);
+    await expect.poll(() => hitTestPositions(controls), { message: 'Samodzielny globalny nagłówek x/y i hit-test' })
+      .toEqual(globalBefore);
+    await expect.poll(() => hitTestPositions(breadcrumb), { message: 'Samodzielna ścieżka nawigacji x/y i hit-test' })
+      .toEqual(crumbBefore);
+    const heightField = page.locator('#height');
+    await heightField.evaluate(node => node.scrollIntoView({ block: 'start', behavior: 'instant' }));
+    await expect.poll(() => hitTestPositions(heightField)).toEqual([expect.objectContaining({ visible: true })]);
+  }
+});
+
 test('Gabinet A keeps its navigation fixed and opens the chosen patient record', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const reminderTitle = 'Fikcyjne przypomnienie o wynikach';

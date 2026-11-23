@@ -1,9 +1,26 @@
 /* Shared header for the two tabs. Native form nodes stay in their original
  * container so the clinical, persistence and chart owners keep their identity. */
 html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
+html:not(.vilda-embedded):has(.main-content[data-vhome-screen]) {
+  --gb-brand-bottom: var(--chrome-layout-header-height,calc(var(--vilda-safe-top) + var(--chrome-strip-height) + var(--border-hairline)));
+}
+html:not(.vilda-embedded):has(.main-content[data-vhome-screen]) > body.liquid-ios26 {
+  padding-top: var(--gb-brand-bottom);
+}
+html:not(.vilda-embedded):has(.main-content[data-vhome-screen]) > body > header {
+  position: fixed !important;
+  top: var(--vilda-safe-top) !important;
+  inset-inline: var(--vilda-safe-left) var(--vilda-safe-right);
+}
+@media (min-width: 992px) {
+  html:not(.vilda-embedded,.vilda-phone):has(.main-content[data-vhome-screen]) body.vilda-header-menu .chrome-chips {
+    right: var(--space-16px);
+  }
+}
 [data-vhome-screen="history"] #vhomePatientOverview,
 [data-vhome-screen] #vhomeGabinet[hidden],
 #vhomeGabinet [hidden],
+#gbWorkspaceHeader [hidden],
 [data-vhome-screen]:not([data-vhome-screen="analysis"],[data-vhome-screen="rapid"]) > #vhomeGabinetAnalysis,
 [data-vhome-screen] .vhome-visit-heading,
 [data-vhome-screen] #vhomeAnalysisHeading,
@@ -11,16 +28,37 @@ html:has([data-vhome-screen]) { scrollbar-gutter: stable; }
 
 #vildaLoadChoiceModal[hidden] { display: none !important; }
 
-#vhomeGabinet { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
+#vhomeGabinet, #gbWorkspaceHeader { color: #23444c; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; min-width: 0; }
 #vhomeGabinetHeader, #vhomePatientOverview, #vhomeVisitHistory { width: 100%; min-width: 0; box-sizing: border-box; }
 .main-content[data-vhome-screen] {
   --gb-inset-start: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-left,0px) + .35rem));
   --gb-inset-end: max(var(--mobile-dock-side-gap,.75rem),calc(env(safe-area-inset-right,0px) + .35rem));
 }
 [data-vhome-screen]:not([data-vhome-screen="start"]) > #vhomeGabinet,
-[data-vhome-screen] > #gbEntryHeader {
+[data-vhome-screen] > #gbWorkspaceHeader {
   box-sizing: border-box;
   padding-inline: var(--gb-inset-start) var(--gb-inset-end);
+}
+#gbWorkspaceHeader { display: flow-root; }
+html.vilda-fixed-gabinet-header {
+  --gb-workspace-top: calc(var(--gb-brand-bottom,0px) + var(--chrome-form-gap,12px));
+  scroll-padding-top: calc(var(--gb-workspace-top) + var(--gb-workspace-header-height));
+  overscroll-behavior-y: none;
+}
+html.vilda-fixed-gabinet-header [data-vhome-screen] > #gbWorkspaceHeader {
+  position: fixed;
+  top: var(--gb-workspace-top);
+  left: var(--gb-workspace-left);
+  width: var(--gb-workspace-width);
+  z-index: var(--z-dropdown);
+  background: var(--vhome-workspace-background,var(--bg));
+  box-shadow: 0 calc(-1 * var(--chrome-form-gap,12px)) var(--vhome-workspace-background,var(--bg));
+}
+/* Keep content in flow even though the navigation belongs to the viewport. */
+html.vilda-fixed-gabinet-header .main-content[data-vhome-screen]::before {
+  content: '';
+  display: block;
+  block-size: calc(var(--gb-workspace-header-height) + var(--gb-compact-trail-gap,0px));
 }
 @media (min-width: 992px) {
   html.vilda-form-layout:not(.vilda-embedded):not(.vilda-shell-embedded):not(.vilda-phone) .main-content[data-vhome-screen] {
@@ -41,9 +79,8 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 }
 [data-vhome-screen] :is(#calcForm, #vhomeMainCards) { gap: var(--space-12px); }
 [data-vhome-screen] :is(#vhomeMainCards, #vhomeVisitComparison, #vhomeOtherTools) { margin-block: var(--space-12px); }
-#gbEntryHeader[hidden] { display: none !important; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) { font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
-#vhomeGabinetHeader { margin-bottom: 1.15rem; }
+#vhomeGabinetHeader { --gb-patient-header-end: 1.15rem; margin-bottom: var(--gb-patient-header-end); }
 #vhomeGabinetHeader :is(.gb-header-top,.gb-person-line,.gb-patient-tabs,button),
 :is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb { display: flex; align-items: center; }
 :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) {
@@ -170,7 +207,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   .vvisit-dialog.vvisit-gabinet .vvisit-list .vvisit-visit { transition: none !important; }
 }
 @media (max-width: 640px) {
-  #vhomeGabinetHeader { margin-bottom: var(--space-0-85); }
+  #vhomeGabinetHeader { --gb-patient-header-end: var(--space-0-85); }
   :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { margin-bottom: var(--space-0-35); }
   #vhomeGabinetHeader .gb-person-line { gap: var(--space-0-7); }
   #vhomeGabinetHeader .gb-identity-meta { font-size: .875rem; }
@@ -181,6 +218,37 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   #vhomeGabinetHeader .gb-patient-tabs { gap: 0; }
   #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; padding-inline: var(--space-0-35); }
   #vhomeGabinetHeader [data-visit-actions] { padding-inline: var(--space-4px); gap: var(--space-4px); font-size: .93rem; }
+}
+/* Keep the breadcrumb and visit state visible in a compact pane while the
+ * rest of the patient header uses the original order and scrolls normally. */
+@media (max-width: 640px), (max-height: 500px) {
+  [data-vhome-screen]:has(> #gbWorkspaceHeader > #vhomeGabinetHeader:not([hidden])) {
+    --gb-compact-trail-gap: var(--space-0-55);
+  }
+  [data-vhome-screen] #gbWorkspaceHeader:has(> #vhomeGabinetHeader:not([hidden])),
+  [data-vhome-screen] #vhomeGabinetHeader:not([hidden]) { display: contents; }
+  [data-vhome-screen] #vhomeGabinetHeader > .gb-header-top {
+    box-sizing: border-box;
+    padding-inline: var(--gb-inset-start) var(--gb-inset-end);
+  }
+  html.vilda-fixed-gabinet-header [data-vhome-screen] #vhomeGabinetHeader > .gb-header-top {
+    position: fixed;
+    top: var(--gb-workspace-top);
+    left: var(--gb-workspace-left);
+    width: var(--gb-workspace-width);
+    z-index: var(--z-dropdown);
+    background: var(--vhome-workspace-background,var(--bg));
+    box-shadow: 0 calc(-1 * var(--chrome-form-gap,12px)) var(--vhome-workspace-background,var(--bg));
+  }
+  [data-vhome-screen] #vhomeGabinetHeader > :is(.gb-person-line,.gb-patient-nav) {
+    margin-inline: var(--gb-inset-start) var(--gb-inset-end);
+  }
+  [data-vhome-screen] #vhomeGabinetHeader > .gb-patient-nav { margin-bottom: var(--gb-patient-header-end); }
+}
+@media (max-width: 640px) {
+  [data-vhome-screen]:has(> #gbWorkspaceHeader > #vhomeGabinetHeader:not([hidden])) {
+    --gb-compact-trail-gap: var(--space-0-35);
+  }
 }
 @media (max-width: 380px) {
   #vhomeGabinetHeader .gb-card-actions button { min-height: 3.6rem; }

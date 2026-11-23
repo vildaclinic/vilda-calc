@@ -1335,7 +1335,7 @@ function Wt(t){
       &&(win.VildaHomeGabinet.showStart()||active.d.querySelector("[data-vhome-screen]")))return;
   }
   P(n,true,r.getAttribute("href"),null,{focusPane:drawer&&wasOpen});
-}function pt(){o.documentElement.classList.add("vilda-shell-host");try{a.history&&"scrollRestoration"in a.history&&(a.history.scrollRestoration="manual")}catch{}J(),o.addEventListener("scroll",function(){j(80)},{passive:!0,capture:!0}),a.addEventListener("pageshow",function(){j(40)});try{o.body&&o.body.classList.remove("js-loading")}catch{}Rt();var t=/^#\//.test(String(a.location.hash||"")),e=t?W():"start";
+}function pt(){o.documentElement.classList.add("vilda-shell-host");if(a.__VILDA_HOME_GABINET_PREVIEW__===true)o.documentElement.classList.add("vilda-gabinet-shell");try{a.history&&"scrollRestoration"in a.history&&(a.history.scrollRestoration="manual")}catch{}J(),o.addEventListener("scroll",function(){j(80)},{passive:!0,capture:!0}),a.addEventListener("pageshow",function(){j(40)});try{o.body&&o.body.classList.remove("js-loading")}catch{}Rt();var t=/^#\//.test(String(a.location.hash||"")),e=t?W():"start";
 if(a.VildaHomeLegacyClinical?.blocked(e,null)){
   e="start";t=false;
   a.setTimeout(function(){a.VildaHomeLegacyClinical.explain()},0);
