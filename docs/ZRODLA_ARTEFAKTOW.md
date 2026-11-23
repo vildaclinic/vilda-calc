@@ -2320,7 +2320,8 @@ Przy źródle Palczewska PDF tworzy osobny przycisk (`generatePalczewskaCentileC
 ```
 // inline_index_07.js
 // 1. Fe (jeden wykres 1–18 lat):  …modelOnly:__modelOnly}){  →  …modelOnly:__modelOnly,pomiaryDziennika:__dz07}){
-// 2. Fe, przed adnotacjami Kreatora: (function(){if(__dz07!==!0||S)return;…Dz.rysujPdf(e,{minX:12,maxX:216,[o]:{px:te+120,
+// 2. Fe, po serii pomiarów, przed blokiem samego wzrostu (o==="height"&&…; adnotacje Kreatora zostają tuż po nim —
+//    pilnuje tests/unit/publication-creator.test.mjs): (function(){if(__dz07!==!0||S)return;…Dz.rysujPdf(e,{minX:12,maxX:216,[o]:{px:te+120,
 //    py:ne+80,pw:Z-220,ph:U-160,minY:F,maxY:R},legend (tylko strona pionowa):{x:Y/2,y:xe-175},current:{ageMonths:ve,
 //    weight:l,height:f},measurements:advancedGrowthData.measurements});Me.dataset.vildaRomby=String(n)})(),
 // 3. ze: destrukturyzacja …,pomiaryDziennika:__dzZ},__lay) i przekazanie do obu wywołań Fe (…layout:__lay,pomiaryDziennika:__dzZ})
