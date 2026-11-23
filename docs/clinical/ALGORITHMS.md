@@ -46187,15 +46187,18 @@ podczas edycji = program zapisany edycją bez zmian; „po” = pole po zapisie)
 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
 względem `origin/audyt` 77cb60dc. Bez nowego pliku ładowanego i bez nowych stylów.
 
-**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; punkty niespójne (np. Genotropin z programem IGF-1):
-edycja ich nie poprawia, a lista preparatów formularza edycji idzie za programem punktu (bez Genotropinu), więc zapis bez
-zmian odmawia — sposób poprawki to osobna decyzja (np. program edytowalny przy edycji albo lista preparatów wg leku
-punktu); punkt bez programu, przed którym w kursie nie ma programu rodzaju preparatu z formularza edycji (pkt 3 —
-program Włączenia: Genotropin z IGF-1 po Włączeniu Increlex, a Increlex wybrany w kursie bez programu IGF-1 — z programem
-Włączenia, np. SNP; monitor nie wymyśla programu), oraz zapas z innego kursu (kurs 2 bez Włączenia i bez programu
-pierwszego punktu — program Włączenia kursu 1); to, że pkt 2 nie patrzy na późniejsze punkty; preparat punktu bez leku
-przy edycji (pierwszy z listy, jak dotąd); rozstrzygnięcia wykonawcy: punkt usunięty w trakcie edycji (pole — program
-bieżący) i formularz wsteczny w trakcie edycji (program i lek bieżący kursu).
+**Decyzje właściciela (2026-11-23, po PR).** „akceptuję 3-5, punkty 1 - nie ma takiego przypadku do tej pory w aplikacji
+więc można o nim zapomnieć, punt 2 odłóż.”
+- zaakceptowane: zapas z innego kursu (kurs 2 bez Włączenia i bez programu pierwszego punktu — program Włączenia kursu 1,
+  jak dotąd); preparat punktu bez leku przy edycji (pierwszy z listy, jak dotąd); punkt usunięty w trakcie edycji — pole
+  pokazuje program bieżący (rozstrzygnięcie wykonawcy);
+- zamknięte bez zmian: punkty niespójne (np. Genotropin z programem IGF-1 — edycja ich nie poprawia, a lista preparatów
+  formularza edycji idzie za programem punktu, więc zapis bez zmian odmawia) — takich zapisów w aplikacji dotąd nie ma;
+- odłożone: punkt bez programu, przed którym w kursie nie ma programu rodzaju preparatu z formularza edycji (pkt 3 —
+  program Włączenia, np. Increlex wybrany w kursie bez programu IGF-1 — z programem SNP; monitor nie wymyśla programu).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku (przy scaleniu); to, że pkt 2 nie patrzy na późniejsze
+punkty; formularz wsteczny w trakcie edycji — program i lek bieżący kursu (rozstrzygnięcie wykonawcy).
 
 ## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.568, `vilda_vault.js` 283, 2026-11-20)
 
