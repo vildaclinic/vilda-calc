@@ -216,6 +216,16 @@ test.describe('touch footer navigation', () => {
       // Check the tile at the viewport edge where the old FAB covered it.
       // The outer hit-test also detects controls painted above a same-origin iframe.
       await lastTool.evaluate(node => node.scrollIntoView({ block: 'end', behavior: 'instant' }));
+      const visibleBottom = await page.evaluate(() => {
+        const dock = document.getElementById('mobileBottomDock');
+        const box = dock?.getBoundingClientRect();
+        return (box?.height && box.top > 0 && box.top < innerHeight ? box.top : innerHeight) - 8;
+      });
+      const frameTop = standalone ? 0 : (await page.locator('iframe.app-pane[title="Start"]').boundingBox()).y;
+      // Respect the visible dock without hiding it: the old FAB sat above this edge.
+      await lastTool.evaluate((node, bottom) => window.scrollBy({
+        top: Math.max(0, node.getBoundingClientRect().bottom - bottom), behavior: 'instant',
+      }), visibleBottom - frameTop);
       await expect.poll(() => lastTool.evaluate(node => {
         const { left, right, top, bottom } = node.getBoundingClientRect();
         return [left + 12, (left + right) / 2, right - 12].flatMap(x =>
