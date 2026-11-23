@@ -106,12 +106,16 @@ function ghKursProgramu(Gwk) {
      leku — program (/^IGF/); bez leku i programu w calym kursie — rhGH.
    - Program: program ostatniego punktu; gdy pusty — ostatni wczesniejszy program tego samego rodzaju (IGF… przy Increlexie,
      inny przy rhGH); brak — program jak dotad (Wlaczenie kursu, pierwszy punkt listy, a bez nich pole bez zmiany).
+   - Lek biezacy: lek ostatniego punktu; gdy pusty — ostatni wczesniejszy lek tego samego rodzaju (jak Karta).
    Kurs jednym programem — wynik jak dotad. Edycja punktu (x != null) — bez zmian: pole jak dotad (O i F, kurs edytowanego
-   punktu — ghKursProgramu). Lista preparatow karty (#therDrug) idzie za programem pola (poza edycja): gdy wybrany preparat
-   nie nalezy do programu (R — preparaty programu, jak w edycji i punkcie wstecznym; np. lista innego programu po wczytaniu
-   pacjenta), karta przelicza liste jak po zmianie programu (zdarzenie change pola: lista i preparat domyslny programu, dawka
-   i podpowiedzi — gh_igf_therapy.js), a gdy na nowej liscie jest preparat biezacy kursu — wybiera go (zdarzenie change
-   preparatu, jak przy zmianie preparatu). Wybrany preparat, ktory nalezy do programu, zostaje bez zmian (jak dotad). */
+   punktu — ghKursProgramu). Lista preparatow karty (#therDrug) idzie za programem pola (poza edycja) tylko wtedy, gdy
+   wybrany preparat nie nalezy do programu (R — preparaty programu, jak w edycji i punkcie wstecznym; np. lista innego
+   programu po wczytaniu pacjenta) ORAZ program pola zgadza sie z rodzajem biezacego preparatu (IGF… przy Increlexie, inny
+   przy rhGH): karta przelicza liste jak po zmianie programu (zdarzenie change pola: lista i preparat domyslny programu,
+   dawka zalecana, podpowiedzi — gh_igf_therapy.js), a gdy na nowej liscie jest lek biezacy — wybiera go (zdarzenie change
+   preparatu, jak przy zmianie preparatu). Reczna date kontroli i wlasna liczbe dni, ktore te zdarzenia czyszcza, karta
+   dostaje z powrotem (restoreState karty, bez zdarzen). Sprzecznosc (np. Genotropin z programem IGF-1, rhGH bez programu
+   po Wlaczeniu IGF-1) i preparat nalezacy do programu — bez zdarzen i bez zmiany listy (jak dotad). */
 /** Rodzaj punktu GH: true — Increlex, false — rhGH, null — punkt bez leku i bez programu (jak Gp_rodzajPunktu Karty). */
 function ghRodzajPunktu(pk) {
   if (!pk) return null;
@@ -119,9 +123,10 @@ function ghRodzajPunktu(pk) {
   if (pk.program) return /^IGF/.test(String(pk.program));
   return null;
 }
-/** Program biezacy z punktow kursu wg wieku (ostatni = biezacy preparat): program ostatniego punktu, a gdy pusty —
-    ostatni wczesniejszy program tego samego rodzaju; brak — "". Ta sama regula co Gp_biezacy(punkty).program Karty. */
-function ghProgramBiezacy(punkty) {
+/** Stan biezacy z punktow kursu wg wieku (ostatni = biezacy preparat) — ta sama regula co Gp_biezacy Karty:
+    { lek, program, increlex } — rodzaj z ostatniego punktu z lekiem albo programem; lek i program ostatniego punktu,
+    a gdy pusty — ostatni wczesniejszy tego samego rodzaju; brak — "". */
+function ghBiezacy(punkty) {
   const lista = Array.isArray(punkty)
     ? punkty.filter((pk) => pk && (pk.type === "start" || pk.type === "continue" || pk.type === "end"))
     : [];
@@ -130,13 +135,23 @@ function ghProgramBiezacy(punkty) {
     const r = ghRodzajPunktu(lista[j]);
     if (r !== null) { increlex = r; break; }
   }
-  const ost = lista[lista.length - 1];
-  if (ost && ost.program) return String(ost.program);
-  for (let j = lista.length - 1; j >= 0; j--) {
-    const w = lista[j].program;
-    if (w && /^IGF/.test(String(w)) === increlex) return String(w);
-  }
-  return "";
+  const ost = lista[lista.length - 1] || null;
+  const zgodny = (pole, wzor) => {
+    for (let j = lista.length - 1; j >= 0; j--) {
+      const w = lista[j][pole];
+      if (w && wzor.test(String(w)) === increlex) return String(w);
+    }
+    return "";
+  };
+  return {
+    lek: ost && ost.drug ? String(ost.drug) : zgodny("drug", /^Increlex/),
+    program: ost && ost.program ? String(ost.program) : zgodny("program", /^IGF/),
+    increlex
+  };
+}
+/** Program biezacy (ghBiezacy(punkty).program); brak — "". */
+function ghProgramBiezacy(punkty) {
+  return ghBiezacy(punkty).program;
 }
 /** Punkty biezacego kursu wg wieku: kilka kursow — ostatni kurs (ghKursy); jeden kurs albo brak modulu kursow — cala
     lista (lista = Gpo()) wg wieku, stabilnie (jak Karta: Gw_punktyProgramu). */
@@ -154,26 +169,35 @@ function ghProgramWiersza(Gwk, dotad) {
 function ghProgramPola(Gwk, dotad) {
   return x != null ? dotad : ghProgramWiersza(Gwk, dotad);
 }
-/** Preparat biezacy kursu z listy preparatow programu: lek ostatniego punktu kursu (od konca), ktory jest na liscie. */
-function ghPreparatKursu(punkty, leki) {
-  for (let j = punkty.length - 1; j >= 0; j--) {
-    const d = punkty[j] && punkty[j].drug;
-    if (d && leki.indexOf(String(d)) >= 0) return String(d);
-  }
-  return null;
+/** Reczna data kontroli i wlasna liczba dni karty po zdarzeniach zmiany (u() w gh_igf_therapy.js je czysci): wpisane
+    wczesniej wracaja przez restoreState karty (bez zdarzen); dawka w trybie pola, ktore lekarz wypelnia (kg albo podawana). */
+function ghPrzywrocDateKarty(przed) {
+  const A = typeof window < "u" ? window.vildaGhIgfPersistApi : null;
+  if (!przed || !(przed.manualControlDate || przed.customDays) || !A || typeof A.captureState != "function" || typeof A.restoreState != "function") return;
+  const s = A.captureState();
+  if (!s || (s.manualControlDate === przed.manualControlDate && s.customDays === przed.customDays)) return;
+  const abs = document.getElementById("therDailyDoseAbs");
+  const podawana = !!(abs && abs.dataset && abs.dataset.vildaDawka === "podawana");
+  A.restoreState(Object.assign({}, s, podawana ? { dailyDose: "" } : { dailyDoseAbs: "" },
+    { manualControlDate: przed.manualControlDate, customDays: przed.customDays }));
 }
-/** Lista preparatow karty za programem pola (F, poza edycja): tylko gdy wybrany preparat nie nalezy do programu. */
+/** Lista preparatow karty za programem pola (F, poza edycja): tylko gdy wybrany preparat nie nalezy do programu,
+    a program pola zgadza sie z rodzajem biezacego preparatu kursu. */
 function ghPreparatyKarty(prog, program, Gwk) {
   if (x != null || !prog || !program || prog.value !== program) return;
   const leki = R[program], lek = document.getElementById("therDrug");
   if (!leki || !lek || leki.indexOf(lek.value) >= 0) return;
+  const b = ghBiezacy(ghPunktyBiezacegoKursu(Gwk, Gpo()));
+  if (/^IGF/.test(program) !== b.increlex) return;
   try {
+    const A = typeof window < "u" ? window.vildaGhIgfPersistApi : null;
+    const przed = A && typeof A.captureState == "function" ? A.captureState() : null;
     prog.dispatchEvent(new Event("change", { bubbles: !0 }));
-    const biezacy = ghPreparatKursu(ghPunktyBiezacegoKursu(Gwk, Gpo()), leki);
-    if (biezacy && lek.value !== biezacy && Array.prototype.some.call(lek.options || [], (op) => op.value === biezacy)) {
-      lek.value = biezacy;
+    if (b.lek && lek.value !== b.lek && Array.prototype.some.call(lek.options || [], (op) => op.value === b.lek)) {
+      lek.value = b.lek;
       lek.dispatchEvent(new Event("change", { bubbles: !0 }));
     }
+    ghPrzywrocDateKarty(przed);
   } catch (e) {
     p("Zignorowany błąd pomocniczy w monitorze terapii GH/IGF-1", e);
   }

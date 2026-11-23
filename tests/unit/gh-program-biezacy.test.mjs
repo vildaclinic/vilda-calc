@@ -35,21 +35,26 @@ function oknoKursow() {
   return w;
 }
 
-// Monitor: ghKursyMonitora (kursy i wiersze tabeli) oraz blok P-GH-PROGRAM-BIEZACY (ghRodzajPunktu, ghProgramBiezacy,
-// ghPunktyBiezacegoKursu) — tekst z gh_therapy_monitor.js bez zmian.
+// Monitor: ghKursyMonitora (kursy i wiersze tabeli) oraz blok P-GH-PROGRAM-BIEZACY (ghRodzajPunktu, ghBiezacy,
+// ghProgramBiezacy, ghPunktyBiezacegoKursu) — tekst z gh_therapy_monitor.js bez zmian. Wynik: { lek, program, increlex }.
 function regulaMonitora(okno) {
   const kod = [
     fragment(MONITOR, 'gh_therapy_monitor.js', 'function ghKursyMonitora(lista) {', '/** Wiek punktu jako'),
     fragment(MONITOR, 'gh_therapy_monitor.js', 'function ghRodzajPunktu(pk) {', '/** Wiersz „Program terapeutyczny'),
   ].join('\n');
-  const f = new Function('window', 'p', `${kod}\nreturn { ghKursyMonitora, ghProgramBiezacy, ghPunktyBiezacegoKursu };`)(
+  const f = new Function('window', 'p', `${kod}\nreturn { ghKursyMonitora, ghBiezacy, ghProgramBiezacy, ghPunktyBiezacegoKursu };`)(
     okno, (komunikat, blad) => { throw blad || new Error(komunikat); });
-  return (lista) => f.ghProgramBiezacy(f.ghPunktyBiezacegoKursu(f.ghKursyMonitora(lista), lista));
+  return (lista) => {
+    const punkty = f.ghPunktyBiezacegoKursu(f.ghKursyMonitora(lista), lista);
+    const b = f.ghBiezacy(punkty);
+    expect(f.ghProgramBiezacy(punkty)).toBe(b.program);
+    return b;
+  };
 }
 
 // Karta pacjenta: blok Gw_* (kursy GH, P-GH-WZNOWIENIE) i Gp_* (P-GH-PREPARAT-BIEZACY) z vilda_auth_ui.js.
-// Program podsumowania wl: Gp_biezacy(punkty bieżącego kursu albo cała lista wg wieku) — jak w wl; program trendu Pl:
-// Gp_program(Gw_punktyProgramu(lista)).
+// Stan podsumowania wl: Gp_biezacy(punkty bieżącego kursu albo cała lista wg wieku) — { lek, program, increlex }, jak w wl;
+// program trendu Pl: Gp_program(Gw_punktyProgramu(lista)).
 function regulaKarty(okno) {
   const kod = fragment(AUTH, 'vilda_auth_ui.js', 'function Gw_kursy(t) {', '/* P-KARTA-LECZENIE, etap 1 (decyzje');
   const f = new Function('i', `${kod}\nreturn { Gw_biezacy, Gw_punktyProgramu, Gp_biezacy, Gp_program };`)(okno);
@@ -58,7 +63,7 @@ function regulaKarty(okno) {
       const a = lista.filter((S) => S && (S.type === 'start' || S.type === 'continue' || S.type === 'end'));
       const n = a.slice().sort((S, D) => (S.ageYears || 0) * 12 + (S.ageMonths || 0) - ((D.ageYears || 0) * 12 + (D.ageMonths || 0)));
       const Gw = f.Gw_biezacy(a);
-      return f.Gp_biezacy(Gw ? Gw.kurs.punkty : n).program;
+      return f.Gp_biezacy(Gw ? Gw.kurs.punkty : n);
     },
     Pl: (lista) => f.Gp_program(f.Gw_punktyProgramu(lista)),
   };
@@ -113,17 +118,28 @@ describe('P-GH-PROGRAM-BIEZACY — jedna reguła programu bieżącego: monitor D
   const monitor = regulaMonitora(okno);
   const karta = regulaKarty(okno);
   it.each(Object.entries(PRZYPADKI))('%s', (_n, [lista, oczekiwany]) => {
-    expect(monitor(lista)).toBe(oczekiwany);
-    expect(karta.wl(lista)).toBe(oczekiwany);
+    // Program, lek bieżący i rodzaj (Increlex czy rhGH) — monitor = Karta (wl); program trendu (Pl) — ten sam.
+    expect(monitor(lista).program).toBe(oczekiwany);
+    expect(monitor(lista)).toEqual(karta.wl(lista));
     expect(karta.Pl(lista)).toBe(oczekiwany);
+  });
+  it('lek bieżący i rodzaj (wartości z kodu): I→G, G→I, niespójny punkt, luki A i B, cały kurs IGF-1, wznowienie', () => {
+    const m = (n) => monitor(PRZYPADKI[n][0]);
+    expect(m('I→G')).toEqual({ lek: GEN, program: 'SNP', increlex: false });
+    expect(m('G→I')).toEqual({ lek: INC, program: 'IGF-1', increlex: true });
+    expect(m('niespójny punkt (Genotropin z programem IGF-1)')).toEqual({ lek: GEN, program: 'IGF-1', increlex: false });
+    expect(m('luka A: Kontynuacje bez leku z programem SNP')).toEqual({ lek: '', program: 'SNP', increlex: false });
+    expect(m('luka B: Kontynuacje Genotropin bez programu')).toEqual({ lek: GEN, program: '', increlex: false });
+    expect(m('cały kurs IGF-1')).toEqual({ lek: INC, program: 'IGF-1', increlex: true });
+    expect(m('wznowienie (kurs 1 Increlex, kurs 2 Genotropin)')).toEqual({ lek: GEN, program: 'SNP', increlex: false });
   });
   it('bez modułu kursów: monitor bierze całą listę wg wieku, jak Karta (Gw_kursy bez modułu)', () => {
     const goly = {};
     const m = regulaMonitora(goly);
     const k = regulaKarty(goly);
-    for (const [lista] of Object.values(PRZYPADKI)) expect(m(lista)).toBe(k.wl(lista));
-    expect(m(WZNOWIENIE)).toBe('SNP');
-    expect(m(I_DO_G)).toBe('SNP');
+    for (const [lista] of Object.values(PRZYPADKI)) expect(m(lista)).toEqual(k.wl(lista));
+    expect(m(WZNOWIENIE).program).toBe('SNP');
+    expect(m(I_DO_G).program).toBe('SNP');
   });
 });
 
@@ -150,6 +166,9 @@ const wierszProgramu = (a) => {
   return tr ? tr.textContent : null;
 };
 const pole = (a) => ({ program: a.pole('therProg').value, zablokowane: a.pole('therProg').disabled, wiersz: wierszProgramu(a) });
+// Karta: preparat, lista preparatów i pola dawki (atrapa nie ma skryptu karty — zmienia je tylko monitor).
+const kartaGh = (a) => ({ lek: a.pole('therDrug').value, leki: a.pole('therDrug').options.map((o) => o.value),
+  dawka: a.pole('therDailyDose').value, podawana: a.pole('therDailyDoseAbs').value });
 const karta = (lata, mies) => ({ age: String(lata), ageMonths: String(mies), weight: String(18 + 2 * (lata - 7)), height: String(110 + 5 * (lata - 7)) });
 const ostatni = (a) => a.stan().okno.at(-1);
 const odswiez = (a) => { a.zdarzeniaKarty.length = 0; a.win.refreshGHTherapyMonitor(); };
@@ -194,10 +213,12 @@ describe('P-GH-PROGRAM-BIEZACY — monitor DocPro: pole, wiersz programu, nowy p
     expect(b.pole('therDrug').value).toBe('Omnitrope 10 mg');
   });
 
-  it('kurs jednym programem (SNP, IGF-1), wznowienie, luka B, bez Włączenia: pole i wiersz identyczne jak dotąd', () => {
+  it('kurs jednym programem (SNP, IGF-1), wznowienie, luka B, bez Włączenia: pole, wiersz i tabela identyczne jak dotąd; karta (preparat, lista, dawka) — jak dotąd poza listą rhGH przy programie IGF-1', () => {
     const listy = { CALY_SNP, CALY_IGF, WZNOWIENIE, lukaB: PRZYPADKI['luka B: Kontynuacje Genotropin bez programu'][0],
       bezWlaczenia: CALY_SNP.slice(1), wznowienieOdwrotne: PRZYPADKI['wznowienie odwrotne (kurs 2 Increlex)'][0] };
     const oczekiwane = { CALY_SNP: 'SNP', CALY_IGF: 'IGF-1', WZNOWIENIE: 'SNP', lukaB: 'IGF-1', bezWlaczenia: 'SNP', wznowienieOdwrotne: 'IGF-1' };
+    // Przy programie IGF-1 i bieżącym Increlexie karta z preparatem rhGH (domyślnie Omnitrope 10 mg) przechodzi na Increlex.
+    const lekTeraz = { CALY_IGF: INC, wznowienieOdwrotne: INC };
     for (const [n, lista] of Object.entries(listy)) {
       const a = atrapa(lista);
       const b = dotad(lista);
@@ -205,12 +226,72 @@ describe('P-GH-PROGRAM-BIEZACY — monitor DocPro: pole, wiersz programu, nowy p
       expect(pole(a).program, n).toBe(oczekiwane[n]);
       // Tabela (wiersze, separatory kursów, zmiana preparatu) bez zmian.
       expect(a.pole('ghTherapyTbody').textContent, n).toBe(b.pole('ghTherapyTbody').textContent);
+      // Karta: lista i dawka bez zmian (atrapa); preparat — jak dotąd albo Increlex przy programie IGF-1.
+      expect(kartaGh(a), n).toEqual({ ...kartaGh(b), lek: lekTeraz[n] || kartaGh(b).lek });
+      expect(kartaGh(b).lek, n).toBe('Omnitrope 10 mg');
+      // Kolejne odświeżenie: bez zdarzeń karty po obu stronach.
+      odswiez(a);
+      odswiez(b);
+      expect(a.zdarzeniaKarty, n).toEqual([]);
+      expect(b.zdarzeniaKarty, n).toEqual([]);
+      // Luka B przy karcie z Genotropinem (lek bieżący): bez zdarzeń i bez zmiany karty (program pola IGF-1 — zapas).
+      if (n === 'lukaB') {
+        a.ustaw('therDrug', GEN);
+        b.ustaw('therDrug', GEN);
+        odswiez(a);
+        odswiez(b);
+        expect(a.zdarzeniaKarty).toEqual([]);
+        expect(kartaGh(a)).toEqual(kartaGh(b));
+        expect(kartaGh(a).lek).toBe(GEN);
+      }
     }
-    // Preparat karty z programu SNP (Omnitrope 10 mg) zostaje; przy programie IGF-1 lista idzie za polem (dotąd zostawał
-    // preparat rhGH przy programie IGF-1).
-    expect(atrapa(CALY_SNP).pole('therDrug').value).toBe('Omnitrope 10 mg');
-    expect(atrapa(CALY_IGF).pole('therDrug').value).toBe(INC);
-    expect(dotad(CALY_IGF).pole('therDrug').value).toBe('Omnitrope 10 mg');
+  });
+
+  // S1–S3 (przegląd 2026-11-23): bieżący preparat rhGH, a program pola IGF-1 — z zapisu z programem IGF-1 przy Genotropinie
+  // (S1, np. sprzed tej zmiany), z edycji ostatniej Kontynuacji (S2, pytanie 17) albo z zapasu przy luce w programie (S3).
+  // Program pola i rodzaj preparatu sobie przeczą: lista preparatów karty bez przeliczania i bez zdarzeń — jak dotąd.
+  const S1 = [P('s1-w', 'start', 7, 0, INC, 'IGF-1'), P('s1-k1', 'continue', 7, 6, GEN, 'IGF-1'), P('s1-k2', 'continue', 8, 0, GEN, 'IGF-1')];
+  const S3 = PRZYPADKI['luka B: Kontynuacje Genotropin bez programu'][0];
+  it.each([['S1 Genotropin z programem IGF-1', S1, 'IGF-1'], ['S3 luka B (Genotropin bez programu)', S3, 'IGF-1']])(
+    '%s, karta na Genotropin 12 mg: pole %s, karta zostaje przy Genotropin (bez zdarzeń), Kontynuacja z karty jak dotąd', (_n, lista, program) => {
+      const a = atrapa(lista);
+      const b = dotad(lista);
+      for (const m of [a, b]) {
+        m.ustaw('therDrug', GEN);
+        odswiez(m);
+        expect(m.zdarzeniaKarty).toEqual([]);
+      }
+      expect(pole(a)).toEqual({ program, zablokowane: true, wiersz: `Program terapeutyczny: ${program}` });
+      expect(pole(a)).toEqual(pole(b));
+      expect(kartaGh(a)).toEqual(kartaGh(b));
+      expect(kartaGh(a).lek).toBe(GEN);
+      a.dodajZKarty('continue', karta(8, 6));
+      b.dodajZKarty('continue', karta(8, 6));
+      expect(a.zdarzeniaKarty).toEqual([]);
+      expect(ostatni(a)).toEqual(ostatni(b));
+      expect(ostatni(a)).toMatchObject({ type: 'continue', ageYears: 8, ageMonths: 6, drug: GEN, program });
+      expect(kartaGh(a).lek).toBe(GEN);
+    });
+
+  it('S2 I→G, karta na Genotropin 12 mg: edycja ostatniej Kontynuacji zapisana bez zmian (program IGF-1 — pytanie 17) — karta zostaje przy Genotropin, Kontynuacja z karty jak dotąd', () => {
+    const a = atrapa(I_DO_G);
+    const b = dotad(I_DO_G);
+    for (const m of [a, b]) {
+      m.ustaw('therDrug', GEN);
+      odswiez(m);
+      m.edytuj('ig-k2', {}, 'continue');
+      expect(m.stan().komunikat).toBeNull();
+      expect(m.stan().okno[2]).toMatchObject({ id: 'ig-k2', drug: GEN, program: 'IGF-1' });
+      expect(m.zdarzeniaKarty).toEqual([]);
+    }
+    expect(pole(a)).toEqual({ program: 'IGF-1', zablokowane: true, wiersz: 'Program terapeutyczny: IGF-1' });
+    expect(pole(a)).toEqual(pole(b));
+    expect(kartaGh(a)).toEqual(kartaGh(b));
+    expect(kartaGh(a).lek).toBe(GEN);
+    a.dodajZKarty('continue', karta(8, 6));
+    b.dodajZKarty('continue', karta(8, 6));
+    expect(ostatni(a)).toEqual(ostatni(b));
+    expect(ostatni(a)).toMatchObject({ drug: GEN, program: 'IGF-1' });
   });
 
   it('bez modułu kursów: I→G — SNP (cała lista wg wieku)', () => {
