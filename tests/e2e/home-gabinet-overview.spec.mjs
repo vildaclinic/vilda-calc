@@ -1065,7 +1065,7 @@ test('a mobile reminder added to an existing plan retains the active visit and i
   await header.getByRole('tab', {name:'Przegląd', exact:true}).click();
   await frame.locator('#vhomePatientOverview select.vhome-b1-mobile-select').selectOption('reminders');
   await frame.locator('#vhomePatientRemindersSlot').getByRole('button', {name:'Dodaj przypomnienie', exact:true}).click();
-  const dialog = frame.locator('dialog.vhome-reminders-dialog');
+  const dialog = page.locator('dialog.vhome-reminders-dialog');
   await dialog.getByLabel('Plan opieki (opcjonalnie)', {exact:true}).selectOption(plan.planId);
   const title = 'Fikcyjne przypomnienie planu z otwartej wizyty';
   await dialog.getByLabel('Treść przypomnienia', {exact:true}).fill(title);
@@ -1078,6 +1078,7 @@ test('a mobile reminder added to an existing plan retains the active visit and i
     ]);
     return {note:notes.find(note => note.title === title), plan, visit:visits.find(row => row.visitId === visitId)};
   }, {patientId:ids.a, title, planId:plan.planId, visitId:visit.visitId});
+  await expect.poll(async () => !!(await read()).note, {message:'Przypomnienie wybranego planu zostało zapisane'}).toBe(true);
   await expect.poll(async () => (await read()).note?.visitContext).toEqual(origin);
   const saved = await read();
   expect(saved.note).toMatchObject({patientId:ids.a, dueDateISO, careContext:{planId:plan.planId}, visitContext:origin});

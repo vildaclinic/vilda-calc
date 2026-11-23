@@ -31,7 +31,12 @@ describe('shell authorizes the actual restored document on handoff', () => {
     const visitContext = {version: 1, visitId: '06a12f42-b3dc-4cac-9d4a-bd54727489a0', clinicalDateISO: '2026-11-20'};
     home.VildaHomeGabinet = {captureDocumentationBinding: (id, options) =>
       id === patientId && options.isCurrent() ? {visitContext, isCurrent: options.isCurrent} : {blocked: true}};
+    const dialogBinding = p.shell.captureActiveHomeDocumentationBinding(patientId);
+    expect(dialogBinding?.visitContext).toEqual(visitContext);
+    expect(dialogBinding.isCurrent()).toBe(true);
     p.shell.navigate('lab');
+    expect(dialogBinding.isCurrent()).toBe(false);
+    expect(p.shell.captureActiveHomeDocumentationBinding(patientId)).toBeNull();
     const frame = p.load('lab'), lab = frame.contentWindow;
     frame.isConnected = true;
     lab.VildaVault = vault();

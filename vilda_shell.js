@@ -733,6 +733,12 @@ function Sm_captureDocumentationBinding(win,patientId){
     return gabinet.captureDocumentationBinding(patientId,{isCurrent,sourceWindow:c==="docpro"?win:null});
   }catch{return Sm_blockedDocumentation}
 }
+// Shell-hosted patient dialogs write through the active Start document.
+function Sm_captureActiveHomeDocumentationBinding(patientId){
+  if(c!=="start")return null;
+  try{return Sm_captureDocumentationBinding(l.start?.frame?.contentWindow,patientId)}
+  catch{return Sm_blockedDocumentation}
+}
 // Presentation only: the DocPro adapter independently asks the existing native
 // writer boundary about the visible document whenever encounter/pane state moves.
 function Sm_refreshDocproVisitAccess(){
@@ -1386,4 +1392,4 @@ function Ut(){
     b=null;Sn_homeReturn=null;Sn_forgetDirectory();
   }
   return b||null;
-}a.VildaShell={captureHomeVisitWriter:Sm_captureVisitWriter,captureDocumentationBinding:Sm_captureDocumentationBinding,getSidebarPresentation:Sp_presentation,canClearLockedSessionIdentity:Sw_identityCleanup,captureSessionWriter:Sw_capture,isSessionWriterCurrent:Sw_current,captureSessionWriterMessage:Sw_message,isSessionWriterMessageCurrent:Sw_messageCurrent,navigate:P,getCurrentRoute:function(){return c},returnFromSearchCalendar:Sn_returnFromSearchCalendar,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,removeUserWaiting:Bkr_czekanieUsuwania,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,claimHomeDirectory:Sn_claimHomeDirectory,hasHomePatientNavigation:Sn_hasHomeNavigation,openHomePatient:function(id,options){return Sn_homePatient("card",id,options)},openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);
+}a.VildaShell={captureHomeVisitWriter:Sm_captureVisitWriter,captureDocumentationBinding:Sm_captureDocumentationBinding,captureActiveHomeDocumentationBinding:Sm_captureActiveHomeDocumentationBinding,getSidebarPresentation:Sp_presentation,canClearLockedSessionIdentity:Sw_identityCleanup,captureSessionWriter:Sw_capture,isSessionWriterCurrent:Sw_current,captureSessionWriterMessage:Sw_message,isSessionWriterMessageCurrent:Sw_messageCurrent,navigate:P,getCurrentRoute:function(){return c},returnFromSearchCalendar:Sn_returnFromSearchCalendar,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,removeUserWaiting:Bkr_czekanieUsuwania,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,claimHomeDirectory:Sn_claimHomeDirectory,hasHomePatientNavigation:Sn_hasHomeNavigation,openHomePatient:function(id,options){return Sn_homePatient("card",id,options)},openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);

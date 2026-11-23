@@ -38,6 +38,8 @@ function declared(base, fragment) {
       'if (binding) return EncounterPlanRun(input,binding,function(){return VisitDocumentCareLock(input,binding,function(){return CareMvpMutate(input)})});'],
     ['new-care-child-origin', '      prepared.set(noteId, Object.assign({}, prepared.get(noteId) || {}, payload, { id: noteId, patientId: request.patientId }));',
       '      const origin = VisitDocumentCareOrigin(request, existing, payload);\n      if (origin) {\n        await VisitDocumentCheckActive(Object.assign({ patientId: request.patientId }, origin), { requireActiveVisit: true }, assertSession);\n        payload = Object.assign({}, payload, origin);\n      }\n      prepared.set(noteId, Object.assign({}, prepared.get(noteId) || {}, payload, { id: noteId, patientId: request.patientId }));'],
+    ['active-start-frame-care-owner', '  const current = v.VildaHomeEncounter && v.VildaHomeEncounter.captureBinding(patientId);\n  if (!current || !binding.isCurrent() || current.visitContext.visitId',
+      '  const current = VisitDocumentCareCurrent(patientId);\n  if (!current || !current.visitContext || typeof current.isCurrent !== \'function\' || !current.isCurrent()\n      || !binding.isCurrent() || current.visitContext.visitId'],
     ['readable-source', '/* BEGIN VILDA PATIENT PROFILE V1 */\n', fragment + '/* BEGIN VILDA PATIENT PROFILE V1 */\n'],
   ];
   const hooks = [];
@@ -52,7 +54,7 @@ function definition(root) {
   const manifest = JSON.parse(readFileSync(resolve(root, MANIFEST), 'utf8')), { source, fragment } = readable(root);
   if (manifest.namespace !== 'vilda-visit-document-vault' || manifest.version !== 1 || manifest.baseVaultSHA256 !== BASE
     || manifest.source !== SOURCE || manifest.sourceSHA256 !== digest(source) || manifest.fragmentSHA256 !== digest(fragment)
-    || !Array.isArray(manifest.hooks) || manifest.hooks.length !== 6) fail('manifest or readable source');
+    || !Array.isArray(manifest.hooks) || manifest.hooks.length !== 7) fail('manifest or readable source');
   for (const hook of manifest.hooks) {
     if (!hook || typeof hook.before !== 'string' || !hook.before || typeof hook.after !== 'string' || !hook.after
       || digest(hook.before) !== hook.beforeSHA256 || digest(hook.after) !== hook.afterSHA256) fail('hook checksum');

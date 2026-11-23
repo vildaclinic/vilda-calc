@@ -11798,8 +11798,9 @@ async function CareMvpLegacyDelete(noteId,expectedRev) {
 const EncounterPlanBindings = new Map();
 function EncounterPlanCheck(binding, patientId) {
   if (!binding) return;
-  const current = v.VildaHomeEncounter && v.VildaHomeEncounter.captureBinding(patientId);
-  if (!current || !binding.isCurrent() || current.visitContext.visitId !== binding.visitContext.visitId
+  const current = VisitDocumentCareCurrent(patientId);
+  if (!current || !current.visitContext || typeof current.isCurrent !== 'function' || !current.isCurrent()
+      || !binding.isCurrent() || current.visitContext.visitId !== binding.visitContext.visitId
       || current.visitContext.clinicalDateISO !== binding.visitContext.clinicalDateISO) throw new Error('Zmieniono wizytę. Otwórz formularz ponownie.');
 }
 async function EncounterPlanRun(request, binding, action) {
@@ -15377,6 +15378,13 @@ function VisitDocumentCareOrigin(request, existing, payload) {
   if (request.action !== 'addStep' || existing.stored || !request.visitContext
       || !payload.careContext || ['step', 'calendar'].indexOf(payload.careContext.role) < 0) return null;
   return EncounterNoteFields(request);
+}
+function VisitDocumentCareCurrent(patientId) {
+  const local = v.VildaHomeEncounter;
+  if (local && typeof local.captureBinding === 'function') return local.captureBinding(patientId);
+  const shell = v.VildaShell;
+  return shell && typeof shell.captureActiveHomeDocumentationBinding === 'function'
+    ? shell.captureActiveHomeDocumentationBinding(patientId) : null;
 }
 function VisitDocumentInstall(api) {
   const save = api.savePatientNoteOnce;

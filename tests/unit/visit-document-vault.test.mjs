@@ -259,6 +259,41 @@ describe('clinical document and visit Trash races across two IndexedDB tabs', ()
 });
 
 describe('new legacy care-plan step documents and their source visit', () => {
+  it('creates a legacy plan and its bound step through the active Start binding supplied by the shell', async () => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v), binding = bindVisit(device, row);
+    delete device.win.VildaHomeEncounter;
+    const capture = vi.fn(patientId => patientId === row.patientId ? binding : null);
+    device.win.VildaShell = { captureActiveHomeDocumentationBinding: capture };
+    const plan = await createLegacyPlan(device.v, row.patientId, binding);
+    expect((await device.v.getPatientNote(plan.id)).visitContext).toEqual(binding.visitContext);
+    const added = await device.v.mutateCarePlan(planCommand(plan, 'addStep', { step: plannedStep() }), binding);
+    expect(added.saved).toBe(true);
+    const { reminder, calendar } = await stepNotes(device.v, await device.v.getCarePlan(plan.id), added.stepId);
+    expect(reminder.visitContext).toEqual(binding.visitContext);
+    expect(calendar.visitContext).toEqual(binding.visitContext);
+    expect(capture).toHaveBeenCalledWith(row.patientId);
+    expect(binding.ensureRecorded).toHaveBeenCalledTimes(2);
+    expect(device.win).not.toHaveProperty('VildaHomeEncounter');
+  });
+
+  it.each(['shell binding is no longer current', 'local capture refuses the binding'])('refuses a shell binding when %s', async scenario => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v);
+    const plan = await createLegacyPlan(device.v, row.patientId);
+    const before = await device.v.listPatientNotesForPatient(row.patientId), binding = bindVisit(device, row);
+    const shellBinding = scenario === 'shell binding is no longer current'
+      ? { ...binding, isCurrent: () => false } : binding;
+    const capture = vi.fn(() => shellBinding);
+    device.win.VildaShell = { captureActiveHomeDocumentationBinding: capture };
+    if (scenario === 'local capture refuses the binding') device.win.VildaHomeEncounter.captureBinding = vi.fn(() => null);
+    else delete device.win.VildaHomeEncounter;
+    await expect(device.v.mutateCarePlan(planCommand(plan, 'addStep', { step: plannedStep() }), binding)).rejects.toThrow();
+    expect(binding.ensureRecorded).not.toHaveBeenCalled();
+    expect(await device.v.listPatientNotesForPatient(row.patientId)).toEqual(before);
+    expect((await device.v.getCarePlan(plan.id)).steps).toEqual([]);
+    if (scenario === 'local capture refuses the binding') expect(capture).not.toHaveBeenCalled();
+    else expect(capture).toHaveBeenCalledWith(row.patientId);
+  });
+
   it.each(['unlinked', 'earlier visit'])('binds both new child documents while preserving the parent origin: %s', async parentOrigin => {
     const device = await urzadzenie(), earlier = await recordedVisit(device.v);
     const earlierBinding = parentOrigin === 'earlier visit' ? bindVisit(device, earlier) : undefined;

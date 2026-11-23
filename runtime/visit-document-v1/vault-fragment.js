@@ -49,6 +49,13 @@ function VisitDocumentCareOrigin(request, existing, payload) {
       || !payload.careContext || ['step', 'calendar'].indexOf(payload.careContext.role) < 0) return null;
   return EncounterNoteFields(request);
 }
+function VisitDocumentCareCurrent(patientId) {
+  const local = v.VildaHomeEncounter;
+  if (local && typeof local.captureBinding === 'function') return local.captureBinding(patientId);
+  const shell = v.VildaShell;
+  return shell && typeof shell.captureActiveHomeDocumentationBinding === 'function'
+    ? shell.captureActiveHomeDocumentationBinding(patientId) : null;
+}
 function VisitDocumentInstall(api) {
   const save = api.savePatientNoteOnce;
   api.savePatientNoteOnce = function (payload, options) {
