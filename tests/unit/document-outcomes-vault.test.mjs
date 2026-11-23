@@ -50,18 +50,17 @@ describe('new compound documents retain the explicitly opened visit',()=>{
     expect(saved.saved).toBe(true);expect(await d.v.getPatientNote(saved.resultNoteId)).not.toHaveProperty('visitContext');
     expect((await d.v.getPatientNote(note.id)).visitContext).toEqual(note.visitContext);
   });
-  it('records through a real public writer before entering the outcome workspace lease',async()=>{
-    const{d,note,row}=await fixture();let mark=d.locks.zadania.length;
+  it('awaits canonical visit recording through a real public writer before creating compound children',async()=>{
+    const{d,note,row}=await fixture(),input=outcome(note);
     const binding={visitContext:{version:1,visitId:row.visitId,clinicalDateISO:row.clinicalDateISO},isCurrent:()=>true,
       ensureRecorded:vi.fn(async()=>{
-        expect(d.locks.zadania.slice(mark).filter(x=>x.nazwa.includes('clinical-workspace'))).toEqual([]);
-        await visit(d.v,row.patientId);return true;
+        await visit(d.v,row.patientId);
+        expect(await d.v.getPatientNote('rem-result-'+input.operationId)).toBeNull();return true;
       })};
     d.win.VildaHomeEncounter={captureBinding:()=>binding};
-    const input=outcome(note),saved=await d.v.saveReminderOutcome(input,binding);
+    const saved=await d.v.saveReminderOutcome(input,binding);
     expect(saved.saved).toBe(true);expect(binding.ensureRecorded).toHaveBeenCalledTimes(1);
     expect(await d.v.getPatientNote(saved.resultNoteId)).toMatchObject({visitContext:binding.visitContext});
-    mark=d.locks.zadania.length;
   });
   it('rejects unavailable or deleted visit before preparing any part of an outcome',async()=>{
     const{d,note,row,binding}=await fixture(),input=outcome(note,{next:{title:'Fikcyjna kontrola',dateISO:'2026-12-02'}});
@@ -77,6 +76,23 @@ describe('new compound documents retain the explicitly opened visit',()=>{
     await expect(d.v.saveReminderOutcome(input,binding)).rejects.toThrow('FICTIONAL_COMMIT_FAILURE');
     expect(await d.v.getPatientNote(note.id)).toEqual(note);expect(await d.v.getPatientNote('rem-result-'+input.operationId)).toBeNull();
     expect(await d.v.getPatientNote('rem-next-'+input.operationId)).toBeNull();
+  });
+  it('rejects an operation retry that would reinterpret the same outcome in another visit',async()=>{
+    const{d,note,row,binding}=await fixture(),input=outcome(note),saved=await d.v.saveReminderOutcome(input,binding);
+    const before=await d.v.getPatientNote(saved.resultNoteId),other=await visit(d.v,row.patientId);
+    expect(await d.v.saveReminderOutcome(input,bind(d,other))).toMatchObject({saved:false,conflict:true,reason:'operation-mismatch'});
+    expect(await d.v.getPatientNote(saved.resultNoteId)).toEqual(before);
+  });
+  it('does not enter the native writer after ownership changes during public visit recording',async()=>{
+    const{d,note,row}=await fixture();let current=true,release,entered;
+    const ready=new Promise(resolve=>{entered=resolve;}),wait=new Promise(resolve=>{release=resolve;});
+    const binding={visitContext:{version:1,visitId:row.visitId,clinicalDateISO:row.clinicalDateISO},isCurrent:()=>current,
+      ensureRecorded:async()=>{entered();return wait;}};
+    d.win.VildaHomeEncounter={captureBinding:()=>binding};
+    const saving=d.v.saveReminderOutcome(outcome(note),binding),rejected=expect(saving).rejects.toThrow(/Zmieniono wizytę/);
+    await ready;current=false;release(true);await rejected;
+    expect(await d.v.getPatientNote(note.id)).toEqual(note);
+    expect((await d.v.listPatientNotesForPatient(row.patientId)).filter(x=>x.id.startsWith('rem-result-'))).toEqual([]);
   });
   it('binds a new care note and result while keeping plan and existing step provenance',async()=>{
     const d=await urzadzenie(),old=await visit(d.v),p=await plan(d,old),parent=await d.v.getPatientNote(p.id);

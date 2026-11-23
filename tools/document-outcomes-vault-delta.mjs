@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
+import { restoreTreatmentDocumentationBaseline } from './treatment-documentation-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = '16c39d32d496738528142158ac57ad87e933538c17d710a4be1e290ed4fe0325';
@@ -62,6 +63,7 @@ export function applyDocumentOutcomesDelta(source,root=ROOT) {
   return result;
 }
 export function restoreDocumentOutcomesBaseline(source,root=ROOT) {
+  source=restoreTreatmentDocumentationBaseline(source,root);
   if(!source.includes(START))return source;
   const manifest=definition(root);
   if(digest(source)!==manifest.integratedVaultSHA256)fail('unexpected integrated image');
@@ -72,6 +74,6 @@ export function restoreDocumentOutcomesBaseline(source,root=ROOT) {
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const args=process.argv.slice(2);
   if(args.length===3&&args[0]==='--rebuild')writeFileSync(resolve(args[2]),applyDocumentOutcomesDelta(readFileSync(resolve(args[1]),'utf8')));
-  else if(!args.length){const source=readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8');if(applyDocumentOutcomesDelta(restoreDocumentOutcomesBaseline(source))!==source)fail('round trip');process.stdout.write('Document outcomes: exact source and native-preserving delta verified.\n');}
+  else if(!args.length){const source=restoreTreatmentDocumentationBaseline(readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8'));if(applyDocumentOutcomesDelta(restoreDocumentOutcomesBaseline(source))!==source)fail('round trip');process.stdout.write('Document outcomes: exact source and native-preserving delta verified.\n');}
   else fail('usage: node tools/document-outcomes-vault-delta.mjs [--rebuild BASE_FILE OUTPUT_FILE]');
 }

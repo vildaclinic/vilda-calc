@@ -10634,7 +10634,7 @@ async function VildaChangeExistingPatientNote(payload, remove, treatmentOptions)
     }
     TreatmentOperationAssert(treatmentCurrent);
   }
-  return Ac(next.id, async function () {
+  return TreatmentDocumentationLock(next, treatmentOptions, remove, function () { return Ac(next.id, async function () {
     assertSession();
     const adapter = I();
     if (typeof adapter.listPatientNoteTombstonesForUser !== "function" ||
@@ -10662,6 +10662,9 @@ async function VildaChangeExistingPatientNote(payload, remove, treatmentOptions)
     // Dispatch plan-owned records only after acquiring this note's original
     // lock and checking its patient, tombstone and exact captured revision.
     const careNote = await Ft(stored); assertSession();
+    if (treatmentOptions && Object.prototype.hasOwnProperty.call(treatmentOptions, 'newTreatmentFollowup')) {
+      await TreatmentDocumentationCheckFollowup(next, careNote, treatmentOptions, assertSession); assertSession();
+    }
     if (careNote.careContext && ['step', 'calendar'].indexOf(careNote.careContext.role) >= 0) {
       if (remove) {
         const handled = await CareMvpLegacyDelete(next.id, next.baseRev); assertSession();
@@ -10682,7 +10685,7 @@ async function VildaChangeExistingPatientNote(payload, remove, treatmentOptions)
     const saved = await Ad(next, guard);
     if (saved.conflict) return Object.assign(result, saved, { reason: "conflict" });
     return Object.assign({}, saved, { isNew: false, updated: true });
-  });
+  }); });
 }
 function VildaUpdateExistingPatientNote(payload, treatmentOptions) {
   return VildaChangeExistingPatientNote(payload, false, treatmentOptions);
@@ -15165,18 +15168,18 @@ function PatientPortableInstallProjection(api) {
       await recordVisit(binding);
       var note = payload(id, next);
       if (binding) note.visitContext = clone(binding.visitContext);
-      var result = await guarded(function () { return vault.savePatientNoteOnce(note, { isCurrent: function () { return checkVisit(binding); } }); });
+      var result = await guarded(function () { return vault.savePatientNoteOnce(note, TreatmentDocumentationCreateOptions(binding, function () { return checkVisit(binding); })); });
       checkVisit(binding);
       if (!result || result.conflict || result.saved === false) throw failure('TREATMENT_CONFLICT', 'Nie zapisano leczenia. Odśwież kartę i sprawdź aktualny zapis.');
       return reread(id, kind);
     }
-    async function update(kind, dto, values, binding) {
+    async function update(kind, dto, values, binding, newFollowup) {
       check(); var original = captured(dto, kind), next = context(kind, values, original.context);
       if (kind === 'therapy') await links(next, original.context); else await read();
       var request = Object.assign(payload(original.id, next), { baseRev: original.rev,
         baseUpdatedAtISO: original.updatedAtISO, baseNote: original.baseNote });
       checkVisit(binding);
-      var result = await guarded(function () { return vault.updateExistingPatientNote(request, { isCurrent: function () { return checkVisit(binding); } }); });
+      var result = await guarded(function () { return vault.updateExistingPatientNote(request, TreatmentDocumentationUpdateOptions(binding, function () { return checkVisit(binding); }, newFollowup)); });
       checkVisit(binding);
       if (!result || result.updated !== true) throw failure('TREATMENT_CONFLICT', 'Zapis zmienił się albo został usunięty. Odśwież kartę przed ponowną edycją.');
       return reread(original.id, kind);
@@ -15194,7 +15197,7 @@ function PatientPortableInstallProjection(api) {
         if (binding) next.visitContext = clone(binding.visitContext);
         entries.push(Object.assign({}, next, { id: newId() }));
       }
-      return update('therapy', original, { followups: entries }, binding);
+      return update('therapy', original, { followups: entries }, binding, !id && binding ? { id: entries[entries.length - 1].id, visitContext: entries[entries.length - 1].visitContext } : null);
     }
     return Object.freeze({
       read: read,
@@ -16047,6 +16050,74 @@ function ProfileTrashNotify(change) {
   if (change.profile) qr({ id: change.profile.note.id, patientId: change.patientId, action: 'save' });
 }
 /* END VILDA PROFILE TRASH V1 */
+/* BEGIN VILDA TREATMENT DOCUMENTATION V1 */
+/* Only newly authored treatment documents acquire the open visit. An added
+ * nested follow-up carries its own witness; the episode's original visit and
+ * every previously recorded follow-up remain independent and immutable here. */
+function TreatmentDocumentationInvalid() {
+  const error = new Error('Nie można potwierdzić nowego wpisu leczenia. Otwórz formularz ponownie.');
+  error.code = 'TREATMENT_DOCUMENT_INVALID'; return error;
+}
+function TreatmentDocumentationWitness(options) {
+  if (!options || !Object.prototype.hasOwnProperty.call(options, 'newTreatmentFollowup')) return null;
+  const value = options.newTreatmentFollowup;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 2
+      || typeof value.id !== 'string' || !/^[A-Za-z0-9_.-]{1,160}$/.test(value.id)
+      || !Object.prototype.hasOwnProperty.call(value, 'visitContext')) throw TreatmentDocumentationInvalid();
+  let origin;
+  try { origin = EncounterNoteFields({ visitContext: value.visitContext }).visitContext; }
+  catch (_) { throw TreatmentDocumentationInvalid(); }
+  return { id: value.id, visitContext: origin };
+}
+function TreatmentDocumentationCreateOptions(binding, isCurrent) {
+  return binding ? { isCurrent: isCurrent, requireActiveVisit: true } : { isCurrent: isCurrent };
+}
+function TreatmentDocumentationUpdateOptions(binding, isCurrent, followup) {
+  const options = { isCurrent: isCurrent };
+  if (binding && followup) options.newTreatmentFollowup = TreatmentDocumentationWitness({ newTreatmentFollowup: followup });
+  return options;
+}
+function TreatmentDocumentationLock(note, options, remove, action) {
+  const witness = TreatmentDocumentationWitness(options);
+  if (!witness) return action();
+  if (remove) throw TreatmentDocumentationInvalid();
+  // Enter only from the established actor after its workspace lease, and take
+  // the same patient lease as whole-visit Trash before entering the note lock.
+  return Bzw_podBlokada(note.patientId, action, options);
+}
+async function TreatmentDocumentationCheckFollowup(next, previous, options, assertCurrent) {
+  const witness = TreatmentDocumentationWitness(options);
+  if (!witness) return;
+  let before, after;
+  try {
+    const model = v.VildaPatientTreatmentModel;
+    before = model.normalize(previous.treatmentContext); after = model.normalize(next.treatmentContext);
+    if (before.kind !== 'therapy' || after.kind !== 'therapy' || previous.category !== 'treatment' || next.category !== 'treatment') throw TreatmentDocumentationInvalid();
+    const original = before.followups, added = after.followups[original.length];
+    if (after.followups.length !== original.length + 1 || !added || added.id !== witness.id
+        || original.some(function (entry) { return entry.id === witness.id; })
+        || Bnp_kanon(after.followups.slice(0, original.length)) !== Bnp_kanon(original)
+        || Bnp_kanon(added.visitContext) !== Bnp_kanon(witness.visitContext)) throw TreatmentDocumentationInvalid();
+    delete before.followups; delete after.followups;
+    if (Bnp_kanon(before) !== Bnp_kanon(after)) throw TreatmentDocumentationInvalid();
+  } catch (_) { throw TreatmentDocumentationInvalid(); }
+  assertCurrent();
+  await VisitDocumentCheckActive({ patientId: next.patientId, visitContext: witness.visitContext }, { requireActiveVisit: true }, assertCurrent);
+  assertCurrent();
+}
+function TreatmentDocumentationInstall(api) {
+  const update = api.updateExistingPatientNote;
+  api.updateExistingPatientNote = function (payload, options) {
+    if (!options || !Object.prototype.hasOwnProperty.call(options, 'newTreatmentFollowup')) return update.apply(this, arguments);
+    try {
+      // Snapshot both the owner callback and the separate nested origin before
+      // the native workspace queue can yield to another pane or caller edit.
+      const captured = Object.assign({}, options, { newTreatmentFollowup: TreatmentDocumentationWitness(options) });
+      return update.call(this, payload, captured);
+    } catch (error) { return Promise.reject(error); }
+  };
+}
+/* END VILDA TREATMENT DOCUMENTATION V1 */
 // Retain the canonical native install/publish sequence for the private builder.
 function EncounterPublishVault(api){
   const $s=api;PatientWorkspaceInstall($s);v.VildaVault=$s}
@@ -16055,4 +16126,4 @@ isPatientIdentitySnapshot:VisitTrashIdentity,
 moveVisitToTrash:(patientId,visitId,options)=>VisitTrashChange(patientId,visitId,options,false),
 listTrashedVisits:VisitTrashList,
 restoreTrashedVisit:(patientId,visitId,options)=>VisitTrashChange(patientId,visitId,options,true),
-restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanNoteEntries:CareMvpNoteEntries,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};EncounterPublishVault($s);ProfileInstallPresentation($s);VisitDocumentInstall($s);DocumentOutcomesInstall($s);EncounterInstallCare($s)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanNoteEntries:CareMvpNoteEntries,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};EncounterPublishVault($s);ProfileInstallPresentation($s);VisitDocumentInstall($s);TreatmentDocumentationInstall($s);DocumentOutcomesInstall($s);EncounterInstallCare($s)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
