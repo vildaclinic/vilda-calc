@@ -2772,6 +2772,54 @@ Increlex ↔ rhGH, punkcie bez leku lub programu i zmianie programu w kursie. `g
 `gh_therapy_segments.js`, `vilda_vault.js`, sejf, zapis punktów i wpisów — bez zmian. Wersje `?v=`, precache
 i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-GH-PROGRAM-BIEZACY — DocPro: program w formularzu monitora wg bieżącego preparatu (`gh_therapy_monitor.js` 65 → 66, 2026-11-23, decyzja właściciela)
+
+Czytelne źródło reguły: `gh_therapy_monitor.js`, czytelna część na górze pliku — nowy blok P-GH-PROGRAM-BIEZACY zaraz po
+`ghKursProgramu` (blok P-GH-WZNOWIENIE, część 2): `ghRodzajPunktu` (Increlex, rhGH albo nieznany — lek decyduje, bez leku
+program `/^IGF/`, jak `Gp_rodzajPunktu` Karty), `ghBiezacy` (`{ lek, program, increlex }` — ta sama reguła co
+`Gp_biezacy` w `vilda_auth_ui.js`: rodzaj z ostatniego punktu z lekiem albo programem, lek i program ostatniego punktu,
+a gdy pusty — ostatni wcześniejszy tego samego rodzaju), `ghProgramBiezacy` (= `ghBiezacy(…).program`),
+`ghPunktyBiezacegoKursu` (kilka kursów — ostatni kurs `ghKursy`; jeden kurs albo brak modułu — cała lista wg wieku, jak
+`Gw_punktyProgramu` Karty), `ghProgramWiersza`, `ghProgramPola` (przy edycji — jak dotąd), `ghPrzywrocDateKarty`,
+`ghPreparatyKarty` (lista preparatów karty za programem pola). Spójność z Kartą (lek, program, rodzaj) pilnuje test
+jednostkowy `tests/unit/gh-program-biezacy.test.mjs` (funkcje wycięte z obu plików, ten sam zbiór przypadków). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-BIEZACY. Zminifikowane ciało (`F()`, `renderGHTherapyTable`) zmienione
+kotwicami występującymi dokładnie raz; skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py`
++ `gp_monitor_blok.js`, poza repozytorium) odtwarza wynik z `origin/audyt` e163b85a; bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelna część: blok P-GH-PROGRAM-BIEZACY po function ghKursProgramu (funkcje wyżej),
+//   komentarz ghProgramKursu (od tej łatki: edycja punktu i zapas) i dopisek w komentarzu bloku P-GH-WZNOWIENIE, część 2
+// 1. F(), wiersz „Program terapeutyczny: …” nad tabelą:
+//    Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));if(!o&&i[0]&&(o=i[0].program),o){
+//    → Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));/* P-GH-PROGRAM-BIEZACY */o=ghProgramWiersza(Gwk,o);if(!o&&…
+// 2. F(), #therProg (lista z punktami):
+//    Gwk&&Gwk.wiele&&(l=ghProgramKursu(ghKursProgramu(Gwk))||l),l&&(o.value=l),o.disabled=!0}else o.disabled=!1}
+//    → …||l),/* P-GH-PROGRAM-BIEZACY */l=ghProgramPola(Gwk,l),l&&(o.value=l),o.disabled=!0,ghPreparatyKarty(o,l,Gwk)}else o.disabled=!1}
+//    (dawne wyrażenie zostaje jako zapas: program bieżący pusty → program jak dotąd; edycja punktu → jak dotąd)
+// ghPreparatyKarty: tylko poza edycją, tylko gdy wybrany preparat #therDrug nie należy do programu pola (R — preparaty
+//   programu, jak w edycji i punkcie wstecznym) i tylko gdy program pola zgadza się z rodzajem bieżącego preparatu
+//   (/^IGF/.test(program) === ghBiezacy(…).increlex): zdarzenie change pola (gh_igf_therapy.js: u — ręczna data kontroli
+//   i własna liczba dni czyszczone, De — lista i preparat domyślny, pe — dawka zalecana i podpowiedź, T — kalkulator),
+//   potem — gdy lek bieżący (ghBiezacy(…).lek) jest na nowej liście — jego wybór i zdarzenie change preparatu (u, pe, Gdpo,
+//   T); na końcu ghPrzywrocDateKarty: ręczna data kontroli i własna liczba dni sprzed przeliczenia wracają przez
+//   vildaGhIgfPersistApi.restoreState (stan po przeliczeniu, dawka w trybie pola, które lekarz wypełnia; bez zdarzeń).
+//   Sprzeczność rodzaju albo preparat z programu — bez zdarzeń (jak dotąd).
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+`vilda_gh_punkty.js` (`VildaGhPunkty`) bez zmian: monitor i panel wiersza przyjmują tylko API wersji 4 (bramka zapisu
+`A.wersja===4`), więc nowa funkcja w API oznaczałaby nową wersję i zmianę obu bramek; reguła mieszka w czytelnej części
+monitora, a Karta zostaje przy `Gp_biezacy`. `vilda_auth_ui.js`, `gh_igf_therapy.js` (Terminarz `Je()` czyta pole),
+`vilda_gh_punkt_z_wiersza.js`, zapis punktów, walidacja (`sprawdzRodzaj`), kursy i sejf — bez zmian. Kurs jednym
+programem — pole, wiersz, tabela, preparat, lista i dawka karty identyczne jak dotąd (test jednostkowy: monitor
+z wywołaniami łatki usuniętymi = „jak dotąd”); wyjątek — kurs Increlex przy karcie z listą rhGH (lista idzie za polem).
+Zdarzenia change karty przy przeliczeniu zapisuje autozapis stanu strony (`therProg`, `therDrug`, jak po ręcznej zmianie);
+wskaźnik zapisu pacjenta je pomija. Złota siatka punktów (`tests/fixtures/gh-punkty-wzorzec.json`) bez zmian pliku: przypadki nowego punktu z karty
+na listach z innym programem ostatniego punktu mają dziś program bieżący (`wplywProgramuBiezacego`, `zProgramemNowego`
+w `tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
+precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

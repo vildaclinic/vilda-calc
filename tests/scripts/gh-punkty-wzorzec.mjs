@@ -24,6 +24,11 @@
 // kategorii policzone z BAZA tylko z przypadków z modułem dawki, których reguła kursów nie zmienia; test porównuje z nim
 // drzewo robocze, a przypadki zmienione sprawdza jako odmowy z tekstem reguły kursów. Klasyfikacja woła API z drzewa
 // roboczego (vilda_gh_punkty.js i vilda_trajectory_analysis.js), nie kopię reguły.
+// P-GH-PROGRAM-BIEZACY (zmiana kliniczna, decyzja właściciela 2026-11-23): #therProg poza edycją = program bieżący kursu
+// (jak Karta pacjenta), nie program Włączenia. wplywProgramuBiezacego(p) mówi, które przypadki to zmienia (nowy punkt
+// z karty na liście z innym programem ostatniego punktu); zProgramemNowego(wynik, program) zamienia program nowego punktu
+// w wyniku. Test porównuje te przypadki z wynikiem wzorca z programem bieżącym, a skróty kategorii liczy z ich wyniku
+// z programem cofniętym do programu Włączenia — muszą dać skróty BAZA. Wzorzec (plik) bez zmian.
 // Siatkę, wykonanie przypadku i postać kanoniczną wyniku eksportuje ten plik. Test używa tych samych funkcji, ale na
 // plikach z drzewa roboczego. Dane wyłącznie FIKCYJNE.
 import { createHash } from 'node:crypto';
@@ -417,6 +422,50 @@ export function wplywRegulyKursow(p) {
   if (p.powod === 'typ' && wynik.ok) throw new Error(`${p.id}: reguła kursów przyjmuje punkt, którego dawna reguła nie przyjmowała`);
   if (wynik.ok || wynik.kod === 'wartosci') return null;
   return { kod: wynik.kod, komunikat: wynik.komunikat };
+}
+
+/* ---------- Program bieżący (P-GH-PROGRAM-BIEZACY) ---------- */
+
+// Program, z którym BAZA zapisuje nowy punkt z karty przy niepustej liście: F() wpisuje do #therProg program punktu
+// Włączenia, a bez niego — pierwszego punktu (komentarz w polaKarty; siatka ma jeden kurs).
+function programDotad(lista) {
+  const w = lista.find((x) => x.type === 'start');
+  return (w && w.program) || (lista[0] && lista[0].program) || null;
+}
+const programyPola = new Map();
+// #therProg monitora z drzewa roboczego po wczytaniu listy (poza edycją): świeża atrapa, prawdziwe F().
+function programPola(lista) {
+  if (!programyPola.has(lista)) {
+    programyPola.set(lista, utworzAtrapeMonitoraGh({ punkty: kopia(LISTY[lista]) }).pole('therProg').value);
+  }
+  return programyPola.get(lista);
+}
+/**
+ * Czy program bieżący (P-GH-PROGRAM-BIEZACY, decyzja właściciela 2026-11-23) zmienia wynik przypadku względem BAZA:
+ * null — bez zmian; { dotad, teraz } — nowy punkt z karty (Z1, z modułem dawki) na liście, której program bieżący
+ * (program ostatniego punktu wg wieku) różni się od programu Włączenia: zapis jak w BAZA, tylko nowy punkt ma program
+ * `teraz` zamiast `dotad`. Edycja (Z2 — #therProg przy edycji bez zmian), punkt wsteczny (Z4 — program z formularza),
+ * usuwanie (Z5), odmowy i przypadki zmienione regułą kursów (odmowa) — bez zmian. Program `teraz` czyta prawdziwy
+ * monitor z drzewa roboczego (#therProg po wczytaniu listy), nie kopia reguły.
+ */
+export function wplywProgramuBiezacego(p) {
+  if (p.sciezka !== 'Z1' || !p.modulDawki || p.powod || p.lista === 'pusta' || wplywRegulyKursow(p)) return null;
+  const dotad = programDotad(LISTY[p.lista]);
+  const teraz = programPola(p.lista);
+  return teraz !== dotad ? { dotad, teraz } : null;
+}
+/** Wynik JSON z programem nowego punktu (id = znacznik NOWE_ID) zamienionym na `program`: lista, moduł i dziennik;
+    kolejność kluczy bez zmian. */
+export function zProgramemNowego(wynikJson, program) {
+  const zamien = (v) => {
+    if (Array.isArray(v)) return v.map(zamien);
+    if (!v || typeof v !== 'object') return v;
+    const o = {};
+    for (const k of Object.keys(v)) o[k] = zamien(v[k]);
+    if (o.id === NOWE_ID && 'program' in o) o.program = program;
+    return o;
+  };
+  return zamien(wynikJson);
 }
 
 /* ---------- Wynik kanoniczny ---------- */
