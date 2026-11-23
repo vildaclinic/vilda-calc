@@ -162,6 +162,111 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
   }
 });
 
+test.describe('touch footer navigation', () => {
+  test.use({ hasTouch: true });
+
+  test('mobile Gabinet replaces the floating arrow with an inline return that preserves the active visit', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 480 });
+    const { frame: shell, ids } = await prepare(page);
+
+    for (const standalone of [false, true]) {
+      if (standalone) {
+        await page.goto('/index.html', { waitUntil: 'load' });
+        await readyForPatient(page);
+      }
+      await page.setViewportSize({ width: 390, height: 480 });
+      const frame = standalone ? page : shell;
+      const header = frame.locator('#vhomeGabinetHeader');
+      if (await header.isVisible()) await header.locator('[data-start]').click();
+      const entryBack = frame.locator('#gbEntryHeader').getByRole('button', { name: 'Ekran startowy' });
+      if (await entryBack.isVisible()) await entryBack.click();
+      await expect(frame.locator('#vhomeGabinetStart [data-entry="office"]')).toBeVisible();
+      const inline = frame.locator('button[data-vilda-footer-scroll-top]');
+      const legacy = page.locator(standalone ? '#scrollTopBtn' : '#appShellScrollTop');
+      await scrollToVisibleFooter(frame, 'Mobilny Start bez powrotu na górę');
+      await expect(inline).toBeHidden();
+      await expect(legacy).toBeHidden();
+      await expect(frame.locator('#scrollTopBtn')).toBeHidden();
+
+      await choosePatient(frame, 'Antoni');
+      await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+      const analysis = frame.locator('#vhomeGabinetAnalysisTab');
+      await analysis.click();
+      await expect(analysis).toHaveAttribute('aria-selected', 'true');
+      await frame.locator('#height').fill(standalone ? '160' : '159');
+      await frame.locator('#weight').fill(standalone ? '44' : '43');
+      await frame.locator('#currentSummaryCard').getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
+      const toggle = frame.locator('#vhomeOtherToolsToggle');
+      if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+      const lastTool = frame.locator('#vhomeOtherToolsGrid [data-home-tool]:enabled').last();
+      await expect(lastTool).toContainText('Szacowane spożycie energii');
+      const visitState = () => frame.evaluate(id => {
+        const state = window.VildaHomeEncounter.state(id);
+        return {
+          patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+          visitId: state.visitId, mode: state.mode,
+          height: document.getElementById('height').value, weight: document.getElementById('weight').value,
+          analysis: document.getElementById('vhomeGabinetAnalysisTab').getAttribute('aria-selected'),
+          summaryTab: document.querySelector('#currentSummaryCard [role="tab"][aria-selected="true"]')?.textContent,
+          tools: document.getElementById('vhomeOtherToolsToggle').getAttribute('aria-expanded'),
+        };
+      }, ids.a);
+      const before = await visitState();
+      expect(before.patientId).toBe(ids.a);
+      expect(before.mode).toBe('new');
+
+      // Check the tile at the viewport edge where the old FAB covered it.
+      // The outer hit-test also detects controls painted above a same-origin iframe.
+      await lastTool.evaluate(node => node.scrollIntoView({ block: 'end', behavior: 'instant' }));
+      await expect.poll(() => lastTool.evaluate(node => {
+        const { left, right, top, bottom } = node.getBoundingClientRect();
+        return [left + 12, (left + right) / 2, right - 12].flatMap(x =>
+          [top + 12, (top + bottom) / 2, bottom - 12].map(y => ({
+            x, y, hit: x >= 0 && y >= 0 && x < innerWidth && y < innerHeight &&
+              node.contains(document.elementFromPoint(x, y)),
+          })));
+      })).toEqual(Array.from({ length: 9 }, () => expect.objectContaining({ hit: true })));
+      if (!standalone) {
+        const points = await lastTool.evaluate(node => {
+          const { left, right, top, bottom } = node.getBoundingClientRect();
+          return [left + 12, (left + right) / 2, right - 12].flatMap(x =>
+            [top + 12, (top + bottom) / 2, bottom - 12].map(y => ({ x, y })));
+        });
+        await expect.poll(() => page.locator('iframe.app-pane[title="Start"]').evaluate((iframe, points) => {
+          const rect = iframe.getBoundingClientRect();
+          return points.map(({ x, y }) => iframe === document.elementFromPoint(
+            rect.left + x * rect.width / iframe.clientWidth,
+            rect.top + y * rect.height / iframe.clientHeight));
+        }, points)).toEqual(Array(9).fill(true));
+      }
+      await expect(legacy).toBeHidden();
+      await expect(frame.locator('#scrollTopBtn')).toBeHidden();
+
+      await scrollToVisibleFooter(frame, 'Mobilny powrót z Analizy', true);
+      await expect(inline).toHaveAccessibleName('Wróć na górę');
+      await expect(inline).toBeInViewport({ ratio: 1 });
+      expect(await inline.evaluate(node => Boolean(node.closest('.site-footer')))).toBe(true);
+      expect(['static', 'relative']).toContain(await inline.evaluate(node => getComputedStyle(node).position));
+      await expect.poll(() => hitTestPositions(inline)).toEqual([expect.objectContaining({ visible: true })]);
+      await inline.tap();
+      await expect.poll(() => frame.evaluate(() => document.scrollingElement.scrollTop)).toBe(0);
+      expect(await visitState()).toEqual(before);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+      // Desktop keeps the existing floating control instead of the mobile footer action.
+      await page.setViewportSize({ width: 1440, height: 600 });
+      await scrollToVisibleFooter(frame, 'Dotychczasowa strzałka desktop', true);
+      await expect(inline).toBeHidden();
+      await expect.poll(() => hitTestPositions(legacy)).toEqual([expect.objectContaining({ visible: true })]);
+      await legacy.click();
+      await expect.poll(() => frame.evaluate(() => document.scrollingElement.scrollTop)).toBe(0);
+      expect(await visitState()).toEqual(before);
+      await header.getByRole('button', { name: 'Zapisz wizytę', exact: true }).click();
+      await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('browse');
+    }
+  });
+});
+
 test('Gabinet A keeps its navigation fixed and opens the chosen patient record', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const reminderTitle = 'Fikcyjne przypomnienie o wynikach';
