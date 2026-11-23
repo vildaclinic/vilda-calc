@@ -3133,3 +3133,7 @@ obrazu sejfu poprzedzającego tę zmianę. Skrót obrazu podaje
 `tools/patient-profile-auth-hooks.mjs` odtwarza zmiany edytora kartoteki w
 `vilda_auth_ui.js` jako część warstw sprawdzanych przez
 `node tools/patient_b1_auth_hooks.mjs --check`.
+
+Warstwa `runtime/profile-trash-v1/` zachowuje kartotekę opartą na starszych
+danych, gdy jej źródłowa wizyta trafia do kosza. `node tools/profile-trash-vault-delta.mjs`
+sprawdza odtwarzalność bieżącego sejfu z bazy wskazanej w manifeście warstwy.

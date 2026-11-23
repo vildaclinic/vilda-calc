@@ -1,0 +1,89 @@
+{
+  "namespace": "vilda-profile-trash-vault",
+  "version": 1,
+  "baseVaultSHA256": "011c7839314326b5a31c4d0cb075da7414807f8c8587a9aee8768067b3cd63f1",
+  "sources": [
+    {
+      "path": "runtime/profile-trash-v1/model.js",
+      "sha256": "a602303be944ab220bc38edc1c9efba51c3f7252d9493c4c0785b68088299c8d"
+    },
+    {
+      "path": "runtime/profile-trash-v1/vault-fragment.js",
+      "sha256": "c3834062bab54094e2cb74138d6a8952e68bf648426c4cf5aecdcf2f8884fb41"
+    }
+  ],
+  "fragmentSHA256": "518840a2ea98e4eddaa295d40f1379baf2d351ec75a98cdcfb6e2243008dccf4",
+  "integratedVaultSHA256": "16c39d32d496738528142158ac57ad87e933538c17d710a4be1e290ed4fe0325",
+  "hooks": [
+    {
+      "name": "preserve-only-removed-legacy-source",
+      "before": "        if (!live.length || live[0].snapshotId !== options.snapshotId || mt(live[0]) !== options.revision) throw VisitTrashConflict();",
+      "after": "        if (!live.length || live[0].snapshotId !== options.snapshotId || mt(live[0]) !== options.revision) throw VisitTrashConflict();\n        if (ProfileEnabled()) { change.profile = await ProfileTrashPrepare(patientId, visitId, rows, original, uid, adapter, guard); guard(); }",
+      "beforeSHA256": "fc9d1a7aa5d0110b37babe1d3b3d98ee5a8ed678b4ee486f149d911348132065",
+      "afterSHA256": "3162b7769a2f8dd01545f7a91c8412fbac9619cda4c5e46fa948fa737cc3998b"
+    },
+    {
+      "name": "native-profile-stores-in-same-transaction",
+      "before": "    const tx = PatientClinicalWriteValue(user, db).transaction(stagePatient ? [le] : [le, bt, It, xt], 'readwrite');",
+      "after": "    const stores = stagePatient ? [le] : [le, bt, It, xt];\n    if (change.profile && !stagePatient) stores.push(vt, Kt);\n    const tx = PatientClinicalWriteValue(user, db).transaction(stores, 'readwrite');",
+      "beforeSHA256": "8d16ddb65730a645629fe067213e642a1edb3f811968bc1637b0b2888f9455c0",
+      "afterSHA256": "fe3a66311a2120af11e0e1a82c5d9b07e0958ff26261ab4e2be52044012cc936"
+    },
+    {
+      "name": "native-profile-cas-reads",
+      "before": "    tx.oncomplete = function () { if (applyStaged) applyStaged(); resolve(true); };",
+      "after": "    let profileReads;\n    if (change.profile && snapshots) {\n      const notes = tx.objectStore(vt);\n      profileReads = [notes.index('byPatient').getAll(IDBKeyRange.only(change.patientId)), notes.get(change.profile.note.id), tx.objectStore(Kt).get(change.profile.note.id)];\n      reads.push(...profileReads);\n    }\n    tx.oncomplete = function () { if (applyStaged) applyStaged(); resolve(true); };",
+      "beforeSHA256": "2b2fe8a40c54549bbb0ccb7dd73f46da7c4e3fb2b072d88eff76600c4ca2ed1e",
+      "afterSHA256": "9a25cc7c068c6899e25b32ae8999000796bc140590882f98a617d27cba24c9b1"
+    },
+    {
+      "name": "native-profile-cas-before-trash",
+      "before": "          VisitTrashReadChange(change, reads[1].result, reads[2].result, reads.slice(4).map(read => read.result), reads[3].result);",
+      "after": "          VisitTrashReadChange(change, reads[1].result, reads[2].result, reads.slice(4, 4 + change.writes.length).map(read => read.result), reads[3].result);\n          if (profileReads) ProfileTrashAssert(change, profileReads[0].result, profileReads[1].result, profileReads[2].result);",
+      "beforeSHA256": "89ee57e60a1608e02df621c6e917c1da64acf01dfc6ccc698c379795289ec996",
+      "afterSHA256": "b0d0d181fe80d1ee5edf3f14925f751bc4bd65b45730134b440d1e45d3679107"
+    },
+    {
+      "name": "native-profile-write-before-transaction-completes",
+      "before": "          tx.objectStore(bt).put(change.patient);",
+      "after": "          tx.objectStore(bt).put(change.patient);\n          if (change.profile) tx.objectStore(vt).put(change.profile.note);",
+      "beforeSHA256": "92e8fe2fd09dbf8ceb23a5ff64b8bf78dc7efa32a178d045a755c44529f5f874",
+      "afterSHA256": "58381525394e0bb6f4c58ac0b9f43549a60128b15d8d93eb56b9a1df1c10d8e1"
+    },
+    {
+      "name": "memory-profile-cas-before-staging",
+      "before": "    store.tombstones.get(change.patientId));\n  return function (meta) {",
+      "after": "    store.tombstones.get(change.patientId));\n  if (change.profile) ProfileTrashAssert(change, Array.from(store.patientNotes.values()), store.patientNotes.get(change.profile.note.id), store.patientNoteTombstones.get(change.profile.note.id));\n  return function (meta) {",
+      "beforeSHA256": "7d7316fdb3a90433717e8a2b31933a5be01231c165561cf27307d6e7187a4c8c",
+      "afterSHA256": "c3ebde0681debc86a77499f9575cc85fd1a68106217f4f234e4d4011e964eed6"
+    },
+    {
+      "name": "memory-profile-in-same-staged-publish",
+      "before": "    store.patients.set(change.patientId, change.patient);\n    if (meta) store.meta = meta;",
+      "after": "    store.patients.set(change.patientId, change.patient);\n    if (change.profile) store.patientNotes.set(change.profile.note.id, change.profile.note);\n    if (meta) store.meta = meta;",
+      "beforeSHA256": "7c2e3b2feeef95ed4ed7d404d57a5654582c8d5030322f9533b28ad7b30409ad",
+      "afterSHA256": "502223edbf088329476586c798e79da5968bd74ee21ba4375e80b8d40609ef87"
+    },
+    {
+      "name": "profile-notification-only-after-trash-commit",
+      "before": "      Vn({patientId, visitId, visitTrashAction: restore ? 'restore' : 'trash'});",
+      "after": "      Vn({patientId, visitId, visitTrashAction: restore ? 'restore' : 'trash'});\n      ProfileTrashNotify(change);",
+      "beforeSHA256": "6a233675397d998268e4951481eb50a54591723bce5b71ae22ff3bc6f8eb5087",
+      "afterSHA256": "e20b5f6806bbf2613cb83e0a2556ea89474e5c541904a8638b9135ac1ae6e852"
+    },
+    {
+      "name": "preserved-baseline-is-not-a-user-data-replacement",
+      "before": "  const context = ProfileModel().normalize(note.profileContext), current = await ProfileRead(note.patientId); check();",
+      "after": "  const context = ProfileModel().normalize(note.profileContext), current = await ProfileRead(note.patientId); check();\n  ProfileTrashAuthorizeBaseline(context, current);",
+      "beforeSHA256": "b8029504956c31faf06bfab8e5ac242fce9d5d397d3d20d73d33c4c35dbf7b28",
+      "afterSHA256": "20d9a7517f60f15ebc6b8f9fce63fe4830fe9b0f610ef5b020fd1059ccfd64e8"
+    },
+    {
+      "name": "readable-model-and-transaction-source",
+      "before": "/* END VILDA PATIENT PROFILE V1 */\n",
+      "after": "/* END VILDA PATIENT PROFILE V1 */\n/* BEGIN VILDA PROFILE TRASH V1 */\n/* Additive projection support for immutable legacy profile baselines.\n * Existing strict profile edits keep the original normalizer. A baseline is\n * the exact legacy subset, without correcting or inventing patient facts.\n */\n(function (root) {\n  'use strict';\n  var base = root && root.VildaPatientProfileModel;\n  if (!base || typeof base.normalize !== 'function' || typeof base.project !== 'function') {\n    throw new Error('Brak bazowego modelu kartoteki pacjenta.');\n  }\n  var KIND = 'patient-profile-legacy-baseline';\n  var LEGACY_ID = /^legacy:[0-9a-f]{64}$/;\n  var own = function (value, key) { return Object.prototype.hasOwnProperty.call(value, key); };\n  function fail() {\n    var error = new Error('Nieprawidłowa historyczna podstawa kartoteki.');\n    error.code = 'PATIENT_PROFILE_INVALID'; throw error;\n  }\n  function baseline(value) {\n    var descriptor = value && typeof value === 'object' && Object.getOwnPropertyDescriptor(value, 'kind');\n    return !!descriptor && own(descriptor, 'value') && descriptor.value === KIND;\n  }\n  function exactSurface(value, depth) {\n    depth = depth || 0;\n    if (depth > 16) fail();\n    if (value === null || typeof value !== 'object') return;\n    if (Object.getOwnPropertySymbols(value).length) fail();\n    var keys = Object.getOwnPropertyNames(value), array = Array.isArray(value);\n    if (array && keys.length !== value.length + 1) fail();\n    keys.forEach(function (key) {\n      if (array && key === 'length') return;\n      var descriptor = Object.getOwnPropertyDescriptor(value, key);\n      if (!descriptor || !own(descriptor, 'value') || !descriptor.enumerable) fail();\n      exactSurface(descriptor.value, depth + 1);\n    });\n  }\n  function normalize(context) {\n    if (!baseline(context)) return base.normalize(context);\n    exactSurface(context);\n    var value = base.clone(context);\n    if (Object.keys(value).some(function (key) {\n      return ['schemaVersion', 'kind', 'parents', 'legacyRevisionId', 'data'].indexOf(key) < 0;\n    }) || value.schemaVersion !== 1 || !Array.isArray(value.parents) || value.parents.length !== 0\n      || typeof value.legacyRevisionId !== 'string' || !LEGACY_ID.test(value.legacyRevisionId)\n      || !value.data || typeof value.data !== 'object' || Array.isArray(value.data)) fail();\n    var data = base.clone(value.data), extracted = base.legacy(data, {});\n    if (JSON.stringify(data) !== JSON.stringify(base.clone(extracted))) fail();\n    return base.clone({ schemaVersion: 1, kind: KIND, parents: [], legacyRevisionId: value.legacyRevisionId, data: data });\n  }\n  function project(notes, options) {\n    // Preserve the original API and every existing projection outcome when\n    // this new record kind is absent.\n    if (!(notes || []).some(function (note) {\n      var descriptor = note && typeof note === 'object' && Object.getOwnPropertyDescriptor(note, 'profileContext');\n      return !!descriptor && own(descriptor, 'value') && baseline(descriptor.value);\n    })) return base.project(notes, options);\n    options = options || {}; var patientId = options.patientId;\n    var candidates = (notes || []).filter(base.isRevision), history = [], byId = new Map(), unsupported = false, incomplete = false;\n    // The graph rules below match the existing profile model. Only context\n    // normalization additionally accepts a faithful, parentless baseline.\n    candidates.forEach(function (note) {\n      var context;\n      try {\n        if (note.patientId !== patientId || !base.isRevisionId(note.id) || !own(note, 'profileContext')\n          || note.category !== 'observation' || note.visitContext != null || note.dueDateISO != null\n          || note.linkedAgeMonths != null || note.medication != null || note.labResult != null || note.careContext != null\n          || note.treatmentContext != null || note.reminderContext != null || note.ghPointId != null\n          || note.obesityPointId != null || note.seriesId != null) fail();\n        context = normalize(note.profileContext);\n        if (byId.has(note.id)) { if (JSON.stringify(byId.get(note.id).context) !== JSON.stringify(context)) fail(); return; }\n        var entry = { revisionId: note.id, id: note.id, parents: context.parents.slice(),\n          createdAtISO: note.createdAtISO || null, data: base.clone(context.data), context: context };\n        byId.set(note.id, entry); history.push(entry);\n      } catch (_) { unsupported = true; }\n    });\n    if (!candidates.length) return base.project(notes, options);\n    var referenced = new Set();\n    byId.forEach(function (entry) { entry.parents.forEach(function (id) { referenced.add(id); if (!byId.has(id)) incomplete = true; }); });\n    var active = new Set(), visited = new Set();\n    function visit(id) {\n      if (active.has(id)) { incomplete = true; return; }\n      if (visited.has(id) || !byId.has(id)) return;\n      active.add(id); byId.get(id).parents.forEach(visit); active.delete(id); visited.add(id);\n    }\n    byId.forEach(function (_, id) { visit(id); });\n    var heads = Array.from(byId.keys()).filter(function (id) { return !referenced.has(id); }).sort();\n    history.sort(function (a, b) { return (a.createdAtISO || '').localeCompare(b.createdAtISO || '') || a.id.localeCompare(b.id); });\n    var status = unsupported ? 'unsupported' : incomplete || !heads.length ? 'incomplete' : heads.length > 1 ? 'conflict' : 'ready';\n    return { status: status, data: status === 'ready' ? base.clone(byId.get(heads[0]).data) : null,\n      revisionId: status === 'ready' ? heads[0] : null, history: history.map(function (entry) { var value = base.clone(entry); delete value.context; return value; }),\n      heads: heads, editable: status === 'ready' };\n  }\n  root.VildaPatientProfileModel = Object.freeze(Object.assign({}, base, { normalize: normalize, project: project }));\n})(typeof window !== 'undefined' ? window : globalThis);\n\n/* Freeze a legacy chart only when an explicit Trash operation would remove\n * its current source. The encrypted root and Trash share one storage commit;\n * reading a chart never materializes or changes its profile. */\nfunction ProfileTrashRows(rows, patientId) {\n  return rows.filter(function (row) {\n    return row && row.patientId === patientId && typeof row.id === 'string' && row.id.indexOf('prf-') === 0;\n  });\n}\nfunction ProfileTrashAuthorizeBaseline(context, current) {\n  if (context.kind !== 'patient-profile-legacy-baseline') return;\n  if (current.status !== 'legacy' || context.legacyRevisionId !== current.revisionId\n      || Bnp_kanon(context.data) !== Bnp_kanon(current.data)) {\n    throw ProfileFailure('CONFLICT', 'Nie można zastąpić danych kartoteki inną podstawą ze starszego zapisu.', current);\n  }\n}\nasync function ProfileTrashRevisionId(patientId, legacyRevisionId, guard) {\n  // Identical automatic preservation on two offline devices is one immutable\n  // root. Different legacy facts retain distinct roots and normal conflicts.\n  // No wall-clock or Trash operation metadata participates in its identity.\n  const input = new TextEncoder().encode(Bnp_kanon(['vilda-profile-trash-root-v1', patientId, legacyRevisionId]));\n  const bytes = new Uint8Array(await v.crypto.subtle.digest('SHA-256', input)).slice(0, 16); guard();\n  bytes[6] = bytes[6] & 15 | 128; bytes[8] = bytes[8] & 63 | 128;\n  const hex = Array.from(bytes, function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');\n  return 'prf-' + [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');\n}\nasync function ProfileTrashPrepare(patientId, visitId, rows, original, account, adapter, guard) {\n  const visible = rows.filter(function (row) { return !VisitTrashIdentity(row); });\n  const source = Bvisit_groups(visible, patientId)[0];\n  if (!source || source.visitId !== visitId) return null;\n  const notes = await adapter.listPatientNotesForUser(account); guard();\n  if (ProfileTrashRows(notes, patientId).length) return null;\n  try {\n    const header = await G(original.headerCipher.iv, original.headerCipher.data); guard();\n    const data = ProfileModel().legacy(source.payload, header);\n    const legacyRevisionId = await ProfileLegacyToken(data); guard();\n    let kind = 'patient-profile';\n    try {\n      if (Bnp_kanon(ProfileModel().normalizeData(data)) !== Bnp_kanon(data)) kind = 'patient-profile-legacy-baseline';\n    } catch (_) { kind = 'patient-profile-legacy-baseline'; }\n    const context = ProfileModel().normalize({ schemaVersion: 1, kind: kind, parents: [], legacyRevisionId: legacyRevisionId, data: data });\n    const id = await ProfileTrashRevisionId(patientId, legacyRevisionId, guard); guard();\n    const note = await Ad({ id: id, patientId: patientId, category: 'observation', title: 'Rewizja kartoteki pacjenta',\n      body: 'Dane kartoteki zachowane przed przeniesieniem źródłowej wizyty do kosza.',\n      linkedAgeMonths: null, clinicalDateISO: null, dueDateISO: null, profileContext: context },\n    { token: VildaExistingNoteUpdateToken, beforeCommit: guard, account: account, adapter: adapter, prepareOnly: true });\n    guard(); return { note: note };\n  } catch (error) {\n    guard();\n    if (error && error.code) throw error;\n    throw ProfileFailure('PRESERVATION_FAILED', 'Nie można bezpiecznie zachować danych starszej kartoteki. Sprawdź jej dane przed przeniesieniem wizyty do kosza.');\n  }\n}\nfunction ProfileTrashAssert(change, rows, existing, tombstone) {\n  change.guard();\n  if (change.profile && (ProfileTrashRows(rows, change.patientId).length || existing || tombstone)) {\n    throw ProfileFailure('CONFLICT', 'Kartoteka zmieniła się podczas przenoszenia wizyty do kosza. Otwórz aktualne dane.');\n  }\n}\nfunction ProfileTrashNotify(change) {\n  if (change.profile) qr({ id: change.profile.note.id, patientId: change.patientId, action: 'save' });\n}\n/* END VILDA PROFILE TRASH V1 */\n",
+      "beforeSHA256": "9e6356e1f3c0444466f78f92aaa1e7329b50c3a4c5c8b1fe828d49679938244c",
+      "afterSHA256": "4618cf2cf4aa7bbd3128d7e8d2d715c13228d12b9d6464cd010cea10f5c10538"
+    }
+  ]
+}

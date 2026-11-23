@@ -24,6 +24,17 @@ edycji. Pierwszy odczyt starszej kartoteki korzysta z najnowszej klinicznie
 wizyty. Dla dawnych danych bez daty źródłem jest pierwszy dostępny zapis.
 Brak spójnej wersji wstrzymuje użycie danych do rozpoczęcia wizyty.
 
+Przeniesienie do kosza wizyty, która jest źródłem starszej kartoteki,
+utrwala jej dane stałe razem z operacją przeniesienia. Pierwsza niezależna
+rewizja zachowuje dotychczas odczytywane dane, także gdy kosz pozostawia
+pacjenta bez aktywnych wizyt. Sam odczyt kartoteki nie tworzy rewizji.
+
+Jeżeli standardowy format zmieniłby treść starszych danych, rewizja
+`patient-profile-legacy-baseline` zachowuje ich dotychczasowy odczyt.
+Kolejna edycja sprawdza pola według bieżących reguł kartoteki. Klient,
+który nie obsługuje takiej rewizji, wstrzymuje użycie profilu.
+
+
 `savePatientProfile({patientId, expectedRevisionId, data}, options)` zapisuje
 nową rewizję przez `savePatientNoteOnce`. Identyczne dane zwracają potwierdzenie
 `unchanged: true`. Operacja kopiuje intencję przed oczekiwaniem, sprawdza bazową

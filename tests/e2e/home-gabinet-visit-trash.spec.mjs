@@ -111,6 +111,25 @@ test('editing a historical visit can cancel, trash all its versions and restore 
 test('trashing the sole visit leaves the patient available for a new consultation and restoration on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const { frame, ids } = await prepareGabinet(page);
+  const original = await frame.evaluate(async patientId => {
+    const vault = window.VildaVault;
+    const payload = structuredClone((await vault.getPatient(patientId)).snapshots[0].payload);
+    Object.assign(payload.advanced, { motherHeight: 166, fatherHeight: 183 });
+    Object.assign(payload.advanced.data, { motherHeight: 166, fatherHeight: 183 });
+    payload.perinatal = { gestationalWeeks: 34, gestationalDays: 2, birthWeightG: 1650,
+      birthLengthCm: 41, birthHeadCircCm: 29, gravidity: 2, parity: 1 };
+    payload.clinical = { ...payload.clinical, downSyndrome: true };
+    await vault.savePatient(payload, { patientId, dedup: false });
+    const patient = await vault.getPatient(patientId);
+    return { profile: patient.profile,
+      snapshots: patient.snapshots.map(({ snapshotId, payload }) => ({ snapshotId, payload }))
+        .sort((a, b) => a.snapshotId.localeCompare(b.snapshotId)) };
+  }, ids.b);
+  expect(original.profile.status).toBe('legacy');
+  expect(original.profile.history).toHaveLength(0);
+  expect(original.profile.data).toMatchObject({ advanced: { motherHeight: 166, fatherHeight: 183 },
+    perinatal: { gestationalWeeks: 34, birthWeightG: 1650 }, clinical: { downSyndrome: true } });
+  const profile = () => frame.evaluate(async id => (await window.VildaVault.getPatient(id)).profile.data, ids.b);
   const note = 'Fikcyjna notatka pacjentki pozostaje w kartotece';
   await frame.evaluate(({ patientId, title }) => window.VildaVault.savePatientNote({
     patientId, title, body: 'Fikcyjny wywiad ogólny', category: 'ogolna',
@@ -125,11 +144,13 @@ test('trashing the sole visit leaves the patient available for a new consultatio
   await confirm.getByRole('button', { name: 'Przenieś do kosza', exact: true }).click();
   await expect(confirm).toBeHidden({ timeout: 15_000 });
   await expect.poll(() => activeVisits(frame, ids.b)).toEqual([]);
+  expect(await profile()).toEqual(original.profile.data);
   const header = headerOf(frame);
   await expect(frame.locator('#vhomePatientOverview')).toBeVisible({ timeout: 15_000 });
   await expect(header).toContainText('Beata');
   await header.getByRole('button', { name: /Gabinet/ }).click();
   await choosePatient(frame, 'Beata');
+  expect(await profile()).toEqual(original.profile.data);
   const patientCard = frame.locator('#vhomePatientOverview');
   await expect(patientCard).toContainText('Brak zapisanych wizyt.');
   await patientCard.getByRole('combobox', { name: 'Sekcja karty' }).selectOption({ label: 'Notatki' });
@@ -144,6 +165,16 @@ test('trashing the sole visit leaves the patient available for a new consultatio
   await start.click();
   const save = header.getByRole('button', { name: 'Zapisz wizytę', exact: true });
   await expect(save).toBeEnabled({ timeout: 15_000 });
+  expect(await frame.evaluate(() => ({
+    advanced: { motherHeight: window.lastLoadedData.advanced.motherHeight,
+      fatherHeight: window.lastLoadedData.advanced.fatherHeight },
+    perinatal: window.lastLoadedData.perinatal,
+    clinical: { downSyndrome: window.lastLoadedData.clinical.downSyndrome },
+  }))).toEqual({ advanced: original.profile.data.advanced,
+    perinatal: original.profile.data.perinatal, clinical: original.profile.data.clinical });
+  await expect(frame.locator('#advMotherHeight')).toHaveValue('166');
+  await expect(frame.locator('#advFatherHeight')).toHaveValue('183');
+  await expect.poll(() => frame.evaluate(() => window.VildaDsSource.getState().population)).toBe('DS');
   await expect(header.getByRole('button', { name: 'Działania', exact: true })).toBeHidden();
   await save.click();
   await expect(start).toBeEnabled({ timeout: 15_000 });
@@ -154,6 +185,21 @@ test('trashing the sole visit leaves the patient available for a new consultatio
   await restoreVisit(frame, '17.06.2026');
   await expect.poll(() => activeVisits(frame, ids.b)).toHaveLength(2);
   expect(await activeVisits(frame, ids.b)).toEqual(expect.arrayContaining([fresh[0], all[0]]));
+  expect(await profile()).toEqual(original.profile.data);
+  const restored = await frame.evaluate(async ({ patientId, snapshotIds }) =>
+    (await window.VildaVault.getPatient(patientId)).snapshots.filter(row => snapshotIds.includes(row.snapshotId))
+      .map(({ snapshotId, payload }) => ({ snapshotId, payload }))
+      .sort((a, b) => a.snapshotId.localeCompare(b.snapshotId)),
+  { patientId: ids.b, snapshotIds: original.snapshots.map(row => row.snapshotId) });
+  // Native Restore renews the sync and pin clocks; every other payload field stays intact.
+  expect(restored).toEqual(original.snapshots.map(row => {
+    const actual = restored.find(snapshot => snapshot.snapshotId === row.snapshotId);
+    expect(actual).toBeDefined();
+    expect(Date.parse(actual.payload._contentAtISO)).toBeGreaterThan(Date.parse(row.payload._contentAtISO));
+    expect(actual.payload._pinnedState.at).toBe(actual.payload._contentAtISO);
+    return { ...row, payload: { ...row.payload, _contentAtISO: actual.payload._contentAtISO,
+      _pinnedState: { ...row.payload._pinnedState, at: actual.payload._pinnedState.at } } };
+  }));
 });
 
 test('a trash confirmation cannot remove another revision or survive a patient switch', async ({ page }) => {

@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
+import { restoreProfileTrashBaseline } from './profile-trash-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = '0499a9e445e5463d3a694cf5675684d333bbd4dd2b01a956a56ee918245869cd';
@@ -67,6 +68,7 @@ export function applyVisitDocumentDelta(base, root = ROOT) {
   return built.source;
 }
 export function restoreVisitDocumentBaseline(source, root = ROOT) {
+  source = restoreProfileTrashBaseline(source, root);
   if (!source.includes(START)) return source;
   const { manifest, fragment } = definition(root), integrated = source;
   if (digest(source) !== manifest.integratedVaultSHA256) fail('unexpected integrated image');
@@ -86,7 +88,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     writeFileSync(resolve(args[2]), built.source);
     process.stdout.write('Built exact active-visit document guard.\n');
   } else if (!args.length) {
-    const source = readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8');
+    const source = restoreProfileTrashBaseline(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
     if (applyVisitDocumentDelta(restoreVisitDocumentBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Active-visit document guard: exact outer Vault layer verified.\n');
   } else fail('usage: node tools/visit-document-vault-delta.mjs [--build BASE_FILE OUTPUT_FILE]');

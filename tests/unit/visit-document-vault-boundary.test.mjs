@@ -3,8 +3,9 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { applyVisitDocumentDelta, restoreVisitDocumentBaseline } from '../../tools/visit-document-vault-delta.mjs';
 import { restorePatientProfileBaseline } from '../../tools/patient-profile-vault-delta.mjs';
+import { restoreProfileTrashBaseline } from '../../tools/profile-trash-vault-delta.mjs';
 
-const source = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
+const source = restoreProfileTrashBaseline(readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8'));
 const manifest = JSON.parse(readFileSync(new URL('../../runtime/visit-document-v1/manifest.json', import.meta.url), 'utf8'));
 const digest = value => createHash('sha256').update(value).digest('hex');
 function native(source) {
