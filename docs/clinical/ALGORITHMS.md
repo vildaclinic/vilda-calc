@@ -22123,7 +22123,8 @@ sejfu, te same kroki co w teście e2e).** Punkt Increlex 20 kg (`dose` 0,24 mg/k
 „Aktualna dawka 0,24 mg/kg/d”; stary punkt 13 kg bez `doseAbs` (`dose` 0,08): „Aktualna dawka 0,08 mg/kg/d”.
 
 **Reguła.** Karta „Leczony IGF-1 (mekasermina)” (program IGF-1 albo preparat Increlex, jednostka punktu nie
-tygodniowa), ostatni punkt terapii:
+tygodniowa) [od P-GH-PREPARAT-BIEZACY (2026-11-23): Increlex czy rhGH wg bieżącego preparatu — leku ostatniego punktu
+kursu, bez leku — programu; nie wg programu Włączenia], ostatni punkt terapii:
 - „Aktualna dawka” = „2 × {mg na podanie} mg na dobę ({dose / 2} mg/kg na podanie)”;
 - mg na podanie = `doseAbs` / 2 (mg/d — P-GH-INCRELEX-PODANIE); bez `doseAbs` — `dose` × masa punktu / 2; bez masy —
   tylko „… mg/kg na podanie”;
@@ -22177,7 +22178,8 @@ te same kroki co w teście e2e).**
 - Wykres trendu z punktów pokazywał już % dawki zalecanej (bez mg/kg; 100% = 0,12 mg/kg na podanie od
   P-GH-INCRELEX-PODANIE) — bez zmian.
 
-**Reguła.** Increlex = preparat „Increlex…” albo program IGF-1, jednostka nie tygodniowa. Tekst dawki jak w
+**Reguła.** Increlex = preparat „Increlex…” albo program IGF-1, jednostka nie tygodniowa [od P-GH-PREPARAT-BIEZACY
+(2026-11-23): gdy punkt ma lek — decyduje lek, bez leku — program punktu]. Tekst dawki jak w
 P-GH-INCRELEX-KARTA: „2 × {mg na podanie} mg na dobę ({mg/kg/d / 2} mg/kg na podanie)”; bez dawki w mg — tylko
 „… mg/kg na podanie”.
 - Tabela „Trend leczenia GH”: wiersz Increlex z punktu — mg z `doseAbs` / 2 (bez `doseAbs` — `dose` × masa / 2); wiersz
@@ -45763,10 +45765,15 @@ zalecanej). Punkt pojedynczy (`Gwl_isInc`): „Increlex ALBO program IGF*” —
 
 **Reguła** (blok `Gp_*` w `vilda_auth_ui.js`). Stan bieżący leczenia GH opisuje bieżący preparat — ostatni punkt wg wieku
 bieżącego kursu (`d`, jak „Aktualna dawka” i „Ostatnia kontrola”):
-1. **Lek bieżący**: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy punkt kursu z lekiem; na końcu lek Włączenia.
-   **Increlex czy rhGH**: gdy znany jest lek — decyduje lek (`/^Increlex/`); bez żadnego leku — program bieżący „IGF-1”.
+1. **Increlex czy rhGH**: ostatni punkt kursu (wg wieku, od końca), który ma lek albo program — gdy ma lek, decyduje lek
+   (`/^Increlex/`), bez leku — jego program (`/^IGF/`); bez leku i programu w całym kursie — rhGH.
+   **Lek bieżący**: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy lek **tego samego rodzaju** (Increlex albo rhGH);
+   brak — „—” (lek drugiego rodzaju nigdy nie podpisuje bieżącej dawki).
 2. **Program bieżący** (cichy tekst „Program …”, dymek pełnej nazwy, pole „Program” przy karcie, która się nie złożyła):
-   program ostatniego punktu kursu, który ma program (wg wieku, od końca); bez programu w żadnym punkcie — „—”.
+   program ostatniego punktu; gdy pusty — ostatni wcześniejszy program **tego samego rodzaju** (IGF… przy Increlexie, inny
+   przy rhGH); brak — „—” (program Włączenia IGF-1 nie przechodzi na kurs rhGH). Uzupełnianie „tylko tego samego rodzaju”
+   dodano po niezależnym przeglądzie (2026-11-23): w starych zapisach z lukami (punkt bez leku z programem SNP po Włączeniu
+   Increlex; Genotropin bez programu po Włączeniu Increlex) znacznik, program, dawka i wiersz trendu nie mogą sobie przeczyć.
 3. Z 1 i 2 — jak dotąd z `c`/`s`: znacznik, „Aktualna dawka” (Increlex na podanie `Gwl_inc` vs mg/kg/d, mg/kg/tydz),
    kafelek „Preparat i dawka” (`Kg_dawkaCz`), pasek leczenia (`Kl_daneGh`), cichy tekst nagłówka, etykieta przełącznika,
    linia „Analizy” (`Kl_wy.program`, `programPelny`). Pole „Preparat” i podpis kafelka (`Kl_wy.preparat`) — ten sam lek
@@ -45790,6 +45797,7 @@ bieżącego kursu (`d`, jak „Aktualna dawka” i „Ostatnia kontrola”):
 | G→I | W Genotropin 12 mg, SNP, 7;0 (0,025) → K Increlex 40 mg, IGF-1, 7;6 (19,6 kg, 0,08, 1,6 mg/d) | „Leczony IGF-1 (mekasermina)”, „Program IGF-1 · 2 punkty kontrolne”; kafelek „2 × 0,8 mg” + „na dobę” · 0,04 mg/kg na podanie · Increlex 40 mg; pasek „2 × 0,8 mg na dobę (0,04 mg/kg na podanie) · 6 mies. · …” | „Program SNP · …” (reszta jak po zmianie) |
 | cały Increlex / cały rhGH | P-GH-INCRELEX-* (Increlex 40 mg, IGF-1), G1 etapu 3 (Genotropin, SNP), Ngenla, zakończone, wznowienie GR1, W2, bez Włączenia | bez zmian (testy etapu 3 i P-GH-INCRELEX-* bez zmian oczekiwań) | — |
 | punkt bez leku | I→G z ostatnim punktem bez leku i programu | rhGH, „Program SNP · 3 punkty kontrolne”, „0,033 mg/kg/d” · Genotropin 12 mg; wiersz trendu „0,033 mg/kg/d” | IGF-1, „2 × 0,35 mg na dobę” · 0,017 mg/kg na podanie · Increlex 40 mg |
+| luki po Włączeniu Increlex | A: Kontynuacje bez leku z programem SNP; B: Kontynuacje Genotropin bez programu | A: rhGH, „Program SNP · 3 punkty kontrolne”, „0,033 mg/kg/d” bez podpisu preparatu, wiersz trendu „0,033 mg/kg/d”; B: rhGH, „3 punkty kontrolne” (bez programu), „0,033 mg/kg/d” · Genotropin 12 mg, bez pasa typowego zakresu | A: IGF-1, dawka na podanie, „Program IGF-1”; B: IGF-1, dawka na podanie |
 | niespójny punkt | G1 z programem IGF-1 we wszystkich punktach | rhGH, „Program IGF-1 · 3 punkty kontrolne” (program jak zapisany), „0,033 mg/kg/d”; tabela trendu w mg/kg/d, legenda „dawka (mg/kg/d)” | IGF-1, „2 × 0,49 mg na dobę” · 0,017 mg/kg na podanie; tabela na podanie |
 | wznowienie | kurs 1 Increlex (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0) | „kurs 2 z 2”, rhGH, „Program SNP · 2 punkty kontrolne w kursie (4 łącznie)”, „0,033 mg/kg/d” | tak samo (bieżący kurs zaczyna Genotropin — już dotąd) |
 
@@ -45812,9 +45820,9 @@ bieżącego kursu (`d`, jak „Aktualna dawka” i „Ostatnia kontrola”):
   `vilda_summary_cards.js`, epikryza (`vilda_epicrisis.js`) — bez rozróżnienia Increlex/rhGH ani programu z punktów.
 
 **Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
-- `tests/unit/karta-leczenie.test.mjs` (104 → 113; prawdziwe `wl`, `kl`, `Pl`, `Kl_leczenie` i blok `Gp_*`): I→G (karta,
-  pasek, trend), I→G z odcinkami, G→I, cały Increlex / cały rhGH, punkt bez leku, niespójny punkt, wznowienie, pas typowego
-  zakresu w trendzie, reguła w kodzie (`Gp_biezacy`, `Gp_program`, `Gwl_isInc`, `Gwl_all`). Bez zmian oczekiwań
+- `tests/unit/karta-leczenie.test.mjs` (104 → 114; prawdziwe `wl`, `kl`, `Pl`, `Kl_leczenie` i blok `Gp_*`): I→G (karta,
+  pasek, trend), I→G z odcinkami, G→I, cały Increlex / cały rhGH, punkt bez leku, luki po Włączeniu Increlex (A, B), niespójny punkt, wznowienie, pas
+  typowego zakresu w trendzie, reguła w kodzie (`Gp_biezacy`, `Gp_program`, `Gwl_isInc`, `Gwl_all`). Bez zmian oczekiwań
   istniejących testów.
 - e2e: nowe `tests/e2e/karta-gh-preparat-biezacy.spec.mjs` KP-1 (I→G), KP-2 (G→I) — komputer;
   `karta-gh-preparat-biezacy-mobile.spec.mjs` KPM-1 (I→G) — telefon; pacjenci w `tests/support/karta-leczenie.mjs`.

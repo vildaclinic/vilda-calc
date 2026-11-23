@@ -1541,6 +1541,28 @@ describe('P-GH-PREPARAT-BIEZACY — Karta opisuje bieżący preparat (Increlex �
       'Program SNP · 3 punkty kontrolne', '0,033 mg/kg/d', 'Genotropin 12 mg']);
   });
 
+  it('luki w starych zapisach po Włączeniu Increlex: rodzaj z ostatniego punktu z lekiem albo programem, lek i program tylko tego samego rodzaju', () => {
+    const [w, k1, k2] = G_I_DO_G;
+    // A: Kontynuacje bez leku, z programem SNP → rhGH (program punktu), bez podpisu „Increlex”, dawka w mg/kg/d
+    const bezLekuSnp = (p) => ({ ...p, drug: null, program: 'SNP' });
+    const a = zbuduj({ plec: 'M', ghTherapyPoints: [w, bezLekuSnp(k1), bezLekuSnp(k2)] });
+    expect(odznaka(a)).toBe('Leczony hormonem wzrostu (rhGH)'); // przed przeglądem: „Leczony IGF-1 (mekasermina)” przy „Program SNP”
+    expect(a.gh.cichy).toBe('Program SNP · 3 punkty kontrolne');
+    expect(a.gh.kafelki[0].v).toBe('0,033 mg/kg/d');
+    expect(a.gh.kafelki[0].sub || '').not.toContain('Increlex');
+    expect(wierszeTrendu(a)[3]).toBe('8 l. 0 mies.0,033 mg/kg/d—'); // wiersz trendu tego punktu — ten sam rodzaj co znacznik
+    // B: Kontynuacje Genotropin bez programu → rhGH; program Włączenia IGF-1 nie przechodzi na rhGH
+    const bezProgramu = (p) => ({ ...p, program: null });
+    const b = zbuduj({ plec: 'M', ghTherapyPoints: [w, bezProgramu(k1), bezProgramu(k2)] });
+    expect(odznaka(b)).toBe('Leczony hormonem wzrostu (rhGH)');
+    expect(b.gh.cichy).toBe('3 punkty kontrolne'); // przed przeglądem: „Program IGF-1 · 3 punkty kontrolne”
+    expect(b.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg' }));
+    const { Gp } = karta();
+    expect(Gp.Gp_biezacy([w, bezLekuSnp(k1), bezLekuSnp(k2)])).toEqual({ lek: '', program: 'SNP', increlex: false });
+    expect(Gp.Gp_biezacy([w, bezProgramu(k1), bezProgramu(k2)])).toEqual({ lek: 'Genotropin 12 mg', program: '', increlex: false });
+    expect(Gp.Gp_program([w, bezProgramu(k1), bezProgramu(k2)])).toBe(''); // pas „typowego zakresu” bez programu, nie IGF-1
+  });
+
   it('niespójny zapis: Genotropin z programem IGF-1 → rhGH (lek decyduje), dawka i tabela w mg/kg/d; program pokazany jak zapisany', () => {
     const k = zbuduj({ plec: 'M', ghTherapyPoints: G_NIESPOJNY });
     expect(odznaka(k)).toBe('Leczony hormonem wzrostu (rhGH)'); // dotąd „Leczony IGF-1 (mekasermina)”

@@ -2710,10 +2710,11 @@ Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 ## Łatka P-GH-PREPARAT-BIEZACY — Karta: Increlex czy rhGH wg bieżącego preparatu (`vilda_auth_ui.js` 581 → 582, 2026-11-23, decyzja właściciela)
 
 Czytelne źródło reguły: `vilda_auth_ui.js` — nowy czytelny blok P-GH-PREPARAT-BIEZACY zaraz po `Gw_punktyProgramu`
-(koniec bloku P-GH-WZNOWIENIE, przed blokiem P-KARTA-LECZENIE, etap 1): `Gp_ostatni` (ostatnia niepusta wartość pola
-w punktach GH listy wg wieku, od końca), `Gp_program` (program bieżący kursu), `Gp_increlexPunktu` (punkt pojedynczy:
-lek decyduje, bez leku — program punktu `/^IGF/`, jak dotąd), `Gp_biezacy` (stan bieżący podsumowania: lek bieżący,
-program bieżący, Increlex czy rhGH; bez żadnego leku — program „IGF-1”, jak dotąd w `wl`). Opis:
+(koniec bloku P-GH-WZNOWIENIE, przed blokiem P-KARTA-LECZENIE, etap 1): `Gp_rodzajPunktu` (rodzaj punktu: Increlex,
+rhGH albo nieznany — lek decyduje, bez leku program `/^IGF/`), `Gp_program` (program bieżący kursu, jak w `Gp_biezacy`),
+`Gp_increlexPunktu` (punkt pojedynczy: lek decyduje, bez leku — program punktu `/^IGF/`, jak dotąd), `Gp_biezacy` (stan
+bieżący podsumowania: Increlex czy rhGH z ostatniego punktu z lekiem albo programem; lek i program ostatniego punktu,
+a gdy pusty — ostatni wcześniejszy tego samego rodzaju). Opis:
 `docs/clinical/ALGORITHMS.md`, wpis P-GH-PREPARAT-BIEZACY. Zminifikowane miejsca zmienione kotwicami występującymi
 dokładnie raz; skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_auth.py` + `gp_blok.js`) odtwarza wynik
 z `origin/audyt` a7b2920b; bez ponownej minifikacji.
@@ -2724,7 +2725,7 @@ z `origin/audyt` a7b2920b; bez ponownej minifikacji.
 //    → function Gwl_isInc(d,p){/* P-GH-PREPARAT-BIEZACY … */return Gp_increlexPunktu(d,p)}
 // vilda_auth_ui.js — wl (podsumowanie GH)
 // 2. var d=n[n.length-1],c=r.program||d.program||"",s=c==="IGF-1"||/^Increlex/.test(String(d.drug||r.drug||"")),
-//    → var d=n[n.length-1];/* P-GH-PREPARAT-BIEZACY … */var Gp_s=Gp_biezacy(Gw_p,d,r),c=Gp_s.program,s=Gp_s.increlex,
+//    → var d=n[n.length-1];/* P-GH-PREPARAT-BIEZACY … */var Gp_s=Gp_biezacy(Gw_p),c=Gp_s.program,s=Gp_s.increlex,
 //    (Gw_p — punkty bieżącego kursu wg wieku; jeden kurs — wszystkie punkty wg wieku; c i s zasilają jak dotąd znacznik,
 //    pole/cichy tekst „Program”, dymek, Gwl_inc/Kg_dawkaCz, Kl_wy.odznaka/dawka/dawkaCz/program/programPelny)
 // 3. h("Preparat",d.drug||r.drug||"—") → h("Preparat",Gp_s.lek||"—")
@@ -2733,6 +2734,8 @@ z `origin/audyt` a7b2920b; bez ponownej minifikacji.
 // 5. var d="",Gw_pp=Gw_punktyProgramu(a);if(Array.isArray(Gw_pp))for(var c=0;c<Gw_pp.length;c+=1){var s=Gw_pp[c];
 //    if(s&&s.program&&(d=s.program,s.type==="start"))break}
 //    → /* P-GH-PREPARAT-BIEZACY … */var d=Gp_program(Gw_punktyProgramu(a));
+// vilda_auth_ui.js — komentarz P-GH-INCRELEX-WIDOKI przed Gwl_isInc (dopisek, bez zmiany kodu)
+// 6. Increlex = preparat Increlex albo program IGF-1; → … albo program IGF-1 [od P-GH-PREPARAT-BIEZACY (2026-11-23): …];
 ```
 
 **Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
