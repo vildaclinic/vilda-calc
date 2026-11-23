@@ -1081,9 +1081,9 @@ test('a mobile reminder added to an existing plan retains the active visit and i
   await expect.poll(async () => !!(await read()).note, {message:'Przypomnienie wybranego planu zostało zapisane'}).toBe(true);
   await expect.poll(async () => (await read()).note?.visitContext).toEqual(origin);
   const saved = await read();
-  expect(saved.note).toMatchObject({patientId:ids.a, dueDateISO, careContext:{planId:plan.planId}, visitContext:origin});
+  expect(saved.note).toMatchObject({patientId:ids.a, dueDateISO:dueDateISO + 'T00:00:00.000Z', careContext:{planId:plan.planId}, visitContext:origin});
   expect(saved.plan.patientId).toBe(ids.a);
-  expect(saved.plan.steps.some(step => step.reminderNoteId === saved.note.id)).toBe(true);
+  expect(saved.plan.steps.find(step => step.reminderNoteId === saved.note.id)).toMatchObject({reminderNoteId:saved.note.id, reminderDateISO:dueDateISO});
   expect(saved.plan.log.find(entry => entry.text?.includes(title))?.visitContext).toEqual(origin);
   expect(saved.plan.visitContext).toBeUndefined();
   expect(saved.visit).toMatchObject({patientId:ids.a, visitId:visit.visitId, clinicalDateISO:visit.clinicalDateISO});
