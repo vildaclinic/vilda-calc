@@ -92,6 +92,109 @@ test('returning from rapid intake reuses the already styled launcher', async ({ 
   expect(await icons.evaluateAll(items => items.map(icon => icon.getBoundingClientRect().width))).toEqual(widths);
 });
 
+test('registration and rapid intake use the PESEL name suggestion on blur and preserve the clinician choice until a fresh form', async ({ page }) => {
+  const { frame } = await prepareGabinet(page);
+  const patientsBefore = await listPatients(frame);
+  const home = launch(frame);
+  const automaticAnna = 'Płeć ustawiona na podstawie imienia „Anna” — sprawdź.';
+  const ambiguousAlex = 'Sprawdź płeć: imię „Alex” noszą kobiety i mężczyźni.';
+  const manualEwa = 'Sprawdź płeć: imię „Ewa” jest zwykle żeńskie.';
+  async function typeAndLeave(field, value) {
+    await field.fill(value);
+    await field.press('Tab');
+  }
+
+  const entry = home.locator('[data-entry="new"]');
+  const form = frame.locator('#vhomeGabinetRegistration').getByRole('form', { name: 'Formularz dodawania pacjenta' });
+  const first = form.getByLabel('Imię', { exact: true });
+  const last = form.getByLabel('Nazwisko', { exact: true });
+  const male = form.locator('.gb-registration-choice').getByRole('button', { name: 'Męska', exact: true });
+  const female = form.locator('.gb-registration-choice').getByRole('button', { name: 'Żeńska', exact: true });
+  const registrationNote = form.locator('#gb-registration-sex-note');
+
+  await entry.click();
+  await expect(male).toHaveAttribute('aria-pressed', 'false');
+  await expect(female).toHaveAttribute('aria-pressed', 'false');
+  await expect(registrationNote).toBeHidden();
+  await typeAndLeave(last, 'Nowak');
+  await typeAndLeave(first, 'Alex');
+  await expect(male).toHaveAttribute('aria-pressed', 'false');
+  await expect(female).toHaveAttribute('aria-pressed', 'false');
+  await expect(registrationNote).toBeVisible();
+  await expect(registrationNote).toHaveText(ambiguousAlex);
+  await typeAndLeave(first, 'Anna');
+  await expect(female).toHaveAttribute('aria-pressed', 'true');
+  await expect(male).toHaveAttribute('aria-pressed', 'false');
+  await expect(registrationNote).toBeVisible();
+  await expect(registrationNote).toHaveText(automaticAnna);
+  await male.click();
+  await typeAndLeave(first, 'Ewa');
+  await expect(male).toHaveAttribute('aria-pressed', 'true');
+  await expect(female).toHaveAttribute('aria-pressed', 'false');
+  await expect(registrationNote).toHaveText(manualEwa);
+  await form.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(form).toHaveCount(0);
+
+  await entry.click();
+  await expect(first).toHaveValue('');
+  await expect(last).toHaveValue('');
+  await expect(male).toHaveAttribute('aria-pressed', 'false');
+  await expect(female).toHaveAttribute('aria-pressed', 'false');
+  await expect(registrationNote).toBeHidden();
+  await typeAndLeave(first, 'Anna');
+  await expect(female).toHaveAttribute('aria-pressed', 'true');
+  await expect(registrationNote).toHaveText(automaticAnna);
+  await first.fill('Łukasz');
+  await male.click();
+  await expect(male).toHaveAttribute('aria-pressed', 'true');
+  await expect(female).toHaveAttribute('aria-pressed', 'false');
+  await expect(registrationNote).toBeHidden();
+  await form.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(form).toHaveCount(0);
+
+  await home.locator('[data-entry="rapid"]').click();
+  const rapidFirst = frame.locator('#firstName');
+  const rapidLast = frame.locator('#lastName');
+  const sex = frame.locator('#sex');
+  const note = frame.locator('#plecZImieniaNote');
+  await expect(sex).toHaveValue('');
+  await expect(note).toBeHidden();
+  await typeAndLeave(rapidLast, 'Nowak');
+  await typeAndLeave(rapidFirst, 'Alex');
+  await expect(sex).toHaveValue('');
+  await expect(note).toBeVisible();
+  await expect(note).toHaveText(ambiguousAlex);
+  await typeAndLeave(rapidFirst, 'Anna');
+  await expect(sex).toHaveValue('F');
+  await expect(note).toBeVisible();
+  await expect(note).toHaveText(automaticAnna);
+  // Real keyboard input makes this a trusted clinician change, not a restore event.
+  await sex.focus();
+  await sex.press('m');
+  await sex.press('Tab');
+  await expect(sex).toHaveValue('M');
+  await typeAndLeave(rapidFirst, 'Ewa');
+  await expect(sex).toHaveValue('M');
+  await expect(note).toHaveText(manualEwa);
+
+  const confirmation = page.waitForEvent('dialog');
+  const leave = button(frame.locator('#gbEntryHeader'), 'Ekran startowy').click();
+  const dialog = await confirmation;
+  expect(dialog.type()).toBe('confirm');
+  expect(dialog.message()).toContain('odrzucić niezapisane dane');
+  await dialog.accept();
+  await leave;
+  await home.locator('[data-entry="rapid"]').click();
+  await expect(rapidFirst).toHaveValue('');
+  await expect(rapidLast).toHaveValue('');
+  await expect(sex).toHaveValue('');
+  await expect(note).toBeHidden();
+  await typeAndLeave(rapidFirst, 'Anna');
+  await expect(sex).toHaveValue('F');
+  await expect(note).toHaveText(automaticAnna);
+  expect(await listPatients(frame)).toEqual(patientsBefore);
+});
+
 test('rapid intake stores one visit per save, starts the next patient clean and preserves homonyms across reload', async ({ page }) => {
   const { frame, ids } = await prepareGabinet(page);
   const home = launch(frame);

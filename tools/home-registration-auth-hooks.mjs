@@ -74,7 +74,7 @@ function change(source, reverse) {
 // vault operations and session ownership stay with ss, including the duplicate choice.
 const inlineOpener = `function homeRegistrationForm(home, controls) {
   const {last, first, male, female, base, external, dob, dobError, year, guardian,
-    phone, guardianNote, contact, mother, father, cancel, submit, error} = controls;
+    phone, guardianNote, contact, mother, father, cancel, submit, error, getSex, setSex} = controls;
   function field(title, input, wide) {
     if (input !== dob && input !== year) input.removeAttribute('placeholder');
     return e('label',{class:'gb-registration-field' + (wide ? ' gb-registration-wide' : '')},[
@@ -120,10 +120,46 @@ const inlineOpener = `function homeRegistrationForm(home, controls) {
   const outsideContact = field('Kontakt / uwaga',contact);
   const family = card('Wzrost rodziców',true,[fields([field('Wzrost mamy (cm)',mother),field('Wzrost taty (cm)',father)]),
     hint('Do oceny potencjału genetycznego wzrostu (MPH).')]);
+  const sexChoice = choice('Płeć',[male,female],true);
+  const sexNote = e('div',{id:'gb-registration-sex-note',class:'vild-dob-note',role:'status','aria-live':'polite'});
+  sexNote.hidden = true;
+  sexChoice.setAttribute('aria-describedby',sexNote.id);
+  sexChoice.appendChild(sexNote);
+  const sexSuggestion = i.VildaPlecZImienia;
+  const states = sexSuggestion?.STAN;
+  let sexState = states?.DOMYSLNA;
+  function updateSexSuggestion(apply) {
+    if (!sexSuggestion?.pokazNotke || !home.current()) return;
+    if (apply && !first.value.trim() && !last.value.trim() && sexState !== states.LEKARZ) sexState = states.DOMYSLNA;
+    const result = sexSuggestion.podpowiedz({imie:first.value,nazwisko:last.value});
+    if (apply && result.plec && (sexState === states.DOMYSLNA || sexState === states.AUTOMAT)) {
+      setSex(result.plec);
+      sexState = states.AUTOMAT;
+    }
+    sexSuggestion.pokazNotke(sexNote,result,sexState,getSex());
+  }
+  for (const input of [first,last]) input.addEventListener('change',event => {
+    if (event.isTrusted) updateSexSuggestion(true);
+  });
+  for (const [button, value] of [[male,'M'],[female,'F']]) {
+    // Nie odznaczaj opcji ustawionej między naciśnięciem przycisku a kliknięciem przez blur pola imienia.
+    let beforePress;
+    button.addEventListener('pointerdown',event => {
+      if (event.isTrusted) beforePress = getSex();
+    });
+    button.addEventListener('click',event => {
+      if (!home.current()) return;
+      const previous = event.isTrusted && event.detail > 0 && beforePress !== undefined ? beforePress : getSex();
+      beforePress = undefined;
+      sexState = event.isTrusted ? states?.LEKARZ : states?.ZEWNETRZNA;
+      setSex(previous === value ? null : value);
+      updateSexSuggestion(false);
+    });
+  }
   const form = e('form',{class:'gb-registration-form','aria-label':'Formularz dodawania pacjenta',autocomplete:'off'},[
     e('div',{class:'gb-registration-type-line'},[choice('Rodzaj kartoteki',[base,external]),typeHint]),
     e('div',{class:'gb-registration-grid'},[
-      card('Tożsamość',false,[fields([field('Nazwisko',last),field('Imię',first),choice('Płeć',[male,female],true)])]),
+      card('Tożsamość',false,[fields([field('Nazwisko',last),field('Imię',first),sexChoice])]),
       card('Data urodzenia',false,[dobGroup,yearGroup]),
       card('Kontakt / opiekun',true,[guardians,outsideContact],'gb-registration-contact'),family
     ]),error,e('div',{class:'gb-registration-actions'},[cancel,submit])
@@ -131,6 +167,10 @@ const inlineOpener = `function homeRegistrationForm(home, controls) {
   // A real submit button keeps Enter and assistive-technology submit actions
   // on the same native click path as the pointer.
   submit.type = 'submit';
+  submit.addEventListener('click',() => {
+    const active = form.ownerDocument.activeElement;
+    if (active === first || active === last) active.blur();
+  }, {capture:true});
   submit.addEventListener('click',event => {
     event.preventDefault();
     if (submit.disabled) form.inert = true;
@@ -198,6 +238,8 @@ function showGabinetNewPatient(options) {
 `;
 const inlinePairs = [
   [opener, inlineOpener],
+  ['m.addEventListener("click",function(){v=v==="M"?null:"M",x(),N()}),y.addEventListener("click",function(){v=v==="K"?null:"K",x(),N()});',
+   'function setRegistrationSex(sex){v=sex;x();N()}if(!home){m.addEventListener("click",function(){setRegistrationSex(v==="M"?null:"M")});y.addEventListener("click",function(){setRegistrationSex(v==="K"?null:"K")})}'],
   ['H.disabled=!st,W.textContent=', 'if(!home)H.disabled=!st;W.textContent='],
   ['}else H.disabled=!1;N()}function L(st)', '}else if(!home)H.disabled=!1;N()}function L(st)'],
   ['H.addEventListener("click",function(){var st=(u.value', 'H.addEventListener("click",function(){if(home&&(!home.current()||home.closeDuplicate))return;var st=(u.value'],
@@ -222,7 +264,14 @@ const inlinePairs = [
   ['et.target===vt&&(dt(),H.disabled=!1)', 'if(et.target===vt){if(home)home.closeDuplicate?.();else{dt();H.disabled=!1}}'],
   ['text:"Anuluj",style:"flex:0 0 auto;",onclick:function(){dt(),H.disabled=!1}', 'text:"Anuluj",style:"flex:0 0 auto;",onclick:function(){if(home)home.closeDuplicate?.();else{dt();H.disabled=!1}}'],
   ['});const formRoot=e("div",{class:"vilda-auth-screen vilda-edit2"}',
-   '});if(home){const inline=homeRegistrationForm(home,{last:u,first:h,male:m,female:y,base:ut,external:wt,dob:w,dobError:W,year:F,guardian:D,phone:M,guardianNote:S,contact:b,mother:z,father:I,cancel:V,submit:H,error:Z});L(l);return inline}const formRoot=e("div",{class:"vilda-auth-screen vilda-edit2"}'],
+   `});if(home){
+  const inline=homeRegistrationForm(home,{last:u,first:h,male:m,female:y,base:ut,external:wt,dob:w,dobError:W,year:F,guardian:D,phone:M,guardianNote:S,contact:b,mother:z,father:I,cancel:V,submit:H,error:Z,
+    getSex:()=>v==='K'?'F':v,
+    setSex(sex){setRegistrationSex(sex==='F'?'K':sex);}
+  });
+  L(l);
+  return inline;
+}const formRoot=e("div",{class:"vilda-auth-screen vilda-edit2"}`],
 ];
 function changeInline(source, reverse) {
   const end = source.indexOf(formEnd);
