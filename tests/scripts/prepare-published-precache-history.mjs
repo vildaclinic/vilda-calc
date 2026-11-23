@@ -4,7 +4,9 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readPublishedPrecachePin, verifyPublishedPrecacheHistory } from '../support/podbij-wersje.mjs';
 
-const DEEPEN_STEPS = [2, 4, 8, 16];
+// The integration branch can carry dozens of reviewed PRs above the fixed
+// publication pin. Keep both ancestry proofs bounded as that history grows.
+const DEEPEN_STEPS = [2, 4, 8, 16, 32];
 function git(katalog, args) {
   return execFileSync('git', args, { cwd: katalog, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20_000 }).trim();
 }

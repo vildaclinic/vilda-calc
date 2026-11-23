@@ -235,9 +235,9 @@ describe('published precache provenance and official version planning', () => {
     expect(() => r.plan()).toThrow();
   });
 
-  it('prepares and proves a pinned ancestor in a depth-two file-origin clone, then checks versions offline', () => {
+  it('proves an older integration pin in a depth-two file-origin clone, then checks versions offline', () => {
     const r = fixture(); const { pin } = published(r); r.commit('record reviewed fictional publication pin');
-    for (let index = 0; index < 5; index++) { r.write('docs/fictional-note.md', `fictional descendant ${index}\n`); r.commit(`fictional descendant ${index}`); }
+    for (let index = 0; index < 38; index++) r.git('commit', '-q', '--allow-empty', '-m', `fictional descendant ${index}`);
     r.apply(); r.commit('official versions for fictional integration');
     // The synthetic PR merge and its parents exist, while the pinned published
     // ancestor lies outside actions/checkout's initial fetch-depth:2 boundary.

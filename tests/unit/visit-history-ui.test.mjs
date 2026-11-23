@@ -115,8 +115,12 @@ describe('Historia wizyt — canonical read-only patient state', () => {
   it('shows documents linked to the exact visit even for two encounters on the same day', async () => {
     const env = setup([visit('first', '2026-11-03'), visit('second', '2026-11-03')]);
     env.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    env.win.VildaLabHistory = {isResultNote: note => !!note.labResult, isClcrResultNote: () => false};
     env.vault.listPatientNotesForPatient = vi.fn(async () => [
       {patientId: PID, title: 'Tylko pierwsza', visitContext: {visitId: 'first'}},
+      {patientId: PID, title: 'Fikcyjny wynik', clinicalDateISO: '2026-10-26', labResult: {}, visitContext: {visitId: 'first'}},
+      {patientId: PID, title: 'Krok planu', dueDateISO: '2026-11-24T00:00:00.000Z', careContext: {role: 'step'},
+        visitContext: {visitId: 'first'}},
       {patientId: PID, title: 'Tylko druga', visitContext: {visitId: 'second'}, reminderContext: {version: 1}},
       {patientId: PID, title: 'Ogólna notatka', clinicalDateISO: '2026-11-03'},
       {patientId: 'foreign', title: 'Inna osoba', visitContext: {visitId: 'first'}},
@@ -128,11 +132,13 @@ describe('Historia wizyt — canonical read-only patient state', () => {
     await env.open({onEdit: vi.fn()});
     expect(env.detail().textContent).toContain('Tylko pierwsza');
     expect(env.detail().textContent).toContain('Kontrola pierwsza');
+    expect(env.detail().textContent).toContain('Data badania · 26.10.2026');
+    expect(env.detail().textContent).toContain('Termin · 24.11.2026');
     expect(env.detail().textContent).not.toMatch(/Tylko druga|Kontrola druga|Ogólna notatka|Inna osoba/);
     env.buttons()[1].click();
     expect(env.detail().textContent).toContain('Tylko druga');
     expect(env.detail().textContent).toContain('Kontrola druga');
-    expect(env.detail().textContent).not.toMatch(/Tylko pierwsza|Kontrola pierwsza/);
+    expect(env.detail().textContent).not.toMatch(/Tylko pierwsza|Kontrola pierwsza|Fikcyjny wynik|Krok planu|24.11.2026/);
   });
 
   it('shows only care-plan entries recorded at the selected visit, once, from either native representation', async () => {

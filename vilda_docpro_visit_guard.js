@@ -16,7 +16,7 @@
     '#dobClear', '#restoreStateBtn', '#advAddMeasurementBtn', '#advClearBtn',
     '#basicGrowthAddMeasurementBtn', '#basicGrowthClearBtn', '#intakeAddRow',
     '#resetSgaBirth', '#computeSgaBirth', '#btnZscorePalczewska', '#btnZscoreOlaf', '#computeZscoreBatch',
-    '#obesityPrefillBtn', '#btnGhStart', '#btnGhContinue', '#btnGhEnd',
+    '#obesityPrefillBtn', '#obesityMonDrugSuggest button.obs-act.sec', '#btnGhStart', '#btnGhContinue', '#btnGhEnd',
     '#btnGhRetro', '#btnGhRetroAdd', '#ghDamagedRemoveBtn', '#ghZWierszaZapisz',
     '#tzAdd90', '#tzAdd180', '#tzAddManual', '.gh-uszkodzone-napraw',
     '.edit-gh-pt-btn', '.delete-gh-pt-btn', '.obm-edit', '.obm-del', '.obm-msg-btn', '.bpm-del',
