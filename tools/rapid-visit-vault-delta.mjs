@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { restorePatientProfileBaseline } from './patient-profile-vault-delta.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const BASE = '1cc227c5b2e0daed415b9f26fa94fdb44aa94935c21783f25e4cf33fb1d775e2';
@@ -47,5 +48,6 @@ export function applyRapidVisitDelta(source, repository = ROOT) {
 }
 
 export function restoreRapidVisitBaseline(source, repository = ROOT) {
+  source = restorePatientProfileBaseline(source, repository);
   return source.includes(MARKER) ? transform(source, repository, true) : source;
 }

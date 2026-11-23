@@ -521,6 +521,119 @@ test('reloading right after saving a reminder keeps its measurement-free visit i
   expect(saved).toEqual({ visits: 1, reminderVisit: visit.visitId });
 });
 
+test('Edytuj pacjenta saves identity and guardian independently and preserves the exact historical visits after F5', async ({ page }) => {
+  let { frame, ids } = await prepare(page);
+  const historical = await frame.evaluate(async patientId => {
+    const vault = window.VildaVault;
+    const template = (await vault.getPatient(patientId)).snapshots[0].payload;
+    let older;
+    for (const [date, height, weight, guardian] of [
+      ['2025-06-17', 145, 35, 'Fikcyjny opiekun historyczny'],
+      ['2026-06-17', 158, 46, 'Fikcyjny opiekun zapisanej wizyty'],
+    ]) {
+      const payload = structuredClone(template);
+      payload.visit = window.VildaVisitContext.create({ patientId, clinicalDateISO: date });
+      payload.user = { ...payload.user, measuredAtISO: date, age: date.startsWith('2025') ? 12 : 13,
+        ageMonths: 0, height, weight };
+      payload.guardian = { name: guardian, relation: 'inny', phone: '', email: '' };
+      const receipt = await vault.savePatient(payload, { patientId, dedup: false });
+      if (!older) older = { visitId: payload.visit.visitId, snapshotId: receipt.snapshotId, guardian };
+    }
+    return older;
+  }, ids.a);
+  await choosePatient(frame, 'Antoni');
+  const records = () => frame.evaluate(async id => {
+    const patient = await window.VildaVault.getPatient(id);
+    return { snapshots: patient.snapshots, count: patient.snapshotCount, latest: patient.latest,
+      visits: await window.VildaVault.getPatientVisits(id) };
+  }, ids.a);
+  const before = await records();
+  const clinicalBefore = await frame.evaluate(() => {
+    const value = window.VildaDataImportExport.captureCurrentUserDataReadOnly();
+    delete value.timestampISO;
+    return value;
+  });
+  const card = frame.locator('#vhomePatientOverview');
+  await card.locator('.vhome-b1-menu-toggle').click();
+  await card.getByRole('menuitem', { name: 'Edytuj pacjenta', exact: true }).click();
+  const editor = frame.locator('.vilda-edit2');
+  await expect(editor).toBeVisible();
+  const guardian = 'Fikcyjna opiekunka aktualnej kartoteki';
+  const firstName = 'Kartotekowy', dobISO = '2014-06-17';
+  await editor.getByPlaceholder('Imię i nazwisko opiekuna', { exact: true }).fill(guardian);
+  await editor.getByPlaceholder('Imię', { exact: true }).fill(firstName);
+  await editor.getByPlaceholder('DD-MM-RRRR (opcjonalnie)', { exact: true }).fill('17-06-2014');
+  await editor.getByRole('button', { name: 'Zapisz zmiany', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await expect.poll(() => frame.evaluate(async id =>
+    (await window.VildaVault.getPatient(id)).profile?.data?.guardian?.name, ids.a)).toBe(guardian);
+  await expect(page.locator('#vildaPatientValue')).toContainText(firstName);
+  await expect(frame.locator('#vhomeGabinetHeader h1')).toContainText(firstName);
+  await expect(frame.locator('#vhomePatientOverview .vhome-b1-identity')).toContainText(firstName);
+  await expect(page.locator('[data-menu-patient-name]').filter({ visible: true })).toContainText(firstName);
+  expect(await frame.evaluate(async id =>
+    (await window.VildaVault.getPatient(id)).profile.data.user, ids.a)).toMatchObject({ firstName, dobISO });
+  expect(await records()).toEqual(before);
+  expect(await frame.evaluate(() => {
+    const value = window.VildaDataImportExport.captureCurrentUserDataReadOnly();
+    delete value.timestampISO;
+    return value;
+  })).toEqual(clinicalBefore);
+
+  await page.reload({ waitUntil: 'load' });
+  frame = await shellFrame(page);
+  await readyForPatient(frame);
+  const header = frame.locator('#vhomeGabinetHeader');
+  if (!await header.isVisible()) await choosePatient(frame, firstName);
+  await expect(page.locator('#vildaPatientValue')).toContainText(firstName);
+  expect(await frame.evaluate(async id =>
+    (await window.VildaVault.getPatient(id)).profile.data.guardian.name, ids.a)).toBe(guardian);
+  expect(await frame.evaluate(async id =>
+    (await window.VildaVault.getPatient(id)).profile.data.user, ids.a)).toMatchObject({ firstName, dobISO });
+  expect(await records()).toEqual(before);
+
+  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
+  expect(await frame.evaluate(() =>
+    window.lastLoadedData.guardian.name)).toBe(guardian);
+  expect(await frame.evaluate(() =>
+    window.VildaDataImportExport.captureCurrentUserDataReadOnly().user)).toMatchObject({ firstName, dobISO, sex: 'M' });
+  expect(await frame.evaluate(() =>
+    window.VildaDataImportExport.captureCurrentUserDataReadOnly().advanced.data.measurements
+      .filter(point => point.height === 158 && point.weight === 46)
+      .map(point => ({ ageMonths: point.ageMonths, height: point.height, weight: point.weight }))
+  )).toEqual([{ ageMonths: 156, height: 158, weight: 46 }]);
+  await expect(frame.locator('#height')).toHaveValue('');
+  await expect(frame.locator('#weight')).toHaveValue('');
+  expect(await records()).toEqual(before);
+
+  await header.getByRole('button', { name: 'Historia wizyt', exact: true }).click();
+  const history = frame.locator('#vhomeVisitHistory');
+  await history.getByRole('button', { name: 'Lista', exact: true }).click();
+  await history.locator(`.vhs-list button[data-visit-id="${historical.visitId}"]`).click();
+  const detail = frame.locator('#vhomeVisitDetail');
+  await expect(detail).toBeVisible();
+  await expect(detail.locator('.vd-identity > p')).toContainText('12 lat 0 mies.');
+  await expect(detail.locator('dl').filter({ has: frame.locator('dt', { hasText: /^Płeć$/ }) })).toContainText('Chłopiec / mężczyzna');
+  const original = before.visits.find(row => row.visitId === historical.visitId).payload.user;
+  expect(original).toMatchObject({ firstName: 'Antoni', age: 12, ageMonths: 0, dobISO: '2013-06-17', sex: 'M' });
+  expect(await records()).toEqual(before);
+  await detail.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
+  await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('edit');
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await expect(frame.locator('#height')).toHaveValue('145');
+  await expect(frame.locator('#weight')).toHaveValue('35');
+  expect(await frame.evaluate(() =>
+    window.lastLoadedData.guardian.name)).toBe(historical.guardian);
+  expect(await frame.evaluate(() =>
+    window.VildaDataImportExport.captureCurrentUserDataReadOnly().user)).toMatchObject({
+    firstName: original.firstName, age: original.age, ageMonths: original.ageMonths,
+    dobISO: original.dobISO, sex: original.sex,
+  });
+  expect(await frame.evaluate(id => window.VildaHomeEncounter.state(id).snapshotId, ids.a)).toBe(historical.snapshotId);
+  expect(await records()).toEqual(before);
+});
+
 test('Edytuj wizytę corrects only the chosen historical record and returns to the latest patient overview', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const seed = await frame.evaluate(async patientId => {

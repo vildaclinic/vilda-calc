@@ -567,3 +567,58 @@ it('binds deferred first-save adoption to copied receipt fields, not a later mut
   await Promise.resolve();
   expect(h.api.captureUiState()).toMatchObject({ patientId: 'fictional-first-save-id', prefillCleared: true });
 });
+
+describe('Gabinet SGA replays the selected visit', () => {
+  const patientId = 'fictional-sga-patient-a';
+  const empty = { weeks: '', days: '0', weight: '', length: '', head: '', sex: '' };
+
+  function scoped(h, loaded) {
+    h.window.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    h.window.VildaPanelPacjent = { nieaktualny: () => false, wlasciciel: () => patientId };
+    h.window.sessionStorage.getItem = key => key === 'vildaCurrentPatientId' ? patientId : null;
+    h.window.lastLoadedData = loaded;
+    vm.runInContext(readFileSync(new URL('../../vilda_perinatal_source.js', import.meta.url), 'utf8'), h.context);
+  }
+
+  it.each([
+    ['historical visit', { visit: { patientId }, user: { sex: 'F' }, perinatal: PERINATAL }, '1650'],
+    ['legacy visit owned by panel', { user: { sex: 'F' }, perinatal: PERINATAL }, '1650'],
+    ['different patient', { visit: { patientId: 'someone-else' }, perinatal: PERINATAL }, ''],
+    ['explicitly cleared form', { visit: { patientId }, birth: empty, perinatal: PERINATAL }, ''],
+    ['visit without perinatal facts', { visit: { patientId } }, '']
+  ])('does not obtain missing facts from the newest vault record for %s', async (_label, payload, weight) => {
+    const h = prepared(empty, false), fetch = prefill(h, { perinatal: { ...PERINATAL, birthWeightG: 2100 } });
+    scoped(h, payload);
+    fetch.request(); await fetch.finish();
+    expect(fetch.getPatient).not.toHaveBeenCalled();
+    const state = h.api.captureStateReadOnly();
+    expect(state.weight).toBe(weight);
+    expect(state.assessment).toBeUndefined();
+    if (weight) expect(state.sex).toBe('female');
+  });
+
+  it.each([true, false])('explicit Reset suppresses both saved birth (%s) and same-visit perinatal fallback', includeBirth => {
+    const h = prepared();
+    owned(h);
+    scoped(h, { visit: { patientId }, ...(includeBirth ? { birth: h.state } : {}), perinatal: PERINATAL });
+    if (includeBirth) h.window.vildaBirthData = h.state;
+    h.document.getElementById('resetSgaBirth').click();
+    expect(h.window.vildaBirthData).toBeNull();
+    expect(h.window.VildaPerinatalSource.biezace()).toBeNull();
+    expect(h.window.lastLoadedData.perinatal).toEqual(PERINATAL);
+  });
+
+  it('presents the recorded centile and timestamp until an explicit recalculation', () => {
+    const h = prepared({ sourceChoice: 'niklasson', sourceKeys: ['niklasson'] });
+    scoped(h, { visit: { patientId }, birth: h.state });
+    const stored = JSON.parse(JSON.stringify(h.state));
+    stored.assessment.sources[0].metrics.weight.percentile = 'zapisany centyl';
+    stored.assessment.computedAtISO = '2020-01-01T00:00:00.000Z';
+    h.api.restoreState(stored);
+    expect(h.document.getElementById('sgaBirthResults').textContent).toContain('zapisany centyl');
+    expect(h.api.captureStateReadOnly().assessment).toEqual(stored.assessment);
+    expect(h.window.VildaSgaBirth.savedPresentation({ ...stored, weight: '2000' })).toBeNull();
+    h.document.getElementById('computeSgaBirth').click();
+    expect(h.document.getElementById('sgaBirthResults').textContent).not.toContain('zapisany centyl');
+  });
+});

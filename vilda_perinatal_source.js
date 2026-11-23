@@ -119,24 +119,52 @@
     oglos();
   }
 
-  // Sekcja „Dane okołoporodowe" w kształcie karty SGA albo null.
+  // The active panel vouches for a legacy payload without an explicit visit owner.
+  function visitPayload(patientId) {
+    if (!patientId) return null;
+    try {
+      var panel = w.VildaPanelPacjent, loaded = w.lastLoadedData;
+      if (!loaded || w.sessionStorage.getItem('vildaCurrentPatientId') !== patientId ||
+          !panel || panel.nieaktualny() || panel.wlasciciel() !== patientId) return null;
+      if (loaded.visit && loaded.visit.patientId && loaded.visit.patientId !== patientId) return null;
+      return loaded;
+    } catch (_) { return null; }
+  }
+
   function zKartyPacjenta() {
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ === true) {
+      var id;
+      try { id = w.sessionStorage.getItem('vildaCurrentPatientId'); } catch (_) { return null; }
+      var visit = visitPayload(id);
+      return visit ? naKarte(visit.perinatal, visit.user && visit.user.sex) : null;
+    }
     return zapamietane ? naKarte(zapamietane.perinatal, zapamietane.plec) : null;
   }
 
   // Dane urodzeniowe, których w tej chwili ma używać reszta aplikacji.
   function biezace() {
+    var scoped = w.__VILDA_HOME_GABINET_PREVIEW__ === true, loaded = null;
+    if (scoped) {
+      var id;
+      try { id = w.sessionStorage.getItem('vildaCurrentPatientId'); } catch (_) { return null; }
+      if (id && !(loaded = visitPayload(id))) return null;
+    }
     var karta = null;
     try {
       var api = w.vildaSgaBirthPersistApi;
-      if (api && typeof api.captureState === 'function') karta = api.captureState();
+      if (w.__VILDA_HOME_GABINET_PREVIEW__ === true && api && typeof api.captureStateReadOnly === 'function') karta = api.captureStateReadOnly();
+      else if (api && typeof api.captureState === 'function') karta = api.captureState();
     } catch (e) {
       karta = null;
     }
+    // Native Reset publishes null. Only an uninitialized carry can use the
+    // archived birth. A recorded reset also takes precedence over prefilling.
+    var birth = typeof w.vildaBirthData === 'undefined' ? loaded && loaded.birth : w.vildaBirthData;
+    var reset = scoped && (w.vildaBirthData === null && loaded?.birth || api?.captureUiState?.()?.prefillCleared);
     return wybierz({
       karta: karta,
-      rekord: w.vildaBirthData && typeof w.vildaBirthData === 'object' ? w.vildaBirthData : null,
-      kartaPacjenta: zKartyPacjenta()
+      rekord: birth,
+      kartaPacjenta: scoped && (birth || reset) ? null : zKartyPacjenta()
     });
   }
 
@@ -152,6 +180,10 @@
     if (!patientId || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()
       || typeof V.getPatient !== 'function') return;
     var generacja = ++generacjaOdczytu;
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ === true) {
+      zapamietaj(visitPayload(patientId));
+      return;
+    }
     try {
       V.getPatient(patientId).then(function (rec) {
         if (generacja !== generacjaOdczytu) return;
@@ -200,6 +232,7 @@
      * sesji karty w innej ramce przychodzi tu jako zdarzenie storage. Bez tego panel po powrocie
      * przyciskiem „Wstecz” liczył dla nowego pacjenta z rekordu poprzedniego. */
     doc.addEventListener('vilda:persist-restored', odswiez);
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ === true) doc.addEventListener('vilda:data-applied', odswiez);
     if (typeof w.addEventListener === 'function') {
       w.addEventListener('storage', function (ev) {
         if (!ev || ev.key == null || ev.key === 'vildaCurrentPatientId') odswiez();
@@ -217,6 +250,7 @@
   w.VildaPerinatalSource = {
     VERSION: VERSION,
     naKarte: naKarte,
+    visitPayload: visitPayload,
     wybierz: wybierz,
     niesieDane: niesieDane,
     zapamietaj: zapamietaj,

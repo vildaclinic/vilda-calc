@@ -12051,6 +12051,26 @@ Dwie niezależne usterki dawały ten sam skutek:
 
 - *Strażnicy:* `tests/unit/kowd-dane-rekord.test.mjs` (14, na funkcjach wyciętych z pliku produkcyjnego) + `tests/e2e/kowd-dane-rekord.spec.mjs` (4, prawdziwy `applyLoadedData` → `collectUserData` na obu stronach). **Zmierzone czerwone:** e2e przeciwko kodowi sprzed naprawy — **2 z 4** (dwa pozostałe to kontrole negatywne, przed naprawą słusznie zielone, bo wtedy wszystko było `null`); jednostkowe przeciwko wariantowi naiwnemu z pięcioma typowymi pomyłkami (nigdy nie czyścić chronionych pól, zapisywać do pamięci także pustki, nie kasować pamięci przy rekordzie bez danych, sięgać po pamięć przy pustym polu formularza, brak osłon try/catch) — **7 z 14**. Uczciwie: e2e „bez zanieczyszczenia między pacjentami" pozostaje zielony także przeciwko temu wariantowi naiwnemu — tę pomyłkę łapie warstwa jednostkowa.
 
+### Dane okołoporodowe w kartotece i wizycie w nowym Gabinecie (2026-11-23)
+
+- Przy rozpoczęciu wizyty Analiza i DocPro SGA korzystają z danych urodzeniowych
+  kartoteki. Istniejące kartoteki mogą otrzymać brakujące parametry z ostatniej
+  wizyty. Poprawione wartości wprowadzone w kartotece obowiązują w kolejnych
+  wizytach. Zapisaną wizytę odczytujemy z jej własnymi danymi i wynikiem SGA.
+- W trybie edycji wizyty lekarz może jawnie wczytać dane z kartoteki do formularza
+  SGA. Przenoszą się tygodnie i dni ciąży, masa, długość oraz obwód głowy. Wybór
+  norm pozostaje w formularzu. Po zmianie parametrów ocenę wylicza istniejący
+  moduł podczas jawnego obliczenia. Zapis wizyty utrwala tę wersję danych.
+- Wejścia do oceny dojrzewania, wieku noworodkowego i wyboru populacji DS w Analizie
+  oraz DocPro są powiązane z otwartą wizytą. Stosujemy takie same normy, jednostki,
+  interpolację i progi jak w opisie powyżej.
+- Scenariusz kontrolny korzysta z chłopca urodzonego w 34+2 tygodniu z masą
+  1650 g, długością 41 cm i obwodem głowy 29 cm. Moduł Niklasson daje
+  odpowiednio −3,13, −3,48 i −2,29 SDS. Po poprawieniu parametrów w kartotece
+  stara wizyta wciąż pokazuje tę zapisaną ocenę.
+- Testy obejmują powiązanie źródła z wizytą, zmianę pacjenta, zwykły odczyt
+  i jawną kopię danych przed zatwierdzeniem wizyty.
+
 ### GROWTH-B64 — ściąga kryteriów programu lekowego B.64 (SGA/IUGR), warstwa 1 bez UI (SW 1.0.859, 2026-09-08, decyzja właściciela)
 
 Nowy czytelny moduł `vilda_b64_checklist.js` (tylko `docpro.html` — karta SGA i cały program dotyczą wyłącznie tej strony). Zestawia dane, które aplikacja już ma, z ośmioma kryteriami kwalifikacji załącznika **B.64** („Leczenie hormonem wzrostu niskorosłych dzieci urodzonych jako zbyt małe w porównaniu do czasu trwania ciąży", ICD-10 R 62.9), w wersji obowiązującej od 01.2015, **potwierdzonej przez właściciela jako aktualna**.

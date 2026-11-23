@@ -11,7 +11,7 @@ function harness() {
   // A saved clinical result belongs to the selected persisted synthetic record.
   browser.VildaVault.getPatient = async id => id === 'fictional-citcr-only' ? { id, patientId: id, name: 'Fikcyjny pacjent' } : null;
   browser.ClcrVisitSave._setPatientId('fictional-citcr-only');
-  return { browser, captured, sanitizer: realVault.VildaVault };
+  return { browser, captured, sanitizer: realVault.VildaVault, profileModel: realVault.VildaPatientProfileModel };
 }
 function evaluate(browser, input = {}) {
   return browser.VildaClcrCitcr.evaluate({ mode: 'direct', reportedValue: '120', reportedUnit: 'umol/mmol', ageYears: 8, sex: 'M', ...input },
@@ -46,14 +46,15 @@ function history(browser, notes) {
 
 // Run the actual readable vault series adapter with an in-memory note source.
 // No real vault is unlocked and no encrypted storage is opened or written.
-async function genericVaultSeries(notes, sanitizer) {
+async function genericVaultSeries(notes, sanitizer, profileModel) {
   const source = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
   const adapter = source.slice(source.indexOf('async function Po(t) {'), source.indexOf('async function Ao(t)'));
   const parser = source.slice(source.indexOf('function vo(t){'), source.indexOf('function Cr(t)'));
-  const create = new Function('T', 'I', 'Ft', 'kt', 'LhHasAssessment', 'HrHasReference', 'RrHasRange', 'b', 'v', 'Ur', 'Cr', 'ye', `${parser} ${adapter}; return Po;`);
+  const create = new Function('T', 'I', 'Ft', 'kt', 'LhHasAssessment', 'HrHasReference', 'RrHasRange', 'b', 'v', 'Ur', 'Cr', 'ye', 'ProfileIsNote', `${parser} ${adapter}; return Po;`);
   const read = create(() => true, () => ({ listPatientNotesForUser: async () => notes }), async note => note,
     sanitizer.sanitizeLabResult, () => false, () => false, () => false, 'fictional-test-actor', {},
-    () => { throw new Error('Every new Cit/Cr result must have an explicit series key'); }, note => note.clinicalDateISO, () => null);
+    () => { throw new Error('Every new Cit/Cr result must have an explicit series key'); }, note => note.clinicalDateISO, () => null,
+    profileModel.isRevision);
   return read('fictional-citcr-only');
 }
 
@@ -113,9 +114,12 @@ describe('Cit/Cr — actual collector, serializers, vault sanitizers and saved h
     for (const reportedUnit of units) notes.push((await save(context, evaluate(context.browser, { reportedUnit, reportedValue: '0,3000100' }))).note);
     const series = history(context.browser, notes);
     expect(series).toHaveLength(units.length);
-    const generic = await genericVaultSeries(notes, context.sanitizer);
+    const generic = await genericVaultSeries(notes, context.sanitizer, context.profileModel);
     expect(generic).toHaveLength(units.length);
     expect(generic.map(series => series.testKey)).toEqual(notes.map(note => note.labResult.testKey));
+    const profileRevision = { ...notes[0], id: 'prf-11111111-1111-4111-8111-111111111111', profileContext: {} };
+    expect(context.profileModel.isRevision(profileRevision)).toBe(true);
+    expect(await genericVaultSeries([...notes, profileRevision], context.sanitizer, context.profileModel)).toEqual(generic);
     expect(new Set(notes.map(note => note.labResult.testKey)).size).toBe(units.length);
     expect(notes[4].labResult.test).toContain('kwas cytrynowy bezwodny');
     expect(notes[5].labResult.test).toContain('jon cytrynianowy');
@@ -135,7 +139,7 @@ describe('Cit/Cr — actual collector, serializers, vault sanitizers and saved h
     expect(point.comparator).toBe(reportedValue[0]);
     expect(note.labResult.value).toBe(reportedValue);
     expect(note.labResult).not.toHaveProperty('valueNum');
-    expect(await genericVaultSeries([note], context.sanitizer)).toEqual([]);
+    expect(await genericVaultSeries([note], context.sanitizer, context.profileModel)).toEqual([]);
     const saved = history(context.browser, [note])[0].points[0];
     expect(saved).toMatchObject({ valueNum: null, comparator: reportedValue[0], displayValue: reportedValue, assessment: status });
     expect(saved.citcrAssessment.rawValue).toBe(Number(reportedValue.slice(1)));
@@ -260,7 +264,7 @@ describe('Cit/Cr — actual collector, serializers, vault sanitizers and saved h
     expect(series.displayLabel).toContain('kwas cytrynowy bezwodny');
     expect(series.points[0]).toMatchObject({ valueNum: 0.10001, outOfRange: null });
     expect(series.points[0]).not.toHaveProperty('citcrAssessment');
-    expect((await genericVaultSeries([edited], context.sanitizer))[0].test).toContain('kwas cytrynowy bezwodny');
+    expect((await genericVaultSeries([edited], context.sanitizer, context.profileModel))[0].test).toContain('kwas cytrynowy bezwodny');
   });
 
   it('legacy measurements never acquire a guessed analyte basis, age or modern norm', () => {

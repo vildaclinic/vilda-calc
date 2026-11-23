@@ -61,7 +61,29 @@
   // Ownership/readiness is presentation metadata. Existing calculators keep
   // using maFlage()/populacja(); charts can wait for the correct patient's read.
   function getState() {
+    var source = visitSource();
+    if (source) {
+      var id = wybranyPacjent(), payload = activeVisitPayload(source, id);
+      var unlocked = w.VildaVault && w.VildaVault.isUnlocked();
+      return { patientId: unlocked ? id : null, status: payload ? 'ready' : id && unlocked ? 'pending' : 'idle',
+        population: populacjaZFlagi(zRekordu(payload)) };
+    }
     return { patientId: oczekiwanyPacjent, status: statusOdczytu, population: populacja() };
+  }
+
+  // Only panels with the existing guarded visit reader opt into visit scope.
+  // A corrected directory profile must not replace a saved visit's population.
+  function visitSource() {
+    var source = w.VildaPerinatalSource;
+    return w.__VILDA_HOME_GABINET_PREVIEW__ === true && source && typeof source.visitPayload === 'function' ? source : null;
+  }
+
+  function activeVisitPayload(source, patientId) {
+    try {
+      var vault = w.VildaVault;
+      if (!patientId || !vault || !vault.isUnlocked() || wybranyPacjent() !== patientId) return null;
+      return source.visitPayload(patientId);
+    } catch (_) { return null; }
   }
 
   function oglosStan() {
@@ -110,6 +132,8 @@
 
   // Odpowiedź dla reszty aplikacji.
   function maFlage() {
+    var source = visitSource();
+    if (source) return zRekordu(activeVisitPayload(source, wybranyPacjent()));
     return wybierz({
       maRekord: !!zapamietane,
       rekord: !!(zapamietane && zapamietane.ds)
@@ -143,6 +167,16 @@
 
   function wczytaj(patientId) {
     var V = w.VildaVault;
+    var source = visitSource();
+    if (source) {
+      generacjaOdczytu += 1;
+      if (V) podepnijSejf(V);
+      var payload = activeVisitPayload(source, patientId);
+      zapamietaj(payload);
+      potwierdzonyPacjent = payload ? patientId : null;
+      ustawStan(patientId, payload ? 'ready' : patientId ? 'pending' : 'idle');
+      return;
+    }
     if (!patientId || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()
       || typeof V.getPatient !== 'function') return;
     podepnijSejf(V);
@@ -152,7 +186,7 @@
     try {
       V.getPatient(patientId).then(function (rec) {
         var wybrany = wybranyPacjent();
-        if (generacja !== generacjaOdczytu || podlaczonySejf !== V || !V.isUnlocked()
+        if (visitSource() || generacja !== generacjaOdczytu || podlaczonySejf !== V || !V.isUnlocked()
           || wybrany && wybrany !== patientId) return;
         var snap = rec && Array.isArray(rec.snapshots) && rec.snapshots.length
           ? rec.snapshots[0] : null;
@@ -194,9 +228,11 @@
     odswiez = function () {
       var id = wybranyPacjent();
       if (id) wczytaj(id);
+      else if (visitSource()) zapomnij();
     };
     doc.addEventListener('vilda:auth-hidden', odswiez);
     doc.addEventListener('vilda:sync-status-changed', odswiez);
+    doc.addEventListener('vilda:data-applied', function () { if (visitSource()) odswiez(); });
     /* P-ZRODLA-PRZEJECIE: panel powłoki przejmuje pacjenta wczytanego w innej ramce w
      * vildaPersistRestoreAll (vilda_persist_runtime.js) — bez vilda:patient-loaded, które dostaje
      * tylko ramka wczytująca. Odtworzenie kończy się vilda:persist-restored, a zmiana pacjenta

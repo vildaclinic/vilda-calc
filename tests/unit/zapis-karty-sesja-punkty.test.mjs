@@ -28,6 +28,7 @@
 //   P0   po 1. listPatientsForUser — dwie karty „Testowy Jan7” bez daty urodzenia, zapis bez daty (okno „Który to
 //        pacjent?” ustawione).
 //   P1   po 1. decrypt w Bpz_zapis poza Bpz_sekcja (nagłówek karty z listy), jak P0.
+//   P2   po odczycie zapisanych rewizji kartotek, przed porównaniem imienników.
 //   P4   po 1. getPatientForUser (rekord karty, pierwszy krok pod blokadą karty) — zapis istniejącej karty.
 //   P7   po 3. decrypt w Bpz_sekcja (głowa karty) — formularz z baselinePayload bez wiersza dopisanego na innym
 //        urządzeniu (okno konfliktu ustawione).
@@ -61,6 +62,7 @@ const SCENARIUSZE = {
   async imiennicy(d) {
     await d.v.savePatient(naglowek(7, { dob: null }), { dedup: false });
     await d.v.savePatient(naglowek(7, { dob: null, wzrost: 121 }), { dedup: false });
+    d.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
     const okno = d.oknoTozsamosci({ odpowiedz: { akcja: 'nowy' } });
     return { pid: null, okno, zapisz: () => d.v.savePatient(naglowek(7, { dob: null, wzrost: 140 }), {}) };
   },
@@ -85,6 +87,7 @@ const SCENARIUSZE = {
 
 // Kroki magazynu konta A od wejścia do zapisu do wskazanego punktu (włącznie).
 const LISTA = ['listPatientsForUser(A)'];
+const LISTA_Z_KARTOTEKA = [...LISTA, 'listPatientNotesForUser(A)'];
 const REKORD = [...LISTA, 'getPatientForUser(A)'];
 const GLOWA = [...REKORD, 'getPatientForUser(A)', 'listSnapshotsForUser(A)'];
 const WERSJA = [...GLOWA, 'putSnapshotForUser(A)'];
@@ -99,7 +102,9 @@ const PUNKTY = [
   { id: 'P0', opis: 'po 1. odczycie listy kart (listPatientsForUser) przy imiennikach', scen: 'imiennicy', rodzaj: 'magazyn',
     dop: { metoda: 'listPatientsForUser', konto: 'A' }, kroki: LISTA, wA: 'bez-zmian', kontrola: { isNew: true, pytania: ['tozsamosc(A)'] } },
   { id: 'P1', opis: 'po 1. odszyfrowaniu nagłówka z listy (decrypt w Bpz_zapis poza Bpz_sekcja)', scen: 'imiennicy', rodzaj: 'krypto',
-    dop: { metoda: 'decrypt', wStosie: /Bpz_zapis/, bezStosu: /Bpz_sekcja/ }, kroki: LISTA, wA: 'bez-zmian', kontrola: { isNew: true, pytania: ['tozsamosc(A)'] } },
+    dop: { metoda: 'decrypt', wStosie: /Bpz_zapis/, bezStosu: /Bpz_sekcja/ }, kroki: LISTA_Z_KARTOTEKA, wA: 'bez-zmian', kontrola: { isNew: true, pytania: ['tozsamosc(A)'] } },
+  { id: 'P2', opis: 'po odczycie rewizji kartotek na potrzeby dopasowania imienników', scen: 'imiennicy', rodzaj: 'magazyn',
+    dop: { metoda: 'listPatientNotesForUser', konto: 'A' }, kroki: LISTA_Z_KARTOTEKA, wA: 'bez-zmian', kontrola: { isNew: true, pytania: ['tozsamosc(A)'] } },
   { id: 'P4', opis: 'po 1. odczycie rekordu karty (getPatientForUser) pod blokadą karty', scen: 'istniejaca', rodzaj: 'magazyn',
     dop: { metoda: 'getPatientForUser', konto: 'A', ktory: 1 }, kroki: REKORD, wA: 'bez-zmian', kontrola: { isNew: false, wersje: 2 } },
   { id: 'P7', opis: 'po 3. odszyfrowaniu w Bpz_sekcja (głowa karty) przy formularzu z obcym wierszem w karcie', scen: 'konflikt', rodzaj: 'krypto',

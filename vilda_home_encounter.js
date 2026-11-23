@@ -101,6 +101,41 @@
     delete payload._visitPatientIdentityOnly;
     return {...row, patientId: scope.patientId, payload};
   }
+  function profileDraft(payload, data) {
+    const user = {...payload.user};
+    for (const key of ['firstName', 'lastName', 'dobISO', 'sex']) {
+      if (Object.hasOwn(data.user, key)) user[key] = data.user[key];
+      else delete user[key];
+    }
+    const name = [user.lastName, user.firstName].filter(Boolean).join(' ');
+    const advanced = {...payload.advanced};
+    if (Object.hasOwn(advanced, 'name')) advanced.name = name;
+    for (const key of ['motherHeight', 'fatherHeight']) {
+      if (Object.hasOwn(data.advanced || {}, key)) advanced[key] = data.advanced[key];
+      else delete advanced[key];
+    }
+    // The native New action still archives the previous measurement at its
+    // originally recorded age. Only the new draft uses the chart's identity.
+    const next = {...payload, name, user, advanced,
+      clinical: {...payload.clinical, downSyndrome: data.clinical?.downSyndrome === true}};
+    if (payload.growthBasic && Object.hasOwn(payload.growthBasic, 'name')) {
+      next.growthBasic = {...payload.growthBasic, name};
+    }
+    for (const key of ['guardian', 'perinatal', 'puberty']) {
+      if (Object.hasOwn(data, key)) next[key] = data[key];
+      else delete next[key];
+    }
+    // Use the chart's birth inputs. Its predecessor's SGA result belongs to
+    // that visit and will only be loaded when the visit itself is opened.
+    delete next.birth;
+    if (next.perinatal) {
+      next.perinatal = {...next.perinatal};
+      for (const key of ['birthWeightSds', 'birthLengthSds', 'sdsSourceLabel', 'sdsSourceError', 'lengthSdsAvailable', 'catchUp']) {
+        delete next.perinatal[key];
+      }
+    }
+    return next;
+  }
   async function loadVisit(patientId, choice, snapshot, afterOwnSave, isCurrent = () => true, transition) {
     if (!patientId || loading || saving || (trashChange && transition?.trashChange !== trashChange) ||
         !isCurrent() || !['new','restore','edit'].includes(choice)) return false;
@@ -128,6 +163,20 @@
           item.visitId === snapshot.visitId && item.rev === snapshot.rev);
       }
       if (!row || (!identityOnly && (row.payload?.visit?.patientId !== patientId || row.payload.visit.visitId !== row.visitId))) return false;
+      let payload = row.payload;
+      if (choice === 'new') {
+        const record = await scope.vault.getPatient(patientId);
+        if (!allowed() || afterOwnSave && !afterOwnSave()) return false;
+        const profile = record?.profile;
+        if (!profile?.data?.user || !['legacy', 'ready'].includes(profile.status)) {
+          const message = profile?.status === 'conflict'
+            ? 'Kartoteka ma rozbieżne wersje. Sprawdź dane pacjenta przed rozpoczęciem wizyty.'
+            : 'Nie można wczytać danych kartoteki. Otwórz ponownie kartę pacjenta.';
+          w.VildaDymek?.pokaz(message, {ton: 'info'});
+          return false;
+        }
+        payload = profileDraft(payload, profile.data);
+      }
       if (transition?.beforeApply && (!transition.beforeApply() || !allowed())) return false;
       let finish;
       const done = new Promise(resolve => { finish = resolve; });
@@ -137,7 +186,7 @@
       const timeout = w.setTimeout(() => finish(false), 12000);
       let chosen = false;
       try {
-        const applied = api.runAcceptedPatientLoad(token, row.payload, {
+        const applied = api.runAcceptedPatientLoad(token, payload, {
           apply(value) {
             // Applying this record can dismiss the native surface that requested
             // it. Retire that surface check only at the accepted-load boundary.
@@ -147,7 +196,7 @@
             return w.applyLoadedData(value);
           },
           publish(authority) {
-            request.detail = Object.assign({patientId, savedAtISO: row.savedAtISO, name: row.payload.name,
+            request.detail = Object.assign({patientId, savedAtISO: row.savedAtISO, name: payload.name,
               snapshotCount: rows.reduce((count, item) => count + item.revisionCount, 0), source: 'pick'}, authority);
             working = null;
             d.dispatchEvent(new w.CustomEvent('vilda:patient-loaded', {detail: request.detail}));
@@ -165,11 +214,11 @@
       working = Object.assign(scope, {mode: choice === 'new' ? 'new' : (snapshot ? 'edit' : 'browse'),
         visitId: visit?.visitId || null, date: choice === 'new' ? visit.clinicalDateISO : row.clinicalDateISO || null,
         snapshotId: choice === 'new' || empty ? null : row.snapshotId,
-        patientName: [row.payload?.user?.firstName, row.payload?.user?.lastName].filter(Boolean).join(' ') || row.payload.name || '',
+        patientName: [payload.user?.firstName, payload.user?.lastName].filter(Boolean).join(' ') || payload.name || '',
         savedAtISO: row.savedAtISO || null,
         dateCertain: choice === 'new' || !!model.clinicalDate(row),
         sourceSnapshotId: identityOnly ? null : row.snapshotId, sourceMeasurementDate: model.measurementDate(row),
-        sourceDownSyndrome: row.payload.clinical?.downSyndrome === true,
+        sourceDownSyndrome: payload.clinical?.downSyndrome === true,
         revision: choice === 'new' || empty ? null : row.rev || 0});
       return true;
     } catch (_) { return false; }
@@ -410,7 +459,7 @@
   });
   d.addEventListener('vilda:user-state-cleared', () => { working = null; notify(); });
   w.VildaHomeEncounter = Object.freeze({load, start, state, save, canSave, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, ensureRecorded,
-    captureVisitTrash, restoreTrashedVisit, isIdentityOnly});
+    captureVisitTrash, restoreTrashedVisit, isIdentityOnly, profileDraft});
 })(window, document);
 
 /* A blank rapid intake belongs to the open account and carries its own visit
@@ -458,7 +507,7 @@
   function retainPatientFacts(payload, previous) {
     if (previous.guardian) payload.guardian = previous.guardian;
     if (previous.clinical) payload.clinical = previous.clinical;
-    for (const key of ['perinatal', 'birth']) {
+    for (const key of ['perinatal', 'puberty']) {
       if (!payload[key] && previous[key]) payload[key] = previous[key];
     }
     for (const key of ['ghTherapyPoints', 'obesityTherapyPoints', 'bisphosTherapyPoints']) {
@@ -508,17 +557,24 @@
     if (candidate) {
       // The latest write guards this patient record; the latest clinical visit
       // supplies its longitudinal facts even when an older visit was saved later.
-      const [latest, visits] = await Promise.all([vault.getLatestSnapshot(candidate.patientId), vault.getPatientVisits(candidate.patientId)]);
+      const [latest, visits, record] = await Promise.all([vault.getLatestSnapshot(candidate.patientId),
+        vault.getPatientVisits(candidate.patientId), vault.getPatient(candidate.patientId)]);
       assertCurrent();
       if (!latest?.payload || !latest.snapshotId) throw new Error('Kartoteka zmieniła się. Wybierz pacjenta ponownie.');
-      const updated = matches(vault, [{patientId:candidate.patientId,header:{...latest.payload.user,name:latest.payload.name}}], payload)[0];
+      const profile = record?.profile;
+      if (!profile?.data?.user || !['legacy', 'ready'].includes(profile.status)) {
+        throw new Error('Sprawdź aktualne dane kartoteki przed zapisaniem wizyty.');
+      }
+      const source = w.VildaHomeVisitComparisonModel.latest(candidate.patientId, visits);
+      if (visits.length && !source) throw new Error('Nie udało się wskazać aktualnej wizyty pacjenta.');
+      const previous = w.VildaHomeEncounter.profileDraft(source?.payload || latest.payload, profile.data);
+      const updated = matches(vault, [{patientId:candidate.patientId,
+        header:{...previous.user, name:previous.name, external:record.header?.external}}], payload)[0];
       if (!updated || candidate.dobISO !== updated.dobISO || candidate.sex !== updated.sex) return {status:'choose', candidates};
       if (candidate.dobISO) payload.user.dobISO = candidate.dobISO;
       if (candidate.sex) payload.user.sex = candidate.sex;
-      const source = w.VildaHomeVisitComparisonModel.latest(candidate.patientId, visits);
-      if (visits.length && !source) throw new Error('Nie udało się wskazać aktualnej wizyty pacjenta.');
+      retainPatientFacts(payload, previous);
       if (source) {
-        retainPatientFacts(payload, source.payload);
         rapidVisit.source = {snapshotId:source.snapshotId, revision:source.rev || 0, updatedAtISO:source.updatedAtISO};
       }
       // Default anti-clobber uses the technical head. The clinical source above

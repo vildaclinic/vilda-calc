@@ -3120,3 +3120,16 @@ bajcie. Opcja `--rebuild PLIK_BAZY PLIK_WYNIKOWY` odtwarza go z obrazu sejfu
 sprzed dodania kosza. Weryfikator porównuje skróty wejścia, czytelnego źródła
 i całego wynikowego pliku. Polecenie `node tools/check_clinical_workspace_boundary.mjs`
 sprawdza również historyczny fragment natywny i aktualny skrót bazy publicznej.
+
+## Rewizje kartoteki pacjenta
+
+Źródła modelu i odczytu zaszyfrowanych rewizji znajdują się w
+`runtime/patient-profile-v1/`. `node tools/patient-profile-vault-delta.mjs`
+sprawdza odwracalność zmian i zgodność opublikowanego `vilda_vault.js` z tymi
+źródłami. Opcja `--build PLIK_BAZY PLIK_WYNIKOWY` odtwarza artefakt i manifest z
+obrazu sejfu poprzedzającego tę zmianę. Skrót obrazu podaje
+`runtime/patient-profile-v1/manifest.json`.
+
+`tools/patient-profile-auth-hooks.mjs` odtwarza zmiany edytora kartoteki w
+`vilda_auth_ui.js` jako część warstw sprawdzanych przez
+`node tools/patient_b1_auth_hooks.mjs --check`.
