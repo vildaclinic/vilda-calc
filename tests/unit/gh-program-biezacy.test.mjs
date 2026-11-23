@@ -163,8 +163,9 @@ function atrapa(punkty, opcje = {}) {
   return a;
 }
 const dotad = (punkty, opcje = {}) => atrapa(punkty, { ...opcje, zrodla: { 'gh_therapy_monitor.js': MONITOR_DOTAD } });
-// Monitor sprzed P-GH-PROGRAM-EDYCJA (audyt 77cb60dc): ghProgramPola przy edycji — dawne wyrażenie (program Włączenia kursu
-// edytowanego punktu); reszta kodu identyczna.
+// Pole przy edycji sprzed P-GH-PROGRAM-EDYCJA (audyt 77cb60dc): ghProgramPola przy edycji — dawne wyrażenie (program
+// Włączenia kursu edytowanego punktu); reszta kodu identyczna (pozostałe wpięcia P-GH-PROGRAM-EDYCJA nie biorą udziału w tych
+// testach — pełny wariant „przed”: tests/unit/gh-program-edycja.test.mjs).
 const POLE_EDYCJI = 'x != null ? ghProgramEdycji(Gwk, dotad) :';
 expect(MONITOR.split(POLE_EDYCJI).length - 1, POLE_EDYCJI).toBe(1);
 const MONITOR_PRZED_EDYCJA = MONITOR.replace(POLE_EDYCJI, 'x != null ? dotad :');

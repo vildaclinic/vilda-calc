@@ -2827,22 +2827,32 @@ i funkcja `ghProgramEdycji(Gwk, dotad)`) zaraz po `ghProgramPola` (blok P-GH-PRO
 punktu (`x != null`) woła `ghProgramEdycji` zamiast zwracać dawne wyrażenie: program edytowanego punktu (pierwszy
 o równym `String(id)` na liście, jak `O()`), bez programu — `ghProgramBiezacy` na punktach kursu punktu wg wieku do
 niego włącznie (kilka kursów — kurs z `Gwk.wgPunktu`; jeden kurs albo brak modułu kursów — `ghPunktyBiezacegoKursu(null,
-lista)`; punkt spoza kursów — sam punkt), bez tego — `dotad` (dawne wyrażenie); punktu nie ma na liście (usunięty
-w trakcie edycji) — `ghProgramWiersza`, jak poza edycją. Dopiski w komentarzach P-GH-WZNOWIENIE (część 2),
-`ghProgramKursu`, `ghKursProgramu` i P-GH-PROGRAM-BIEZACY („Edycja punktu — bez zmian”). Opis: `docs/clinical/ALGORITHMS.md`,
-wpis P-GH-PROGRAM-EDYCJA. Zminifikowane ciało bez zmian — `F()` od P-GH-PROGRAM-BIEZACY woła już `ghProgramPola`, więc
-łatka nie ma nowych kotwic w ciele. Skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py`
-+ `ge_monitor_blok.js`, poza repozytorium) odtwarza wynik z `origin/audyt` 77cb60dc; bez ponownej minifikacji.
+lista)`; punkt spoza kursów — sam punkt; edytowany punkt z lekiem z formularza edycji, `Gpv("ghEditDrug")`), bez tego
+— `dotad` (dawne wyrażenie); punktu nie ma na liście (usunięty w trakcie edycji) — `ghProgramWiersza`, jak poza edycją.
+Po przeglądzie w tym samym bloku: `ghZmianaPreparatuEdycji` (słuchacz `change` na dokumencie, instalowany raz przy
+starcie skryptu z flagą `window.__ghProgramEdycjiBound`, jak inne słuchacze monitora: zmiana `#ghEditDrug` w trakcie
+edycji punktu bez programu → `F()`), `ghPoKoncuEdycji` (`F()` po zakończeniu edycji tam, gdzie dotąd po `Gek()` nie
+było `F()`) i `ghWstecznyZKarty` (formularz wsteczny w trakcie edycji — program i lek bieżący kursu). Dopiski
+w komentarzach P-GH-WZNOWIENIE (część 2), `ghProgramKursu`, `ghKursProgramu` i P-GH-PROGRAM-BIEZACY („Edycja punktu —
+bez zmian”). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-EDYCJA. Zminifikowane ciało: `F()` od
+P-GH-PROGRAM-BIEZACY woła już `ghProgramPola` (bez nowej kotwicy); po przeglądzie cztery kotwice występujące dokładnie
+raz (niżej). Skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py` + `ge_monitor_blok.js`, poza
+repozytorium) odtwarza wynik z `origin/audyt` 77cb60dc; bez ponownej minifikacji.
 
 ```
 // gh_therapy_monitor.js — czytelna część:
 // 1. ghProgramPola: return x != null ? dotad : ghProgramWiersza(Gwk, dotad);
 //    → return x != null ? ghProgramEdycji(Gwk, dotad) : ghProgramWiersza(Gwk, dotad);
 //    a zaraz po funkcji blok P-GH-PROGRAM-EDYCJA (komentarz + ghProgramEdycji)
+// 1a. zdarzenie storage vildaCurrentPatientId: try{Gea()||Gek()}… → try{Gea()||(Gek(),/* P-GH-PROGRAM-EDYCJA */ghPoKoncuEdycji())}…
+//     i() (formularz wsteczny): …if(a){try{D()}catch{} → …if(a){const Gxe=x!=null;try{D()}catch{}Gxe&&x==null&&ghPoKoncuEdycji();
+//     ghAddRetroPoint: function(){D(); → function(){const Gxe=x!=null;D();Gxe&&x==null&&ghPoKoncuEdycji();
+// 1b. ghOpenRetroForm: o.value=d.value||"" → o.value=ghWstecznyZKarty("program",d.value||"");
+//     n(o?o.value:"",l?l.value:null) → n(o?o.value:"",ghWstecznyZKarty("lek",l?l.value:null))
 // 2.–5. dopiski [od P-GH-PROGRAM-EDYCJA (2026-11-23): …] w komentarzach P-GH-WZNOWIENIE (część 2), ghProgramKursu,
 //    ghKursProgramu i P-GH-PROGRAM-BIEZACY
-// Kontrola: tests/unit/gh-program-edycja.test.mjs i kontrola negatywna złotej siatki podmieniają
-//   'x != null ? ghProgramEdycji(Gwk, dotad) :' → 'x != null ? dotad :' (zachowanie 77cb60dc).
+// Kontrola: tests/unit/gh-program-edycja.test.mjs cofa wszystkie wpięcia (ZAMIANY_PRZED, zachowanie 77cb60dc), kontrola
+//   negatywna złotej siatki — 'x != null ? ghProgramEdycji(Gwk, dotad) :' → 'x != null ? dotad :'.
 ```
 
 **Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).

@@ -11,7 +11,8 @@ import { G1, G_DO_I, INC_PACJENT, I_DO_G } from '../support/karta-leczenie.mjs';
 // P-GH-PROGRAM-EDYCJA (decyzja właściciela 2026-11-23: „popraw edycję punktu (pytanie 17)”): przy edycji punktu pole
 // i program zapisany edycją = program edytowanego punktu (bez programu — program bieżący kursu z chwili punktu), nie
 // program Włączenia — GPB-9, GPB-10 i zmienione GPB-7. Dotąd (audyt 77cb60dc) edycja Kontynuacji Genotropin po I→G
-// zapisywała IGF-1.
+// zapisywała IGF-1. Po przeglądzie (2026-11-23) — GPB-11: punkt bez programu bierze rodzaj z preparatu wybranego
+// w formularzu edycji, a formularz wsteczny otwarty w trakcie edycji — program i lek bieżący kursu.
 test.use({ serviceWorkers: 'block' });
 
 const LEKI_RHGH = ['Omnitrope 5 mg', 'Omnitrope 10 mg', 'Genotropin 5,3 mg', 'Genotropin 12 mg', 'Ngenla 24 mg', 'Ngenla 60 mg'];
@@ -403,4 +404,40 @@ test('GPB-10 punkt bez programu (ostatnia Kontynuacja Genotropin po I→G): pole
   await expect(page.locator('#ghInfoOverlay')).toContainText('Wybierz program i preparat');
   expect(await page.evaluate(() => window.ghTherapyPoints)).toEqual(S1);
   expect((await karta(page)).lek).toBe('Genotropin 12 mg');
+});
+
+test('GPB-11 punkt bez programu po I→G: wybór Increlex 40 mg w formularzu edycji — pole od razu IGF-1, zapis Increlex 40 mg + IGF-1 (przed przeglądem: SNP); formularz wsteczny otwarty w trakcie edycji Włączenia Increlex — program i lek bieżący (SNP, Genotropin 12 mg; dotąd IGF-1, Increlex 40 mg)', async ({ page }) => {
+  test.setTimeout(150_000);
+  const bledy = [];
+  page.on('pageerror', (e) => bledy.push(String(e && e.message)));
+  await docPro(page, BEZ_PROGRAMU, { program: 'SNP', lek: 'Genotropin 12 mg' });
+  await edytuj(page, 'ig-c2');
+  await expect(page.locator('#therProg')).toHaveValue('SNP');
+  await page.selectOption('#ghEditDrug', 'Increlex 40 mg');
+  await expect(page.locator('#therProg')).toHaveValue('IGF-1');
+  await expect(page.locator('#therProg')).toBeDisabled();
+  await page.selectOption('#ghEditDrug', 'Genotropin 12 mg');
+  await expect(page.locator('#therProg')).toHaveValue('SNP');
+  await page.selectOption('#ghEditDrug', 'Increlex 40 mg');
+  await page.fill('#ghEditDose', '0.8');
+  await page.click('#btnGhContinue');
+  await expect(page.locator('#ghTherapyEditContainer')).toBeHidden();
+  await expect(page.locator('#ghInfoOverlay')).toHaveCount(0);
+  expect(await punkt(page, 'ig-c2')).toMatchObject({ drug: 'Increlex 40 mg', program: 'IGF-1' });
+
+  // Formularz wsteczny otwarty w trakcie edycji Włączenia Increlex: nowy punkt — program i lek bieżący kursu.
+  await page.evaluate((lista) => {
+    window.VildaPersistence.writeModuleJSON('GH_THERAPY_POINTS', lista, { force: true });
+    window.refreshGHTherapyMonitor();
+  }, I_DO_G.ghTherapyPoints);
+  await expect(page.locator('#ghTherapyTbody .edit-gh-pt-btn')).toHaveCount(3);
+  await edytuj(page, 'ig-s');
+  await expect(page.locator('#therProg')).toHaveValue('IGF-1');
+  await page.click('#btnGhRetro');
+  await expect(page.locator('#ghTherapyRetroContainer')).toBeVisible();
+  await expect(page.locator('#ghRetroProg')).toHaveValue('SNP');
+  await expect(page.locator('#ghRetroDrug')).toHaveValue('Genotropin 12 mg');
+  await expect(page.locator('#ghTherapyEditContainer')).toBeVisible();
+  await expect(page.locator('#therProg')).toHaveValue('IGF-1');
+  expect(bledy).toEqual([]);
 });

@@ -7,23 +7,37 @@ import { utworzAtrapeMonitoraGh } from '../support/gh-monitor-atrapa.mjs';
 // P-GH-PROGRAM-EDYCJA (decyzja właściciela 2026-11-23: „popraw edycję punktu (pytanie 17)”; docs/clinical/ALGORITHMS.md).
 // Monitor DocPro: przy edycji istniejącego punktu („Edytuj” w tabeli punktów) pole „Program terapeutyczny” (#therProg),
 // a więc program zapisany edycją, to program EDYTOWANEGO punktu; bez programu — program bieżący kursu z chwili punktu
-// (ghBiezacy, jak Gp_biezacy Karty, na punktach kursu do edytowanego punktu włącznie); bez tego — jak dotąd (program
-// Włączenia kursu). Dotąd (audyt 77cb60dc) F() nadpisywało pole programem Włączenia: po Włączeniu Increlex (IGF-1) edycja
-// Kontynuacji Genotropin (SNP), nawet bez zmiany, zapisywała ją z programem IGF-1.
+// (ghBiezacy, jak Gp_biezacy Karty, na punktach kursu do edytowanego punktu włącznie, z lekiem edytowanego punktu
+// z formularza edycji); bez tego — jak dotąd (program Włączenia kursu). Dotąd (audyt 77cb60dc) F() nadpisywało pole
+// programem Włączenia: po Włączeniu Increlex (IGF-1) edycja Kontynuacji Genotropin (SNP), nawet bez zmiany, zapisywała ją
+// z programem IGF-1. Poprawki po przeglądzie (2026-11-23): rodzaj punktu bez programu z preparatu formularza edycji
+// (i pole od nowa po jego zmianie), pole od nowa po końcu edycji bez F() (zmiana pacjenta w innej ramce, formularz
+// wsteczny), formularz wsteczny otwarty w trakcie edycji — program i lek bieżący kursu.
 // Testy wołają PRAWDZIWY monitor w atrapie DOM (tests/support/gh-monitor-atrapa.mjs). „Przed” = ten sam monitor z drzewa
-// roboczego z ghProgramPola sprzed tej zmiany (przy edycji dawne wyrażenie) — zachowanie audyt 77cb60dc; reszta kodu
-// identyczna. Spójność reguły z Kartą: Gp_biezacy wycięte z vilda_auth_ui.js. Dane wyłącznie FIKCYJNE.
+// roboczego z cofniętymi wpięciami P-GH-PROGRAM-EDYCJA (ZAMIANY_PRZED: ghProgramPola przy edycji — dawne wyrażenie, bez
+// ghPoKoncuEdycji, ghWstecznyZKarty i słuchacza zmiany preparatu) — zachowanie audyt 77cb60dc (sprawdzone na tym pliku
+// z commita 77cb60dc poza repozytorium). Spójność reguły z Kartą: Gp_biezacy wycięte z vilda_auth_ui.js. Dane wyłącznie
+// FIKCYJNE.
 
 const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const zrodlo = (plik) => fs.readFileSync(path.join(korzen, plik), 'utf8');
 const MONITOR = zrodlo('gh_therapy_monitor.js');
 const AUTH = zrodlo('vilda_auth_ui.js');
 
-const POLE_EDYCJI = 'x != null ? ghProgramEdycji(Gwk, dotad) :';
-const MONITOR_PRZED = (() => {
-  expect(MONITOR.split(POLE_EDYCJI).length - 1, POLE_EDYCJI).toBe(1);
-  return MONITOR.replace(POLE_EDYCJI, 'x != null ? dotad :');
-})();
+// Wpięcia P-GH-PROGRAM-EDYCJA w monitorze i ich postać sprzed zmiany (każde dokładnie raz).
+const ZAMIANY_PRZED = [
+  ['x != null ? ghProgramEdycji(Gwk, dotad) :', 'x != null ? dotad :'],
+  ['Gea()||(Gek(),/* P-GH-PROGRAM-EDYCJA */ghPoKoncuEdycji())', 'Gea()||Gek()'],
+  ['const Gxe=x!=null;try{D()}catch{}/* P-GH-PROGRAM-EDYCJA */Gxe&&x==null&&ghPoKoncuEdycji();', 'try{D()}catch{}'],
+  ['const Gxe=x!=null;D();/* P-GH-PROGRAM-EDYCJA */Gxe&&x==null&&ghPoKoncuEdycji();', 'D();'],
+  ['o.value=/* P-GH-PROGRAM-EDYCJA */ghWstecznyZKarty("program",d.value||"")', 'o.value=d.value||""'],
+  ['n(o?o.value:"",ghWstecznyZKarty("lek",l?l.value:null))', 'n(o?o.value:"",l?l.value:null)'],
+  ['document.addEventListener("change", ghZmianaPreparatuEdycji)', '0'],
+];
+const MONITOR_PRZED = ZAMIANY_PRZED.reduce((tekst, [z, na]) => {
+  expect(tekst.split(z).length - 1, z).toBe(1);
+  return tekst.replace(z, na);
+}, MONITOR);
 
 // Karta pacjenta: Gp_biezacy (P-GH-PREPARAT-BIEZACY) z bloku Gw_*/Gp_* vilda_auth_ui.js — { lek, program, increlex }.
 function gpBiezacy() {
@@ -58,6 +72,17 @@ const WZNOWIENIE = [P('r-w1', 'start', 7, 0, INC, 'IGF-1'), P('r-z1', 'end', 8, 
 // K Genotropin SNP 9;6 → K Genotropin bez programu 10;0.
 const WZNOWIENIE_IG = [P('q-w1', 'start', 7, 0, GEN, 'SNP'), bez(P('q-z1', 'end', 8, 0, GEN, 'SNP'), 'program'),
   P('q-w2', 'start', 9, 0, INC, 'IGF-1'), P('q-k1', 'continue', 9, 6, GEN, 'SNP'), bez(P('q-k2', 'continue', 10, 0, GEN, 'SNP'), 'program')];
+
+// Przegląd 2026-11-23, przypadek 1: W Genotropin SNP 7;0 → K Increlex IGF-1 7;6 → K 8;0 bez leku i programu.
+const G_DO_I_BEZ = [P('gb-w', 'start', 7, 0, GEN, 'SNP'), P('gb-k1', 'continue', 7, 6, INC, 'IGF-1'),
+  bez(P('gb-k2', 'continue', 8, 0, GEN, 'SNP'), 'drug', 'program')];
+// Kurs 1 Increlex IGF-1 (W 7;0 → Z 8;0), kurs 2 bez Włączenia: K Genotropin bez programu 9;0 → K Genotropin SNP 9;6.
+const W2_BEZ = [P('w2-w1', 'start', 7, 0, INC, 'IGF-1'), P('w2-z1', 'end', 8, 0, INC, 'IGF-1'),
+  bez(P('w2-k1', 'continue', 9, 0, GEN, 'SNP'), 'program'), P('w2-k2', 'continue', 9, 6, GEN, 'SNP')];
+// Przegląd 2026-11-23, przypadek 2: I→G z ostatnią Kontynuacją Genotropin bez programu.
+const I_DO_G_BEZ = [I_DO_G[0], I_DO_G[1], bez(I_DO_G[2], 'program')];
+// Stare pole po końcu edycji (przegląd): W Increlex IGF-1 7;0 → K Genotropin SNP 7;6 → K Increlex IGF-1 8;0.
+const POWROT = [I_DO_G[0], I_DO_G[1], P('pw-k2', 'continue', 8, 0, INC, 'IGF-1')];
 
 function atrapa(punkty, opcje = {}) {
   const a = utworzAtrapeMonitoraGh({ punkty: structuredClone(punkty), ...opcje });
@@ -109,6 +134,13 @@ const PRZYPADKI = {
     ['q-w2', 'q-k1', 'q-k2']],
   'wznowienie: Zakończenie kursu 1 bez programu (pkt 2, kurs 1 — nie kurs 2 Increlex)': [WZNOWIENIE_IG, 'q-z1', ['SNP', 'SNP'], ['SNP', 'SNP'],
     ['q-w1', 'q-z1']],
+  // Przegląd 2026-11-23, przypadek 1: rodzaj z preparatu formularza (bez leku — pierwszy z listy, Omnitrope 5 mg), nie
+  // z Kontynuacji Increlex przed punktem (bez tego zapis Omnitrope 5 mg + IGF-1).
+  'G→I, potem K bez leku i programu (pkt 2 — rodzaj z preparatu formularza, Omnitrope 5 mg)': [G_DO_I_BEZ,
+    'gb-k2', ['SNP', 'SNP'], ['SNP', 'SNP'], ['gb-w', 'gb-k1', 'gb-k2']],
+  // Zapas (pkt 3) może wziąć program z innego kursu — jak dotąd (przegląd 2026-11-23, opis w ALGORITHMS).
+  'W2: kurs 2 bez Włączenia, pierwszy punkt bez programu — pkt 3 bierze program Włączenia kursu 1 (IGF-1), jak dotąd': [W2_BEZ,
+    'w2-k1', ['IGF-1', 'SNP'], ['IGF-1', 'SNP'], ['w2-k1']],
 };
 
 describe('P-GH-PROGRAM-EDYCJA — pole „Program terapeutyczny” przy edycji punktu i program zapisany edycją', () => {
@@ -132,9 +164,11 @@ describe('P-GH-PROGRAM-EDYCJA — pole „Program terapeutyczny” przy edycji p
     // Karta terapii: podczas edycji bez zdarzeń (ghPreparatyKarty nic nie robi przy edycji); po zapisie — jak dotąd (np. po
     // edycji Włączenia Increlex lista preparatów karty wraca za programem bieżącym SNP).
     expect(a.zdarzeniaKarty).toEqual(c.zdarzeniaKarty);
-    // Pkt 2: ta sama reguła co Karta pacjenta (Gp_biezacy) na punktach kursu do edytowanego punktu; pusty — pkt 3 (zapas).
+    // Pkt 2: ta sama reguła co Karta pacjenta (Gp_biezacy) na punktach kursu do edytowanego punktu, edytowany punkt z lekiem
+    // z formularza edycji (bez leku — pierwszy preparat listy); pusty — pkt 3 (zapas).
     if (prefiks) {
       const punkty = prefiks.map((x) => lista.find((q) => q.id === x));
+      punkty[punkty.length - 1] = { ...punkty.at(-1), drug: teraz.podczas.lek || punkty.at(-1).drug };
       const karta = GP_BIEZACY(punkty).program;
       expect(karta || programPrzed).toBe(program);
     }
@@ -211,19 +245,102 @@ describe('P-GH-PROGRAM-EDYCJA — pole „Program terapeutyczny” przy edycji p
     expect(a.pole('therProg').value).toBe('SNP');
   });
 
-  it('formularz wstecznego punktu otwarty w trakcie edycji kopiuje pole: program i preparat edytowanego punktu (SNP, Genotropin 12 mg; dotąd IGF-1, Increlex 40 mg)', () => {
-    const a = atrapa(I_DO_G);
-    const c = przed(I_DO_G);
-    for (const m of [a, c]) {
-      m.edytuj('ig-k1');
-      m.kliknij('btnGhRetro');
+  // Poprawka po przeglądzie (2026-11-23): formularz wsteczny dodaje NOWY punkt, więc w trakcie edycji kopiuje program i lek
+  // bieżący kursu (jak pole poza edycją), nie program edytowanego punktu (wersja przed przeglądem: edycja Włączenia
+  // Increlex → IGF-1 i Increlex 40 mg; dotąd — 77cb60dc — program Włączenia: IGF-1 i Increlex 40 mg także przy edycji K).
+  it('formularz wstecznego punktu otwarty w trakcie edycji: program i lek bieżący kursu (I→G — SNP, Genotropin 12 mg przy edycji Włączenia Increlex i Kontynuacji; dotąd IGF-1, Increlex 40 mg); pole edycji bez zmian', () => {
+    for (const id of ['ig-w', 'ig-k1']) {
+      const a = atrapa(I_DO_G);
+      const c = przed(I_DO_G);
+      for (const m of [a, c]) {
+        m.edytuj(id);
+        m.kliknij('btnGhRetro');
+        expect(m.stan().edycjaWidoczna, id).toBe(true);
+      }
+      expect([a.pole('ghRetroProg').value, a.pole('ghRetroDrug').value], id).toEqual(['SNP', GEN]);
+      expect([c.pole('ghRetroProg').value, c.pole('ghRetroDrug').value], id).toEqual(['IGF-1', INC]);
+      expect(a.pole('therProg').value, id).toBe(id === 'ig-w' ? 'IGF-1' : 'SNP');
     }
-    expect([a.pole('ghRetroProg').value, a.pole('ghRetroDrug').value]).toEqual(['SNP', GEN]);
-    expect([c.pole('ghRetroProg').value, c.pole('ghRetroDrug').value]).toEqual(['IGF-1', INC]);
+  });
+
+  it('przypadek 2 (przegląd): K Genotropin bez programu po I→G — lekarz wybiera w formularzu edycji Increlex 40 mg: pole od razu IGF-1, zapis Increlex 40 mg + IGF-1 (wersja przed przeglądem: SNP — Increlex z SNP); powrót do Genotropinu — SNP', () => {
+    const a = atrapa(I_DO_G_BEZ);
+    a.edytuj('ig-k2');
+    expect(polePodczas(a)).toEqual({ program: 'SNP', zablokowane: true, leki: LEKI_WSZYSTKIE, lek: GEN });
+    a.ustaw('ghEditDrug', INC);
+    expect(a.pole('therProg').value).toBe('IGF-1');
+    a.ustaw('ghEditDrug', GEN);
+    expect(a.pole('therProg').value).toBe('SNP');
+    a.ustaw('ghEditDrug', INC);
+    a.ustaw('ghEditDose', '0.8');
+    a.kliknij('btnGhContinue');
+    expect(a.stan().komunikat).toBeNull();
+    expect(punktOId(a, 'ig-k2')).toMatchObject({ drug: INC, program: 'IGF-1' });
+    // Dotąd (77cb60dc): pole IGF-1 z Włączenia przez całą edycję — ten sam zapis Increlex + IGF-1.
+    const c = przed(I_DO_G_BEZ);
+    c.edytuj('ig-k2');
+    expect(c.pole('therProg').value).toBe('IGF-1');
+    c.ustaw('ghEditDrug', GEN);
+    expect(c.pole('therProg').value).toBe('IGF-1');
+  });
+
+  it('pkt 3 przy wybranym preparacie: K Genotropin bez programu po W Genotropin SNP — wybór Increlex 40 mg zostawia SNP (w kursie przed punktem brak programu IGF-1), zapis Increlex 40 mg + SNP — jak dotąd, do decyzji właściciela', () => {
+    const lista = PRZYPADKI['bez programu: K Genotropin po W Genotropin SNP (pkt 2)'][0];
+    for (const m of [atrapa(lista), przed(lista)]) {
+      m.edytuj('a-k');
+      m.ustaw('ghEditDrug', INC);
+      expect(m.pole('therProg').value).toBe('SNP');
+      m.ustaw('ghEditDose', '0.8');
+      m.kliknij('btnGhContinue');
+      expect(punktOId(m, 'a-k')).toMatchObject({ drug: INC, program: 'SNP' });
+    }
+  });
+
+  it('punkt z programem: zmiana preparatu w formularzu edycji nie zmienia pola (pkt 1)', () => {
+    const a = atrapa(I_DO_G);
+    a.edytuj('ig-k1');
+    a.ustaw('ghEditDrug', 'Omnitrope 10 mg');
+    expect(a.pole('therProg').value).toBe('SNP');
+    a.kliknij('btnGhContinue');
+    expect(punktOId(a, 'ig-k1')).toMatchObject({ drug: 'Omnitrope 10 mg', program: 'SNP' });
   });
 });
 
 describe('P-GH-PROGRAM-EDYCJA — koniec edycji bez zapisu: pole wraca do programu bieżącego', () => {
+  // Poprawka po przeglądzie (2026-11-23): zmiana pacjenta sesji karty w innej ramce kończy edycję bez F() — dotąd pole
+  // zostawało z chwili edycji, a z nim program następnego punktu z karty (wersja przed przeglądem: Genotropin + SNP przy
+  // programie bieżącym IGF-1; 77cb60dc: Genotropin 12 mg + IGF-1).
+  it('zmiana pacjenta w innej ramce w trakcie edycji (W Increlex IGF-1, K Genotropin SNP 7;6, K Increlex IGF-1 8;0; edycja 7;6): edycja zamknięta, pole IGF-1 — program bieżący; Kontynuacja z karty — Increlex 40 mg, IGF-1', () => {
+    const wynik = (m) => {
+      m.win.sessionStorage.setItem('vildaCurrentPatientId', 'fikc-pacjent-A');
+      m.edytuj('ig-k1');
+      const podczas = m.pole('therProg').value;
+      m.win.sessionStorage.setItem('vildaCurrentPatientId', 'fikc-pacjent-B');
+      m.zdarzenieOkna('storage', { key: 'vildaCurrentPatientId' });
+      const po = [m.stan().edycjaWidoczna, m.pole('therProg').value];
+      m.dodajZKarty('continue', karta(8, 6));
+      const nowy = m.stan().okno.at(-1);
+      return { podczas, po, nowy: [m.stan().okno.length, nowy.drug, nowy.program] };
+    };
+    expect(wynik(atrapa(POWROT))).toEqual({ podczas: 'SNP', po: [false, 'IGF-1'], nowy: [4, INC, 'IGF-1'] });
+    expect(wynik(przed(POWROT))).toEqual({ podczas: 'IGF-1', po: [false, 'IGF-1'], nowy: [4, GEN, 'IGF-1'] });
+  });
+
+  it('formularz wsteczny otwarty w trakcie edycji, gdy edytowanego punktu nie ma już na liście: kopiuje program i lek bieżący (IGF-1, Increlex 40 mg), edycja zamknięta, pole IGF-1; Kontynuacja z karty — Increlex 40 mg, IGF-1', () => {
+    const wynik = (m) => {
+      m.edytuj('ig-k1');
+      m.ustawModul(structuredClone([POWROT[0], POWROT[2]]));
+      m.kliknij('btnGhRetro');
+      const r = [m.pole('ghRetroProg').value, m.pole('ghRetroDrug').value, m.stan().edycjaWidoczna, m.pole('therProg').value];
+      m.win.ghCancelRetroForm();
+      m.dodajZKarty('continue', karta(8, 6));
+      const nowy = m.stan().okno.at(-1);
+      return [...r, nowy.drug, nowy.program];
+    };
+    expect(wynik(atrapa(POWROT))).toEqual(['IGF-1', INC, false, 'IGF-1', INC, 'IGF-1']);
+    expect(wynik(przed(POWROT))).toEqual(['IGF-1', INC, false, 'IGF-1', GEN, 'IGF-1']);
+  });
+
   it('usunięcie edytowanego punktu (I→G, Kontynuacja 8;0): edycja zamknięta, pole SNP — program bieżący; Kontynuacja z karty SNP (dotąd pole IGF-1 z Włączenia i Kontynuacja z karty IGF-1)', () => {
     const a = atrapa(I_DO_G);
     const c = przed(I_DO_G);
