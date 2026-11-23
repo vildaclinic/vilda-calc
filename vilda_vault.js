@@ -11847,6 +11847,7 @@ function EncounterPlanOperation(id, patientId) {
 function StagedDocumentInstall() {
   const load = PatientWorkspaceModules;
   const cache = new WeakMap();
+  // eslint-disable-next-line no-func-assign -- Wrap the sealed lazy loader once, preserving its import and retry behavior.
   PatientWorkspaceModules = async function () {
     const native = await load();
     if (cache.has(native)) return cache.get(native);

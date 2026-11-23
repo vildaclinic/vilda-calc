@@ -21,7 +21,11 @@ function once(source, before, after) {
 }
 function hook(root) {
   const fragment = readFileSync(resolve(root, SOURCE), 'utf8');
-  return { fragment, installed: START + fragment + END + INSTALL + '\n  StagedDocumentInstall();' };
+  // Only the assembled Vault contains the original function declaration.
+  const assignment = '  PatientWorkspaceModules = async function () {';
+  const generated = once(fragment, assignment,
+    '  // eslint-disable-next-line no-func-assign -- Wrap the sealed lazy loader once, preserving its import and retry behavior.\n' + assignment);
+  return { fragment, installed: START + generated + END + INSTALL + '\n  StagedDocumentInstall();' };
 }
 function build(base, root) {
   if (hash(base) !== BASE) fail('unexpected reviewed base');
