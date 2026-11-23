@@ -2688,8 +2688,25 @@ function remB22Create(host, full, options) {
     editing(false); dismissOutcome(true);
     if (state.stale) refresh();
   }
+  function HomeOutcomeCapture(patientId) {
+    if (i.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || i.__VILDA_HOME_GABINET_PREVIEW__ !== true) return null;
+    try {
+      var host = i.VildaHomeGabinet || i.VildaHomeEncounter;
+      if (host) return typeof host.captureDocumentationBinding === 'function'
+        ? host.captureDocumentationBinding(patientId) : {blocked:true};
+      if (typeof i.VildaShell?.captureActiveHomeDocumentationBinding === 'function')
+        return i.VildaShell.captureActiveHomeDocumentationBinding(patientId);
+      var shell = i.parent !== i && i.parent?.VildaShell;
+      if (typeof shell?.captureDocumentationBinding === 'function') return shell.captureDocumentationBinding(i,patientId);
+    } catch (_) { /* Unavailable ownership must not become a general write. */ }
+    return {blocked:true};
+  }
   function outcome(kind, row) {
     if (state.editing || state.busy || !alive() || !HomeRemindersOwnRow(row)) return;
+    var outcomeVisit = HomeOutcomeCapture(row.n.patientId);
+    if (outcomeVisit && (outcomeVisit.blocked || outcomeVisit.isCurrent?.() !== true)) {
+      report(new Error('Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.'),detail); return;
+    }
     editing(true);
     var uid, op;
     try { uid = 'rem-outcome-' + operationId(); op = operationId(); }
@@ -2741,7 +2758,10 @@ function remB22Create(host, full, options) {
       state.busy = true; var fields = Array.from(form.querySelectorAll('input,select,textarea')); fields.forEach(function (node) { node.disabled = true; }); controls.forEach(function (node) { node.disabled = true; });
       nextSummary.setAttribute('aria-disabled', 'true');
       try {
-        var result = await vault.saveReminderOutcome(request); if (!alive()) return;
+        var outcomeBinding = outcomeVisit ? Object.freeze({visitContext:outcomeVisit.visitContext,
+          isCurrent:function(){return alive() && outcomeRoot === dialog && outcomeVisit.isCurrent();},
+          ensureRecorded:function(){return alive() && outcomeRoot === dialog ? outcomeVisit.ensureRecorded() : Promise.resolve(false);}}) : null;
+        var result = await vault.saveReminderOutcome(request,outcomeBinding); if (!alive()) return;
         if (!result.saved) throw new Error(result.reason === 'conflict' || result.reason === 'already-closed' ? 'Ta sprawa zmieniła się w innej karcie lub na innym urządzeniu. Zachowaj wpisany opis i otwórz aktualny zapis.' : 'Nie zapisano zmian. Sprawa mogła zostać usunięta.');
         // The transaction is committed. Subsequent failures are read failures;
         // retain the current details/back navigation and offer only a read retry.

@@ -549,6 +549,25 @@
       }
       function describePending(item, anchor) {
         if (!canDescribe() || detailsHidden()) return;
+        var visitBinding = null;
+        if (win.__VILDA_HOME_WORKSPACE_PREVIEW__ === true && win.__VILDA_HOME_GABINET_PREVIEW__ === true) {
+          try {
+            var home = win.VildaHomeGabinet || win.VildaHomeEncounter;
+            if (home) visitBinding = typeof home.captureDocumentationBinding === 'function'
+              ? home.captureDocumentationBinding(patientId) : {blocked:true};
+            else if (typeof win.VildaShell?.captureActiveHomeDocumentationBinding === 'function')
+              visitBinding = win.VildaShell.captureActiveHomeDocumentationBinding(patientId);
+            else {
+              var shellOwner = win.parent !== win && win.parent?.VildaShell;
+              visitBinding = typeof shellOwner?.captureDocumentationBinding === 'function'
+                ? shellOwner.captureDocumentationBinding(win,patientId) : {blocked:true};
+            }
+          } catch (_) { visitBinding = {blocked:true}; }
+          if (visitBinding && (visitBinding.blocked || visitBinding.isCurrent?.() !== true)) {
+            state.notice = {kind:'details-resource-error',text:'Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.'};
+            draw(); return;
+          }
+        }
         var helper = win && win.VildaResultDetailsDialog;
         if (!helper || typeof helper.attach !== 'function') {
           state.notice = { kind: 'details-resource-error', text: 'Nie udało się otworzyć okna opisu wyniku. Odśwież stronę.' }; draw(); return;
@@ -623,7 +642,10 @@
             signature = sig;
             request.operationId = op;
             if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return null;
-            return vault.saveReminderOutcome(request);
+            var outcomeBinding = visitBinding ? Object.freeze({visitContext:visitBinding.visitContext,
+              isCurrent:function(){return instance.alive() && describeDialog === opened && visitBinding.isCurrent();},
+              ensureRecorded:function(){return instance.alive() && describeDialog === opened ? visitBinding.ensureRecorded() : Promise.resolve(false);}}) : null;
+            return vault.saveReminderOutcome(request,outcomeBinding);
           }).then(function (result) {
             if (typeof options.isCurrent === 'function' && (!instance.alive() || describeDialog !== opened)) return;
             if (!result || result.saved !== true) {

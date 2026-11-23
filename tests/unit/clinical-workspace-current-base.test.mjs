@@ -15,7 +15,7 @@ let temporary;
 afterEach(() => { if (temporary) rmSync(temporary, { recursive: true, force: true }); temporary = null; });
 function withManifest(change) {
   temporary = mkdtempSync(join(tmpdir(), 'vilda-current-base-'));
-  for (const name of ['patient-treatment-v1', 'durable-visits-v1', 'visit-trash-v1', 'rapid-visit-v1', 'patient-profile-v1', 'visit-document-v1', 'profile-trash-v1']) {
+  for (const name of ['patient-treatment-v1', 'durable-visits-v1', 'visit-trash-v1', 'rapid-visit-v1', 'patient-profile-v1', 'visit-document-v1', 'profile-trash-v1', 'document-outcomes-v1']) {
     cpSync(new URL('runtime/' + name, root), join(temporary, 'runtime', name), { recursive: true });
   }
   const directory = join(temporary, 'runtime', 'clinical-workspace-v1'); mkdirSync(directory, { recursive: true });
@@ -41,6 +41,7 @@ describe('current public Vault base for the next private workspace build', () =>
     expect(result.baseSource).toContain('/* BEGIN VILDA PATIENT PROFILE V1 */');
     expect(result.baseSource).toContain('/* BEGIN VILDA VISIT DOCUMENT V1 */');
     expect(result.baseSource).toContain('/* BEGIN VILDA PROFILE TRASH V1 */');
+    expect(result.baseSource).toContain('/* BEGIN VILDA DOCUMENT OUTCOMES V1 */');
     expect(result.baseSource).not.toContain('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */');
   });
   it('rejects a stale current base even when the historical native proof still matches', () => {

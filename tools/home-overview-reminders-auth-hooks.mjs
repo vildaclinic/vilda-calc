@@ -35,7 +35,33 @@ const PAIRS = [
           if (source && source.blocked) return source;
           return source && source.visitContext ? source : source && source.encounter ? {blocked:true} : null;
         } : undefined,
-        isCurrent: alive,`]
+        isCurrent: alive,`],
+  ["  function outcome(kind, row) {\n    if (state.editing || state.busy || !alive() || !HomeRemindersOwnRow(row)) return;\n    editing(true);",
+    `  function HomeOutcomeCapture(patientId) {
+    if (i.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || i.__VILDA_HOME_GABINET_PREVIEW__ !== true) return null;
+    try {
+      var host = i.VildaHomeGabinet || i.VildaHomeEncounter;
+      if (host) return typeof host.captureDocumentationBinding === 'function'
+        ? host.captureDocumentationBinding(patientId) : {blocked:true};
+      if (typeof i.VildaShell?.captureActiveHomeDocumentationBinding === 'function')
+        return i.VildaShell.captureActiveHomeDocumentationBinding(patientId);
+      var shell = i.parent !== i && i.parent?.VildaShell;
+      if (typeof shell?.captureDocumentationBinding === 'function') return shell.captureDocumentationBinding(i,patientId);
+    } catch (_) { /* Unavailable ownership must not become a general write. */ }
+    return {blocked:true};
+  }
+  function outcome(kind, row) {
+    if (state.editing || state.busy || !alive() || !HomeRemindersOwnRow(row)) return;
+    var outcomeVisit = HomeOutcomeCapture(row.n.patientId);
+    if (outcomeVisit && (outcomeVisit.blocked || outcomeVisit.isCurrent?.() !== true)) {
+      report(new Error('Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.'),detail); return;
+    }
+    editing(true);`],
+  ["var result = await vault.saveReminderOutcome(request); if (!alive()) return;",
+    `var outcomeBinding = outcomeVisit ? Object.freeze({visitContext:outcomeVisit.visitContext,
+          isCurrent:function(){return alive() && outcomeRoot === dialog && outcomeVisit.isCurrent();},
+          ensureRecorded:function(){return alive() && outcomeRoot === dialog ? outcomeVisit.ensureRecorded() : Promise.resolve(false);}}) : null;
+        var result = await vault.saveReminderOutcome(request,outcomeBinding); if (!alive()) return;`]
 ];
 
 function replaceOnce(source, before, after) {

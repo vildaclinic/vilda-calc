@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
+import { restoreDocumentOutcomesBaseline } from './document-outcomes-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = '011c7839314326b5a31c4d0cb075da7414807f8c8587a9aee8768067b3cd63f1';
@@ -71,6 +72,7 @@ export function applyProfileTrashDelta(base, root=ROOT) {
   return built.source;
 }
 export function restoreProfileTrashBaseline(source, root=ROOT) {
+  source = restoreDocumentOutcomesBaseline(source, root);
   if (!source.includes(START)) return source;
   const {manifest,fragment}=definition(root), integrated=source;
   if (digest(source) !== manifest.integratedVaultSHA256) fail('unexpected integrated image');
@@ -88,7 +90,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       sources:source.sources,fragmentSHA256:digest(source.fragment),integratedVaultSHA256:digest(built.source),hooks:built.hooks},null,2)+'\n');
     writeFileSync(resolve(args[2]),built.source); process.stdout.write('Built exact atomic legacy-profile retention.\n');
   } else if (!args.length) {
-    const source=readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8');
+    const source=restoreDocumentOutcomesBaseline(readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8'));
     if (applyProfileTrashDelta(restoreProfileTrashBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Atomic profile Trash: exact outer Vault layer verified.\n');
   } else fail('usage: node tools/profile-trash-vault-delta.mjs [--build BASE_FILE OUTPUT_FILE]');

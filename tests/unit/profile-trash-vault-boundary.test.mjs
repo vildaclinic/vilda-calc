@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { applyProfileTrashDelta, restoreProfileTrashBaseline } from '../../tools/profile-trash-vault-delta.mjs';
 import { restoreVisitDocumentBaseline } from '../../tools/visit-document-vault-delta.mjs';
-const source=readFileSync(new URL('../../vilda_vault.js',import.meta.url),'utf8');
+import { restoreDocumentOutcomesBaseline } from '../../tools/document-outcomes-vault-delta.mjs';
+const source=restoreDocumentOutcomesBaseline(readFileSync(new URL('../../vilda_vault.js',import.meta.url),'utf8'));
 const manifest=JSON.parse(readFileSync(new URL('../../runtime/profile-trash-v1/manifest.json',import.meta.url),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const native=value=>value.slice(value.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */'),

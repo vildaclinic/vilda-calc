@@ -11862,7 +11862,7 @@ function EncounterInstallCare(api) {
   };
 }
 async function CareMvpMutate(input, binding) {
-  if (binding) return EncounterPlanRun(input,binding,function(){return VisitDocumentCareLock(input,binding,function(){return CareMvpMutate(input)})});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
+  if (binding) return DocumentOutcomePatientLock(input,binding,function(){return CareMvpMutate(input)});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   if (!T()) throw new Error('Zaloguj się, by zapisać plan opieki.');
   CareMvpRequireLegacyContext(input); CareMvpRequireLegacyContext(input && input.payload);
   if (!input || typeof input !== 'object' || !CareMvpId(input.operationId) || !/^[A-Za-z0-9_-]{1,64}$/.test(input.operationId)
@@ -11894,6 +11894,7 @@ async function CareMvpMutate(input, binding) {
     if (raw && raw.rev !== request.baseRev) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'conflict', conflict: true, plan: await CareMvpNoteProjection(current, CareMvpView(current), assertSession) });
     const patient = await adapter.getPatientForUser(account, request.patientId); assertSession();
     if (!patient) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'deleted' });
+    if(visitOrigin)await DocumentOutcomeCheck(request,assertSession);
     if (!context) context = { version: 1, role: 'plan', status: 'active', goal: '', needsDecision: true, decisionDueDateISO: CareMvpToday(), steps: [], log: [], operations: [], closedAtISO: null, closeReason: '', closeText: '' };
     const lineage = await CareMvpLineage(context, current ? current.title : '', planId, assertSession); assertSession();
     if (!lineage.stamp) throw new Error('Nieprawidłowa historia pochodzenia planu. Zachowaj kopię i otwórz plan ponownie.');
@@ -11912,7 +11913,7 @@ async function CareMvpMutate(input, binding) {
     };
     const queue = async function (noteId, payload) {
       const existing = await read(noteId);
-      const origin = VisitDocumentCareOrigin(request, existing, payload);
+      const origin = DocumentOutcomeCareOrigin(request, existing, payload);
       if (origin) {
         await VisitDocumentCheckActive(Object.assign({ patientId: request.patientId }, origin), { requireActiveVisit: true }, assertSession);
         payload = Object.assign({}, payload, origin);
@@ -12707,18 +12708,21 @@ async function CareMvpReminderOutcome(request, fingerprint) {
   const next=result.stepId&&result.stepId!==step.id?result.plan.steps.find(function(item){return item.id===result.stepId;}):null;
   return Object.assign({},result,{id:request.id,nextId:next?next.reminderNoteId:null});
 }
-async function RemB22SaveOutcome(input) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
+async function RemB22SaveOutcome(input, binding) {
+  if (binding) return DocumentOutcomePatientLock(input,binding,function(){return RemB22SaveOutcome(input)});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   if (!T()) throw new Error('Zaloguj się, by zapisać wykonanie przypomnienia.');
   if (!input || typeof input.id !== 'string' || !input.id || typeof input.patientId !== 'string'
       || !Number.isSafeInteger(input.baseRev) || input.baseRev < 0
       || typeof input.operationId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(input.operationId)
       || ['complete', 'result', 'reschedule'].indexOf(input.action) < 0) throw new Error('Niepełne dane wykonania.');
   const request = JSON.parse(JSON.stringify(input)), account = b, key = ot;
-  const assertSession = function () { if (!T() || b !== account || ot !== key) throw new Error('Sesja zmieniła się. Otwórz przypomnienie ponownie.'); };
+  const visitOrigin = EncounterPlanOperation(request.operationId,request.patientId);
+  if (visitOrigin) request.visitContext=visitOrigin; else delete request.visitContext;
+  const assertSession = function () { if(visitOrigin)EncounterPlanOperation(request.operationId,request.patientId); if (!T() || b !== account || ot !== key) throw new Error('Sesja zmieniła się. Otwórz przypomnienie ponownie.'); };
   const date = Ct(request.dateISO), comment = Z(String(request.text || '')).trim();
   if (!date || comment.length > 20000) throw new Error('Sprawdź datę i długość opisu (maksymalnie 20 000 znaków).');
   if (request.action === 'result' && !comment) throw new Error('Wpisz treść otrzymanego wyniku.');
-  const fingerprintInput = JSON.stringify([request.patientId, request.action, date, comment, request.next || null, request.test || null]);
+  const fingerprintInput = JSON.stringify([request.patientId, request.action, date, comment, request.next || null, request.test || null, ...(visitOrigin ? [visitOrigin] : [])]);
   const fingerprint = Array.from(new Uint8Array(await v.crypto.subtle.digest('SHA-256', new TextEncoder().encode(fingerprintInput)))).map(function (byte) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,byte.toString(16).padStart(2, '0')); }).join('');
   const next = request.next;
   if (next && (!Z(String(next.title || '')).trim() || !Ct(next.dateISO))) throw new Error('Uzupełnij treść i termin kolejnego kroku.');
@@ -12745,6 +12749,7 @@ async function RemB22SaveOutcome(input) {const PatientClinicalOperationAccount=b
     // wszystkich polach odczytu nie jest konfliktem (Bnp_takSamoWidoczna: ratunek D-21, import karty, zapis samego rev).
     if ((typeof request.baseUpdatedAtISO === 'string' && request.baseUpdatedAtISO ? (current.updatedAtISO || '') !== request.baseUpdatedAtISO : current.rev !== request.baseRev) && !Bnp_takSamoWidoczna(current, request.baseNote, request.id, request.baseUpdatedAtISO)) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, conflict: true, reason: 'conflict', current });
     if (current.completedAtISO || current.noShowAtISO) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'already-closed' });
+    if(visitOrigin)await DocumentOutcomeCheck(request,assertSession);
     const children = [], resultId = request.action === 'result' ? 'rem-result-' + request.operationId : null;
     const nextId = next ? 'rem-next-' + request.operationId : null;
     const context = Object.assign({}, current.reminderContext || {}, { version: 1, operationId: request.operationId, fingerprint, action: request.action, dateISO: date, nextId, resultNoteId: resultId });
@@ -12765,12 +12770,14 @@ async function RemB22SaveOutcome(input) {const PatientClinicalOperationAccount=b
         category: 'wynik-badania', body: 'Otrzymano: ' + dayLabel + '\n\n' + comment, dueDateISO: null,
         // A narrative is never parsed as a numeric sample or assigned a sample date.
         labResult: { test, value: 'Wynik opisowy — pełna treść w notatce' },
-        reminderContext: { version: 1, parentId: current.id, action: 'result', dateISO: date }
+        reminderContext: { version: 1, parentId: current.id, action: 'result', dateISO: date },
+        ...EncounterNoteFields(request)
       }, guard));
     }
     if (nextId) children.push(await Ad({ id: nextId, patientId: current.patientId, title: Z(next.title).trim(),
       category: current.category, body: 'Kolejny krok po: ' + current.title, dueDateISO: next.dateISO,
-      dueTime: next.dueTime || null, reminderContext: { version: 1, parentId: current.id }
+      dueTime: next.dueTime || null, reminderContext: { version: 1, parentId: current.id },
+      ...EncounterNoteFields(request)
     }, guard));
     assertSession();
     const result = calendarOriginal
@@ -15341,6 +15348,56 @@ function EncounterDecoratePlanModel(model, resolveOrigin) {
   return Object.freeze(Object.assign({}, model, {validateState,prepareTransaction}));
 }
 /* END VILDA PATIENT TREATMENT V1 */
+/* BEGIN VILDA DOCUMENT OUTCOMES V1 */
+/* Explicit provenance for newly authored reminder and legacy care outcomes.
+ * Existing parents, facts, dates, receipts and compound transactions retain
+ * their native contracts. Entered inside the original workspace actor. */
+function DocumentOutcomeCapture(binding) {
+  if (!binding || binding.blocked === true || typeof binding.isCurrent !== 'function'
+      || typeof binding.ensureRecorded !== 'function' || binding.isCurrent() !== true) {
+    throw VisitDocumentFailure('STALE', 'Zmieniono wizytę. Otwórz formularz ponownie.');
+  }
+  const origin = VisitDocumentOrigin({ visitContext: binding.visitContext });
+  const current = binding.isCurrent.bind(binding), record = binding.ensureRecorded.bind(binding);
+  return Object.freeze({ visitContext: Object.freeze(Object.assign({}, origin)),
+    isCurrent: current, ensureRecorded: record });
+}
+function DocumentOutcomePatientLock(request, binding, action) {
+  const session = Bses_opcje(null); Bpz_pilnuj(session);
+  // The native workspace / portable-plan lease is already held. Patient
+  // precedes reminder/plan-note locks and remains held through durable commit.
+  return Bzw_podBlokada(request.patientId, function () {
+    Bpz_pilnuj(session); EncounterPlanCheck(binding, request.patientId);
+    return action();
+  }, binding);
+}
+function DocumentOutcomeCareOrigin(request, existing, payload) {
+  if (existing.stored || !request.visitContext || !payload.careContext
+      || ['step', 'calendar', 'note', 'result'].indexOf(payload.careContext.role) < 0) return null;
+  return EncounterNoteFields(request);
+}
+async function DocumentOutcomeCheck(request, assertCurrent) {
+  if (!request.visitContext) return;
+  await VisitDocumentCheckActive({ patientId: request.patientId, visitContext: request.visitContext },
+    { requireActiveVisit: true }, assertCurrent);
+  assertCurrent();
+}
+function DocumentOutcomesInstall(api) {
+  ['saveReminderOutcome', 'mutateCarePlan'].forEach(function (name) {
+    const original = api[name];
+    api[name] = function (input, binding) {
+      if (!binding) return original.apply(this, arguments);
+      let request, captured;
+      try { request = JSON.parse(JSON.stringify(input)); captured = DocumentOutcomeCapture(binding); }
+      catch (error) { return Promise.reject(error); }
+      // Recording is a public operation and must finish BEFORE the native
+      // workspace queue/shared lease. The inner actor takes patient→note and
+      // validates the canonical visit without re-entering public actors.
+      return EncounterPlanRun(request, captured, function () { return original.call(api, request, captured); });
+    };
+  });
+}
+/* END VILDA DOCUMENT OUTCOMES V1 */
 /* BEGIN VILDA VISIT DOCUMENT V1 */
 /* Opt-in durability of newly authored visit documents. No origin is inferred,
  * reassigned or migrated. Existing receipts and historical documents retain
@@ -15998,4 +16055,4 @@ isPatientIdentitySnapshot:VisitTrashIdentity,
 moveVisitToTrash:(patientId,visitId,options)=>VisitTrashChange(patientId,visitId,options,false),
 listTrashedVisits:VisitTrashList,
 restoreTrashedVisit:(patientId,visitId,options)=>VisitTrashChange(patientId,visitId,options,true),
-restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanNoteEntries:CareMvpNoteEntries,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};EncounterPublishVault($s);ProfileInstallPresentation($s);VisitDocumentInstall($s);EncounterInstallCare($s)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanNoteEntries:CareMvpNoteEntries,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};EncounterPublishVault($s);ProfileInstallPresentation($s);VisitDocumentInstall($s);DocumentOutcomesInstall($s);EncounterInstallCare($s)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
