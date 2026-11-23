@@ -363,9 +363,9 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(wpisy.has('/vilda_ui_intents.js?v=2')).toBe(true);
     for (const resource of ['/vilda_docpro_visit_guard.js?v=2', '/vilda_home_workspace.js?v=10', '/vilda_home_workspace.css?v=9', '/vilda_home_growth_views.js?v=5', '/vilda_home_growth_views.css?v=7', '/vilda_home_growth_charts.js?v=3', '/vilda_home_diet.js?v=3', '/vilda_home_diet_bmi.css?v=1', '/vilda_home_diet.css?v=3', '/vilda_home_dialog_history.js?v=1', '/vilda_home_patient_data.js?v=4', '/vilda_home_patient_note_host.js?v=2', '/vilda_home_patient_note_host.css?v=1', '/vilda_home_patient.js?v=9', '/vilda_home_patient.css?v=2', '/vilda_home_patient_native.js?v=9', '/vilda_home_patient_native.css?v=5', '/vilda_patient_treatment_ui.js?v=4', '/vilda_patient_treatment_ui.css?v=1', '/vilda_home_patient_native_note.js?v=1', '/vilda_icd10_pl_data.js?v=1', '/vilda_icd10_search.js?v=1', '/vilda_icd10_picker.js?v=1', '/vilda_icd10_picker.css?v=1', '/vilda_home_reminders.js?v=3', '/vilda_home_reminders.css?v=2', '/vilda_home_reminders_runtime.js?v=3', '/vilda_home_tools.css?v=5', '/vilda_home_tools.js?v=6', '/vilda_home_tools_vitals.js?v=2', '/vilda_home_tools_anthropometry.js?v=2', '/vilda_home_tools_nutrition.js?v=2', '/vilda_home_tools_intake.js?v=1',
       '/vilda_home_gabinet.css?v=8', '/vilda_home_gabinet_start.css?v=5', '/vilda_home_gabinet_quick.js?v=1',
-      '/vilda_home_gabinet_start.js?v=7', '/vilda_home_encounter.js?v=8', '/vilda_home_gabinet.js?v=14',
-      '/vilda_home_visit_scene.css?v=2', '/vilda_home_visit_detail.css?v=1', '/vilda_home_visit_projection.js?v=2',
-      '/vilda_home_visit_scene.js?v=2', '/vilda_home_visit_detail.js?v=3', '/vilda_home_visit_history.js?v=4',
+      '/vilda_home_gabinet_start.js?v=7', '/vilda_home_encounter.js?v=9', '/vilda_home_gabinet.js?v=15',
+      '/vilda_home_visit_scene.css?v=2', '/vilda_home_visit_detail.css?v=2', '/vilda_home_visit_projection.js?v=2',
+      '/vilda_home_visit_scene.js?v=2', '/vilda_home_visit_detail.js?v=4', '/vilda_home_visit_history.js?v=5',
       '/vilda_home_visit_comparison_model.js?v=1', '/vilda_home_comparison_clinical.js?v=1',
       '/vilda_home_visit_comparison.js?v=1', '/vilda_home_visit_comparison.css?v=1']) {
       expect(ZASOBY_WIZYT.has(resource)).toBe(true);

@@ -4,6 +4,7 @@
  * No clinical values or patient data leave their owning document.
  */
 R += ".vug--klirens .vug-btn{min-height:48px;font-size:16px;line-height:1.4;white-space:normal}.vug .vug-btn[hidden]{display:none!important}";
+R += ".vug-native{width:auto;height:auto;max-width:none;max-height:none;margin:0;border:0}.vug-native:not([open]){display:none}.vug-native::backdrop{background:transparent}";
 function VildaKlirensGuardHasPending() {
   var root = f, windows = [f], seen = [];
   try {
@@ -109,9 +110,18 @@ function VildaGuardRunDecision(options, decision) {
   var doc = p();
   if (!doc || !doc.body) { proceed(); return; }
   if (b) return;
+  var modalOwner = options.modalOwner;
+  if (modalOwner && (modalOwner.ownerDocument !== doc || modalOwner.localName !== "dialog" ||
+      !modalOwner.open || !modalOwner.isConnected)) { cancel(); return; }
   var isNew = !clcrOnly && state === "new_patient", copy = N(reason, isNew), patient = J(options.patientLabel);
   var mainDirty = !clcrOnly && k(state);
   if (clcrPending) copy = VildaKlirensGuardCopy(reason, mainDirty, copy);
+  if (modalOwner && mainDirty && !clcrPending) {
+    copy.title = "Zapisać zmiany w otwartej wizycie?";
+    copy.body = "W otwartej wizycie są niezapisane dane. Wybierz, co zrobić przed przejściem dalej.";
+    copy.primary = "Zapisz i przejdź dalej";
+    copy.discard = "Odrzuć zmiany i przejdź dalej";
+  }
   if (mainDirty && f.__VILDA_HOME_GABINET_PREVIEW__ === true) {
     const action = f.VildaDataImportExport?.getHomeVisitSaveAction?.();
     // Loading the next patient is pending while this guard runs. The current
@@ -128,14 +138,26 @@ function VildaGuardRunDecision(options, decision) {
   var who = isNew
     ? n("div", { class: "vug-who" }, [n("span", { class: "dot newp" }), n("span", {}, [n("span", { text: "W formularzu: " }), n("b", { text: "nowy pacjent (bez karty)" })])])
     : patient ? n("div", { class: "vug-who" }, [n("span", { class: "dot dirty" }), n("span", {}, [n("span", { text: "Otwarty: " }), n("b", { text: patient })])]) : null;
-  var dialog = n("div", { class: "vug" + (clcrPending ? " vug--klirens" : ""), role: "dialog", "aria-modal": "true", "aria-label": copy.title }, [
+  var dialog = n("div", { class: "vug" + (clcrPending ? " vug--klirens" : ""),
+    role: modalOwner ? null : "dialog", "aria-modal": modalOwner ? null : "true", "aria-label": modalOwner ? null : copy.title }, [
     n("div", { class: "vug-head" }, [n("div", { class: "vug-ic " + copy.variant, "aria-hidden": "true", text: isNew ? "＋" : "✎" }),
       n("div", {}, [n("div", { class: "vug-kicker " + copy.variant, text: copy.kicker }), n("div", { class: "vug-ttl", text: copy.title })])]),
     n("p", { class: "vug-body", text: copy.body }), note ? n("p", { class: "vug-body vug-note", text: String(note) }) : null,
     who, error, n("div", { class: "vug-actions" }, [save, discard, back])
   ]);
-  var backdrop = n("div", { class: "vug-backdrop" }, dialog), pending = null, closed = false;
-  save.hidden = !copy.primary; doc.body.appendChild(backdrop);
+  // A guard opened from a native dialog needs its own top-layer entry.
+  var backdrop = modalOwner
+    ? n("dialog", { class: "vug-backdrop vug-native", "aria-label": copy.title }, dialog)
+    : n("div", { class: "vug-backdrop" }, dialog);
+  var pending = null, closed = false;
+  save.hidden = !copy.primary;
+  doc.body.appendChild(backdrop);
+  if (modalOwner) {
+    modalOwner.addEventListener("close", ownerClosed, { once: true });
+    backdrop.addEventListener("cancel", function (event) { event.preventDefault(); if (!back.disabled) finish(cancel); });
+    try { backdrop.showModal(); } catch (_) { finish(cancel); return; }
+  }
+  function ownerClosed() { finish(cancel); }
   function releaseRequest(request) {
     f.clearTimeout(request.timer);
     if (request.restoreListener) {
@@ -147,6 +169,10 @@ function VildaGuardRunDecision(options, decision) {
     if (closed) return;
     closed = true; b = false;
     if (pending) { releaseRequest(pending); pending = null; }
+    if (modalOwner) {
+      modalOwner.removeEventListener("close", ownerClosed);
+      if (backdrop.open) backdrop.close();
+    }
     try { if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); } catch (_) {}
     try { doc.removeEventListener("keydown", escape, true); } catch (_) {}
   }
@@ -237,7 +263,13 @@ function VildaGuardRunDecision(options, decision) {
     finish(proceed);
   });
   back.addEventListener("click", function () { if (!back.disabled) finish(cancel); });
-  function escape(event) { if (event && event.key === "Escape") { event.stopPropagation(); if (!back.disabled) finish(cancel); } }
+  function escape(event) {
+    if (event && event.key === "Escape") {
+      event.stopPropagation();
+      if (modalOwner) event.preventDefault();
+      if (!back.disabled) finish(cancel);
+    }
+  }
   doc.addEventListener("keydown", escape, true);
   backdrop.addEventListener("click", function (event) { if (event.target === backdrop && !back.disabled) finish(cancel); });
   try { (save.hidden ? discard : save).focus(); } catch (_) {}

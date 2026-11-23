@@ -1,5 +1,5 @@
-/* Read-only detail of a saved visit. Only the explicit edit action hands the
- * selected visit back to the clinical form owner. */
+/* Read-only detail of a saved visit. The clinical form owner handles explicit
+ * requests to edit the selected visit or start a new visit. */
 (function (w) {
   'use strict';
   const d = w.document;
@@ -20,6 +20,30 @@
     b.dataset.vdAction = action;
     if (value) b.dataset.vdValue = value;
     return b;
+  }
+
+  function accessIcon(path) {
+    const namespace = 'http://www.w3.org/2000/svg';
+    const icon = d.createElementNS(namespace, 'svg');
+    icon.setAttribute('viewBox', '0 0 24 24');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.setAttribute('focusable', 'false');
+    icon.setAttribute('fill', 'none');
+    icon.setAttribute('stroke', 'currentColor');
+    icon.setAttribute('stroke-width', '1.7');
+    icon.setAttribute('stroke-linecap', 'round');
+    icon.setAttribute('stroke-linejoin', 'round');
+    const line = d.createElementNS(namespace, 'path');
+    line.setAttribute('d', path);
+    icon.append(line);
+    return icon;
+  }
+
+  function accessButton(label, action, path) {
+    const actionButton = button('', action);
+    actionButton.className = 'vd-action vd-access-' + action;
+    actionButton.append(accessIcon(path), el('span', '', label));
+    return actionButton;
   }
 
   function tabs(choices, selected, action, label) {
@@ -159,20 +183,44 @@
     const dialog = el('dialog', 'vhome-detail-dialog vhome-history-detail');
     dialog.id = 'vhomeVisitDetail';
     const heading = el('div', 'vhome-dialog-heading');
+    const headingCopy = el('div');
+    const eyebrow = el('p', 'vd-eyebrow');
     const title = el('h2');
     title.id = 'vd-visit-title';
+    const subtitle = el('p', 'vd-subtitle');
+    headingCopy.append(eyebrow, title, subtitle);
     const dismiss = button('×', 'close');
     dismiss.className = 'vhome-dialog-close';
     dismiss.setAttribute('aria-label', 'Zamknij podgląd wizyty');
-    heading.append(title, dismiss);
+    heading.append(headingCopy, dismiss);
+
+    const access = el('section', 'vd-access');
+    const accessCopy = el('div', 'vd-access-copy');
+    const lock = el('span', 'vd-access-icon');
+    lock.append(accessIcon('M7 10h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Zm1 0V7a4 4 0 0 1 8 0v3m-4 5v2'));
+    const explanation = el('div');
+    const accessTitle = el('h2', '', 'Tylko odczyt');
+    accessTitle.id = 'vd-access-title';
+    const accessNote = el('p', '', 'Dane zapisanej wizyty są chronione przed zmianą.');
+    accessNote.id = 'vd-access-note';
+    explanation.append(accessTitle, accessNote);
+    accessCopy.append(lock, explanation);
+    const actions = el('div', 'vd-access-actions');
+    const startButton = accessButton('Rozpocznij nową wizytę', 'new', 'M12 5v14M5 12h14');
+    const editButton = accessButton('Edytuj wizytę', 'edit', 'm13 6 5 5M4 20l5-1L20 8a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L5 15z');
+    actions.append(startButton, editButton);
+    access.append(accessCopy, actions);
+    access.setAttribute('aria-labelledby', accessTitle.id);
+    const tabBar = tabs(panels, 'visit', 'tab', 'Zawartość podglądu wizyty');
     const scroll = el('div', 'vhome-dialog-body');
-    dialog.append(heading, scroll);
+    dialog.append(heading, access, tabBar, scroll);
     dialog.setAttribute('aria-labelledby', title.id);
+    dialog.setAttribute('aria-describedby', accessTitle.id + ' ' + accessNote.id);
     dialog.setAttribute('aria-modal', 'true');
 
     let index = Math.max(0, Math.min(Number.isInteger(options.index) ? options.index : 0, options.rows.length - 1));
     let tab = 'visit', summary = 'results', metric = 'height', expanded = false, closed = false;
-    let chart = null, frame = 0;
+    let chart = null, frame = 0, changingVisit = false;
     const returnTo = options.opener || d.activeElement;
     const history = w.VildaHomeDialogHistory?.create({
       isOpen: () => !closed && dialog.open,
@@ -204,6 +252,20 @@
       if (!options.isCurrent || options.isCurrent()) return true;
       close(false);
       return false;
+    }
+
+    async function changeVisit(action, opener) {
+      if (changingVisit || opener.hidden) return;
+      const selected = row();
+      const isActionCurrent = () => current() && row() === selected;
+      changingVisit = startButton.disabled = editButton.disabled = true;
+      try {
+        if (action === 'edit') await options.onEdit(selected, isActionCurrent, dialog);
+        else await options.onStart(isActionCurrent, dialog);
+      } finally {
+        changingVisit = startButton.disabled = editButton.disabled = false;
+        if (isActionCurrent()) opener.focus({preventScroll: true});
+      }
     }
 
     function drawChart() {
@@ -274,7 +336,6 @@
       if (grid.children.length === 1) result.classList.add('vd-wide');
       container.append(grid);
       const actions = el('div', 'vd-footer');
-      if (selected.visitId && options.onEdit) actions.append(button('Edytuj wizytę', 'edit'));
       actions.append(button('Porównaj z bieżącą wizytą', 'compare'));
       container.append(actions);
     }
@@ -284,12 +345,22 @@
       const selected = row();
       const previousScroll = scroll.scrollTop;
       chart = null;
+      eyebrow.textContent = index > 0 ? 'Wizyta historyczna' : 'Zapisana wizyta';
       title.textContent = selected.dateISO === '' ? 'Zapis bez ustalonej daty'
         : (selected.dateCertain ? 'Wizyta z ' : 'Zapis z ') + selected.dateLabel;
+      subtitle.textContent = [options.patientName, selected.ageLabel].filter(Boolean).join(' · ');
+      startButton.hidden = !options.onStart;
+      editButton.hidden = !selected.visitId || !options.onEdit;
+      actions.hidden = startButton.hidden && editButton.hidden;
+      for (const tabButton of tabBar.children) {
+        const activeTab = tabButton.dataset.vdValue === tab;
+        tabButton.setAttribute('aria-selected', String(activeTab));
+        tabButton.tabIndex = activeTab ? 0 : -1;
+      }
       const top = el('div', 'vd-topbar');
       const identity = el('div', 'vd-identity');
-      identity.append(el('span', 'vd-pill', 'Podgląd wizyty'), el('h3', '', options.patientName),
-        el('p', '', [selected.ageLabel, selected.description, selected.ordinal].filter(Boolean).join(' · ')));
+      const note = [selected.description, selected.ordinal].filter(Boolean).join(' · ');
+      if (note) identity.append(el('p', '', note));
       const nav = el('div', 'vd-navigation');
       const prev = button('←', 'newer'), next = button('→', 'older');
       prev.setAttribute('aria-label', 'Nowsza wizyta');
@@ -301,7 +372,7 @@
       nav.append(prev, count, next);
       top.append(identity, nav);
       const main = tabPanel('tab', tab);
-      scroll.replaceChildren(top, tabs(panels, tab, 'tab', 'Zawartość podglądu wizyty'), main);
+      scroll.replaceChildren(top, main);
       if (tab === 'compare') comparison(main, selected, options.getComparison?.(selected));
       else if (tab === 'general') general(main, options.getGeneral?.(selected), options.onOpenRecord);
       else visit(main, selected);
@@ -314,7 +385,7 @@
       if (selected.revisionCount > 1) scroll.append(el('p', 'vd-meta', 'Zachowane wersje tej wizyty · ' + selected.revisionCount));
       scroll.scrollTop = reset ? 0 : previousScroll;
       if (chart) drawChart();
-      if (focus) (scroll.querySelector(focus) || d.getElementById('vd-tab-' + tab))?.focus({ preventScroll: true });
+      if (focus) (dialog.querySelector(focus) || d.getElementById('vd-tab-' + tab))?.focus({ preventScroll: true });
     }
 
     function refresh() {
@@ -347,13 +418,7 @@
         options.onOpenRecord(value);
         return;
       }
-      if (action === 'edit') {
-        const selected = row();
-        if (!selected.visitId || !options.onEdit) return;
-        close(false);
-        options.onEdit(selected);
-        return;
-      }
+      if (action === 'edit' || action === 'new') return changeVisit(action, b);
       if (action === 'older' || action === 'newer') {
         const target = index + (action === 'older' ? 1 : -1);
         if (!options.rows[target]) return;
@@ -399,10 +464,11 @@
     dialog.addEventListener('close', () => close());
     active = { close, refresh };
     d.body.append(dialog);
+    render();
+    if (closed) return null;
     w.VildaHomeWorkspace?.fitDialog?.(dialog);
     dialog.showModal();
     history?.enter();
-    render();
     w.addEventListener('resize', resize);
     w.visualViewport?.addEventListener('resize', resize);
     return active;

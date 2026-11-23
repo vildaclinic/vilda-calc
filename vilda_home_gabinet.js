@@ -158,12 +158,17 @@
       ...options, patientId: id, isCurrent: () => inPatientScreen() && owns(id) && options.isCurrent(),
       backLabel: screen === 'analysis' ? 'Wróć do analizy' : 'Wróć do przeglądu',
       onBack: back,
-      onEdit(row) {
-        if (!owns(id)) return false;
+      onEdit(row, isActionCurrent, modalOwner) {
+        if (!historyView || !inPatientScreen() || !owns(id) || typeof isActionCurrent !== 'function' || !isActionCurrent()) return false;
         const editing = historyView;
         // Keep the history visible while the clinician decides about a draft.
         // The native form must be available when the verified revision loads.
-        return options.onEdit(row, () => historyView === editing && owns(id) && back());
+        return options.onEdit(row, () => historyView === editing && inPatientScreen() && owns(id) && isActionCurrent() && back(), modalOwner);
+      },
+      onStart(isActionCurrent, modalOwner) {
+        if (!historyView || !inPatientScreen() || !owns(id) || typeof isActionCurrent !== 'function' || !isActionCurrent()) return false;
+        const starting = historyView;
+        return options.onStart(() => historyView === starting && inPatientScreen() && owns(id) && isActionCurrent() && back(), modalOwner);
       },
       onOpenRecord(key) {
         if (owns(id)) { back(false); showOverview(key); }

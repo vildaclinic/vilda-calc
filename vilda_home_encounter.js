@@ -44,12 +44,12 @@
       requiresLatest: !item.mode && selected() === patientId && w.sessionStorage.getItem(historicalFlag) === '1'};
   }
 
-  function guardLeave() {
+  function guardLeave(modalOwner) {
     const guard = w.VildaUnsavedGuard;
     if (!guard || typeof guard.run !== 'function') return Promise.resolve(false);
     if (d.querySelector('.vug-backdrop, .vug[role="dialog"]')) return Promise.resolve(false);
     return new Promise(resolve => {
-      guard.run({reason: 'load', onProceed: () => resolve(true), onCancel: () => resolve(false)});
+      guard.run({reason: 'load', modalOwner, onProceed: () => resolve(true), onCancel: () => resolve(false)});
     });
   }
 
@@ -146,7 +146,7 @@
     const allowed = () => isCurrent() && current(scope) && loading === scope && api.isAcceptedPatientLoadCurrent(token);
     loading = scope; notify();
     try {
-      if (!(afterOwnSave ? afterOwnSave() : await guardLeave())) {
+      if (!(afterOwnSave ? afterOwnSave() : await guardLeave(transition?.modalOwner))) {
         transition?.onCancel?.();
         return false;
       }
@@ -177,7 +177,13 @@
         }
         payload = profileDraft(payload, profile.data);
       }
-      if (transition?.beforeApply && (!transition.beforeApply() || !allowed())) return false;
+      if (transition?.beforeApply) {
+        if (!transition.beforeApply()) {
+          transition.onCancel?.();
+          return false;
+        }
+        if (!allowed()) return false;
+      }
       let finish;
       const done = new Promise(resolve => { finish = resolve; });
       const request = {choice, scope, finish, deadline: Date.now() + 12000,
@@ -224,7 +230,9 @@
     } catch (_) { return false; }
     finally { if (loading === scope) loading = null; notify(); }
   }
-  function start(patientId) { return load(patientId, 'new'); }
+  function start(patientId, isCurrent, transition) {
+    return loadVisit(patientId, 'new', null, null, isCurrent, transition);
+  }
 
   function canSave(patientId) {
     if (trashChange || !active(patientId) || working.mode === 'browse') return false;
@@ -462,12 +470,21 @@
     if (initialVisitId && (!active(patientId) || working.mode !== 'browse' ||
         working.visitId !== initialVisitId || !working.snapshotId || loading || saving)) return false;
     const isCurrent = () => current(scope) && selected() === patientId;
-    const options = {patientName, initialVisitId, isCurrent, async onEdit(row, beforeApply) {
-      let declined = false;
-      const ok = await loadVisit(patientId, 'edit', row, null, isCurrent, {beforeApply, onCancel: () => { declined = true; }});
-      if (!ok && !declined && isCurrent()) w.alert('Nie otwarto wizyty do edycji. Otwórz ponownie historię i wybierz aktualny zapis.');
-      return ok;
-    }};
+    const options = {
+      patientName, initialVisitId, isCurrent,
+      async onEdit(row, beforeApply, modalOwner) {
+        let declined = false;
+        const ok = await loadVisit(patientId, 'edit', row, null, isCurrent, {beforeApply, modalOwner, onCancel: () => { declined = true; }});
+        if (!ok && !declined && isCurrent()) w.alert('Nie otwarto wizyty do edycji. Otwórz ponownie historię i wybierz aktualny zapis.');
+        return ok;
+      },
+      async onStart(beforeApply, modalOwner) {
+        let declined = false;
+        const ok = await start(patientId, isCurrent, {beforeApply, modalOwner, onCancel: () => { declined = true; }});
+        if (!ok && !declined && isCurrent()) w.alert('Nie rozpoczęto nowej wizyty. Otwórz ponownie historię i spróbuj ponownie.');
+        return ok;
+      }
+    };
     return w.VildaHomeGabinet.openVisitHistory(patientId, options);
   }
   d.addEventListener('vilda:patient-loaded', event => {

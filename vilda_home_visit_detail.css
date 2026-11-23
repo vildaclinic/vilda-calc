@@ -13,8 +13,56 @@
 #vhomeVisitDetail[open] { animation-duration: 300ms; }
 #vhomeVisitDetail * { box-sizing: border-box; }
 #vhomeVisitDetail [hidden] { display: none !important; }
-#vhomeVisitDetail .vhome-dialog-heading { background: #fff; }
+#vhomeVisitDetail .vhome-dialog-heading { background: #fff; border-bottom: 0; }
 #vhomeVisitDetail .vhome-dialog-body { background: #fff; font-size: 15px; scrollbar-gutter: stable; }
+#vhomeVisitDetail > :is(.vhome-dialog-heading,.vd-access,.vd-tabs,.vhome-dialog-footer) { flex: 0 0 auto; }
+#vhomeVisitDetail > .vhome-dialog-heading > div { min-width: 0; }
+#vhomeVisitDetail .vd-eyebrow { margin: 0 0 var(--space-4px); color: var(--vd-muted); font-size: 14px; font-weight: 650; line-height: 1.4; text-align: start; }
+#vhomeVisitDetail .vd-subtitle { margin: 7px 0 0; color: var(--vd-muted); font-size: 14px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; text-align: start; }
+#vhomeVisitDetail > .vhome-dialog-body { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+#vhomeVisitDetail .vd-access {
+  --vd-access-bg: #fff8ec;
+  --vd-access-line: #e9d3ab;
+  --vd-access-ink: #774800;
+  --vd-access-copy: #624e31;
+  --vd-access-icon-bg: #f7ead0;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-18px);
+  min-width: 0; min-height: 80px; margin: 0 25px 13px; padding: 13px var(--space-14px);
+  color: var(--vd-access-ink); background: var(--vd-access-bg);
+  border: var(--border-hairline) solid var(--vd-access-line); border-radius: var(--radius-10);
+}
+#vhomeVisitDetail .vd-access-copy { display: flex; flex: 1 1 0; align-items: flex-start; gap: 11px; min-width: 0; }
+#vhomeVisitDetail .vd-access-copy > div { min-width: 0; }
+#vhomeVisitDetail .vd-access-icon {
+  display: inline-flex; flex: 0 0 34px; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 7px; color: var(--vd-access-ink); background: var(--vd-access-icon-bg);
+}
+#vhomeVisitDetail .vd-access-icon svg { display: block; width: 19px; height: 19px; }
+#vhomeVisitDetail .vd-access h2 { margin: 0 0 var(--space-4px); color: var(--vd-access-ink); font-size: 16px; font-weight: 650; line-height: 1.3; text-align: start; }
+#vhomeVisitDetail .vd-access p { margin: 0; color: var(--vd-access-copy); font-size: 14px; font-weight: 400; line-height: 1.4; text-align: start; }
+#vhomeVisitDetail .vd-access-actions { display: grid; flex: 0 0 auto; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: stretch; gap: var(--space-8px); width: min(387px,53%); min-width: 0; }
+#vhomeVisitDetail .vd-access-actions .vd-action {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-width: 0; width: 100%; min-height: 44px; margin: 0; padding: 9px 11px;
+  border: var(--border-hairline) solid var(--line, #d2e0e3) !important; border-radius: var(--radius-8) !important;
+  background: var(--bg, #fff) !important; color: var(--primary, #007d87) !important;
+  box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  font: inherit; font-size: 14px; font-weight: 700; line-height: 1.25; text-align: center; text-wrap: balance; cursor: pointer;
+  transform: none !important;
+}
+#vhomeVisitDetail .vd-access-actions .vd-action > span { min-width: 0; }
+#vhomeVisitDetail .vd-access-actions .vd-action > svg { display: block; flex: 0 0 19px; width: 19px; height: 19px; }
+#vhomeVisitDetail .vd-access-actions .vd-access-edit { color: #fff !important; background: var(--primary, #007d87) !important; border-color: var(--primary, #007d87) !important; }
+#vhomeVisitDetail .vd-access-actions .vd-action:hover:not(:disabled) { background: var(--card, #f2f6f7) !important; border-color: var(--primary, #007d87) !important; }
+#vhomeVisitDetail .vd-access-actions .vd-access-edit:hover:not(:disabled) { background: color-mix(in srgb,var(--primary, #007d87) 82%,#000) !important; border-color: var(--primary, #007d87) !important; }
+#vhomeVisitDetail .vd-access-actions .vd-action:disabled { opacity: var(--opacity-slider-tick); cursor: default; }
+body:is(.dark-bg-level-1,.dark-bg-level-2) #vhomeVisitDetail .vd-access {
+  --vd-access-bg: color-mix(in srgb,var(--warning-bg, #fff3e0) 60%,var(--card, #fff));
+  --vd-access-line: color-mix(in srgb,var(--warning, #b45309) 30%,var(--line, #d2e0e3));
+  --vd-access-ink: var(--warning, #774800);
+  --vd-access-copy: var(--text, #624e31);
+  --vd-access-icon-bg: var(--warning-bg, #f7ead0);
+}
 #vhomeVisitDetail .vhome-dialog-body :is(h3,h4,dt,dd,p) { text-align: start; }
 #vhomeVisitDetail .vhome-dialog-body button {
   display: inline-flex; align-items: center; justify-content: center;
@@ -30,14 +78,20 @@
 #vhomeVisitDetail :is(button,[role=tabpanel]):focus-visible { outline: var(--border-emphasis) solid var(--vd-accent); outline-offset: 2px; }
 #vhomeVisitDetail .vd-topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-20px); margin-bottom: var(--space-18px); }
 #vhomeVisitDetail .vd-identity { min-width: 0; overflow-wrap: anywhere; }
-#vhomeVisitDetail .vd-identity h3 { margin: 5px 0 3px; font-size: 21px; font-weight: 600; line-height: 1.35; color: var(--vd-ink); }
 #vhomeVisitDetail .vd-identity p { margin: 0; color: var(--vd-muted); font-size: 14px; }
-#vhomeVisitDetail .vd-pill { display: inline-block; padding: var(--space-4px) var(--space-10px); border: var(--border-hairline) solid #d6e3e4; border-radius: 7px; background: #f4f8f8; color: #567077; font-size: 13px; }
 #vhomeVisitDetail .vd-navigation { display: grid; grid-template-columns: repeat(3,minmax(44px,auto)); align-items: center; gap: var(--space-6px); }
 #vhomeVisitDetail .vd-navigation button { font-size: 19px; }
 #vhomeVisitDetail .vd-page-count { font-size: 13px; text-align: center; white-space: nowrap; color: var(--vd-muted); font-variant-numeric: tabular-nums; }
 #vhomeVisitDetail :is(.vd-tabs,.vd-summary-tabs,.vd-chart-select) { display: grid; gap: 5px; padding: 5px; background: #f2f7f6; border: var(--border-hairline) solid var(--vd-line); border-radius: var(--radius-10); }
 #vhomeVisitDetail .vd-tabs { position: sticky; top: -22px; z-index: var(--z-range-marker); grid-template-columns: repeat(3,minmax(0,1fr)); margin-bottom: var(--space-20px); box-shadow: 0 3px 0 3px #fff; }
+#vhomeVisitDetail > .vd-tabs { position: static; margin: 0 25px; box-shadow: none; }
+#vhomeVisitDetail > .vd-tabs button {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px;
+  width: 100%; margin: 0; padding: var(--space-8px) var(--space-14px);
+  border: var(--border-hairline) solid transparent !important; border-radius: var(--radius-8) !important;
+  box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  font: inherit; font-size: 14px; font-weight: 550; line-height: 1.35; text-align: center; cursor: pointer; transform: none !important;
+}
 #vhomeVisitDetail :is(.vd-summary-tabs,.vd-chart-select) { grid-template-columns: repeat(2,minmax(0,1fr)); margin-bottom: var(--space-14px); }
 #vhomeVisitDetail :is(.vd-tabs,.vd-summary-tabs,.vd-chart-select) button { background: transparent !important; border-color: transparent !important; color: var(--vd-muted) !important; }
 #vhomeVisitDetail button:is([aria-selected=true],[aria-pressed=true]) {
@@ -85,14 +139,30 @@
 #vhomeVisitDetail .vd-compare-table th { font-weight: 550; }
 #vhomeVisitDetail .vd-compare-table thead th { color: var(--vd-muted); font-size: 14px; }
 #vhomeVisitDetail .vd-compare-table small { display: block; margin-top: 3px; color: var(--vd-muted); font-size: 13px; font-weight: 450; }
+@media (max-width: 850px) {
+  #vhomeVisitDetail .vd-access { align-items: stretch; flex-direction: column; gap: var(--space-12px); }
+  #vhomeVisitDetail .vd-access-copy { flex-basis: auto; }
+  #vhomeVisitDetail .vd-access-actions { width: 100%; }
+}
 @media (max-width: 700px) {
   #vhomeVisitDetail .vd-grid { grid-template-columns: minmax(0,1fr); }
   #vhomeVisitDetail .vd-tabs { top: -14px; }
+  #vhomeVisitDetail > .vd-tabs { margin-inline: var(--space-14px); }
+  #vhomeVisitDetail .vd-access { margin-inline: var(--space-14px); }
   #vhomeVisitDetail .vhome-dialog-body { padding: var(--space-14px); scrollbar-gutter: auto; }
 }
 @media (max-width: 480px) {
   #vhomeVisitDetail .vhome-dialog-body { padding: var(--space-12px); }
   #vhomeVisitDetail .vd-tabs { top: -12px; }
+  #vhomeVisitDetail > .vd-tabs { margin-inline: var(--space-12px); }
+  #vhomeVisitDetail .vd-subtitle { margin-top: var(--space-4px); }
+  #vhomeVisitDetail .vd-access { margin: 0 var(--space-12px) 7px; padding: 9px; gap: var(--space-8px); }
+  #vhomeVisitDetail .vd-access-copy { gap: var(--space-8px); }
+  #vhomeVisitDetail .vd-access-icon { flex-basis: 30px; width: 30px; height: 30px; }
+  #vhomeVisitDetail .vd-access h2 { margin-bottom: 2px; }
+  #vhomeVisitDetail .vd-access-actions { gap: var(--space-6px); }
+  #vhomeVisitDetail .vd-access-actions .vd-action { padding: 7px 5px; }
+  #vhomeVisitDetail .vd-access-actions .vd-action > svg { flex-basis: 15px; width: 15px; height: 15px; }
   #vhomeVisitDetail .vd-navigation { grid-template-columns: 44px auto 44px; gap: 2px; }
   #vhomeVisitDetail .vd-topbar { gap: var(--space-8px); }
   #vhomeVisitDetail .vd-navigation button { padding: var(--space-6px); }
@@ -100,6 +170,21 @@
   #vhomeVisitDetail :is(.vd-card,.vvisit-documents) { padding: 13px; }
   #vhomeVisitDetail .vd-compare-table :is(th,td) { padding: 9px 3px; font-size: 14px; }
   #vhomeVisitDetail .vd-footer button { width: 100%; }
+}
+@media (max-height: 520px) {
+  html.vilda-home-workspace #vhomeVisitDetail { height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 16px); }
+  #vhomeVisitDetail > .vhome-dialog-heading { padding-block: var(--space-10px); }
+  #vhomeVisitDetail .vd-access { min-height: 0; padding-block: var(--space-8px); margin-bottom: var(--space-8px); }
+  #vhomeVisitDetail > .vd-tabs button { min-height: 40px; padding-block: var(--space-6px); }
+}
+@media (max-width: 480px) and (max-height: 420px) {
+  #vhomeVisitDetail > .vhome-dialog-heading { padding-block: var(--space-6px); }
+  #vhomeVisitDetail .vd-eyebrow { font-size: 12px; }
+  #vhomeVisitDetail .vhome-dialog-heading h2 { font-size: 18px; line-height: 1.3; }
+  #vhomeVisitDetail .vd-subtitle { font-size: 13px; line-height: 1.35; }
+  #vhomeVisitDetail > .vd-access { flex-shrink: 1; min-height: 92px; max-height: 48%; overflow-y: auto; overscroll-behavior: contain; }
+  #vhomeVisitDetail > .vhome-dialog-body { min-height: 48px; padding-block: var(--space-8px); }
+  #vhomeVisitDetail > .vd-tabs button { padding-inline: 3px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #vhomeVisitDetail[open], #vhomeVisitDetail[open]::backdrop { animation: none; }
