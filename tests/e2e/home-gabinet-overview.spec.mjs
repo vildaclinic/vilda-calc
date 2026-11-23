@@ -1044,3 +1044,47 @@ test('a saved consultation without measurements stays read-only until a new visi
   expect(after[0].clinicalDateISO).toBe(persisted.date);
   expect(after[0].payload.user.weight || null).toBeNull();
 });
+
+test('a mobile reminder added to an existing plan retains the active visit and its separate future due date', async ({ page }) => {
+  await page.setViewportSize({width:390, height:844});
+  const {frame, ids} = await prepare(page);
+  await choosePatient(frame, 'Antoni');
+  const plan = await frame.evaluate(patientId => window.VildaVault.mutateCarePlan({
+    patientId, operationId:crypto.randomUUID(), action:'create',
+    title:'Fikcyjny plan kontroli przypomnienia', goal:'Fikcyjny scenariusz mobilny'
+  }), ids.a);
+  expect(plan.saved).toBe(true);
+  const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('button', {name:'Rozpocznij nową wizytę', exact:true}).click();
+  await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
+  const visit = await frame.evaluate(() => window.VildaDataImportExport.captureCurrentUserDataReadOnly().visit);
+  const origin = {version:1, visitId:visit.visitId, clinicalDateISO:visit.clinicalDateISO};
+  const reminderDay = new Date(visit.clinicalDateISO + 'T12:00:00Z');
+  reminderDay.setUTCDate(reminderDay.getUTCDate() + 14);
+  const dueDateISO = reminderDay.toISOString().slice(0, 10);
+  await header.getByRole('tab', {name:'Przegląd', exact:true}).click();
+  await frame.locator('#vhomePatientOverview select.vhome-b1-mobile-select').selectOption('reminders');
+  await frame.locator('#vhomePatientRemindersSlot').getByRole('button', {name:'Dodaj przypomnienie', exact:true}).click();
+  const dialog = frame.locator('dialog.vhome-reminders-dialog');
+  await dialog.getByLabel('Plan opieki (opcjonalnie)', {exact:true}).selectOption(plan.planId);
+  const title = 'Fikcyjne przypomnienie planu z otwartej wizyty';
+  await dialog.getByLabel('Treść przypomnienia', {exact:true}).fill(title);
+  await dialog.getByLabel('Przypomnij w dniu', {exact:true}).fill(dueDateISO);
+  await dialog.getByRole('button', {name:'Zapisz przypomnienie', exact:true}).click();
+  const read = () => frame.evaluate(async ({patientId, title, planId, visitId}) => {
+    const [notes, plan, visits] = await Promise.all([
+      window.VildaVault.listPatientNotesForPatient(patientId), window.VildaVault.getCarePlan(planId),
+      window.VildaVault.getPatientVisits(patientId)
+    ]);
+    return {note:notes.find(note => note.title === title), plan, visit:visits.find(row => row.visitId === visitId)};
+  }, {patientId:ids.a, title, planId:plan.planId, visitId:visit.visitId});
+  await expect.poll(async () => (await read()).note?.visitContext).toEqual(origin);
+  const saved = await read();
+  expect(saved.note).toMatchObject({patientId:ids.a, dueDateISO, careContext:{planId:plan.planId}, visitContext:origin});
+  expect(saved.plan.patientId).toBe(ids.a);
+  expect(saved.plan.steps.some(step => step.reminderNoteId === saved.note.id)).toBe(true);
+  expect(saved.plan.log.find(entry => entry.text?.includes(title))?.visitContext).toEqual(origin);
+  expect(saved.plan.visitContext).toBeUndefined();
+  expect(saved.visit).toMatchObject({patientId:ids.a, visitId:visit.visitId, clinicalDateISO:visit.clinicalDateISO});
+  expect(dueDateISO).not.toBe(visit.clinicalDateISO);
+});

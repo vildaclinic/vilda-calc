@@ -64,6 +64,37 @@ async function twoTabs() {
   windows.push(second);
   return { first, second, row };
 }
+function bindVisit(device, row) {
+  const binding = Object.freeze({
+    visitContext: Object.freeze({ version: 1, visitId: row.visitId, clinicalDateISO: row.clinicalDateISO }),
+    isCurrent: () => true, ensureRecorded: vi.fn(async () => true)
+  });
+  device.win.VildaHomeEncounter = { captureBinding: vi.fn(patientId => patientId === row.patientId ? binding : null) };
+  return binding;
+}
+async function createLegacyPlan(vault, patientId, binding) {
+  const created = await vault.mutateCarePlan({ patientId, operationId: globalThis.crypto.randomUUID(),
+    action: 'create', title: 'Fikcyjny wcześniejszy plan opieki', goal: 'Fikcyjna dokumentacja próby.' }, binding);
+  expect(created.saved).toBe(true);
+  return created.plan || vault.getCarePlan(created.planId);
+}
+function planCommand(plan, action, extra = {}) {
+  return { patientId: plan.patientId, planId: plan.id, baseRev: plan.rev,
+    operationId: globalThis.crypto.randomUUID(), action, ...extra };
+}
+function plannedStep(changes = {}) {
+  return { title: 'Fikcyjny nowy krok planu', kind: 'Badanie', state: 'pending',
+    description: 'Wyłącznie fikcyjne ustalenie testowe.', reminderDateISO: '2026-12-01',
+    reminderTime: '08:15', eventDateISO: '2026-12-03', eventTime: '10:30', ...changes };
+}
+async function stepNotes(vault, plan, stepId) {
+  const step = plan.steps.find(item => item.id === stepId);
+  expect(step).toBeTruthy();
+  expect(step.reminderNoteId).toBeTruthy();
+  expect(step.calendarNoteId).toBeTruthy();
+  expect(step.reminderNoteId).not.toBe(step.calendarNoteId);
+  return { step, reminder: await vault.getPatientNote(step.reminderNoteId), calendar: await vault.getPatientNote(step.calendarNoteId) };
+}
 
 describe('guarded clinical documents at the native Vault write boundary', () => {
   it('stores an encrypted document once for its canonical visit, retaining its separate sample date', async () => {
@@ -223,6 +254,94 @@ describe('clinical document and visit Trash races across two IndexedDB tabs', ()
       expect(await tab.v.getPatientNote(note.id)).toMatchObject({ visitContext: note.visitContext, rev: 1 });
       expect(await tab.v.getPatientVisits(row.patientId)).toEqual([]);
       expect(await tab.v.listTrashedVisits(row.patientId)).toMatchObject([{ visitId: row.visitId }]);
+    }
+  });
+});
+
+describe('new legacy care-plan step documents and their source visit', () => {
+  it.each(['unlinked', 'earlier visit'])('binds both new child documents while preserving the parent origin: %s', async parentOrigin => {
+    const device = await urzadzenie(), earlier = await recordedVisit(device.v);
+    const earlierBinding = parentOrigin === 'earlier visit' ? bindVisit(device, earlier) : undefined;
+    const plan = await createLegacyPlan(device.v, earlier.patientId, earlierBinding);
+    const parentBefore = await device.v.getPatientNote(plan.id);
+    if (earlierBinding) expect(parentBefore.visitContext).toEqual(earlierBinding.visitContext);
+    else expect(parentBefore).not.toHaveProperty('visitContext');
+    const current = await recordedVisit(device.v, { patientId: earlier.patientId, visit: appointment('2026-11-13') });
+    const binding = bindVisit(device, current);
+    const request = planCommand(plan, 'addStep', { step: plannedStep() });
+    const result = await device.v.mutateCarePlan(request, binding);
+    expect(result.saved).toBe(true);
+    expect(binding.ensureRecorded).toHaveBeenCalledTimes(1);
+    expect(device.win.VildaHomeEncounter.captureBinding).toHaveBeenCalledWith(plan.patientId);
+    const savedPlan = await device.v.getCarePlan(plan.id);
+    const { reminder, calendar } = await stepNotes(device.v, savedPlan, result.stepId);
+    expect(reminder).toMatchObject({ patientId: plan.patientId, visitContext: binding.visitContext,
+      dueDateISO: '2026-12-01T00:00:00.000Z', dueTime: '08:15', careContext: { role: 'step', planId: plan.id } });
+    expect(calendar).toMatchObject({ patientId: plan.patientId, visitContext: binding.visitContext,
+      dueDateISO: '2026-12-03T00:00:00.000Z', dueTime: '10:30', careContext: { role: 'calendar', planId: plan.id } });
+    const parentAfter = await device.v.getPatientNote(plan.id);
+    expect(parentAfter.visitContext).toEqual(parentBefore.visitContext);
+    if (!earlierBinding) expect(parentAfter).not.toHaveProperty('visitContext');
+    expect(reminder.visitContext.visitId).not.toBe(earlier.visitId);
+    expect(calendar.visitContext.visitId).not.toBe(earlier.visitId);
+  });
+
+  it('still adds reminder and calendar documents without a visit when no binding is supplied', async () => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v);
+    const plan = await createLegacyPlan(device.v, row.patientId);
+    const result = await device.v.mutateCarePlan(planCommand(plan, 'addStep', { step: plannedStep() }));
+    expect(result.saved).toBe(true);
+    const { reminder, calendar } = await stepNotes(device.v, await device.v.getCarePlan(plan.id), result.stepId);
+    for (const note of [reminder, calendar, await device.v.getPatientNote(plan.id)]) {
+      expect(note).not.toHaveProperty('visitContext');
+    }
+  });
+
+  it('does not retroactively bind an existing unlinked step or its documents when editing during a visit', async () => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v);
+    const plan = await createLegacyPlan(device.v, row.patientId);
+    const added = await device.v.mutateCarePlan(planCommand(plan, 'addStep', { step: plannedStep() }));
+    expect(added.saved).toBe(true);
+    const before = await device.v.getCarePlan(plan.id), binding = bindVisit(device, row);
+    const oldStep = before.steps.find(item => item.id === added.stepId);
+    const edited = await device.v.mutateCarePlan(planCommand(before, 'editStep', { stepId: oldStep.id,
+      step: plannedStep({ title: 'Fikcyjny poprawiony krok', description: 'Fikcyjna poprawka istniejącego wpisu.' }) }), binding);
+    expect(edited.saved).toBe(true);
+    const { reminder, calendar } = await stepNotes(device.v, await device.v.getCarePlan(plan.id), oldStep.id);
+    expect(reminder).toMatchObject({ id: oldStep.reminderNoteId, title: 'Fikcyjny poprawiony krok' });
+    expect(calendar).toMatchObject({ id: oldStep.calendarNoteId, title: 'Fikcyjny poprawiony krok' });
+    for (const note of [reminder, calendar, await device.v.getPatientNote(plan.id)]) {
+      expect(note).not.toHaveProperty('visitContext');
+    }
+  });
+
+  it('rejects bound addStep after another IndexedDB tab trashes its previously confirmed visit without changing the plan', async () => {
+    const { first, second, row } = await twoTabs();
+    const plan = await createLegacyPlan(first.v, row.patientId);
+    const parentBefore = await first.v.getPatientNote(plan.id);
+    const notesBefore = await first.v.listPatientNotesForPatient(row.patientId);
+    const binding = bindVisit(first, row), confirmed = deferred(), proceed = deferred();
+    binding.ensureRecorded.mockImplementation(async () => {
+      expect(await first.v.getPatientVisits(row.patientId)).toMatchObject([{ visitId: row.visitId }]);
+      confirmed.resolve();
+      await proceed.promise;
+      // The caller's successful earlier confirmation cannot authorize the later write.
+      return true;
+    });
+    const request = first.v.mutateCarePlan(planCommand(plan, 'addStep', { step: plannedStep() }), binding);
+    const rejected = expect(request).rejects.toMatchObject({ code: 'VISIT_DOCUMENT_STALE' });
+    try {
+      await confirmed.promise;
+      const [otherRow] = await second.v.getPatientVisits(row.patientId);
+      await trash(second.v, otherRow);
+    } finally { proceed.resolve(); }
+    await rejected;
+    expect(binding.ensureRecorded).toHaveBeenCalledTimes(1);
+    for (const tab of [first, second]) {
+      expect(await tab.v.getPatientNote(plan.id)).toEqual(parentBefore);
+      expect(await tab.v.listPatientNotesForPatient(row.patientId)).toEqual(notesBefore);
+      expect((await tab.v.getCarePlan(plan.id)).steps).toEqual([]);
+      expect(await tab.v.getPatientVisits(row.patientId)).toEqual([]);
     }
   });
 });

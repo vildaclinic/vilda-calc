@@ -11847,7 +11847,7 @@ function EncounterInstallCare(api) {
   };
 }
 async function CareMvpMutate(input, binding) {
-  if (binding) return EncounterPlanRun(input,binding,function(){return CareMvpMutate(input)});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
+  if (binding) return EncounterPlanRun(input,binding,function(){return VisitDocumentCareLock(input,binding,function(){return CareMvpMutate(input)})});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   if (!T()) throw new Error('Zaloguj się, by zapisać plan opieki.');
   CareMvpRequireLegacyContext(input); CareMvpRequireLegacyContext(input && input.payload);
   if (!input || typeof input !== 'object' || !CareMvpId(input.operationId) || !/^[A-Za-z0-9_-]{1,64}$/.test(input.operationId)
@@ -11897,6 +11897,11 @@ async function CareMvpMutate(input, binding) {
     };
     const queue = async function (noteId, payload) {
       const existing = await read(noteId);
+      const origin = VisitDocumentCareOrigin(request, existing, payload);
+      if (origin) {
+        await VisitDocumentCheckActive(Object.assign({ patientId: request.patientId }, origin), { requireActiveVisit: true }, assertSession);
+        payload = Object.assign({}, payload, origin);
+      }
       prepared.set(noteId, Object.assign({}, prepared.get(noteId) || {}, payload, { id: noteId, patientId: request.patientId }));
       return PatientClinicalWriteValue(PatientClinicalOperationAccount,existing.note);
     };
@@ -15357,6 +15362,21 @@ async function VisitDocumentCheckActive(note, options, assertCurrent) {
   })) {
     throw VisitDocumentFailure('STALE', 'Wybrana wizyta została usunięta lub zmieniła się. Otwórz ją ponownie przed zapisem dokumentu.');
   }
+}
+function VisitDocumentCareLock(request, binding, action) {
+  if (request.action !== 'addStep') return action();
+  const session = Bses_opcje(null); Bpz_pilnuj(session);
+  // The legacy actor already holds the workspace lease; take the patient
+  // lease before its plan-note lock, matching whole-visit trash ordering.
+  return Bzw_podBlokada(request.patientId, function () {
+    Bpz_pilnuj(session); EncounterPlanCheck(binding, request.patientId);
+    return action();
+  }, binding);
+}
+function VisitDocumentCareOrigin(request, existing, payload) {
+  if (request.action !== 'addStep' || existing.stored || !request.visitContext
+      || !payload.careContext || ['step', 'calendar'].indexOf(payload.careContext.role) < 0) return null;
+  return EncounterNoteFields(request);
 }
 function VisitDocumentInstall(api) {
   const save = api.savePatientNoteOnce;

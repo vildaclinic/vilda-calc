@@ -34,6 +34,21 @@ async function VisitDocumentCheckActive(note, options, assertCurrent) {
     throw VisitDocumentFailure('STALE', 'Wybrana wizyta została usunięta lub zmieniła się. Otwórz ją ponownie przed zapisem dokumentu.');
   }
 }
+function VisitDocumentCareLock(request, binding, action) {
+  if (request.action !== 'addStep') return action();
+  const session = Bses_opcje(null); Bpz_pilnuj(session);
+  // The legacy actor already holds the workspace lease; take the patient
+  // lease before its plan-note lock, matching whole-visit trash ordering.
+  return Bzw_podBlokada(request.patientId, function () {
+    Bpz_pilnuj(session); EncounterPlanCheck(binding, request.patientId);
+    return action();
+  }, binding);
+}
+function VisitDocumentCareOrigin(request, existing, payload) {
+  if (request.action !== 'addStep' || existing.stored || !request.visitContext
+      || !payload.careContext || ['step', 'calendar'].indexOf(payload.careContext.role) < 0) return null;
+  return EncounterNoteFields(request);
+}
 function VisitDocumentInstall(api) {
   const save = api.savePatientNoteOnce;
   api.savePatientNoteOnce = function (payload, options) {

@@ -34,6 +34,10 @@ function declared(base, fragment) {
       '    if(VisitDocumentRequired(next,treatmentOptions)){await VisitDocumentCheckActive(next,treatmentOptions,assertSession);assertSession();}\n    const saved = await Ad(next, { token: VildaExistingNoteUpdateToken, beforeCommit: assertSession, account, adapter });'],
     ['capture-options-before-native-queue', ';ProfileInstallPresentation($s);EncounterInstallCare($s)',
       ';ProfileInstallPresentation($s);VisitDocumentInstall($s);EncounterInstallCare($s)'],
+    ['new-care-step-patient-lock', 'if (binding) return EncounterPlanRun(input,binding,function(){return CareMvpMutate(input)});',
+      'if (binding) return EncounterPlanRun(input,binding,function(){return VisitDocumentCareLock(input,binding,function(){return CareMvpMutate(input)})});'],
+    ['new-care-child-origin', '      prepared.set(noteId, Object.assign({}, prepared.get(noteId) || {}, payload, { id: noteId, patientId: request.patientId }));',
+      '      const origin = VisitDocumentCareOrigin(request, existing, payload);\n      if (origin) {\n        await VisitDocumentCheckActive(Object.assign({ patientId: request.patientId }, origin), { requireActiveVisit: true }, assertSession);\n        payload = Object.assign({}, payload, origin);\n      }\n      prepared.set(noteId, Object.assign({}, prepared.get(noteId) || {}, payload, { id: noteId, patientId: request.patientId }));'],
     ['readable-source', '/* BEGIN VILDA PATIENT PROFILE V1 */\n', fragment + '/* BEGIN VILDA PATIENT PROFILE V1 */\n'],
   ];
   const hooks = [];
@@ -48,7 +52,7 @@ function definition(root) {
   const manifest = JSON.parse(readFileSync(resolve(root, MANIFEST), 'utf8')), { source, fragment } = readable(root);
   if (manifest.namespace !== 'vilda-visit-document-vault' || manifest.version !== 1 || manifest.baseVaultSHA256 !== BASE
     || manifest.source !== SOURCE || manifest.sourceSHA256 !== digest(source) || manifest.fragmentSHA256 !== digest(fragment)
-    || !Array.isArray(manifest.hooks) || manifest.hooks.length !== 4) fail('manifest or readable source');
+    || !Array.isArray(manifest.hooks) || manifest.hooks.length !== 6) fail('manifest or readable source');
   for (const hook of manifest.hooks) {
     if (!hook || typeof hook.before !== 'string' || !hook.before || typeof hook.after !== 'string' || !hook.after
       || digest(hook.before) !== hook.beforeSHA256 || digest(hook.after) !== hook.afterSHA256) fail('hook checksum');
