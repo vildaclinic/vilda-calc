@@ -44,6 +44,7 @@ function createE2eServiceWorker(source, wersja) {
   if (!visitPack) throw new Error('Test service worker requires the visit UI precache configuration.');
   const expectedVisitPaths = new Set([
     '/vilda_ui_intents.js',
+    '/vilda_docpro_visit_guard.js',
     '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
     '/vilda_home_workspace.js', '/vilda_home_workspace.css',
     '/vilda_home_perinatal.js', '/vilda_sga_birth_results.css',

@@ -10,6 +10,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const SCRIPT = 'tests/support/static-server.mjs';
 const EXPECTED_PATHS = [
   '/vilda_ui_intents.js',
+  '/vilda_docpro_visit_guard.js',
   '/vilda_visit_context.js', '/vilda_visit_history_ui.js', '/vilda_visit_history_ui.css',
   '/vilda_home_workspace.js', '/vilda_home_workspace.css',
   '/vilda_home_growth.js', '/vilda_home_growth_views.js', '/vilda_home_growth_views.css', '/vilda_home_growth_charts.js', '/vilda_home_perinatal.js', '/vilda_sga_birth_results.css',
@@ -63,7 +64,7 @@ afterEach(async () => {
 });
 
 describe('actual E2E static-server service-worker endpoint', () => {
-  it('serves all 55 exact versioned UI keys and continues serving the application afterwards', async () => {
+  it('serves all 56 exact versioned UI keys and continues serving the application afterwards', async () => {
     const { child, origin } = await startServer();
     const response = await fetch(origin + '/__test-service-worker-kalorii.js?wersja=fixture-8-ui');
     expect(response.status).toBe(200);
@@ -105,7 +106,7 @@ describe('actual E2E static-server service-worker endpoint', () => {
     const { child, origin } = await startServer(directory);
     const response = await fetch(origin + '/__test-service-worker-kalorii.js');
     expect(response.status).toBe(500);
-    expect(await response.text()).toContain('requires exactly the 55 versioned UI resources');
+    expect(await response.text()).toContain('requires exactly the 56 versioned UI resources');
     const page = await fetch(origin + '/index.html');
     expect(page.status).toBe(200);
     expect(await page.text()).toContain('Fictional server fixture');
