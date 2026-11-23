@@ -2305,9 +2305,34 @@ data w dymku), `vilda_professional_summary.css` (`.professional-summary-reported
 `.vilda-romb-pacjent`, `.pt-s.pt-pacjent`).
 
 **Granice.** Sejf, dziennik, zapis wizyty, autozapis i `collectAdvancedMeasurements()` bez zmian — pomiary z dziennika
-są tylko rysowane i pokazywane. Bez zmian: Karta pacjenta (temat C), DocPro, siatka Palczewskiej 1–18 lat i strona
-„standardowa” PDF, karta „Obliczenia wzrostowe” (tryb podstawowy). Wersje `?v=`, precache i `SW_VERSION` ustawił
-`npm run podbij-wersje`.
+są tylko rysowane i pokazywane. Bez zmian: Karta pacjenta (temat C), strona „standardowa” PDF, karta „Obliczenia
+wzrostowe” (tryb podstawowy). Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`. Sprostowanie
+(2026-11-23): DocPro ładuje te same pliki, więc zmiany działają także tam (poza blokami „Poprzednich pomiarów”) — patrz
+łatka P-OTYLOSC-STRONA-2 niżej; siatki Palczewskiej (własny przycisk) dostały romby w P-OTYLOSC-STRONA-2.
+
+## Łatka P-OTYLOSC-STRONA-2 — romby i legenda w PDF siatek Palczewskiej; DocPro (`vilda_cykle_leczenia.js` 13 → 14, `inline_index_07.js` 16 → 17, `vilda_centile_landscape.js` 2 → 3, 2026-11-23, polecenie właściciela)
+
+Przy źródle Palczewska PDF tworzy osobny przycisk (`generatePalczewskaCentileCharts`, `Re` w `inline_index_07.js`), nie
+`generateCentileChart`, więc łatka P-OTYLOSC-STRONA go nie obejmowała — ani 0–3 lata, ani 1–18 lat. Czytelne źródła:
+`vilda_cykle_leczenia.js` — `rysujLegendePdf` wydzielona z `rysujPdf` (eksport `VildaDziennikOtylosci`);
+`vilda_centile_landscape.js` — `buildPage` rysuje legendę pod stopką strony poziomej, gdy któryś wykres narysował romby.
+
+```
+// inline_index_07.js
+// 1. Fe (jeden wykres 1–18 lat):  …modelOnly:__modelOnly}){  →  …modelOnly:__modelOnly,pomiaryDziennika:__dz07}){
+// 2. Fe, przed adnotacjami Kreatora: (function(){if(__dz07!==!0||S)return;…Dz.rysujPdf(e,{minX:12,maxX:216,[o]:{px:te+120,
+//    py:ne+80,pw:Z-220,ph:U-160,minY:F,maxY:R},legend (tylko strona pionowa):{x:Y/2,y:xe-175},current:{ageMonths:ve,
+//    weight:l,height:f},measurements:advancedGrowthData.measurements});Me.dataset.vildaRomby=String(n)})(),
+// 3. ze: destrukturyzacja …,pomiaryDziennika:__dzZ},__lay) i przekazanie do obu wywołań Fe (…layout:__lay,pomiaryDziennika:__dzZ})
+// 4. Ie (0–3 lata): …userHeight:l,pomiaryDziennika:__dzI}) i do buildCentilePageCanvas …userHeight:l,pomiaryDziennika:__dzI===!0,
+// 5. Re (przycisk strony): __a={…,pomiaryDziennika:!0} (1–18 lat, pion i poziom) oraz Ie({…,pomiaryDziennika:!0})
+```
+
+Siatki publikacyjne (`window.publicationCharts`), raport pacjenta i Kreator nie podają flagi — bez rombów. **DocPro**:
+sprawdzone na prawdziwej stronie (e2e ST-8) — linijka pod „Waga”, romby na siatce „Podsumowania wyników” i analiza
+trajektorii karty zaawansowanej z wpisami działają jak na stronie głównej (te same pliki); bloków „pomiar od pacjenta”
+w „Poprzednich pomiarach” DocPro nie ma (`VildaAdvDziennik` tylko przy `#advHistoryToggle`).
+
 
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 

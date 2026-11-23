@@ -1612,25 +1612,29 @@
         ctx.restore();
       });
     });
-    if (romby && g.legend) {
-      ctx.save();
-      ctx.font = '30px sans-serif';
-      ctx.fillStyle = '#333333';
-      ctx.textBaseline = 'middle';
-      ctx.textAlign = 'left';
-      var t1 = 'dane z gabinetu', t2 = 'dane od pacjenta';
-      var w1 = ctx.measureText(t1).width, w2 = ctx.measureText(t2).width;
-      var calosc = 16 + 14 + w1 + 60 + 28 + 14 + w2;
-      var x0 = g.legend.x - calosc / 2, y = g.legend.y;
-      ctx.beginPath(); ctx.arc(x0 + 8, y, 8, 0, 2 * Math.PI); ctx.fillStyle = '#000000'; ctx.fill();
-      ctx.fillStyle = '#333333'; ctx.fillText(t1, x0 + 30, y);
-      var xr = x0 + 30 + w1 + 60 + 14;
-      ctx.beginPath(); ctx.moveTo(xr, y - 12); ctx.lineTo(xr + 12, y); ctx.lineTo(xr, y + 12); ctx.lineTo(xr - 12, y); ctx.closePath();
-      ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#000000'; ctx.stroke();
-      ctx.fillStyle = '#333333'; ctx.fillText(t2, xr + 28, y);
-      ctx.restore();
-    }
+    if (romby && g.legend) rysujLegendePdf(ctx, g.legend.x, g.legend.y);
     return romby;
+  }
+
+  /** Legenda PDF wyśrodkowana w punkcie (x, y): „● dane z gabinetu   ◇ dane od pacjenta”. */
+  function rysujLegendePdf(ctx, x, y) {
+    if (!ctx || !isFinite(x) || !isFinite(y)) return;
+    ctx.save();
+    ctx.font = '30px sans-serif';
+    ctx.fillStyle = '#333333';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    var t1 = 'dane z gabinetu', t2 = 'dane od pacjenta';
+    var w1 = ctx.measureText(t1).width, w2 = ctx.measureText(t2).width;
+    var calosc = 16 + 14 + w1 + 60 + 28 + 14 + w2;
+    var x0 = x - calosc / 2;
+    ctx.beginPath(); ctx.arc(x0 + 8, y, 8, 0, 2 * Math.PI); ctx.fillStyle = '#000000'; ctx.fill();
+    ctx.fillStyle = '#333333'; ctx.fillText(t1, x0 + 30, y);
+    var xr = x0 + 30 + w1 + 60 + 14;
+    ctx.beginPath(); ctx.moveTo(xr, y - 12); ctx.lineTo(xr + 12, y); ctx.lineTo(xr, y + 12); ctx.lineTo(xr - 12, y); ctx.closePath();
+    ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#000000'; ctx.stroke();
+    ctx.fillStyle = '#333333'; ctx.fillText(t2, xr + 28, y);
+    ctx.restore();
   }
 
   /** Źródło wartości pomiaru dla metryki: 'pacjent' albo 'gabinet' (bez wartości — null). */
@@ -1693,6 +1697,7 @@
     pomiaryStrony: pomiaryStrony,
     pomiaryOdcinka: pomiaryOdcinka,
     rysujPdf: rysujPdf,
+    rysujLegendePdf: rysujLegendePdf,
     opisMasyOdPacjenta: opisMasyOdPacjenta,
     opisOdcinka: opisOdcinka,
     zrodloMetryki: zrodloMetryki
