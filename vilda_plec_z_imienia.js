@@ -326,7 +326,7 @@
   /* Pacjent z kartoteki albo pola zablokowane przez kogokolwiek — moduł nie ma tu nic do roboty. */
   function zablokowane() {
     var plec = pole(ID.plec);
-    if (!plec || plec.disabled || w.VildaHomeGabinet?.isRapidIntake?.()) return true;
+    if (!plec || plec.disabled) return true;
     var imie = pole(ID.imie);
     var nazwisko = pole(ID.nazwisko);
     if ((imie && imie.readOnly) || (nazwisko && nazwisko.readOnly)) return true;
@@ -346,8 +346,8 @@
     return podpowiedz({ imie: wartosc(ID.imie), nazwisko: wartosc(ID.nazwisko) });
   }
 
-  function pokaz(t, wynik) {
-    var n = pole(ID.notka);
+  function pokaz(t, wynik, n) {
+    n = n || pole(ID.notka);
     if (!n) return;
     try {
       if (!t) {
@@ -537,6 +537,9 @@
     ocenNazwisko: ocenNazwisko,
     podpowiedz: podpowiedz,
     trescNotki: trescNotki,
+    pokazNotke: function (element, wynik, stanPlci, plec) {
+      if (element) pokaz(trescNotki(wynik, stanPlci, plec), wynik, element);
+    },
     stan: function () { return stan; },
     odswiez: odswiezNotke
   };
