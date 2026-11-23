@@ -4267,6 +4267,7 @@ const OPTIONAL_ASSETS = [
   '/custom-fixes.js?v=87',
   '/custom-fixes.js?v=88',
   '/custom-fixes.js?v=89',
+  '/custom-fixes.js?v=90',
   '/reposition.js?v=7',
   '/vilda_klawiatura.js?v=1',
   '/vilda_klawiatura.js?v=2',
@@ -7146,8 +7147,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-1c04f50e0a50.json",
-  "sha256": "1c04f50e0a500eef9549eb3fa7e9cf85cade1ad8ab286cfad4e26323f8755306",
+  "url": "/runtime/visit-ui-precache/precache-c03977a202c0.json",
+  "sha256": "c03977a202c01c5a154b0f43067c1955fb39cd3695e3155ced13789810eb1abf",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7307,7 +7308,7 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     },
     {
       "url": "/vilda_home_gabinet.css?v=8",
-      "sha256": "1e437942182b3efd53b092ccf7fc4fe61555dcda9eb5df5574cf58998ad2cd21"
+      "sha256": "161ae4fae8ed7e9b9a13c5b7548f2b648de4b9f3c47b98b9c08f0ed1327df173"
     },
     {
       "url": "/vilda_home_gabinet_start.css?v=5",

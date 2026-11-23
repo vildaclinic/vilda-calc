@@ -40,6 +40,34 @@ async function horizontalEdges(locator) {
   });
 }
 
+async function hitTestPositions(locator) {
+  return locator.evaluateAll(nodes => nodes.map(node => {
+    const { left, top, right, bottom } = node.getBoundingClientRect();
+    const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+    const target = node.closest('a,button') || node;
+    return { left, top, visible: right > left && bottom > top && left >= 0 && top >= 0 &&
+      right <= innerWidth && bottom <= innerHeight && target.contains(hit) };
+  }));
+}
+
+async function scrollToVisibleFooter(frame, screen, requireOverflow = false) {
+  await frame.evaluate(() => {
+    const scroller = document.scrollingElement;
+    scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'instant' });
+  });
+  await expect.poll(() => frame.evaluate(() => {
+    const scroller = document.scrollingElement;
+    return Math.round(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop);
+  }), { message: 'Rzeczywisty koniec przewijania · ' + screen }).toBe(0);
+  const footer = await frame.locator('.site-footer').evaluate(node => {
+    const { top, bottom } = node.getBoundingClientRect();
+    return { top, bottom, viewportHeight: innerHeight, scroll: document.scrollingElement.scrollTop };
+  });
+  expect(footer.top, 'Widoczna stopka · ' + screen).toBeGreaterThanOrEqual(0);
+  expect(footer.bottom, 'Cała stopka mieści się w widoku · ' + screen).toBeLessThanOrEqual(footer.viewportHeight + 0.5);
+  if (requireOverflow) expect(footer.scroll, 'Przewinięta treść · ' + screen).toBeGreaterThan(100);
+}
+
 test('the outer header stays visible and aligned while switching or scrolling Gabinet screens', async ({ page }) => {
   const { frame } = await prepare(page);
   const start = frame.locator('#vhomeGabinetStart');
@@ -53,41 +81,26 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     const controls = page.locator('.chrome-strip').locator(leading + ', #vildaHeaderSearchBtn, #vildaRemindersBtn');
     await expect(controls).toHaveCount(3);
     for (const control of await controls.all()) await expect(control).toBeInViewport({ ratio: 1 });
-    const positions = locator => locator.evaluateAll(nodes => nodes.map(node => {
-      const { left, top, right, bottom } = node.getBoundingClientRect();
-      const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
-      const target = node.closest('a,button') || node;
-      return { left, top, visible: right > left && bottom > top && left >= 0 && top >= 0 &&
-        right <= innerWidth && bottom <= innerHeight && target.contains(hit) };
-    }));
-    const baseline = await positions(controls);
+    const baseline = await hitTestPositions(controls);
     expect(baseline.every(box => box.visible)).toBe(true);
 
     async function expectAnchored(screen) {
-      await expect.poll(async () => {
-        const current = await positions(controls);
-        return current.map((box, i) => ({ visible:box.visible,
-          dx:Math.round(box.left - baseline[i].left), dy:Math.round(box.top - baseline[i].top) }));
-      }, { message: 'Położenie i widoczność globalnego nagłówka przy szerokości ' + width + ' px · ' + screen })
-        .toEqual(baseline.map(() => ({ visible:true, dx:0, dy:0 })));
+      await expect.poll(() => hitTestPositions(controls), {
+        message: 'Dokładne położenie i hit-test globalnego nagłówka przy szerokości ' + width + ' px · ' + screen,
+      }).toEqual(baseline);
     }
     async function checkScroll(screen, requireOverflow = false, pinned) {
       await expectAnchored(screen);
       await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-      const beforeScroll = pinned ? await positions(pinned) : [];
-      const moved = await frame.evaluate(async () => {
-        const scroller = document.scrollingElement;
-        scroller.scrollTo({ top: 420, behavior: 'instant' });
-        await new Promise(resolve => { requestAnimationFrame(resolve); });
-        return scroller.scrollTop;
-      });
-      if (requireOverflow) expect(moved, 'Przewinięta treść · ' + screen).toBeGreaterThan(100);
+      const beforeScroll = pinned ? await hitTestPositions(pinned) : [];
+      await scrollToVisibleFooter(frame, screen, requireOverflow);
       if (pinned) {
         expect(beforeScroll.every(box => box.visible)).toBe(true);
-        expect(await positions(pinned), 'Przypięta nawigacja · ' + screen).toEqual(beforeScroll);
+        await expect.poll(() => hitTestPositions(pinned), { message: 'Przypięta nawigacja i hit-test · ' + screen })
+          .toEqual(beforeScroll);
       }
       // The browser can also hand scrolling to the outer document at the pane boundary.
-      await page.evaluate(() => window.scrollTo({ top: 180, behavior: 'instant' }));
+      await page.evaluate(() => window.scrollTo({ top: document.scrollingElement.scrollHeight, behavior: 'instant' }));
       await expectAnchored(screen + ' po przewinięciu');
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
@@ -116,6 +129,37 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     await entryBack.click();
     await expect(start.locator('[data-entry="office"]')).toBeVisible();
     await expectAnchored('Powrót na ekran startowy');
+  }
+
+  // Reuse the same fictional account and patients on the standalone entry.
+  // A restored selection may already show the patient instead of the picker.
+  for (const { width, height } of [{ width: 1440, height: 600 }, { width: 390, height: 480 }]) {
+    await page.setViewportSize({ width, height });
+    await page.goto('/index.html', { waitUntil: 'load' });
+    await readyForPatient(page);
+    const header = page.locator('#vhomeGabinetHeader');
+    if (!await header.isVisible()) await choosePatient(page, 'Antoni');
+    else await expect(header).toContainText('Antoni');
+    const analysisTab = page.locator('#vhomeGabinetAnalysisTab');
+    await analysisTab.click();
+    await expect(analysisTab).toHaveAttribute('aria-selected', 'true');
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    const leading = width > 991 ? '.chrome-brand-logo' : '[data-vilda-chrome-menu-btn]';
+    const controls = page.locator('.chrome-strip').locator(leading + ', #vildaHeaderSearchBtn, #vildaRemindersBtn');
+    const breadcrumb = header.locator('[data-start]');
+    await expect(controls).toHaveCount(3);
+    const globalBefore = await hitTestPositions(controls);
+    const crumbBefore = await hitTestPositions(breadcrumb);
+    expect(globalBefore.every(box => box.visible)).toBe(true);
+    expect(crumbBefore.every(box => box.visible)).toBe(true);
+    await scrollToVisibleFooter(page, 'Samodzielna Analiza ' + width + '×' + height, true);
+    await expect.poll(() => hitTestPositions(controls), { message: 'Samodzielny globalny nagłówek x/y i hit-test' })
+      .toEqual(globalBefore);
+    await expect.poll(() => hitTestPositions(breadcrumb), { message: 'Samodzielna ścieżka nawigacji x/y i hit-test' })
+      .toEqual(crumbBefore);
+    const heightField = page.locator('#height');
+    await heightField.evaluate(node => node.scrollIntoView({ block: 'start', behavior: 'instant' }));
+    await expect.poll(() => hitTestPositions(heightField)).toEqual([expect.objectContaining({ visible: true })]);
   }
 });
 
