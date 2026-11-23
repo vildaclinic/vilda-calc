@@ -851,16 +851,56 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await expect(history.locator('.vhs-paper[data-active]')).toHaveCSS('transition-duration', '0s');
   await history.getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
   const detail = frame.locator('dialog.vhome-history-detail');
+  const access = detail.locator('.vd-access');
+  const startFromDetail = access.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true });
+  await expect(access).toContainText('Tylko odczyt');
+  await expect(access).toHaveCSS('background-color', 'rgb(255, 248, 236)');
+  await expect(access.getByRole('button')).toHaveCount(2);
+  await expect(access.getByRole('button', { name: 'Edytuj wizytę', exact: true })).toBeVisible();
+  await expect(startFromDetail).toBeVisible();
+  const accessGeometry = () => access.evaluate(node => [node, ...node.querySelectorAll('button')].map(item => {
+    const { x, y, width, height } = item.getBoundingClientRect();
+    return { x, y, width, height };
+  }));
+  const accessBefore = await accessGeometry();
+  expect(accessBefore[1].width).toBeCloseTo(accessBefore[2].width, 0);
+  expect(accessBefore[1].height).toBeCloseTo(accessBefore[2].height, 0);
+  expect(accessBefore[1].y).toBeCloseTo(accessBefore[2].y, 0);
+  async function expectAccessStable() {
+    await expect.poll(accessGeometry).toEqual(accessBefore);
+    const bounds = await detail.evaluate(node => ({ content: node.scrollWidth, width: node.clientWidth,
+      left: node.getBoundingClientRect().left, right: node.getBoundingClientRect().right, viewport: innerWidth }));
+    expect(bounds.content).toBeLessThanOrEqual(bounds.width + 1);
+    expect(bounds.left).toBeGreaterThanOrEqual(-0.5);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.viewport + 0.5);
+  }
+  const detailBody = detail.locator('.vhome-dialog-body');
+  await detailBody.evaluate(node => node.scrollTo({ top: node.scrollHeight, behavior: 'instant' }));
+  await expect.poll(() => detailBody.evaluate(node => node.scrollTop)).toBeGreaterThan(0);
+  await expectAccessStable();
+  await startFromDetail.click();
+  const loadGuard = frame.locator('dialog.vug-backdrop');
+  await expect(loadGuard).toBeVisible();
+  await loadGuard.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(loadGuard).toBeHidden();
+  await expect(detail).toBeVisible();
+  await expect(startFromDetail).toBeFocused();
+  expect(await patientState()).toEqual(before);
+  await expect(frame.locator('#height')).toHaveValue('159');
+  await expect(frame.locator('#weight')).toHaveValue('49');
+  await expectAccessStable();
   await expect(detail.getByRole('tabpanel', { name: 'Wyniki', exact: true })).toContainText('46 kg');
   await expect(detail).toContainText(notes.archived);
   await expect(detail).not.toContainText(notes.general);
   await expect(detail).not.toContainText(treatment.active);
   await detail.getByRole('tab', { name: 'Siatka centylowa' }).click();
   await expect(detail.getByRole('tabpanel', { name: 'Siatka centylowa' }).locator('svg')).toBeVisible();
+  await expectAccessStable();
   await detail.getByRole('tab', { name: 'Porównanie' }).click();
   const comparison = detail.getByRole('row', { name: /Masa ciała/ });
   await expect(comparison.getByRole('cell').first()).toHaveText('46 kg');
   await expect(comparison.getByRole('cell').last()).toContainText('49 kg');
+  await expectAccessStable();
   await detail.getByRole('tab', { name: 'Informacje ogólne' }).click();
   const general = detail.getByRole('tabpanel', { name: 'Informacje ogólne' });
   await expect(general).toContainText(notes.general);
@@ -873,6 +913,7 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await expect(general).not.toContainText(treatment.closed);
   await expect(general).not.toContainText(treatment.foreign);
   await expect(general.getByRole('button', {name:'Leczenie pacjenta', exact:true})).toBeVisible();
+  await expectAccessStable();
   await detail.getByRole('button', { name: 'Zamknij podgląd wizyty' }).click();
   await history.getByRole('button', { name: /^Wróć/ }).click();
   await expect(history).toBeHidden();
@@ -902,6 +943,45 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await warning.getByRole('button', { name: /^Odrzuć (dane|zmiany) i wyczyść$/ }).click();
   await expect(frame.locator('#vhomeGabinetStart')).toBeVisible();
   expect((await patientState()).snapshots).toEqual(before.snapshots);
+
+  await choosePatient(frame, 'Antoni');
+  const savedVisits = () => frame.evaluate(async id => ({
+    snapshots: (await window.VildaVault.getPatient(id)).snapshots,
+    visits: await window.VildaVault.getPatientVisits(id),
+  }), ids.a);
+  const archived = await savedVisits();
+  await trigger.click();
+  await history.getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
+  await expect(startFromDetail).toBeVisible();
+  await startFromDetail.click();
+  await expect(detail).toBeHidden();
+  await expect(history).toBeHidden();
+  await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
+  const current = await frame.evaluate(id => ({
+    patientId: sessionStorage.getItem('vildaCurrentPatientId'),
+    visitId: window.VildaHomeEncounter.state(id).visitId,
+  }), ids.a);
+  expect(current.patientId).toBe(ids.a);
+  expect(current.visitId).toBeTruthy();
+  expect(current.visitId).not.toBe(before.encounter.visitId);
+  expect(archived.visits.some(row => row.visitId === current.visitId)).toBe(false);
+  await analysis.click();
+  await expect(frame.locator('#height')).toHaveValue('');
+  await expect(frame.locator('#weight')).toHaveValue('');
+  await expect(frame.locator('#height')).toBeEditable();
+  await expect(frame.locator('#weight')).toBeEditable();
+  expect(await savedVisits()).toEqual(archived);
+  await header.getByRole('button', { name: 'Zapisz wizytę', exact: true }).click();
+  await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('browse');
+  const saved = await savedVisits();
+  expect(saved.snapshots).toHaveLength(archived.snapshots.length + 1);
+  expect(saved.snapshots.filter(row => row.payload?.visit?.visitId !== current.visitId)).toEqual(archived.snapshots);
+  expect(saved.visits.filter(row => row.visitId !== current.visitId)).toEqual(archived.visits);
+  const fresh = saved.visits.filter(row => row.visitId === current.visitId);
+  expect(fresh).toHaveLength(1);
+  expect(fresh[0].payload.user.height).toBeNull();
+  expect(fresh[0].payload.user.weight).toBeNull();
+  expect(fresh[0].payload.user.measuredAtISO ?? null).toBeNull();
 });
 
 test('a new note in Overview keeps the active encounter and an independent clinical date', async ({ page }) => {

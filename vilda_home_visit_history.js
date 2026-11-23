@@ -187,7 +187,7 @@
           detail = null;
           if (restoreFocus && options.initialVisitId && !closed) onBack();
         },
-        onEdit: options.onEdit, onOpenRecord: options.onOpenRecord,
+        onEdit: options.onEdit, onStart: options.onStart, onOpenRecord: options.onOpenRecord,
         getGeneral: general, getComparison: projection.getComparison, onRefreshGeneral: refreshGeneral,
         renderChart: (container, row, metric, expanded) => projection.renderChart(container, row, rows, metric, expanded),
         appendDocuments(container, row, refresh) {
