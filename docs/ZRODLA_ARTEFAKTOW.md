@@ -2888,6 +2888,13 @@ P-DZIENNIK-ZDARZEN) bazą delty jest obraz sejfu po tej zmianie bez bloku trwał
 (`5f5ec15f783375b99066288f80bf653d825f4591255af5c0149c1838f0c0afde`). Baza z E3-PR0d (`417ac2f4…`) odpowiada
 stanowi sprzed E3-PR0d2 (`audyt` `119f0225`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
+Od E3-PR0e1 (P-SYNC-WLASCICIEL, karta opróżniona przy „Scal pacjentów” zachowuje znany nagrobek scalenia; zmiana
+poza blokiem P-DZIENNIK-ZDARZEN i poza blokiem trwałych wizyt) bazą delty jest obraz sejfu po tej zmianie bez bloku
+trwałych wizyt: SHA-256 `3e7bcd5a4ef38b482c00d318db8cf9c126b50d024dcc182e65bb111a2f1aa2c8`, a wynikiem — bieżący
+`vilda_vault.js` (`3f647b800629fd9118689af6d61f34e67a467c0f698dce68785fcb99e28cfe36`). Baza `a11b41b3…` (po
+vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-PR0e1 (`audyt` `a7b2920b`); bieżącą bazę daje to samo
+odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
@@ -3034,6 +3041,13 @@ usunięcie listy oraz terminu w metadanych sejfu. Przy ponownym budowaniu bloku 
 zachować kopiowanie argumentów `addWaitlistList` i `completeWaitlistBooking` oraz wyłączną
 blokadę obszaru roboczego dla `completeWaitlistBooking` w ścieżce V1. Aktualne skróty obu warstw
 sejfu są zapisane w ich manifestach.
+
+Od E3-PR0e1 (P-SYNC-WLASCICIEL; zmiana sejfu tylko poza blokiem natywnym — `Bsw_przenies`, `Bsw_poOddaniu`
+i komentarze) baza sejfu to `75fa66c9e580e9ac051c7300b621de8cb03ede637cad026afc0f15c7b1a0ec68`, a
+`integratedVaultSHA256` (obraz pośredni) — `32f1087105a3d8efb4ba701ebdba608bac21bbc7bb9387e86b9e0f067b434115`.
+Baza `1464cdf4…` (po vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-PR0e1 (`audyt` `a7b2920b`). Blok
+natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości
+są w `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych

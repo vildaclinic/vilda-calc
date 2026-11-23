@@ -30,10 +30,12 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // (after a single change from another device is applied, a visit version the merge saved differently than it
 // arrived is queued again; dormant behind a hidden switch), E3-PR0d (after a single change from another device is
 // applied, a trash entry the merge saved differently than before and than it arrived is queued again; dormant behind
-// the same hidden switch) and E3-PR0d2 (after a single change from another device is applied successfully, a hidden
+// the same hidden switch), E3-PR0d2 (after a single change from another device is applied successfully, a hidden
 // trash entry of a deleted card is queued again when the change carried a later version of that visit under a card
-// that lost to the patient tombstone here; dormant behind the same hidden switch).
-const BASE = '1464cdf47d16a3e431992c64529979fe6b6c9ac7bd014042f930edb2a8110e32';
+// that lost to the patient tombstone here; dormant behind the same hidden switch) and E3-PR0e1 (a card emptied by the
+// move phase of the synchronization merge disappears together with the patient tombstone known to that merge, from
+// the payload or local, written only when no local tombstone or an earlier one exists; in effect at once).
+const BASE = '75fa66c9e580e9ac051c7300b621de8cb03ede637cad026afc0f15c7b1a0ec68';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
