@@ -2701,6 +2701,35 @@ body.vilda-header-menu.has-mobile-bottom-dock:not(.user-hides-mobile-dock) #scro
 body.vilda-header-menu #appShellScrollTop {
   bottom: max(calc(var(--vilda-shell-dock-h,84px) + 14px),var(--chrome-footer-arrow-bottom,0px))
 }
+html.vilda-gabinet-mobile-footer :is(#scrollTopBtn,#appShellScrollTop),
+.site-footer [data-vilda-footer-scroll-top][hidden] {
+  display: none!important
+}
+.site-footer button[data-vilda-footer-scroll-top]:not([hidden]) {
+  grid-column: 1 / -1;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8px);
+  width: auto;
+  min-block-size: 44px;
+  margin: 0;
+  padding: 0 var(--space-12px);
+  border: 0!important;
+  border-radius: var(--radius-8)!important;
+  background: transparent!important;
+  box-shadow: none!important;
+  backdrop-filter: none!important;
+  color: var(--primary, #00838d)!important;
+  font-family: inherit;
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer
+}
+.site-footer button[data-vilda-footer-scroll-top]:is(:hover,:focus-visible) {
+  text-decoration: underline
+}
 
 /* P-LAYOUT-12: Start, DocPro and Klirens share one outer gutter. The runtime
  * marks these documents (and their active shell); other tools keep their own

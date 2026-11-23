@@ -1308,6 +1308,12 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     target.addEventListener(type,handler,options);
     if(cleanup)cleanup.push(function(){target.removeEventListener(type,handler,options)});
   }
+  function scrollToGabinetStart(owner){
+    var view=owner.defaultView;
+    var trail=firstVisible(owner,["#gbWorkspaceHeader .gb-breadcrumb button:not([hidden])"]);
+    if(trail)trail.focus({preventScroll:true});
+    view.scrollTo({top:0,behavior:view.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});
+  }
   function observeSource(owner,frame,authRoot){
     if(sourceDoc===owner&&sourceFrame===frame&&sourceAuthRoot===authRoot)return;
     sourceCleanup.forEach(function(remove){remove()});sourceCleanup=[];
@@ -1315,10 +1321,11 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     listen(owner.defaultView,"scroll",schedule,{passive:true},sourceCleanup);
     listen(owner.defaultView,"resize",schedule,null,sourceCleanup);
     listen(owner,"vilda:phone-layout-changed",schedule,null,sourceCleanup);
+    listen(owner.querySelector("[data-vilda-footer-scroll-top]"),"click",function(){scrollToGabinetStart(owner)},null,sourceCleanup);
     if(typeof win.MutationObserver==="function"){
       var changes=new win.MutationObserver(schedule);
       var content=owner.querySelector(".main-content")||owner.body;
-      if(content)changes.observe(content,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden","class","style"]});
+      if(content)changes.observe(content,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden","class","style","data-vhome-screen"]});
       if(owner.documentElement)changes.observe(owner.documentElement,{attributes:true,attributeFilter:["class"]});
       if(owner.body)changes.observe(owner.body,{attributes:true,attributeFilter:["class"],childList:true});
       // Patient screens live outside .main-content. Their card can be replaced
@@ -1336,6 +1343,21 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     if(typeof win.ResizeObserver!=="function")return;
     if(!sizeObserver)sizeObserver=new win.ResizeObserver(schedule);
     nodes.forEach(function(node){sizeObserver.observe(node)});
+  }
+  function syncGabinetFooterNavigation(owner,gabinet,footerInner){
+    var html=doc.documentElement;
+    var mobile=!!gabinet&&(win.innerWidth<700||html.classList.contains("vilda-phone"));
+    marker(html,"vilda-gabinet-mobile-footer",mobile);
+    var button=footerInner&&footerInner.querySelector("[data-vilda-footer-scroll-top]");
+    if(!button)return mobile;
+    var scroller=owner.scrollingElement;
+    // Measure the workspace itself so adding a footer row cannot make a short view qualify.
+    var length=mobile&&gabinet.dataset.vhomeScreen!=="start"&&scroller
+      ?gabinet.getBoundingClientRect().bottom+scroller.scrollTop
+      :0;
+    var hidden=!scroller||length<=scroller.clientHeight+1||doc.body.classList.contains("user-hides-nav-arrow");
+    if(button.hidden!==hidden)button.hidden=hidden;
+    return mobile;
   }
   function syncFooterRail(owner,frameBox,footer,footerBox,authVisible){
     var rail=doc.querySelector(".desktop-layout>.decor-sidebar"),railBox=rail&&rail.getBoundingClientRect();
@@ -1432,6 +1454,7 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     var workspace=authTarget||firstVisible(owner,["#calcForm","#clcrWorkspace","#clcrForm"]);
     var fallback=firstVisible(owner,["#proGateBanner",".main-content>.container",".main-content","main"]);
     var footer=owner.querySelector("footer.site-footer"),footerInner=footer&&footer.querySelector(".site-footer__inner");
+    var mobileFooterNavigation=syncGabinetFooterNavigation(owner,gabinet,footerInner);
     watchSizes([workspaceHeader,gabinet,pinnedNavigation,target,second,workspace,fallback,footer,footerInner,frame,header,strip,actions]);
     var footerBox=rect(footer),innerBox=rect(footerInner);
     syncFooterRail(owner,frame?frameBox:null,footer,footerBox,authVisible);
@@ -1442,7 +1465,7 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     property("--chrome-form-footer-height",pixels(footerBox?footerBox.height:0),owner);
     // Keep the floating arrow above visible footer links instead of adding a
     // second empty band. The dock still owns its independent bottom reserve.
-    var arrowBottom=innerBox?Math.max(0,win.innerHeight-(verticalOffset+innerBox.top)+10):0;
+    var arrowBottom=!mobileFooterNavigation&&innerBox?Math.max(0,win.innerHeight-(verticalOffset+innerBox.top)+10):0;
     property("--chrome-footer-arrow-bottom",pixels(Math.min(Math.max(0,win.innerHeight-64),arrowBottom)));
     if(compact())return;
     var stripBox=strip.getBoundingClientRect(),box=rect(target)||rect(fallback);
