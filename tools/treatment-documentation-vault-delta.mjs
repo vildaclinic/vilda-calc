@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
+import { restoreStagedDocumentationBaseline } from './staged-documentation-vault-delta.mjs';
 
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const BASE='294774d6ee7fdb494e238b68c9bd81d74eb61aefb348acb71cc69ab6b241870c';
@@ -65,6 +66,7 @@ export function buildTreatmentDocumentationDelta(base,root=ROOT){
   return declared(base,readable(root).fragment).source;
 }
 export function restoreTreatmentDocumentationBaseline(source,root=ROOT){
+  source=restoreStagedDocumentationBaseline(source,root);
   if(!source.includes(START))return source;
   const{manifest,fragment}=definition(root),integrated=source;
   if(digest(source)!==manifest.integratedVaultSHA256)fail('unexpected integrated image');
@@ -81,7 +83,7 @@ if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
     writeFileSync(resolve(ROOT,MANIFEST),JSON.stringify({namespace:'vilda-treatment-documentation-vault',version:1,baseVaultSHA256:BASE,
       source:SOURCE,sourceSHA256:digest(source.source),fragmentSHA256:digest(source.fragment),integratedVaultSHA256:digest(built.source),hooks:built.hooks},null,2)+'\n');
     writeFileSync(resolve(args[2]),built.source);process.stdout.write('Built exact treatment-document durability.\n');
-  }else if(!args.length){const source=readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8');
+  }else if(!args.length){const source=restoreStagedDocumentationBaseline(readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8'));
     if(applyTreatmentDocumentationDelta(restoreTreatmentDocumentationBaseline(source))!==source)fail('round trip differs');
     process.stdout.write('Treatment documentation: exact outer Vault layer verified.\n');
   }else fail('usage: node tools/treatment-documentation-vault-delta.mjs [--build BASE_FILE OUTPUT_FILE]');

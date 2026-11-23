@@ -1,0 +1,8 @@
+{
+  "namespace": "vilda-staged-documentation-vault",
+  "version": 1,
+  "baseVaultSHA256": "c50d9f4359adb8c94ce38194d2b6633cb3ca43d7698dcffda2a9c7d58a3e10da",
+  "source": "runtime/staged-documentation-v1/vault-fragment.js",
+  "sourceSHA256": "d26f50fbc3b5c145101c6c5d572a184ad47e0e11a32a115e1ef2b54d5326208f",
+  "integratedVaultSHA256": "06af0bede574b76b4d5c066b73a101c6ee5236aa9f5f59be49fb5af2507a16ad"
+}

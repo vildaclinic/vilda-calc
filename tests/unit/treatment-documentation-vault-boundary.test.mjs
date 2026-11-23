@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { applyTreatmentDocumentationDelta, restoreTreatmentDocumentationBaseline } from '../../tools/treatment-documentation-vault-delta.mjs';
 import { restoreDocumentOutcomesBaseline } from '../../tools/document-outcomes-vault-delta.mjs';
-const source=readFileSync(new URL('../../vilda_vault.js',import.meta.url),'utf8');
+import { restoreStagedDocumentationBaseline } from '../../tools/staged-documentation-vault-delta.mjs';
+const source=restoreStagedDocumentationBaseline(readFileSync(new URL('../../vilda_vault.js',import.meta.url),'utf8'));
 const manifest=JSON.parse(readFileSync(new URL('../../runtime/treatment-documentation-v1/manifest.json',import.meta.url),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const native=value=>value.slice(value.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */'),
