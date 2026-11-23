@@ -11,6 +11,7 @@
   var previewState = null;
   var inline = null;
   var subscribed = new WeakSet();
+  var identityReadGeneration = 0;
   var tabNames = [['labs', 'Badania'], ['care', 'Plany'], ['notes', 'Notatki']];
   var lifecycle = ['vilda:user-state-cleared', 'vilda:data-applied', 'vilda:patient-loaded', 'vilda:auth-loaded', 'vilda:session-changed'];
 
@@ -28,6 +29,35 @@
   function patientId() {
     try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; }
     catch (_) { return null; }
+  }
+  function presentationFrom(record) {
+    var header = record && record.header;
+    if (!header || typeof header !== 'object' || Array.isArray(header)) return null;
+    var first = typeof header.firstName === 'string' ? header.firstName : '';
+    var last = typeof header.lastName === 'string' ? header.lastName : '';
+    var name = typeof header.name === 'string' ? header.name : '';
+    return {patientId:record.patientId, name:name || [last,first].filter(Boolean).join(' ') || 'Pacjent',
+      displayName:[first,last].filter(Boolean).join(' ') || name || 'Pacjent', firstName:first, lastName:last,
+      dobISO:typeof header.dobISO === 'string' ? header.dobISO : '', sex:typeof header.sex === 'string' ? header.sex : ''};
+  }
+  function publishPresentation(view, record) {
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || !current(view) || record?.patientId !== view.owner.patientId) return;
+    var presentation = presentationFrom(record); if (!presentation) return;
+    view.presentation = presentation;
+    d.querySelectorAll('[data-home-patient-identity]').forEach(function (host) {
+      if (host.dataset.homePatientIdentity === presentation.patientId) {
+        var label = host.querySelector('[data-home-patient-name]'); if (label) label.textContent = presentation.name;
+      }
+    });
+    d.dispatchEvent(new w.CustomEvent('vilda:patient-profile-presentation-ready', {detail:{patientId:presentation.patientId}}));
+  }
+  function refreshPresentation(id) {
+    var view = active;
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || !current(view) || id !== view.owner.patientId) return;
+    var ticket = ++identityReadGeneration;
+    Promise.resolve().then(function () { return current(view) ? view.vault.getPatient(id) : null; }).then(function (record) {
+      if (ticket === identityReadGeneration) publishPresentation(view, record);
+    }).catch(function () { /* A profile read never substitutes an old visit or changes the active form. */ });
   }
   function dateLabel(value) {
     if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value.slice(8, 10) + '.' + value.slice(5, 7) + '.' + value.slice(0, 4);
@@ -99,7 +129,8 @@
     });
   }
   function clearDecrypted() {
-    generation += 1; readGeneration += 1; model = null; active = null; refreshRequested = true;
+    if (active) active.presentation = null;
+    generation += 1; readGeneration += 1; identityReadGeneration += 1; model = null; active = null; refreshRequested = true;
     previewState = null;
     closeInline(true);
     close(true, false);
@@ -264,7 +295,7 @@
     });
   }
   async function load(view, attempt) {
-    var serial = ++readGeneration;
+    var serial = ++readGeneration, identityTicket = identityReadGeneration;
     if (!current(view)) return;
     card.setAttribute('aria-busy', 'true');
     try {
@@ -289,6 +320,7 @@
         return load(view, 1);
       }
       model = next;
+      if (identityTicket === identityReadGeneration) publishPresentation(view, next.patient);
     } catch (error) {
       if (!current(view) || serial !== readGeneration) return;
       // Failures never become zero counts or fictitious empty clinical lists.
@@ -435,7 +467,9 @@
   function section(host, label) { var node = el('section', 'vhome-patient-section'); node.appendChild(el('h3', '', label)); host.appendChild(node); return node; }
   function addContext(host) {
     var context = el('div', 'vhome-patient-context');
-    context.appendChild(el('strong', '', model?.identity?.name || 'Pacjent'));
+    context.dataset.homePatientIdentity = active?.owner.patientId || '';
+    var label = el('strong', '', active?.presentation?.name || model?.identity?.name || 'Pacjent'); label.dataset.homePatientName = '';
+    context.appendChild(label);
     var date = active?.owner.visit?.clinicalDateISO;
     context.appendChild(el('span', '', date ? 'Wizyta · ' + dateLabel(date) : 'Dokumentacja pacjenta'));
     host.appendChild(context);
@@ -703,6 +737,7 @@
     w.addEventListener('vilda:user-state-cleared', function () { clearDecrypted(); schedule(); });
     ['vilda:auth-boot-settled', 'vilda:auth-hidden', 'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled',
       'vilda:state-restored', 'vildaProAccessChanged', 'vilda:sync-merged', 'vilda:clcr-results-changed'].forEach(function (name) { d.addEventListener(name, requestRead); });
+    d.addEventListener('vilda:patient-profile-changed', function (event) { refreshPresentation(event.detail?.patientId); });
     ['input', 'change'].forEach(function (name) { d.addEventListener(name, function () { if (active && !current(active)) clearDecrypted(); schedule(); }); });
     w.addEventListener('pageshow', requestRead);
     // The native APIs have no generic account-change subscription. This small
@@ -719,6 +754,11 @@
     refresh();
   }
   w.VildaHomePatient = Object.freeze({ open: open, close: close, refresh: requestRead,
+    getPatientPresentation: function (id) {
+      var view = active;
+      return w.__VILDA_HOME_GABINET_PREVIEW__ === true && current(view) && id === view.owner.patientId && view.presentation
+        ? Object.assign({}, view.presentation) : null;
+    },
     openInline: openInline, closeInline: closeInline, selectInline: selectInline, ownsInline: ownsInline, focusInlineNote: focusInlineNote,
     focusInlineCarePlan, focusInlineReminder, applyInlineReminderFocus, ownsSavePublication: ownsSavePublication,
     isInlineOpen: function () { return !!inline && ownsInline(inline, inline.patientId); },

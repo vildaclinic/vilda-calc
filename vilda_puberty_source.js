@@ -406,6 +406,14 @@
     try {
       if (!id || !V || typeof V.isUnlocked !== 'function' || !V.isUnlocked()
         || typeof V.getPatient !== 'function') { niedostepny(); return; }
+      if (w.__VILDA_HOME_GABINET_PREVIEW__ === true && typeof w.VildaPerinatalSource?.visitPayload === 'function') {
+        // The form of a saved visit supplies its original puberty facts and
+        // neonatal context. A new visit already incorporates the chart data.
+        var visit = w.VildaPerinatalSource.visitPayload(id);
+        if (visit) opublikuj(visit, id, 'ready');
+        else niedostepny();
+        return;
+      }
       V.getPatient(id).then(function (rec) {
         if (!nadalBiezacy()) return;
         if (w.VildaVault !== V || !V.isUnlocked() || !pasujeDoTozsamosci(id)) { niedostepny(); return; }
@@ -460,6 +468,7 @@
     doc.addEventListener('vilda:auth-hidden', odswiez);
     doc.addEventListener('vilda:sync-status-changed', odswiez);
     doc.addEventListener('vilda:session-changed', odswiez);
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ === true) doc.addEventListener('vilda:data-applied', odswiez);
     if (typeof w.addEventListener === 'function') {
       w.addEventListener('storage', function (ev) {
         if (!ev || ev.key == null || ev.key === 'vildaCurrentPatientId') odswiez();

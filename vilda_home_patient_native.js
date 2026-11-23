@@ -58,6 +58,23 @@
       return view.ownerCurrent() === true && view.root.isConnected && loadedSequence() === view.loaded;
     } catch (_) { return false; }
   }
+  function profileName(record, id) {
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || record?.patientId !== id) return '';
+    var header = record.header;
+    if (!header || typeof header !== 'object' || Array.isArray(header)) return '';
+    return typeof header.name === 'string' && header.name ||
+      [header.lastName, header.firstName].filter(function (value) { return typeof value === 'string' && value; }).join(' ') || 'Pacjent';
+  }
+  function refreshProfile(view) {
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || !current(view)) return;
+    var ticket = ++view.identityRead;
+    Promise.resolve().then(function () { return current(view) ? view.vault.getPatient(view.patientId) : null; }).then(function (record) {
+      if (!current(view) || ticket !== view.identityRead) return;
+      var name = profileName(record, view.patientId); if (!name) return;
+      view.patientName = name; view.identityLabel.textContent = name;
+      if (view.treatmentOptions) view.treatmentOptions.patientLabel = name;
+    }).catch(function () { /* Identity presentation never replaces clinical state. */ });
+  }
   function captureFocus(view, native) {
     if (!native.backgroundRefresh || !view || native.patientId !== view.patientId || !current(view)) return null;
     var focused = d.activeElement;
@@ -109,6 +126,8 @@
   function destroy(view) {
     if (!view || view.disposed) return;
     view.disposed = true; hideMenu(view, false);
+    view.identityRead += 1;
+    d.removeEventListener('vilda:patient-profile-changed', view.profileChanged);
     clearFocus(view);
     if (view.observer) view.observer.disconnect();
     if (view.fit) { w.removeEventListener('resize', view.fit); w.visualViewport?.removeEventListener('resize', view.fit); }
@@ -129,6 +148,7 @@
     if (view.reminderSlot) w.VildaHomeRemindersRuntime?.unmountOverview?.(view.reminderSlot);
     wipe(view.root);
     view.root = null; view.panels = null; view.tabs = null; view.treatment = null;
+    view.identityLabel = null; view.treatmentOptions = null; view.patientName = '';
   }
   function close(view) {
     if (!current(view)) return false;
@@ -164,7 +184,7 @@
       view.legacy.forEach(function (item) { view.treatmentBody.appendChild(item); });
       return;
     }
-    view.treatment = module.mount(view.treatmentBody, {
+    view.treatmentOptions = {
       patientId: view.patientId, patientLabel: view.patientName, vault: view.vault, captureVisitBinding: view.inline?.captureVisitBinding, isCurrent: function () { return current(view); },
       titleNode: view.treatmentTitle,
       focusNoteId: view.treatmentFocus || null,
@@ -175,7 +195,8 @@
         if (!current(view)) return;
         treatmentSummary(view, summary); view.changed(); w.VildaHomePatient?.refresh?.();
       }
-    });
+    };
+    view.treatment = module.mount(view.treatmentBody, view.treatmentOptions);
   }
   function select(view, key) {
     if (!view || view.disposed || !view.tabs.some(function (tab) { return tab.dataset.tab === key; })) return;
@@ -323,17 +344,19 @@
     var vault = w.VildaVault, token;
     try { token = vault.captureSyncOperationSession(); } catch (_) { return null; }
     var root = native.root, view = {
-      root: root, patientId: native.patientId, patientName: native.patientName || 'Pacjent', openerId: native.openerId || '', vault: vault, token: token, loaded: loadedSequence(), ownerCurrent: native.isCurrent,
+      root: root, patientId: native.patientId, patientName: profileName(native.patientRecord, native.patientId) || native.patientName || 'Pacjent', openerId: native.openerId || '', vault: vault, token: token, loaded: loadedSequence(), ownerCurrent: native.isCurrent,
       homeOwner: w.VildaHomePatient?.captureOwner?.() || null, inline: native.inline || null,
       disposed: false, selected: native.activeTab || 'antro', close: native.close, changed: native.onChanged, disposeNativeViews: native.disposeNativeViews,
       registerBack: native.registerBack, legacy: native.legacyPanels.filter(Boolean), legacySummary: native.legacySummary || '',
       tabs: [], panels: [], treatment: null, note: null, treatmentFocus: native.focusNoteId || null, dialogCleanups: new Set(), menuBack: null, observer: null, back: null, mounted: false,
-      deferred: false, resumeQueued: false, resumeNativeRefresh: native.resumeRefresh, pendingFocus: focus, cancelFocus: null, restoringFocus: false
+      deferred: false, resumeQueued: false, resumeNativeRefresh: native.resumeRefresh, pendingFocus: focus, cancelFocus: null, restoringFocus: false,
+      identityRead: 0, identityLabel: null, treatmentOptions: null, profileChanged: null
     };
     active = view; var suffix = String(++serial);
     root.classList.add('vhome-native-patient-card'); root.dataset.homePatientId = view.patientId;
     var header = node('header', 'vhome-b1-heading'), identity = node('div', 'vhome-b1-heading-copy');
-    identity.appendChild(node('h2', '', 'Karta pacjenta')); identity.appendChild(node('span', 'vhome-b1-identity', native.patientName || 'Pacjent'));
+    view.identityLabel = node('span', 'vhome-b1-identity', view.patientName);
+    identity.appendChild(node('h2', '', 'Karta pacjenta')); identity.appendChild(view.identityLabel);
     var actions = node('div', 'vhome-b1-actions'), menuWrap = node('div', 'vhome-b1-menu-wrap');
     view.menuToggle = button('Działania ⌄', function () { showMenu(view); }, 'vhome-b1-menu-toggle');
     view.menuToggle.setAttribute('aria-haspopup', 'menu'); view.menuToggle.setAttribute('aria-expanded', 'false');
@@ -421,6 +444,8 @@
       if (event.key === 'Escape' && !view.menu.hidden) { event.preventDefault(); event.stopImmediatePropagation(); hideMenu(view, true); }
     }, true);
     view.ownerChanged = function () { if (view.mounted && !current(view)) destroy(view); };
+    view.profileChanged = function (event) { if (event.detail?.patientId === view.patientId) refreshProfile(view); };
+    d.addEventListener('vilda:patient-profile-changed', view.profileChanged);
     ['vilda:patient-loaded','vilda:data-applied','vilda:user-state-cleared'].forEach(function (name) { d.addEventListener(name, view.ownerChanged); });
     w.addEventListener('vilda:user-state-cleared', view.ownerChanged);
     if (w.VildaHomePatientNativeNote?.create) view.note = w.VildaHomePatientNativeNote.create({

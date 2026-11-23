@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.576';
+const SW_VERSION = '1.1.577';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2002,6 +2002,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_encounter.js?v=4',
   '/vilda_home_encounter.js?v=5',
   '/vilda_home_encounter.js?v=6',
+  '/vilda_home_encounter.js?v=7',
   '/vilda_home_gabinet.js?v=1',
   '/vilda_home_gabinet.js?v=2',
   '/vilda_home_gabinet.js?v=3',
@@ -2013,6 +2014,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_gabinet.js?v=9',
   '/vilda_home_gabinet.js?v=10',
   '/vilda_home_gabinet.js?v=11',
+  '/vilda_home_gabinet.js?v=12',
   '/vilda_home_visit_scene.css?v=1',
   '/vilda_home_visit_scene.css?v=2',
   '/vilda_home_visit_detail.css?v=1',
@@ -2049,6 +2051,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_workspace.css?v=9',
   '/vilda_home_perinatal.js?v=1',
   '/vilda_home_perinatal.js?v=2',
+  '/vilda_home_perinatal.js?v=3',
   '/vilda_docpro_visit_guard.js?v=1',
   '/vilda_home_growth.js?v=1',
   '/vilda_home_growth.js?v=2',
@@ -2073,6 +2076,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_patient.js?v=5',
   '/vilda_home_patient.js?v=6',
   '/vilda_home_patient.js?v=7',
+  '/vilda_home_patient.js?v=8',
   '/vilda_home_patient.css?v=1',
   '/vilda_home_patient.css?v=2',
   '/vilda_home_growth_views.js?v=1',
@@ -2426,6 +2430,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=319',
   '/vilda_chrome.js?v=320',
   '/vilda_chrome.js?v=321',
+  '/vilda_chrome.js?v=322',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -3258,6 +3263,7 @@ const CORE_SHELL_URLS = [
   '/vilda_home_patient_native.js?v=5',
   '/vilda_home_patient_native.js?v=6',
   '/vilda_home_patient_native.js?v=7',
+  '/vilda_home_patient_native.js?v=8',
   '/vilda_home_patient_native.css?v=1',
   '/vilda_home_patient_native.css?v=2',
   '/vilda_home_patient_native.css?v=3',
@@ -3344,6 +3350,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=283',
   '/vilda_vault.js?v=284',
   '/vilda_vault.js?v=285',
+  '/vilda_vault.js?v=286',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -3391,6 +3398,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=579',
   '/vilda_auth_ui.js?v=580',
   '/vilda_auth_ui.js?v=581',
+  '/vilda_auth_ui.js?v=582',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3478,6 +3486,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=232',
   '/vilda_session_bridge.js?v=233',
   '/vilda_session_bridge.js?v=234',
+  '/vilda_session_bridge.js?v=235',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
@@ -3828,6 +3837,7 @@ const OPTIONAL_ASSETS = [
   '/sga_birth_module.js?v=13',
   '/sga_birth_module.js?v=14',
   '/sga_birth_module.js?v=15',
+  '/sga_birth_module.js?v=16',
   '/docpro_state_persist.js',
   '/docpro_state_persist.js?v=4',
   '/docpro_state_persist.js?v=5',
@@ -4189,6 +4199,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_name_fix.js?v=4',
   '/vilda_name_fix.js?v=5',
   '/vilda_name_fix.js?v=6',
+  '/vilda_name_fix.js?v=7',
   '/vilda_data_import_export.js?v=54',
   '/vilda_data_import_export.js?v=55',
   '/vilda_data_import_export.js?v=56',
@@ -4404,6 +4415,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_perinatal_source.js?v=1',
   '/vilda_perinatal_source.js?v=2',
   '/vilda_perinatal_source.js?v=3',
+  '/vilda_perinatal_source.js?v=4',
   '/vilda_urodzeniowe_rozbieznosc.js?v=1',
   '/vilda_zrodla_pacjenta.js?v=1',
   '/vilda_ds_source.js?v=1',
@@ -4411,6 +4423,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_ds_source.js?v=3',
   '/vilda_ds_source.js?v=4',
   '/vilda_ds_source.js?v=5',
+  '/vilda_ds_source.js?v=6',
   '/vilda_b64_checklist_ui.js?v=2',
   '/vilda_b64_checklist_ui.js?v=3',
   '/vilda_b64_checklist_ui.js?v=4',
@@ -4544,6 +4557,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_puberty_source.js?v=11',
   '/vilda_puberty_source.js?v=12',
   '/vilda_puberty_source.js?v=13',
+  '/vilda_puberty_source.js?v=14',
   '/inline_index_02.js?v=10',
   '/vilda_data_import_export.js?v=67',
   '/vilda_auth_ui.js?v=427',
@@ -7165,8 +7179,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-1b3200568539.json",
-  "sha256": "1b3200568539f2b88e8ebefe144407b9b44b7fd5eba28fadad150fc349c44cb6",
+  "url": "/runtime/visit-ui-precache/precache-53d7e0413bc8.json",
+  "sha256": "53d7e0413bc83f75ee4c14b7dadfeebe737a47f0153fe5a83baddee642cb43e2",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7197,8 +7211,8 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "ba1458c81acb45d2554722ce88de25e8d821231ae226a2f120045c67cc770217"
     },
     {
-      "url": "/vilda_home_perinatal.js?v=2",
-      "sha256": "99b0a70ee134237afa89f952b31d99ed076dbc5f9d76dd8ffb8bf5fdd1789121"
+      "url": "/vilda_home_perinatal.js?v=3",
+      "sha256": "7a697f863018945ff93d1f86ee020c436edfd604811b741dccc5b855a375b097"
     },
     {
       "url": "/vilda_sga_birth_results.css?v=1",
@@ -7273,16 +7287,16 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "0280464c2496960fc20568b398fd0bb3f2dd7d57429cd70e6aa9452cab97b56b"
     },
     {
-      "url": "/vilda_home_patient.js?v=7",
-      "sha256": "fccfb809ef8c13df6d65bc0323edbaed39eb0552389773bd54a563aeef81010d"
+      "url": "/vilda_home_patient.js?v=8",
+      "sha256": "e10ccb283293364dc2240769afebfef550bbbb51b300d5b875099440bf62298c"
     },
     {
       "url": "/vilda_home_patient.css?v=2",
       "sha256": "4d53f179f8ae5629b88b21f4682b768881ee395a69b295777ad37d0e3f398a36"
     },
     {
-      "url": "/vilda_home_patient_native.js?v=7",
-      "sha256": "b571f2386552667c832f0264a3f671e355c09e8297e87b66304a4622982b8503"
+      "url": "/vilda_home_patient_native.js?v=8",
+      "sha256": "79608c546cbce0221ccf7764d824ab1e4195252fadf1609fcf637a9fc38767e8"
     },
     {
       "url": "/vilda_home_patient_native.css?v=5",
@@ -7345,12 +7359,12 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "32765be07af749f4ba5f8bf213633467d49d06c85eddee09d69ac35797853cdf"
     },
     {
-      "url": "/vilda_home_encounter.js?v=6",
-      "sha256": "fec69f9d1515304840064807be122549908d2c785187f5f6f16a970be8d51b81"
+      "url": "/vilda_home_encounter.js?v=7",
+      "sha256": "cf6a3878a01a0085927453d80221a6fff1fe94036d461204ccf5b81a2e0363be"
     },
     {
-      "url": "/vilda_home_gabinet.js?v=11",
-      "sha256": "6de8a3633b9b67057f7d8df3f263274c9403b88e5ec1f2d7744335e780aec09e"
+      "url": "/vilda_home_gabinet.js?v=12",
+      "sha256": "7daf67f7b241eda22ea353c3dab8695d5b0fea284ee943388f3a20450ec9ba13"
     },
     {
       "url": "/vilda_home_visit_scene.css?v=2",

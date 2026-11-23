@@ -9,7 +9,7 @@ const record = (gnrhaStatus = 'brak', stage = '2') => ({
     puberty: { gnrhaStatus }, advanced: { testicularVolume: '4to6' } } }]
 });
 
-function harness({ lazyVault = false } = {}) {
+function harness({ lazyVault = false, preview = false } = {}) {
   const documentHandlers = {}, windowHandlers = {}, storage = new Map(), requests = [], notices = [];
   const lockHandlers = [], unlockHandlers = [];
   const emitDocument = (name, detail) => (documentHandlers[name] || []).forEach(handler => handler({ type: name, detail }));
@@ -27,6 +27,10 @@ function harness({ lazyVault = false } = {}) {
   };
   const vault = w.VildaVault;
   if (lazyVault) delete w.VildaVault;
+  if (preview) {
+    w.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    loadBrowserScript('vilda_perinatal_source.js', w);
+  }
   loadBrowserScript('vilda_puberty_source.js', w);
   const source = w.VildaPubertySource;
   const setId = id => {
@@ -43,6 +47,24 @@ function harness({ lazyVault = false } = {}) {
 }
 
 describe('Źródło pokwitania — tożsamość i generacja odczytu', () => {
+  it('podgląd bierze wywiad i wiek ciążowy z otwartej wizyty do czasu jej zamknięcia', () => {
+    const h = harness({ preview: true });
+    h.w.VildaPanelPacjent = { wlasciciel: () => A, nieaktualny: () => false };
+    h.w.lastLoadedData = { ...record('zakonczone', '3').snapshots[0].payload,
+      visit: { patientId: A }, perinatal: { gestationalWeeks: 34, gestationalDays: 1 } };
+    h.load(A);
+    expect(h.source.kontekstPacjenta(A)).toMatchObject({ status: 'ready',
+      puberty: { gnrhaStatus: 'zakonczone' }, state: { etap: '3' },
+      neonatalAge: { gestationalDays: { lower: 239, upper: 239 } } });
+    h.w.lastLoadedData = { ...record('brak', '4').snapshots[0].payload, visit: { patientId: A } };
+    h.emitDocument('vilda:data-applied');
+    expect(h.source.kontekstPacjenta(A)).toMatchObject({ status: 'ready',
+      puberty: { gnrhaStatus: 'brak' }, state: { etap: '4' } });
+    h.load(B);
+    expect(h.source.kontekstPacjenta(B)).toMatchObject({ status: 'unavailable', puberty: null, state: null });
+    expect(h.requests).toEqual([]);
+  });
+
   it('płeć źródła pozostaje częścią gotowego rekordu i nie wycieka do innej tożsamości ani loading', async () => {
     const h = harness();
     h.load(A); await h.resolve(0);

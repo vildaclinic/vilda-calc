@@ -4,6 +4,7 @@ import { applyOverviewRemindersHooks, reverseOverviewRemindersHooks } from './ho
 import { applyPatientNavigationHooks, reversePatientNavigationHooks } from './home-patient-navigation-auth-hooks.mjs';
 
 import { applyRegistrationAuthHooks, reverseRegistrationAuthHooks } from './home-registration-auth-hooks.mjs';
+import { applyPatientProfileAuthHooks, reversePatientProfileAuthHooks } from './patient-profile-auth-hooks.mjs';
 
 function applyOverviewHooks(source) {
   return applyEncounterNoteAuthHooks(applyInlinePatientHooks(applyOverviewRemindersHooks(source)));
@@ -22,12 +23,15 @@ function chartReferenceSex(source, reverse = false) {
   return source.replace(before, reverse ? previousChart : chartWithReferenceSex);
 }
 export function applyGabinetAuthHooks(source, inline = true) {
-  return chartReferenceSex(applyRegistration(source, inline));
+  return applyPatientProfileAuthHooks(chartReferenceSex(applyRegistration(source, inline)));
 }
 
 // The older reproducers also accept their historical inputs. Reapply exactly
 // the layers found on entry when replaying a change or writing their output.
 export function gabinetAuthLayers(source) {
+  const hasProfile = source.includes('/* BEGIN HOME PATIENT PROFILE EDIT */');
+  const input = source;
+  if (hasProfile) source = reversePatientProfileAuthHooks(source);
   if (!source.includes('/* BEGIN HOME PATIENT INLINE ADAPTER */') && !source.includes('i.VildaHomeRemindersRuntime?.ownsOverviewHost(host)')) {
     return { base: source, replay: value => value };
   }
@@ -39,8 +43,9 @@ export function gabinetAuthLayers(source) {
   const hasNavigation = navigation.includes('function openPatientInHome(');
   const overview = hasNavigation ? reversePatientNavigationHooks(navigation) : navigation;
   const base = reverseOverviewRemindersHooks(reverseInlinePatientHooks(reverseEncounterNoteAuthHooks(overview)));
-  const replay = hasReferenceSex ? value => applyGabinetAuthHooks(value, inline) : hasRegistration ? value => applyRegistration(value, inline)
+  const nativeReplay = hasReferenceSex ? value => chartReferenceSex(applyRegistration(value, inline)) : hasRegistration ? value => applyRegistration(value, inline)
     : hasNavigation ? value => applyPatientNavigationHooks(applyOverviewHooks(value)) : applyOverviewHooks;
-  if (replay(base) !== source) throw new Error('Gabinet AuthUI layers do not reproduce the current artifact.');
+  const replay = hasProfile ? value => applyPatientProfileAuthHooks(nativeReplay(value)) : nativeReplay;
+  if (replay(base) !== input) throw new Error('Gabinet AuthUI layers do not reproduce the current artifact.');
   return { base, replay };
 }

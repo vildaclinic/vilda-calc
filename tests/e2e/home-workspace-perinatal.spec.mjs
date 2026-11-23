@@ -88,6 +88,7 @@ test('home perinatal: Gabinet browse is read-only in Start and DocPro, and a new
   await expect(field(readonly, 'weight')).toHaveValue('1650');
   await expect(readonly.locator('[data-home-birth-field]:enabled, [data-home-birth-source]:enabled')).toHaveCount(0);
   await expect(save(readonly)).toBeHidden();
+  await expect(readonly.getByRole('button', { name: 'Wczytaj z kartoteki', exact: true })).toBeHidden();
   await expect(readonly.getByRole('button', { name: 'Wyczyść dane okołoporodowe', exact: true })).toBeHidden();
   await expect(readonly.locator('[data-home-birth-results]')).toBeVisible();
   await readonly.locator('.vhome-dialog-cancel').click();
@@ -102,6 +103,14 @@ test('home perinatal: Gabinet browse is read-only in Start and DocPro, and a new
   await expect(field(editable, 'weight')).toBeEditable();
   await expect(field(editable, 'weeks')).toBeEnabled();
   await expect(save(editable)).toBeVisible();
+  const originalCarry = await frame.evaluate(() => window.vildaBirthData);
+  const reference = editable.locator('[data-home-birth-source][value="intergrowth"]');
+  await reference.check();
+  await field(editable, 'weight').fill('1620');
+  await editable.getByRole('button', { name: 'Wczytaj z kartoteki', exact: true }).click();
+  await expect(field(editable, 'weight')).toHaveValue('1650');
+  await expect(reference).toBeChecked();
+  expect(await frame.evaluate(() => window.vildaBirthData)).toEqual(originalCarry);
   await field(editable, 'weight').fill('1700');
   await save(editable).click();
   await expect(editable).toBeHidden();

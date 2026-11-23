@@ -31,8 +31,8 @@
       "sha256": "ba1458c81acb45d2554722ce88de25e8d821231ae226a2f120045c67cc770217"
     },
     {
-      "path": "vilda_home_perinatal.js?v=2",
-      "sha256": "99b0a70ee134237afa89f952b31d99ed076dbc5f9d76dd8ffb8bf5fdd1789121"
+      "path": "vilda_home_perinatal.js?v=3",
+      "sha256": "7a697f863018945ff93d1f86ee020c436edfd604811b741dccc5b855a375b097"
     },
     {
       "path": "vilda_sga_birth_results.css?v=1",
@@ -107,16 +107,16 @@
       "sha256": "0280464c2496960fc20568b398fd0bb3f2dd7d57429cd70e6aa9452cab97b56b"
     },
     {
-      "path": "vilda_home_patient.js?v=7",
-      "sha256": "fccfb809ef8c13df6d65bc0323edbaed39eb0552389773bd54a563aeef81010d"
+      "path": "vilda_home_patient.js?v=8",
+      "sha256": "e10ccb283293364dc2240769afebfef550bbbb51b300d5b875099440bf62298c"
     },
     {
       "path": "vilda_home_patient.css?v=2",
       "sha256": "4d53f179f8ae5629b88b21f4682b768881ee395a69b295777ad37d0e3f398a36"
     },
     {
-      "path": "vilda_home_patient_native.js?v=7",
-      "sha256": "b571f2386552667c832f0264a3f671e355c09e8297e87b66304a4622982b8503"
+      "path": "vilda_home_patient_native.js?v=8",
+      "sha256": "79608c546cbce0221ccf7764d824ab1e4195252fadf1609fcf637a9fc38767e8"
     },
     {
       "path": "vilda_home_patient_native.css?v=5",
@@ -179,12 +179,12 @@
       "sha256": "32765be07af749f4ba5f8bf213633467d49d06c85eddee09d69ac35797853cdf"
     },
     {
-      "path": "vilda_home_encounter.js?v=6",
-      "sha256": "fec69f9d1515304840064807be122549908d2c785187f5f6f16a970be8d51b81"
+      "path": "vilda_home_encounter.js?v=7",
+      "sha256": "cf6a3878a01a0085927453d80221a6fff1fe94036d461204ccf5b81a2e0363be"
     },
     {
-      "path": "vilda_home_gabinet.js?v=11",
-      "sha256": "6de8a3633b9b67057f7d8df3f263274c9403b88e5ec1f2d7744335e780aec09e"
+      "path": "vilda_home_gabinet.js?v=12",
+      "sha256": "7daf67f7b241eda22ea353c3dab8695d5b0fea284ee943388f3a20450ec9ba13"
     },
     {
       "path": "vilda_home_visit_scene.css?v=2",
@@ -228,9 +228,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-1b3200568539.json",
-    "sha256": "1b3200568539f2b88e8ebefe144407b9b44b7fd5eba28fadad150fc349c44cb6",
-    "byteLength": 2042675
+    "path": "runtime/visit-ui-precache/precache-53d7e0413bc8.json",
+    "sha256": "53d7e0413bc83f75ee4c14b7dadfeebe737a47f0153fe5a83baddee642cb43e2",
+    "byteLength": 2053889
   },
   "historicalPacks": [
     {
@@ -657,6 +657,11 @@
       "path": "runtime/visit-ui-precache/precache-a70e56bd8ab6.json",
       "sha256": "a70e56bd8ab606435d39a526c45736c9f204ffc247eff8cccb0f6c0d2f3d025a",
       "byteLength": 2024267
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-1b3200568539.json",
+      "sha256": "1b3200568539f2b88e8ebefe144407b9b44b7fd5eba28fadad150fc349c44cb6",
+      "byteLength": 2042675
     }
   ]
 }

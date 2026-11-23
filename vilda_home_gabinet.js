@@ -47,8 +47,11 @@
       (!w.frameElement?.classList.contains('app-pane') || w.parent.VildaShell?.getCurrentRoute() === 'start');
   }
   function showMessage(text) { root.querySelector('.vhome-gabinet-message').textContent = text; }
+  function patientPresentation() {
+    return target && owns(target) ? w.VildaHomePatient?.getPatientPresentation?.(target) : null;
+  }
   function patientName() {
-    return [field('firstName'), field('lastName')].filter(Boolean).join(' ') || field('name') || 'Pacjent';
+    return patientPresentation()?.displayName || [field('firstName'), field('lastName')].filter(Boolean).join(' ') || field('name') || 'Pacjent';
   }
   function setVisitMenu(open) {
     const toggle = header.querySelector('[data-visit-actions]');
@@ -70,10 +73,11 @@
     breadcrumb.querySelector('span').textContent = parentLabel;
     breadcrumb.setAttribute('aria-label', 'Wróć do: ' + parentLabel);
     const draft = status.mode === 'new' || status.mode === 'edit';
-    const birth = w.VildaDobAge?.readISO(), day = draft && status.date ? new Date(status.date + 'T12:00:00') : new Date();
+    const identity = patientPresentation();
+    const birth = identity ? identity.dobISO : w.VildaDobAge?.readISO(), day = draft && status.date ? new Date(status.date + 'T12:00:00') : new Date();
     const age = birth && w.VildaDobAge.ageFromDobISO(birth, day);
     const years = field('age'), months = field('ageMonths');
-    const ageText = age ? w.VildaDobAge.describeAge(age) : years || months ? w.VildaDobAge.describeAge({years: Number(years), ageMonths: Number(months)}) : '';
+    const ageText = age ? w.VildaDobAge.describeAge(age) : years || months ? w.VildaDobAge.describeAge({years: Number(years), ageMonths: Number(months)}) + (identity ? ' w zapisie' : '') : '';
     header.querySelector('h1').textContent = patientName();
     header.querySelector('.gb-identity-meta').textContent = [ageText, birth && 'ur. ' + birth.split('-').reverse().join('.')].filter(Boolean).join(' · ');
     const badge = header.querySelector('.gb-encounter-state');
@@ -738,7 +742,7 @@
   d.addEventListener('vilda:auth-hidden', () => clearRegistration(true));
   ['vilda:auth-boot-settled','vilda:auth-hidden','vilda:session-changed','vilda:auth-loaded','vildaProAccessChanged',
     'vilda:main-session-restored','vilda:initial-main-session-restore-settled','vilda:intake-restore-readiness','vilda:data-applied','vilda:home-patient-inline-ready',
-    'vilda:home-encounter-changed','vilda:user-state-cleared'].forEach(name => d.addEventListener(name, schedule));
+    'vilda:home-encounter-changed','vilda:user-state-cleared','vilda:patient-profile-presentation-ready'].forEach(name => d.addEventListener(name, schedule));
   w.addEventListener('vilda:user-state-cleared', schedule);
   w.addEventListener('pageshow', schedule);
   w.addEventListener('pagehide', () => { dismissHistory(); clearRegistration(true); if (main) setScreen(null); sequence++; selecting = false; detach(true); if (picker) destroyPicker(); });

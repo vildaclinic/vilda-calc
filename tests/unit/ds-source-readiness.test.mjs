@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // Native source with controlled vault replies. All identities are fictional.
-function setup() {
+function setup({optIn = false, visitSource = false} = {}) {
   const requests = [], locks = [], signals = [];
   const values = new Map();
   let unlocked = true;
@@ -17,6 +17,8 @@ function setup() {
     getPatient: id => new Promise((resolve, reject) => { requests.push({ id, resolve, reject }); }),
   };
   win.document.addEventListener('vilda:ds-source-state', event => signals.push(event.detail));
+  if (optIn) win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+  if (visitSource) loadBrowserScript('vilda_perinatal_source.js', win);
   loadBrowserScript('vilda_ds_source.js', win);
   const source = win.VildaDsSource;
   return {
@@ -135,5 +137,52 @@ describe('DS source — owned asynchronous readiness', () => {
     e.requests[0].resolve(record('fictional-b', true)); await settle();
     expect(e.source.getState()).toMatchObject({ patientId: 'fictional-a', status: 'error' });
     expect(e.win.VildaPopulacjaPacjenta()).toBe('OGOLNA');
+  });
+
+  it.each([true, false])('keeps the active visit population (DS=%s) without reading the newest technical snapshot', ds => {
+    const e = setup({optIn:true, visitSource:true});
+    e.win.VildaPanelPacjent = {nieaktualny:() => false, wlasciciel:() => 'fictional-a'};
+    e.win.lastLoadedData = {visit:{patientId:'fictional-a'}, clinical:{downSyndrome:ds}};
+    e.load('fictional-a');
+    e.refresh();
+    expect(e.requests).toHaveLength(0);
+    expect(e.source.getState()).toEqual({patientId:'fictional-a', status:'ready', population:ds ? 'DS' : 'OGOLNA'});
+    // A new visit explicitly receives its own current profile-derived payload.
+    e.win.lastLoadedData = {visit:{patientId:'fictional-a', visitId:'fictional-new'}, clinical:{downSyndrome:!ds}};
+    e.win.document.dispatchEvent(new Event('vilda:data-applied'));
+    expect(e.requests).toHaveLength(0);
+    expect(e.source.getState()).toEqual({patientId:'fictional-a', status:'ready', population:ds ? 'OGOLNA' : 'DS'});
+    expect(e.signals.at(-1)).toEqual(e.source.getState());
+  });
+
+  it('never reuses a scoped visit diagnosis after readiness or the exact visit owner is lost', () => {
+    const e = setup({optIn:true, visitSource:true});
+    let stale = false;
+    e.win.VildaPanelPacjent = {nieaktualny:() => stale, wlasciciel:() => 'fictional-a'};
+    e.win.lastLoadedData = {visit:{patientId:'fictional-a'}, clinical:{downSyndrome:true}};
+    e.load('fictional-a');
+    expect(e.source.maFlage()).toBe(true);
+    stale = true;
+    expect(e.source.getState()).toEqual({patientId:'fictional-a', status:'pending', population:'OGOLNA'});
+    expect(e.source.maFlage()).toBe(false);
+    e.win.document.dispatchEvent(new Event('vilda:data-applied'));
+    stale = false;
+    e.win.lastLoadedData.visit.patientId = 'fictional-b';
+    e.refresh();
+    expect(e.source.getState()).toEqual({patientId:'fictional-a', status:'pending', population:'OGOLNA'});
+    e.win.lastLoadedData.visit.patientId = 'fictional-a';
+    e.refresh();
+    expect(e.source.maFlage()).toBe(true);
+    e.lock();
+    expect(e.source.getState()).toEqual({patientId:null, status:'idle', population:'OGOLNA'});
+    expect(e.requests).toHaveLength(0);
+  });
+
+  it('retains the legacy vault path when the opt-in panel has no guarded visit reader', async () => {
+    const e = setup({optIn:true});
+    await ready(e, 'fictional-a', true);
+    e.win.document.dispatchEvent(new Event('vilda:data-applied'));
+    expect(e.requests).toHaveLength(1);
+    expect(e.source.getState()).toEqual({patientId:'fictional-a', status:'ready', population:'DS'});
   });
 });

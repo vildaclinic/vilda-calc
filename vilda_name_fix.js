@@ -475,6 +475,18 @@
       ? detail.patientId
       : (detail.patientId != null ? String(detail.patientId) : '');
 
+    // The visit loader has already chosen the identity of this form. Reading
+    // the latest snapshot here would replace the name in a restored visit or
+    // undo a chart correction applied when a new visit was opened.
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ === true && detail.acceptedLoadAuthority) {
+      hidePrompt();
+      hideDone();
+      var visit = w.VildaPerinatalSource?.visitPayload(patientId);
+      var user = visit && visit.user;
+      if (user && (norm(user.lastName) || norm(user.firstName))) applyFields(user.lastName, user.firstName);
+      return;
+    }
+
     // Pacjent już rozstrzygnięty w tej sesji → odtwórz wybór, nie pytaj ponownie.
     if (patientId && resolved.has(patientId)) {
       hidePrompt();
