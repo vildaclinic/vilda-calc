@@ -3266,9 +3266,13 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(f).toContain("if (d.co !== 'nowa') { czekaja += 1; continue; }\n      await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k])));");
     // P-REV-MAX: czwarty zapis to podniesienie rev wersji tej samej karty przy odrzuceniu (gałąź ids.has), nie wersja spod innej karty.
     // P-PRZYPIETA-POLKRATA (S4 krok 2, W3): piąty — rekord złożony wersji tej samej karty (gałąź ids.has, Bgw_scal).
-    expect(f.match(/putSnapshotForUser\(/g), 'zapis wersji spod innej karty tylko w fazie przeniesień (+1: podniesienie rev, P-REV-MAX; +1: rekord złożony W3)').toHaveLength(5);
+    // E3-PR0e2a (P-SYNC-WLASCICIEL, przepisane razem z kodem): szósty — zapis samej późniejszej chwili przypisania wersji
+    // do karty z ładunku, gdy tutejsza treść zostaje, a rev zdalna nie jest wyższa (gałąź ids.has; tutejszy rekord bez
+    // innej zmiany). Wersja spod innej karty dalej tylko w fazie przeniesień.
+    expect(f.match(/putSnapshotForUser\(/g), 'zapis wersji spod innej karty tylko w fazie przeniesień (+1: podniesienie rev, P-REV-MAX; +1: rekord złożony W3; +1: sama chwila przypisania wersji tej samej karty, E3-PR0e2a)').toHaveLength(6);
     expect(f).toContain('await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bgw_w.rekord, Bm1(g, S)), Bgw_w.tresc, Bgw_w.rekord.payloadCipher)));');
     expect(f).toContain('await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign({}, g, { rev: mt(S) }, Bm1(g, S)), null, g.payloadCipher)));');
+    expect(f).toContain('} else if (Bsw_pole) {\n              await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign({}, g, Bm1(g, S)), null, g.payloadCipher)));');
     // faza przeniesień: 'zabierz' nie sprawdza rewizji z chwili decyzji, ale czyta wersję świeżo pod obiema blokadami
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
     expect(fp).toContain('const wersjeG = await I().listSnapshotsForUser(b, G);');
