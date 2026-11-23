@@ -9,6 +9,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // przy lastSavedAt > deletedAt) kasowało przywróconą kartę po cichu i stawiało nagrobek z powrotem. Tak samo
 // nagrobki notatek pacjenta z chmury wygrywały z notatkami z pliku.
 //
+// E3-PR0e1 (kontrola): import pliku starej karty na urządzeniu, z którego karta zniknęła przy synchronizacji
+// z urządzeniem, które ją scaliło — karta z nową wizytą z pliku przeżywa synchronizację, tak samo jak na urządzeniu,
+// które scaliło (przed zmianą i po niej; zielony na a7b2920b).
+//
 // Tu: prawdziwy vilda_vault.js na magazynie w pamięci; „chmura” to ładunek exportSyncPayload innego stanu,
 // scalany przez mergeSyncPayload — tę samą drogę, którą idzie pobranie. Dane wyłącznie FIKCYJNE.
 
@@ -153,5 +157,52 @@ describe('Import karty po usunięciu pacjenta przeżywa nagrobek z chmury', () =
     await v.importPatientFromEnvelope(plik, haslo);
     await v.mergeSyncPayload(await v.exportSyncPayload());
     expect(await stan(v, pid)).toEqual(ZOSTAJE);
+  });
+});
+
+describe('Import pliku starej karty po jej opróżnieniu przy synchronizacji (E3-PR0e1)', () => {
+  /* A: X (dwie wersje) i Y; pełna synchronizacja z B i C. C (bez wiedzy o scaleniu) dopisuje do X wizytę d i zapisuje
+     plik karty X. B: „Scal pacjentów” X → Y i poprawka drugiej wersji X już pod Y (rev 2); A poprawia ją w starej X (rev 1,
+     po scaleniu) i dostaje pełną kopię B: obie wersje X przechodzą pod Y, X znika (od E3-PR0e1 z nagrobkiem z ładunku).
+     Lekarz importuje plik C — na A albo na B (urządzeniu, które scaliło). [kontrola] Import zapisuje kartę z chwilą
+     importu (późniejszą niż nagrobek), więc X z wizytą d przeżywa następną pełną synchronizację — na A tak samo jak na B,
+     przed E3-PR0e1 i po nim; dawne wersje X wracają pod Y. */
+  const pelna = async (z, na) => { await na.mergeSyncPayload(JSON.parse(JSON.stringify(await z.exportSyncPayload()))); };
+  async function przygotuj() {
+    const { v: A } = await sejf();
+    const { v: B } = await sejf();
+    const { v: C, haslo: hasloC } = await sejf();
+    const x = await karta(A);
+    const y = (await A.savePatient({ ...payload([48]), name: 'Testowy Pawel', user: { ...payload([48]).user, firstName: 'Pawel' } }, { dedup: false })).patientId;
+    await pelna(A, B); await pelna(A, C);
+    const sid = (await A.getPatient(x)).snapshots[0].snapshotId;
+    await chwila(5);
+    const d = (await C.savePatient(payload([60, 66, 72]), { patientId: x, dedup: false })).snapshotId;
+    const plik = await C.exportPatientEnvelope(x);
+    await chwila(5);
+    await B.mergePatients(x, y);
+    await chwila(5);
+    await B.updateSnapshotPayload(y, sid, payload([60, 67]), { preserveSavedAt: true });
+    await chwila(5);
+    await A.updateSnapshotPayload(x, sid, payload([60, 68]), { preserveSavedAt: true });
+    await pelna(B, A);
+    expect(await A.getPatient(x), 'kontrola: X opróżniona na A').toBeFalsy();
+    return { A, B, C, hasloC, x, y, d, plik };
+  }
+  const zD = async (v, x, d) => { const p = await v.getPatient(x); return p ? p.snapshots.map((s) => (s.snapshotId === d ? 'd' : 'inna')).sort() : 'brak karty'; };
+
+  it('[kontrola] import pliku karty X z drugiego urządzenia (z wizytą d) na urządzeniu, z którego X zniknęła przy synchronizacji: X z d przeżywa następną pełną synchronizację, tak samo jak na urządzeniu, które scaliło', async () => {
+    const wynik = {};
+    for (const nazwa of ['A', 'B']) {
+      const p = await przygotuj();
+      const [v, inne] = nazwa === 'A' ? [p.A, p.B] : [p.B, p.A];
+      await v.importPatientFromEnvelope(p.plik, p.hasloC);
+      wynik[nazwa] = { poImporcie: (await zD(v, p.x, p.d)).includes('d') };
+      await chwila(5);
+      await pelna(inne, v);
+      wynik[nazwa].poSynchronizacji = await zD(v, p.x, p.d);
+    }
+    expect(wynik.A, 'A: karta z d przeżywa synchronizację').toEqual({ poImporcie: true, poSynchronizacji: ['d'] });
+    expect(wynik.A, 'A tak samo jak urządzenie, które scaliło').toEqual(wynik.B);
   });
 });

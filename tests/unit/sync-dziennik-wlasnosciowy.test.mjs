@@ -212,6 +212,17 @@
 // późniejszym zdarzeniem tej samej partii (świat 1020; model bez wiersza ze stanu, sejf bez koperty) i granica
 // w porównaniu partii, ziarno 1 i koalescencja 8 — 0 odesłań ze stanu.
 //
+// E3-PR0e1 (decyzja 1 właściciela z 2026-11-23; karta opróżniona przy scalaniu zachowuje znany nagrobek): blok „karta
+// opróżniona przy pełnej wymianie” — miejsce wizyty po „Scal pacjentów” w świecie A ≡ B (światy 1030 bez przełącznika
+// i 1031 z przełącznikiem; W1 ten sam przed zmianą i po niej, W4 — punkt stały po jednej pełnej wymianie, nagrobek karty
+// opróżnionej na obu klonach po pierwszej, bez wpisu ptomb w rejestrze łańcucha); na a7b2920b czerwony świat 1030 (druga
+// wymiana dopisuje nagrobek). Uprząż: przy E2_AB_ECHO=1 urządzenia katalogu p. 5 mają przełącznik odsyłania (pole okna
+// w zRejestrem), koperta jawna katalogu idzie przez applyEncryptedEvent koperty zaszyfrowanej kluczem odbiorcy (dotąd
+// mergeSyncPayload — bez odsyłania), wpisy katalogu mają jawną kopię i źródło, a model haków liczy odsyłanie także
+// u odbiorcy bez pola app; samokontrola w każdym przebiegu katalogu (okna z przełącznikiem, koperty odsyłania w E4b-1;
+// bez zmiennej — okna bez pola i zero kopert). Dotychczasowe przebiegi katalogu „z przełącznikiem” nie obejmowały więc
+// odsyłania. Bez zmiennej katalog bez zmian (zrzut E2_AB_P5 ten sam co przed zmianą uprzęży, poza czasami).
+//
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
 // cred. Pola karty zmienione bez snap tej karty w kroku niesie stomb z kartą (11.2), inaczej snap(karta, najnowsza
@@ -310,14 +321,19 @@ import path from 'node:path';
 
 // Kopia sejfu z rejestrem łańcucha (EMISJA): tekst raz na plik; okno z kopią ma otwartą bramkę (pole okna), a wynik
 // ładowania to rejestr okna — tablica wpisów łańcucha w kolejności wywołań Bem_doLancucha.
+// E3-PR0e1: przy E2_AB_ECHO=1 okno dostaje też przełącznik odsyłania (VILDA_EVENT_ECHO) — dotąd miały go tylko urządzenia
+// profili (dodatki w urzadzenie), a urządzenia katalogu p. 5 (s4d7-wspolne.mjs) nie. Okna katalogu trafiają do
+// OKNA_KATALOGU (samokontrola przełącznika w bloku deterministycznym p. 5; lista czyszczona na początku przebiegu).
 const ZRODLO_EMITEROW = zRejestremLancucha();
 function zRejestrem(win) {
   const lancuch = [];
   win.VILDA_EVENT_LOG = true;
+  if (ECHO_WSZYSTKIE) win.VILDA_EVENT_ECHO = true;
   zaladujZrodlo(win, ZRODLO_EMITEROW, { lancuch: (z) => { lancuch.push(z); } });
   return lancuch;
 }
-zaladowanieSejfu(zRejestrem); // urządzenia katalogu p. 5 (s4d7-wspolne.mjs)
+const OKNA_KATALOGU = [];
+zaladowanieSejfu((win) => { OKNA_KATALOGU.push(win); return zRejestrem(win); }); // urządzenia katalogu p. 5 (s4d7-wspolne.mjs)
 
 // ── Wyrocznia „nie zginęła ostatnia zmiana” (E3-PR0a; tests/support/ostatnia-zmiana.mjs, WYROCZNIA w nagłówku) ─────
 // E2_AB_WYROCZNIA=plik — naruszenia wyroczni (JSONL: punkty z naruszeniami i podsumowania ziaren); E2_AB_SCISLE=1 —
@@ -525,7 +541,11 @@ const NPIK = 'notatka pod inną kartą';
 //   tej karty leży po drugiej stronie pod inną kartą. O wersji z ładunku pod inną istniejącą kartą decyduje nowszy
 //   rekord („najpierw rev”, P-SYNC-WLASCICIEL), więc wersja z wyższą rev zostaje w starej karcie;
 // - „nagrobek karty opróżnionej” (niewidoczna): nagrobek karty P tylko po jednej stronie, karty P nie ma po żadnej —
-//   karta opróżniona przeniesieniem ostatniej wersji pod inną kartę znika bez nagrobka (vilda_vault.js:3662–3663);
+//   karta opróżniona przeniesieniem ostatniej wersji pod inną kartę znika bez nagrobka (Bsw_poOddaniu). Od E3-PR0e1
+//   karta znika ze znanym scalaniu nagrobkiem (z ładunku albo tutejszym); klasa zostaje, gdy scalanie, które opróżniło
+//   kartę, nagrobka nie znało, a koperta nagrobka przegrała tu wcześniej z późniejszym zapisem tej karty (np. wersja
+//   przyszła potem kopertą odsyłania, bez nagrobka — ziarno 5 profilu pełnego z przełącznikiem); koperta nagrobka, która
+//   przychodzi dopiero po kopercie wersji, zapisuje nagrobek drogą zbioru N;
 // - „rekord złożony po jednej stronie”: wersja na obu, ta sama chwila zmiany, inna treść; strona z późniejszą chwilą
 //   treści ma rekord złożony (treść z jednego rekordu, gwiazdka z drugiego: _pinnedState.zl, Bgw_zlozony) i wyższą rev.
 const MIEJSCE_WIZYTY = 'miejsce wizyty po „Scal pacjentów”';
@@ -825,7 +845,8 @@ const kartaKoperty = (k) => (k.event.kind === 'pnote' && Array.isArray(k.patient
 // E3-PR0c: src — 'echo' dla koperty odsyłania poprawionej wizyty (wpis Q z polem src; jawna kopia także przy S.echo).
 async function doKolejki(S, U, k, src = null) {
   if (U.jawnie) { // katalog p. 5: osobne konta, koperta jawna (bez szyfrowania — szyfrowanie pokrywa W3)
-    U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), k: Object.freeze(json(k)) }));
+    // E3-PR0e1: przy włączonym przełączniku także jawna kopia (jaw — ładunek modelu odsyłania) i źródło wpisu (src).
+    U.Q.push(Object.freeze({ kind: k.event.kind, key: k.event.key, atISO: k.event.atISO, pid: kartaKoperty(k), k: Object.freeze(json(k)), ...(zEchem(S) ? { jaw: Object.freeze(json(k)) } : {}), ...(zEchem(S) && src ? { src } : {}) }));
     S.stat.zdarzen += 1;
     return;
   }
@@ -908,9 +929,17 @@ async function mutacja(S, U, opis, fn, { zrodlo = 'emitery', operacja = null } =
 }
 
 // Zastosowanie partii u Y (applyEncryptedEvent; każdy status inny niż applied = błąd testu).
+// Katalog p. 5 (koperta jawna, osobne konta): bez przełącznika przez mergeSyncPayload (to samo scalanie, bez odsyłania);
+// E3-PR0e1: przy E2_AB_ECHO=1 — applyEncryptedEvent tej koperty zaszyfrowanej kluczem odbiorcy (to samo scalanie
+// i odsyłanie, które ma tylko applyEncryptedEvent).
 async function zastosuj(Y, partia, sposob = 'event') {
   for (const e of partia) {
-    if (e.k) { await Y.v.mergeSyncPayload(json(e.k)); continue; } // katalog p. 5: koperta jawna przez mergeSyncPayload
+    if (e.k && !ECHO_WSZYSTKIE) { await Y.v.mergeSyncPayload(json(e.k)); continue; } // katalog p. 5: koperta jawna przez mergeSyncPayload
+    if (e.k) {
+      const r = await Y.ev.applyEncryptedEvent((await Y.ev.encryptEvent(json(e.k))).env);
+      if (!r || r.status !== 'applied') throw new Error(`${Y.nazwa}: zdarzenie katalogu ${e.kind} ${e.key} → status ${r && r.status} ${r && (r.reason || r.code || '')}`);
+      continue;
+    }
     if (sposob === 'delta') { await Y.v.applyEncryptedDelta(e.env); continue; }
     const r = await Y.ev.applyEncryptedEvent(e.env);
     if (!r || r.status !== 'applied') throw new Error(`${Y.nazwa}: zdarzenie ${e.kind} ${e.key} → status ${r && r.status} ${r && (r.reason || r.code || '')}`);
@@ -1047,7 +1076,7 @@ function porownajHaki(S, Y, partia, model, emitery, wpisy, po) {
 // w S.echoWyslane); każda liczy się w S.stat.echo.
 async function haki(S, Y, partia, przed, po, stany = null, stanyEcha = null) {
   const wpisy = Y.lancuch.splice(0).filter((z) => !z.znacznik && z.uid === po.userId);
-  const echo = zEchem(S) && Y.app === 'N';
+  const echo = zEchem(S) && (Y.app === 'N' || Y.jawnie); // E3-PR0e1: urządzenia katalogu p. 5 (bez app) też odsyłają
   const jestEcho = (z) => echo && (z.kind === 'snap' || z.kind === 'stomb');
   const model = hakiModelu(Y, partia, przed, po, stany);
   const zbudowane = [];
@@ -2305,11 +2334,16 @@ function losowoscZiarna(ziarno) {
   vi.spyOn(c, 'randomUUID').mockImplementation(() => 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(los() * 16).toString(16)));
   vi.spyOn(Math, 'random').mockImplementation(() => losMath());
 }
+// E3-PR0e1: samokontrola przełącznika odsyłania w urządzeniach katalogu — po każdym przebiegu (nazwa, kolejność, tryb)
+// pole VILDA_EVENT_ECHO okien katalogu tego przebiegu i liczba kopert odsyłania (S.stat.echo); poza wynikiem przebiegu,
+// więc zrzut E2_AB_P5 jest ten sam co przed zmianą uprzęży.
+const KAT_ECHO = new Map();
 async function przebiegKat(nazwa, kol, tryb, ziarno) {
   vi.restoreAllMocks();
   losowoscZiarna(ziarno);
   sztucznyZegar();
   const scen = KATALOG[nazwa];
+  OKNA_KATALOGU.length = 0;
   const u = await PRZYGOTOWANIA[scen.przygotuj]();
   u.dziennik = []; u.warunki = []; u.warunkiBledne = false; u.slad = [];
   u.t0 = zegar.t;
@@ -2426,6 +2460,8 @@ async function przebiegKat(nazwa, kol, tryb, ziarno) {
     wynik.w4 = { widok: widoki(st4), stan: skrot(st4), pelny: st4, rund, stabilny, pary };
     wynik.wyrW4 = wyrOcena(S, 'W4', 'p5 W4', await wyrWidoki(S, U));
   }
+  KAT_ECHO.set(`${nazwa} ${kol} ${tryb}`, { echo: S.stat.echo || 0, okna: OKNA_KATALOGU.map((w) => w.VILDA_EVENT_ECHO) });
+  OKNA_KATALOGU.length = 0;
   return wynik;
 }
 // Klasy W4 p. 5 (tabela 'W4:p5'): predykat E1-katalog na kluczach D ścieżki blobów tej samej pary (paryBlob), dozwolenie
@@ -2912,6 +2948,13 @@ describe('A ≡ B, blok deterministyczny p. 5: katalog kosza (zdarzenia wobec bl
         KAT_WYNIKI[klucz] = { ...wynik, zmiana, e1: w4.e1, zd: w4.zd };
         if (process.env.E2_AB_P5) appendFileSync(process.env.E2_AB_P5, JSON.stringify({ klucz, ...wynik, zmiana, e1: w4.e1, zdZnane: w4.zd, w4ok: w4.ok, w4pary: w4.pary, blobPary: Object.fromEntries(Object.entries(bl.pary).map(([k, d]) => [k, d.map(skrotRoznicy)])), zd: { ...zd, pelny: undefined, wyr: undefined, wyrW4: undefined, w4: { ...zd.w4, pelny: undefined, pary: undefined } }, pelny: { zdarzenia: zd.pelny, blob: bl.pelny, w4: zd.w4.pelny }, wyrocznia: zbiorWyr([...zd.wyr, ...zd.wyrW4, ...bl.wyr]) }) + '\n');
         expect({ warunki: [zd.warunkiBledne, bl.warunkiBledne], oczekujace: zd.oczekujace, braki: zd.braki }, 'warunki kroków katalogu, kolejki dostarczone, nośnik').toEqual({ warunki: [false, false], oczekujace: false, braki: 0 });
+        // E3-PR0e1: samokontrola przełącznika odsyłania w urządzeniach katalogu — przy E2_AB_ECHO=1 każde okno obu
+        // przebiegów ma VILDA_EVENT_ECHO === true, a E4b-1 (obie kolejności) wysyła co najmniej jedną kopertę odsyłania;
+        // bez zmiennej — okna bez pola i zero kopert odsyłania.
+        const kontrolaEcha = ['zdarzenia', 'blob'].map((tr) => KAT_ECHO.get(`${nazwa} ${kol} ${tr}`));
+        expect(kontrolaEcha.map((x) => x.okna.length > 0 && x.okna.every((w) => w === (ECHO_WSZYSTKIE ? true : undefined))), `przełącznik odsyłania w oknach katalogu (${klucz})`).toEqual([true, true]);
+        if (!ECHO_WSZYSTKIE) expect(kontrolaEcha.map((x) => x.echo), `bez przełącznika — zero kopert odsyłania (${klucz})`).toEqual([0, 0]);
+        else if (nazwa === 'E4b-1') expect(kontrolaEcha[0].echo, `z przełącznikiem — koperty odsyłania w E4b-1 (${klucz})`).toBeGreaterThan(0);
         // Wyrocznia „nie zginęła ostatnia zmiana”: po zdarzeniach (W1), po W4 i w świecie samych blobów — każde naruszenie
         // z klasą z tabeli wyjątków (w świecie z listy klasy), a zbiór (klasa, świat) = literał KAT_WYR. Asercje miękkie
         // (expect.soft) przed literałami: komunikat CI ma i literał, i werdykt wyroczni.
@@ -7731,4 +7774,68 @@ describe('A ≡ B, odsyłanie ukrytego wpisu Kosza w partii (E3-PR0d2): wpis zdj
     expect(() => porownajEcho(S, Y, [{ kind: 'snap', key: 'P/v', jaw }, { kind: 'snap', key: 'P/v', k: jaw }], [{}, {}, {}], {}, [stomb, stomb]), 'drugi ładunek z v tylko jako koperta jawna katalogu').toThrow(/^odesłanie ponad granicę: A stomb:v 2 > 1/);
     expect(HAKI_NIEZGODNE.splice(0).length, 'niezgodności zapisane dla afterEach (AB7)').toBe(2);
   });
+});
+
+// E3-PR0e1 (decyzja 1 właściciela z 2026-11-23): „miejsce wizyty po „Scal pacjentów”” w świecie A ≡ B. A: P (x1 20 kg,
+// w 21 kg) i Q (30 kg); B — bliźniak. B: „Scal pacjentów” P → Q i poprawka w już pod Q (31 kg, rev 2); A — bez wiedzy
+// o scaleniu — gwiazdka w w P (rev 1); dostawa A → B; A: poprawka w w P (41 kg, rev 2); dostawa B → A, potem spoczynek.
+// Po samych zdarzeniach (W1) bez przełącznika odsyłania w zostaje w P na A, a na B jest w Q (miejsce wizyty) — tak samo
+// przed E3-PR0e1 i po nim (zmiany pojedyncze: koperty wersji przychodzą przed kopertą nagrobka). W4: pierwsza pełna
+// wymiana przenosi w pod Q i opróżnia P na A; od E3-PR0e1 P znika z nagrobkiem z ładunku, więc punkt stały zachodzi po
+// jednej wymianie (dotąd druga dopisywała nagrobek P na A). Nagrobek karty opróżnionej zapisuje magazyn — w rejestrze
+// łańcucha klonu A po pierwszej wymianie bez wpisu ptomb. Świat 1031 (przełącznik odsyłania włączony) — kontrola: koperta
+// odsyłania wersji przenosi w pod Q już w W1, ale bez nagrobka P (scalanie koperty wersji go nie zna), a nagrobek P
+// zapisuje pierwsza pełna wymiana drogą zbioru N. Świat swiat(1030|1031), Math.random z rng(0x7030|0x7031).
+describe('A ≡ B, karta opróżniona przy pełnej wymianie (E3-PR0e1): miejsce wizyty po „Scal pacjentów”', () => {
+  d1();
+  // Widok urządzenia: karty z wersjami (etykieta:masa, * — gwiazdka) i nagrobki pacjentów.
+  async function widokMiejsca(U, n) {
+    const et = (id) => n.get(id) || String(id).slice(0, 6);
+    const karty = [];
+    for (const p of U.stan.patients || []) {
+      const pp = await U.v.getPatient(p.patientId);
+      karty.push(`${et(p.patientId)}[${(pp ? pp.snapshots : []).map((s) => `${n.has(s.snapshotId) ? n.get(s.snapshotId) : 'm'}:${s.payload && s.payload.user ? s.payload.user.weight : '?'}${s.pinned ? '*' : ''}`).sort().join(',')}]`);
+    }
+    const nagr = (U.stan.tombstones || []).map((t) => et(t.patientId)).sort();
+    return [karty.sort().join(' '), nagr.length ? `nagr ${nagr.join(',')}` : ''].filter(Boolean).join(' | ');
+  }
+  for (const [nr, echo] of [[1030, false], [1031, true]]) {
+    it(`${echo ? '[kontrola] przełącznik odsyłania włączony' : '[czerwony na bazie] przełącznik odsyłania wyłączony'} (świat ${nr}): W1 — ${echo ? 'w pod Q na obu, A bez nagrobka P' : 'miejsce wizyty (w pod P na A, pod Q na B)'}; W4 — punkt stały po jednej pełnej wymianie, nagrobek P na obu klonach po pierwszej, w rejestrze łańcucha bez wpisu ptomb`, async () => {
+      ustaw(START);
+      const S = swiat(nr);
+      const los = rng(nr === 1030 ? 0x7030 : 0x7031);
+      vi.spyOn(Math, 'random').mockImplementation(() => (S.losAlt || los)());
+      S.w2s = false; S.nrKroku = 0; S.wyrSwiat = `karta opróżniona ${nr}`;
+      if (echo) { S.echo = true; S.stat.echo = 0; }
+      const u = await p6r4(S);
+      u.S = S;
+      const q = (u.A.stan.patients || []).find((p) => p.patientId === u.Q).snapshots[0].snapshotId;
+      u.n = new Map([[u.P, 'P'], [u.Q, 'Q'], [u.v, 'x1'], [u.w, 'w'], [q, 'q']]);
+      const { A, B } = u;
+      S.nrKroku = 1; await scal(u, B, u.P, u.Q);
+      S.nrKroku = 2; await popraw(u, B, u.w, 31);
+      S.nrKroku = 3; await p6gwiazdka(u, A, u.w, true);
+      S.nrKroku = 4; krok(); await dostawa(S, A, B, { w2s: false });
+      S.nrKroku = 5; await popraw(u, A, u.w, 41);
+      S.nrKroku = 6; krok(); await dostawa(S, B, A, { w2s: false });
+      expect(await spoczynek(S, A, B, { w2s: false }), raport(S, 'spoczynek')).not.toBe(null);
+      const W1 = { A: await widokMiejsca(A, u.n), B: await widokMiejsca(B, u.n) };
+      const poPierwszej = [];
+      const wymianaPO = async (X, Y, nr) => {
+        await rundaPO(X, Y);
+        if (nr === 1) {
+          const nagrP = (K) => (K.stan.tombstones || []).some((t) => t.patientId === u.P);
+          poPierwszej.push({ nagrobekP: [nagrP(X), nagrP(Y)], ptomb: [X, Y].map((K) => K.lancuch.filter((z) => z.kind === 'ptomb').length) });
+        }
+      };
+      const w = await w4(S, A, B, { tabela: 'W4' }, { runda: wymianaPO });
+      expect(W1, 'W1: widok po samych zdarzeniach').toEqual(echo
+        ? { A: 'Q[m:30,q:30,w:41*,x1:20]', B: 'Q[m:30,q:30,w:41*,x1:20] | nagr P' }
+        : { A: 'P[w:41*] Q[m:30,q:30,x1:20]', B: 'Q[m:30,q:30,w:41*,x1:20] | nagr P' });
+      if (echo) expect(S.stat.echo, 'koperty odsyłania w W1').toBe(2);
+      expect(w.warianty.map((x) => [x.wariant, x.punktStaly]), raport(S, 'W4: punkt stały po jednej pełnej wymianie')).toEqual([['PO-A', true], ['PO-B', true]]);
+      expect(w.ok, raport(S, 'W4') + '\n' + JSON.stringify(w.warianty, null, 1)).toBe(true);
+      expect(poPierwszej, 'po pierwszej pełnej wymianie: nagrobek P na obu klonach, w rejestrze łańcucha bez wpisu ptomb').toEqual([{ nagrobekP: [true, true], ptomb: [0, 0] }, { nagrobekP: [true, true], ptomb: [0, 0] }]);
+    }, 60_000);
+  }
 });

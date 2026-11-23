@@ -11,6 +11,10 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 //     liczniku 5; wpis kosza Y z wersją X znikał;
 //   - notatka X tylko w kopii lądowała pod X z nagrobkiem (niewidoczna sierota).
 //
+// Od E3-PR0e1 (decyzja 1 właściciela z 2026-11-23): karta opróżniona tu przy pełnej synchronizacji z urządzeniem, które
+// ją scaliło, ma nagrobek z ładunku — „Scal kopię konta” pomija ją jako scaloną, jak na urządzeniu, które scaliło (na
+// a7b2920b czerwony 1: X wracała z wersją z kopii); kontrola: wersja z kopii zapisana po scaleniu (D-4 A) — X wchodzi.
+//
 // Prawdziwy vilda_vault.js, magazyn w pamięci, dane wyłącznie FIKCYJNE.
 
 function magazyn() {
@@ -547,5 +551,68 @@ describe('P-KOPIA-POMIJA — strażnik wersji innej karty i kontrole', () => {
     const C = await sejf();
     const wynik = await C.v.mergeVaultBackup(kopia, A.haslo);
     expect(wynik).toMatchObject({ addedPatientCount: 2, addedSnapshotCount: 4, skippedPatients: [], foreignSnapshotCount: 0 });
+  });
+});
+
+describe('P-KOPIA-POMIJA — karta opróżniona tu przy synchronizacji z urządzeniem, które ją scaliło (E3-PR0e1)', () => {
+  /* A: X (dwie wersje), pełna synchronizacja z B i z C; potem Y (dwie wersje) na A i synchronizacja z B — C nie ma Y.
+     C (bez wiedzy o scaleniu) dopisuje do X wersję d i robi kopię konta (bez karty Y). B: „Scal pacjentów” X → Y
+     i poprawka drugiej wersji X już pod Y (rev 2); A poprawia ją w starej X (rev 1, po scaleniu) i dostaje pełną kopię B:
+     obie wersje X przechodzą pod Y, X znika. „Scal kopię konta” C na A: dotąd X wracała z wersją d (bez nagrobka X na A
+     scalenie tutaj nie było rozpoznane: d liczyła się jako własna wersja X, a karty Y nie ma w kopii); od E3-PR0e1 X
+     znika z nagrobkiem z ładunku — A pomija X jako scalonego z Y, tak samo jak urządzenie, które scaliło. Kontrola:
+     wersja d zapisana po scaleniu (kopia nowsza niż nagrobek) — X wchodzi na obu (D-4 A). */
+  async function przygotuj(dPoScaleniu) {
+    const A = await sejf(), B = await sejf(), C = await sejf();
+    const x = await karta(A.v, 'Testowy', 'Jan');
+    await C.v.mergeSyncPayload(await A.v.exportSyncPayload());
+    const y = await karta(A.v, 'Testowy', 'Jan');
+    await B.v.mergeSyncPayload(await A.v.exportSyncPayload());
+    const sid = (await A.v.getPatient(x)).snapshots[0].snapshotId;
+    const zrobD = async () => { await chwila(5); await C.v.savePatient(zapis('Testowy', 'Jan', [60, 66, 72]), { patientId: x, dedup: false }); };
+    if (!dPoScaleniu) await zrobD();
+    await chwila(5);
+    await B.v.mergePatients(x, y);
+    await chwila(5);
+    await B.v.updateSnapshotPayload(y, sid, zapis('Testowy', 'Jan', [60, 67]), { preserveSavedAt: true });
+    if (dPoScaleniu) await zrobD();
+    await chwila(5);
+    await A.v.updateSnapshotPayload(x, sid, zapis('Testowy', 'Jan', [60, 68]), { preserveSavedAt: true });
+    await A.v.mergeSyncPayload(await B.v.exportSyncPayload());
+    expect(await A.baza.getPatientForUser(A.uid, x), 'kontrola: X opróżniona na A').toBeFalsy();
+    expect((await stan(A))[y].wersje, 'kontrola: Y z wersjami X').toEqual((await stan(B))[y].wersje);
+    const kopiaC = await C.v.exportVaultBackup();
+    return { A, B, C, x, y, kopiaC };
+  }
+  const opisPominietych = (lista) => (lista || []).map((k) => ({ patientId: k.patientId, reason: k.reason, mergedIntoPatientId: k.mergedIntoPatientId, snapshotCount: k.snapshotCount, missingSnapshotCount: k.missingSnapshotCount }));
+
+  it('[czerwony na bazie] kopia konta z X z wersją d sprzed scalenia, bez karty Y: podgląd i scalenie pomijają X jako scalonego z Y (d tylko w pliku), jak na urządzeniu, które scaliło', async () => {
+    const p = await przygotuj(false);
+    const wyniki = {};
+    for (const [nazwa, d] of [['A', p.A], ['B', p.B]]) {
+      const przed = await stan(d);
+      const podglad = await d.v.previewVaultBackupMerge(p.kopiaC, p.C.haslo);
+      const wynik = await d.v.mergeVaultBackup(p.kopiaC, p.C.haslo);
+      wyniki[nazwa] = { podglad: opisPominietych(podglad.skippedPatients), dodane: podglad.addPatients.map((k) => k.patientId), wynik: opisPominietych(wynik.skippedPatients), dodanych: wynik.addedPatientCount };
+      expect(await stan(d), `${nazwa}: magazyn bez zmian`).toEqual(przed);
+    }
+    expect(wyniki.A, 'A: X pominięty jako scalony z Y').toEqual({
+      podglad: [{ patientId: p.x, reason: 'merged', mergedIntoPatientId: p.y, snapshotCount: 3, missingSnapshotCount: 1 }], dodane: [],
+      wynik: [{ patientId: p.x, reason: 'merged', mergedIntoPatientId: p.y, snapshotCount: 3, missingSnapshotCount: 1 }], dodanych: 0,
+    });
+    expect(wyniki.A, 'A tak samo jak urządzenie, które scaliło').toEqual(wyniki.B);
+  });
+
+  it('[kontrola] ta sama kopia z wersją d zapisaną po scaleniu (D-4 A): X wchodzi z d — tak samo jak na urządzeniu, które scaliło', async () => {
+    const p = await przygotuj(true);
+    const wyniki = {};
+    for (const [nazwa, d] of [['A', p.A], ['B', p.B]]) {
+      const podglad = await d.v.previewVaultBackupMerge(p.kopiaC, p.C.haslo);
+      const wynik = await d.v.mergeVaultBackup(p.kopiaC, p.C.haslo);
+      const s = await stan(d);
+      wyniki[nazwa] = { pominiete: opisPominietych(podglad.skippedPatients), dodane: podglad.addPatients.map((k) => [k.patientId, k.snapshotCount]), dodanych: wynik.addedPatientCount, x: s[p.x] ? s[p.x].licznik : null };
+    }
+    expect(wyniki.A).toEqual({ pominiete: [], dodane: [[p.x, 1]], dodanych: 1, x: 1 });
+    expect(wyniki.A).toEqual(wyniki.B);
   });
 });

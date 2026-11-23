@@ -32,6 +32,10 @@
 //        ważny kosz karty usuniętej unieważniony w scaleniu (M11h, W5P-3: cień zdjęty także z wyniku złączenia, L3);
 //        adapter bez magazynu; P-SESJA-ZAPISU: blokada w zdjęciu cienia źródła „Scal pacjentów” (M11i), przełączenie na
 //        konto z kartą o tym samym patientId po usunięciu rekordu źródła — cień karty tego konta zostaje (M11j);
+//        Obok M11c-2 (E3-PR0e1): ten sam wyścig, a wersja karty poprawiona tu przed chwilą usunięcia na drugim urządzeniu
+//        (zachowana chwila zapisu) — karta zostaje z poprawioną wersją i nową wizytą na obu urządzeniach; kontrola: nowa
+//        wizyta przed scaleniem. Zielone na a7b2920b; pilnuje, że karta zachowana na świeżym rekordzie nie traci wersji
+//        zmienionych przed chwilą usunięcia (dotąd żaden test tego nie sprawdzał).
 //   K  — koszt deterministycznie: scalenie bez zmian 0 zapisów rekordów cienia, rekord metadanych bez pełnych szyfrów.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -844,6 +848,51 @@ describe('P-CIEN-POZA-LISTA: cień kart usuniętych w tej sesji (W3P-1, decyzja 
     expect((await P.listPatients()).some((x) => x.patientId === pid), 'karta zostaje').toBe(true);
     expect(await karta(P, pid), 'cień zostaje').toEqual({ zaslepki: 11, pelnyCien: 0, rekordy: 11, koszZTrescia: 0 });
   }, 180_000);
+
+  // Wersja poprawiona tu przed chwilą usunięcia karty na drugim urządzeniu (zachowana chwila zapisu, późniejsza chwila
+  // zmiany) przy tym samym wyścigu (D-21 F2): Bsl_usunPacjenta zostawia kartę, a jej wersje zostają — także ta poprawiona.
+  // Kontrola: nowa wizyta zapisana przed scaleniem (karta poza zbiorem N od startu). Bez tego przypadku nic nie
+  // pilnowało, że karta zachowana na świeżym rekordzie nie traci wersji zmienionych przed chwilą usunięcia.
+  for (const wyscig of [true, false]) {
+    it(`nowa wizyta zapisana tu ${wyscig ? 'w trakcie scalenia z nagrobkiem karty (D-21 F2)' : 'przed scaleniem z nagrobkiem karty (kontrola)'}, a jej wersję poprawiono tu przed usunięciem karty na drugim urządzeniu: karta zostaje z poprawioną wersją (41 kg) i nową wizytą na obu urządzeniach`, async () => {
+      sztucznyZegar();
+      const K = await urzadzenie('K'), P = await urzadzenie('P');
+      const r = await zapisz(K, jan(120, 20));
+      const pid = r.patientId, v = r.snapshotId;
+      przesunZegar(M); await sync(K, P);
+      przesunZegar(M); await poprawMase(P, v, 41);
+      przesunZegar(M); await K.removePatient(pid);
+      const st = { n: null };
+      if (!wyscig) {
+        st.n = (await zapisz(P, jan(131, 33), { patientId: pid })).snapshotId;
+        przesunZegar(M); await sync(K, P);
+      } else {
+        const px = P.__px;
+        const hak = new Proxy(px, { get(cel, k) {
+          const f = cel[k];
+          if (typeof f !== 'function') return f;
+          return async (...a) => {
+            if (k === 'listTombstonesForUser' && st.n === null) {
+              st.n = 'w toku';
+              przesunZegar(M);
+              st.n = (await P.savePatient(jan(131, 33), { dedup: false, patientId: pid })).snapshotId;
+            }
+            return f.apply(cel, a);
+          };
+        } });
+        P.setStorageAdapter(hak); P.__px = hak;
+        try { przesunZegar(M); await sync(K, P); } finally { P.setStorageAdapter(px); P.__px = px; }
+      }
+      const masy = async (u) => {
+        const p = await u.getPatient(pid);
+        return p ? p.snapshots.map((q) => `${q.snapshotId === v ? 'v' : q.snapshotId === st.n ? 'n' : '?'}:${q.payload.user.weight}`).sort() : 'brak karty';
+      };
+      expect(await masy(P), 'P po scaleniu').toEqual(['n:33', 'v:41']);
+      przesunZegar(M); await sync(P, K);
+      przesunZegar(M); await sync(K, P);
+      expect({ P: await masy(P), K: await masy(K) }, 'po wymianie').toEqual({ P: ['n:33', 'v:41'], K: ['n:33', 'v:41'] });
+    }, 180_000);
+  }
 
   // „Scal pacjentów” S → T na K. Pełny ładunek K niesie nagrobek S: na P karta S znika (Bsl_usunPacjenta), wpisy S
   // zachowują jej patientId — cień S znika przy końcowym zapisie listy, jak na K (Bpu_usun źródła). K daje potem do kosza
