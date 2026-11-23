@@ -1584,16 +1584,16 @@
   "sha256": "b0e200f45ae28d4bf016b2e8a1d3de3a58b3d0f6da5b6beea6c88297c0b6af33"
  },
  "vilda_home_encounter.js": {
-  "v": 9,
-  "sha256": "8ebac64bddb4a7d793ee9058a378c16876b36d2c04f40879259fa128e6861c55"
+  "v": 10,
+  "sha256": "b682edb906d078b0e27c4ea759eec5e99d9f2d800d128fe30c2620893ee0e9df"
  },
  "vilda_home_gabinet.css": {
-  "v": 8,
-  "sha256": "161ae4fae8ed7e9b9a13c5b7548f2b648de4b9f3c47b98b9c08f0ed1327df173"
+  "v": 9,
+  "sha256": "fb9306380da3b38d8196b34ecf4d7a40da968fcb54367fc664731d8b9dd0b433"
  },
  "vilda_home_gabinet.js": {
-  "v": 15,
-  "sha256": "b16545b68c20de277d340cd7a8588b18d2cd7074974be10dc376411f769d0c85"
+  "v": 16,
+  "sha256": "dce1a11613c047d770a20b189a9c900470923202723e48d18e5a29a0b66d7d91"
  },
  "vilda_home_gabinet_quick.js": {
   "v": 1,

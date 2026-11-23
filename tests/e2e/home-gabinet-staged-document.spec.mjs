@@ -10,7 +10,7 @@ test('a staged plan creates a visit document on the ordinary encrypted account a
   const patientId = await frame.evaluate(async data => (await VildaVault.savePatient(data, { dedup: false })).patientId,
     fictionalPatient({ firstName: 'Etapowy' }));
   await choosePatient(frame, 'Etapowy');
-  await frame.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await frame.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
   await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, patientId)).toBe('new');
   const result = await frame.evaluate(async patientId => {
     const vault = VildaVault, id = () => crypto.randomUUID();

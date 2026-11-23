@@ -233,6 +233,29 @@
   function start(patientId, isCurrent, transition) {
     return loadVisit(patientId, 'new', null, null, isCurrent, transition);
   }
+  async function editDisplayedVisit(patientId, expected, isCurrent, onCancel) {
+    if (!expected || typeof isCurrent !== 'function') return false;
+    const original = working;
+    const snapshot = {visitId: expected.visitId, snapshotId: expected.snapshotId, rev: expected.revision};
+    if (typeof snapshot.visitId !== 'string' || !snapshot.visitId ||
+        typeof snapshot.snapshotId !== 'string' || !snapshot.snapshotId ||
+        !Number.isInteger(snapshot.rev) || snapshot.rev < 0) return false;
+    // The header's ownership outlives the native apply. The displayed browse
+    // selection is checked separately, before it is replaced by that apply.
+    const owned = () => current(original) && selected() === patientId && isCurrent();
+    function displayed() {
+      try {
+        if (!owned() || working !== original || original.patientId !== patientId || original.mode !== 'browse' ||
+            original.visitId !== snapshot.visitId || original.snapshotId !== snapshot.snapshotId || original.revision !== snapshot.rev ||
+            saving || recording || choiceRequest || trashChange ||
+            !w.VildaDataImportExport?.getSaveReadiness?.().ready || Number(w.__vildaLoadInFlightUntil) > Date.now()) return false;
+        const visit = w.VildaVisitContext?.capture(null, {patientId, readOnly: true});
+        return visit?.patientId === patientId && visit.visitId === snapshot.visitId;
+      } catch (_) { return false; }
+    }
+    if (loading || !displayed()) return false;
+    return loadVisit(patientId, 'edit', snapshot, null, owned, {beforeApply: displayed, onCancel});
+  }
 
   function canSave(patientId) {
     if (trashChange || !active(patientId) || working.mode === 'browse') return false;
@@ -494,7 +517,7 @@
     }
   });
   d.addEventListener('vilda:user-state-cleared', () => { working = null; notify(); });
-  w.VildaHomeEncounter = Object.freeze({load, start, state, save, canSave, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, captureDocumentationBinding, ensureRecorded,
+  w.VildaHomeEncounter = Object.freeze({load, start, editDisplayedVisit, state, save, canSave, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, captureDocumentationBinding, ensureRecorded,
     captureVisitTrash, restoreTrashedVisit, isIdentityOnly, profileDraft});
 })(window, document);
 

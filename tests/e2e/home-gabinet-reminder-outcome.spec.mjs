@@ -19,7 +19,7 @@ test('a result received during a new visit keeps the old reminder origin and its
   }, { patientId: ids.a, title });
   await choosePatient(frame, 'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await header.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
   await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
   const visit = await frame.evaluate(() => window.VildaDataImportExport.captureCurrentUserDataReadOnly().visit);
   const currentOrigin = { version: 1, visitId: visit.visitId, clinicalDateISO: visit.clinicalDateISO };

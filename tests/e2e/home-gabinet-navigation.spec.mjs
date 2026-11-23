@@ -76,7 +76,7 @@ async function expectOverview(start, id, name, weight) {
   await expect(header.getByRole('heading', { name: new RegExp(name) })).toBeVisible({ timeout: 15_000 });
   await expect(start.locator('.vilda-patient-database')).toBeHidden();
   await expect(header.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
-  await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true })).toBeVisible();
+  await expect(header.getByRole('button', { name: 'Nowa wizyta', exact: true })).toBeVisible();
   await expect(start.locator('#vhomePatientOverview > .vilda-auth-card')).toBeVisible();
   await expect(start.locator('#vildaLoadChoiceModal')).toBeHidden();
   await expect(start.locator('#weight')).toHaveValue(weight);
@@ -117,7 +117,7 @@ test('DocPro patient-card route keeps the active measurement-free visit and atta
     visits: await window.VildaVault.getPatientVisits(id),
   }), ids.a);
   const before = await records();
-  await start.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await start.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
   await expect.poll(() => start.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
   const visit = await start.evaluate(() => window.VildaDataImportExport.captureCurrentUserDataReadOnly().visit);
   expect(visit).toMatchObject({ patientId: ids.a, origin: 'explicit' });
@@ -179,7 +179,7 @@ test('DocPro keeps an active visit on cancellation and saves its local measureme
   await choosePatient(start, 'Antoni');
   const beforeA = await savedVisits(start, ids.a), beforeB = await savedVisits(start, ids.b);
   const header = start.locator('#vhomeGabinetHeader');
-  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await header.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
   const { visitId } = await start.evaluate(id => window.VildaHomeEncounter.state(id), ids.a);
   expect(visitId).toBeTruthy();
@@ -223,8 +223,9 @@ for (const visitKind of ['new', 'edit']) {
     const header = start.locator('#vhomeGabinetHeader');
     const saveLabel = visitKind === 'new' ? 'Zapisz wizytę' : 'Zapisz zmiany';
     if (visitKind === 'new') {
-      await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+      await header.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
     } else {
+      await header.getByRole('button', { name: 'Opcje', exact: true }).click();
       await header.getByRole('button', { name: 'Historia wizyt' }).click();
       await start.locator('#vhomeVisitHistory').getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
       await start.locator('#vhomeVisitDetail').getByRole('button', { name: 'Edytuj wizytę' }).click();
@@ -240,6 +241,7 @@ for (const visitKind of ['new', 'edit']) {
     if (visitKind === 'edit') {
       await openDocPro(page);
     } else {
+      await header.getByRole('button', { name: 'Opcje', exact: true }).click();
       await header.getByRole('button', { name: 'Historia wizyt' }).click();
       const history = start.locator('#vhomeVisitHistory');
       await history.getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
@@ -251,6 +253,7 @@ for (const visitKind of ['new', 'edit']) {
       await expect(editGuard).toBeHidden();
       await expect(history.getByRole('heading', { name: 'Wizyty pacjenta' })).toBeVisible();
       await history.getByRole('button', { name: /^Wróć/ }).click();
+      await expect(header.getByRole('button', { name: 'Opcje', exact: true })).toBeFocused();
       await expect(header.getByRole('tab', { name: 'Analiza', exact: true })).toHaveAttribute('aria-selected', 'true');
       expect(await current()).toEqual(working);
       await expect(start.locator('#height')).toHaveValue('159');

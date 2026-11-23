@@ -97,7 +97,7 @@ test('home perinatal: Gabinet browse is read-only in Start and DocPro, and a new
   expect(await snapshot(frame)).toEqual(before);
   expect(await saved()).toEqual(storedBefore);
 
-  await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await header.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
   await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('new');
   const editable = await show(frame);
   await expect(field(editable, 'weight')).toBeEditable();
