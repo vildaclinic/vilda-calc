@@ -1677,11 +1677,25 @@
     if (!d) return null;
     var r = d.r;
     if (r.sds == null) {
+      /* P-STATUS-KAFLE-ROWNE (decyzja wlasciciela 2026-11-23): na kafelku krotki powod, zeby
+       * kafel nie rozpychal rzedu; pelny opis idzie do panelu pod siatka, otwieranego
+       * strzalka — tak samo jak szczegoly policzonego SDS. */
+      var szczegolyOdmowy = [];
+      if (r.powod === 'okno-poza-zakresem' && r.zrodlo
+        && num(r.zrodlo.oknoMiesMin) != null && num(r.zrodlo.oknoMiesMax) != null && num(vel.gapM) != null) {
+        szczegolyOdmowy.push('Odstęp pomiarów: ' + fmt(vel.gapM, 0) + ' mies. Zakres odstępów tej normy: '
+          + fmt(r.zrodlo.oknoMiesMin, 0) + '–' + fmt(r.zrodlo.oknoMiesMax, 0) + ' mies.');
+      }
+      if (r.zrodlo && r.zrodlo.cytowanie) {
+        szczegolyOdmowy.push('Norma: ' + r.zrodlo.cytowanie + (r.zrodlo.pmid ? ' PMID ' + r.zrodlo.pmid : '') + '.');
+      }
       return {
         etykieta: 'SDS tempa',
         wartosc: null,
-        nota: 'nie policzono — ' + (r.opisPowodu || 'brak danych'),
-        podpis: null, linie: [], szczegoly: []
+        nota: 'nie policzono — ' + (r.opisPowoduKrotki || r.opisPowodu || 'brak danych'),
+        podpis: null,
+        linie: r.opisPowodu ? [r.opisPowodu] : [],
+        szczegoly: szczegolyOdmowy
       };
     }
     var linie = [];

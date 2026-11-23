@@ -366,8 +366,14 @@ describe('Kafelek stoi w rzędzie kart, nie w martwej gałęzi', () => {
 
   it('kafelek w „Statusie" nie niesie podpisu źródła — ten jest w rozwinięciu', () => {
     const auth = fs.readFileSync(path.join(korzen, 'vilda_auth_ui.js'), 'utf8');
-    const i = auth.indexOf('vhv-tile');
-    const blok = auth.slice(i - 1200, i + 1500);
+    // Cały blok kafelka SDS tempa: od jego zmiennych do bloku „Walidacji prognoz”.
+    // (Do P-STATUS-KAFLE-ROWNE było to okno ±1500 znaków wokół „vhv-tile”, które pękało
+    // przy każdym dopisku w tym bloku.)
+    const i = auth.indexOf('var Bh0=null,BhPanel=null');
+    const j = auth.indexOf('var Ce=null;try{var la=i.VildaGrowthPredictionValidation', i);
+    expect(i, 'znaleziono początek bloku kafelka').toBeGreaterThan(-1);
+    expect(j, 'znaleziono koniec bloku kafelka').toBeGreaterThan(i);
+    const blok = auth.slice(i, j);
     expect(blok, 'podpis nie idzie na kafelek').not.toMatch(/text:Bh0\.podpis/);
     expect(blok, 'rozwinięcie ma komplet szczegółów (w tym Norma … PMID)').toContain('Bh0.szczegoly.forEach');
   });

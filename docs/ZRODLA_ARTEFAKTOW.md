@@ -2864,6 +2864,44 @@ niż Włączenie mają dziś program edytowanego punktu (`wplywProgramuEdycji`, 
 `tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
 precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-STATUS-KAFLE-ROWNE — Karta pacjenta: kafelki „Statusu” jednego rozmiaru (`vilda_auth_ui.js` 582 → 583, `vilda_growth_prediction_validation.js` 14 → 15, 2026-11-23, makieta zaakceptowana przez właściciela)
+
+Opis reguły: `docs/clinical/ALGORITHMS.md`, wpis P-STATUS-KAFLE-ROWNE. Czytelne części tej samej zmiany są w plikach
+czytelnych: `vilda_height_velocity.js` (`OPIS_POWODU_KROTKI`, pole `opisPowoduKrotki`), `vilda_trajectory_analysis.js`
+(`hvSdsKafelek`: krótki powód, `linie` i `szczegoly` odmowy) i `vilda_auth_ui.css` (siatka). Zminifikowane miejsca
+zmienione kotwicami występującymi dokładnie raz (skrypt Python z licznikiem kotwicy, poza repozytorium; odtwarza wynik
+z `origin/audyt` 9662e33b); bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — showPatientCard, kafelek „Tempo wzrastania”
+// 1. Ie=Ee?"improve":null,Tw=Tf?Tf.wartosc+(Tf.odstep?" ("+Tf.odstep+(Tf.pozaOknem?", poza oknem oceny normy":"")+")":""):St(ut)+" cm/rok";
+//    ce.push(xt("Tempo wzrastania",Tw,Ee,Ie))}
+//    → Ie=Ee?"improve":null,/* P-STATUS-KAFLE-ROWNE … */Tw=Tf?Tf.wartosc:St(ut)+" cm/rok",
+//      TwS=Tf&&Tf.odstep?Tf.odstep+(Tf.pozaOknem?" \xB7 poza oknem oceny normy":""):null,TwK=xt("Tempo wzrastania",Tw,TwS||Ee,Ie);
+//      TwS&&Ee&&TwK.appendChild(e("div",{class:"vilda-patient-stat-extra",text:Ee}));ce.push(TwK)}
+// vilda_auth_ui.js — showPatientCard, kafelek „SDS tempa” (blok GROWTH-HV-STATUS)
+// 2. if(Bh0.wartosc==null)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
+//    else{Bh3.push(e("div",{class:"vilda-patient-stat-sub",style:"margin-top:3px;",text:"kliknij, aby rozwin\u0105\u0107"}));
+//    var Bh4=…;var Bh5=e("div",{class:"vilda-patient-stat vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0"},Bh4);
+//    → // P-STATUS-KAFLE-ROWNE …
+//      var BhOdm=Bh0.wartosc==null,BhMa=(Bh0.linie&&Bh0.linie.length)||(Bh0.szczegoly&&Bh0.szczegoly.length);
+//      if(!BhMa)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
+//      else{var Bh4=…;var Bh5=e("div",{class:BhOdm?"vilda-patient-stat vhv-tile vhv-odm":"vilda-patient-stat
+//      vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0","aria-expanded":"false"},Bh4);
+//    oraz w arkuszu wstrzykiwanym przez blok (vhv-style), po regule .vhv-tile.vhv-open .vhv-cev:
+//      ".vhv-tile.vhv-odm{opacity:.78}",   (przygaszenie odmowy klasą, nie stylem na elemencie — P-STYLE krok 5b)
+// 3. try{Bh5.classList.toggle("vhv-open",!Bh9)}catch(Bha){}};
+//    → try{Bh5.classList.toggle("vhv-open",!Bh9);Bh5.setAttribute("aria-expanded",Bh9?"false":"true")}catch(Bha){}};
+// vilda_growth_prediction_validation.js — Pe() (buildStatusSection), podpis kafelka „Walidacja prognoz”
+// 4. r("div",{class:"vilda-patient-stat-sub",text:a.points.length+" punkt\xF3w \xB7 kliknij, aby rozwin\u0105\u0107"})
+//    → /* P-STATUS-KAFLE-ROWNE … */r("div",{class:"vilda-patient-stat-sub",text:(function(_k){var _d=_k%10,_s=_k%100;
+//      return _k+(_k===1?" punkt":_d>=2&&_d<=4&&!(_s>=12&&_s<=14)?" punkty":" punkt\xF3w")})(a.points.length)})
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony. Zapis pacjenta, sejf, model tempa, silnik SDS tempa (liczby),
+panel trajektorii, opis pacjenta, podsumowanie i schowek — bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił
+`npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
