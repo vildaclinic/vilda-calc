@@ -44,7 +44,8 @@
 // ŹRÓDŁA (etykieta testu, nie wejście reguły): ZRODLA. Pół wymiany (w4) = Y scala pełny stan X, X jeszcze nie scala Y.
 // USUNIĘCIA PRZEZ SCALANIE: encja była przed albo w ładunku, po scaleniu jej nie ma. Ślad w stanie po (nagrobek karty,
 //   Kosz, wersja pod inną kartą, przywrócenie, nagrobek notatki …) albo „bez śladu” = utrata bez nośnika (karta
-//   opróżniona przez Bsw_poOddaniu bez nagrobka, wygaśnięcie wpisu Kosza w Bkz_czysc).
+//   opróżniona przez Bsw_poOddaniu bez nagrobka, gdy scalanie go nie znało — od E3-PR0e1; wygaśnięcie wpisu Kosza
+//   w Bkz_czysc).
 // ŻĄDANIA: bajty zdarzenia = rozmiar szyfrogramu {iv, data} (Bev_bajty, jak bytes wiersza kolejki); element ciała
 //   {"eid","iv","data"} = bajty + 45 B (eid 36 znaków); ciało = 13 + Σ elementów + (n − 1) (Bob_element, Bob_cialo);
 //   partia ≤ 200 zdarzeń i ciało ≤ 1 MiB, pierwsze niemieszczące się kończy partię (Bob_wez); zdarzenie
