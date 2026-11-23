@@ -1131,11 +1131,19 @@ describe('care-plan flow repairs preserve independent calendar and clinical fact
 
 it('keeps the origin visit of a care plan and the visit of each subsequent action', async () => {
   const d = await device();
-  const binding = (visitId, date) => ({
-    visitContext: {version:1, visitId, clinicalDateISO:date}, isCurrent: () => true, ensureRecorded: async () => true
-  });
-  const first = binding('fceacbed-3cbb-4fca-baca-eabbfdaaabc1', '2026-10-01');
-  const second = binding('fceacbed-3cbb-4fca-baca-eabbfdaaabc2', '2026-10-02');
+  const binding = async (visitId, date) => {
+    await d.vault.savePatient({ name:'Fikcyjna Zofia Plany',
+      user:{sex:'F',age:12,height:155,weight:44,measuredAtISO:date},
+      visit:{version:1,visitId,patientId:d.patientId,clinicalDateISO:date,createdAtISO:date+'T12:00:00Z',origin:'explicit'} },
+    {patientId:d.patientId,dedup:false});
+    return {
+      visitContext:{version:1,visitId,clinicalDateISO:date}, isCurrent:() => true,
+      ensureRecorded:async () => (await d.vault.getPatientVisits(d.patientId)).some(row =>
+        row.patientId === d.patientId && row.visitId === visitId && row.clinicalDateISO === date)
+    };
+  };
+  const first = await binding('fceacbed-3cbb-4fca-baca-eabbfdaaabc1', '2026-10-01');
+  const second = await binding('fceacbed-3cbb-4fca-baca-eabbfdaaabc2', '2026-10-02');
   let active = first;
   d.win.VildaHomeEncounter = {captureBinding: patientId => patientId === d.patientId ? active : null};
   const created = await d.vault.mutateCarePlan({patientId:d.patientId, operationId:operation(), action:'create', title:'Fikcyjny plan', goal:''}, first);
