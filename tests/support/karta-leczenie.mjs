@@ -211,3 +211,25 @@ export const opisKartyGh = (page) => kartaGh(page).evaluate((k) => {
 /** „Trend leczenia GH” w „Siatkach centylowych” (nagłówek bloku Pl) — liczba wystąpień. */
 export const trendWSiatkach = (page) => page.evaluate(() => [...document.querySelectorAll('.vilda-patient-tab-content[data-tab="traj"] p')]
   .filter((p) => /Trend leczenia GH/.test(p.textContent)).length);
+
+/**
+ * P-GH-PREPARAT-BIEZACY — zmiana preparatu GH (dane wyłącznie FIKCYJNE; karta-gh-preparat-biezacy*.spec.mjs).
+ * I_DO_G — Włączenie Increlex 40 mg (program IGF-1, 0,04 mg/kg na podanie), dwie Kontynuacje Genotropin 12 mg (SNP,
+ * 0,033 mg/kg/d); G_DO_I — Włączenie Genotropin 12 mg (SNP), Kontynuacja Increlex 40 mg (IGF-1).
+ */
+const PREP = (id, type, lata, mies, weight, height, dose, doseAbs, drug, program) => ({
+  id, type, ageYears: lata, ageMonths: mies, weight, height, dose, doseAbs, doseUnit: 'mg/kg/d', drug, program, igf1: null,
+});
+export const I_DO_G = {
+  name: 'Fikcyjny Ignacy',
+  user: { lastName: 'Fikcyjny', firstName: 'Ignacy', sex: 'M', age: 8, ageMonths: 0, height: 118.7, weight: 21.3 },
+  ghTherapyPoints: [PREP('ig-s', 'start', 7, 0, 18, 110, 0.08, 1.44, 'Increlex 40 mg', 'IGF-1'),
+    PREP('ig-c1', 'continue', 7, 6, 19.6, 114.6, 0.033, 0.65, 'Genotropin 12 mg', 'SNP'),
+    PREP('ig-c2', 'continue', 8, 0, 21.3, 118.7, 0.033, 0.7, 'Genotropin 12 mg', 'SNP')],
+};
+export const G_DO_I = {
+  name: 'Fikcyjny Gerwazy',
+  user: { lastName: 'Fikcyjny', firstName: 'Gerwazy', sex: 'M', age: 7, ageMonths: 6, height: 114.6, weight: 19.6 },
+  ghTherapyPoints: [PREP('gi-s', 'start', 7, 0, 18, 110, 0.025, 0.45, 'Genotropin 12 mg', 'SNP'),
+    PREP('gi-c', 'continue', 7, 6, 19.6, 114.6, 0.08, 1.6, 'Increlex 40 mg', 'IGF-1')],
+};
