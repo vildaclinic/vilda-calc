@@ -42,7 +42,7 @@ async function compareSources(dialog) {
 }
 
 test('home perinatal: Gabinet browse is read-only in Start and DocPro, and a new visit restores editing', async ({ page }) => {
-  const { frame } = await prepareGabinet(page);
+  let { frame } = await prepareGabinet(page);
   const payload = { ...fictionalPatient({ firstName: 'Perinatalny' }), perinatal: PERINATAL,
     birth: { sourceChoice: 'niklasson', sourceKeys: ['niklasson'], sex: 'male', weeks: '34', days: '2',
       weight: '1650', length: '41', head: '29', hasComputed: false } };
@@ -54,7 +54,7 @@ test('home perinatal: Gabinet browse is read-only in Start and DocPro, and a new
   }, payload);
   await readyForPatient(frame);
   await choosePatient(frame, 'Perinatalny');
-  const header = frame.locator('#vhomeGabinetHeader');
+  let header = frame.locator('#vhomeGabinetHeader');
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('browse');
   const saved = () => frame.evaluate(id => VildaVault.getPatient(id).then(patient => patient.snapshots), id);
@@ -74,6 +74,12 @@ test('home perinatal: Gabinet browse is read-only in Start and DocPro, and a new
   await expect(readonlyDocpro.locator('#sgaBirthWeight')).not.toBeEditable();
   await expect(readonlyDocpro.locator('#sgaBirthWeeks')).toBeDisabled();
   await (await visibleChromeMenu(page)).locator('a[href="index.html"]').click();
+  await expect(page.locator('iframe.app-pane[title="Start"]')).toBeVisible({ timeout: 15_000 });
+  frame = await shellFrame(page);
+  header = frame.locator('#vhomeGabinetHeader');
+  await expect(header.getByRole('tab', { name: 'Analiza', exact: true })).toBeVisible({ timeout: 15_000 });
+  expect(await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(id);
+  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('browse');
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await expect(frame.locator('#vhomePerinatalButton')).toBeEnabled();
 

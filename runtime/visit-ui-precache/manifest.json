@@ -183,8 +183,8 @@
       "sha256": "fec69f9d1515304840064807be122549908d2c785187f5f6f16a970be8d51b81"
     },
     {
-      "path": "vilda_home_gabinet.js?v=10",
-      "sha256": "858615d9d2a809422dbb258bf59c9278c9a3cf1e1e63ae581a2f0a1050586c22"
+      "path": "vilda_home_gabinet.js?v=11",
+      "sha256": "6de8a3633b9b67057f7d8df3f263274c9403b88e5ec1f2d7744335e780aec09e"
     },
     {
       "path": "vilda_home_visit_scene.css?v=2",
@@ -228,9 +228,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-95b1b63717a2.json",
-    "sha256": "95b1b63717a26ad5ac97a23da655180276e7b9e1b81147c6db47844401e3122f",
-    "byteLength": 2042642
+    "path": "runtime/visit-ui-precache/precache-1b3200568539.json",
+    "sha256": "1b3200568539f2b88e8ebefe144407b9b44b7fd5eba28fadad150fc349c44cb6",
+    "byteLength": 2042675
   },
   "historicalPacks": [
     {
