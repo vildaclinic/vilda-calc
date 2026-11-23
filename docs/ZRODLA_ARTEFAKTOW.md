@@ -2886,8 +2886,10 @@ z `origin/audyt` 9662e33b); bez ponownej minifikacji.
 //    → // P-STATUS-KAFLE-ROWNE …
 //      var BhOdm=Bh0.wartosc==null,BhMa=(Bh0.linie&&Bh0.linie.length)||(Bh0.szczegoly&&Bh0.szczegoly.length);
 //      if(!BhMa)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
-//      else{var Bh4=…;var BhA={class:BhOdm?"vilda-patient-stat vhv-tile":"vilda-patient-stat vilda-patient-stat--ok vhv-tile",
-//      role:"button",tabindex:"0","aria-expanded":"false"};BhOdm&&(BhA.style="opacity:.78");var Bh5=e("div",BhA,Bh4);
+//      else{var Bh4=…;var Bh5=e("div",{class:BhOdm?"vilda-patient-stat vhv-tile vhv-odm":"vilda-patient-stat
+//      vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0","aria-expanded":"false"},Bh4);
+//    oraz w arkuszu wstrzykiwanym przez blok (vhv-style), po regule .vhv-tile.vhv-open .vhv-cev:
+//      ".vhv-tile.vhv-odm{opacity:.78}",   (przygaszenie odmowy klasą, nie stylem na elemencie — P-STYLE krok 5b)
 // 3. try{Bh5.classList.toggle("vhv-open",!Bh9)}catch(Bha){}};
 //    → try{Bh5.classList.toggle("vhv-open",!Bh9);Bh5.setAttribute("aria-expanded",Bh9?"false":"true")}catch(Bha){}};
 // vilda_growth_prediction_validation.js — Pe() (buildStatusSection), podpis kafelka „Walidacja prognoz”

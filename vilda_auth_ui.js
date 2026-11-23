@@ -4005,6 +4005,7 @@ if(Bh0){(function(){try{if(i.document.getElementById("vhv-style"))return;var Bs=
 Bs.textContent=[".vhv-tile{cursor:pointer;position:relative}",
 ".vhv-tile .vhv-cev{position:absolute;top:10px;right:12px;color:#0F6E56;font-size:.9rem;transition:transform .2s}",
 ".vhv-tile.vhv-open .vhv-cev{transform:rotate(180deg)}",
+".vhv-tile.vhv-odm{opacity:.78}",
 ".vhv-panel{border:1.5px solid #9FE1CB;border-radius:14px;padding:14px 16px 16px;margin:10px 0 4px;background:#fff}",
 ".vhv-panel .vhv-line{font-size:.85rem;line-height:1.5;color:#0f2b33;font-weight:600;margin-bottom:8px}",
 ".vhv-panel .vhv-note{font-size:.8rem;line-height:1.55;color:#5b6672;margin:0 0 7px}",
@@ -4019,8 +4020,7 @@ var BhOdm=Bh0.wartosc==null,BhMa=(Bh0.linie&&Bh0.linie.length)||(Bh0.szczegoly&&
 if(!BhMa)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
 else{
 var Bh4=[e("div",{class:"vhv-cev",text:"\u25BE"})].concat(Bh3);
-var BhA={class:BhOdm?"vilda-patient-stat vhv-tile":"vilda-patient-stat vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0","aria-expanded":"false"};BhOdm&&(BhA.style="opacity:.78");
-var Bh5=e("div",BhA,Bh4);
+var Bh5=e("div",{class:BhOdm?"vilda-patient-stat vhv-tile vhv-odm":"vilda-patient-stat vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0","aria-expanded":"false"},Bh4);
 var Bh6=[];Bh0.linie.forEach(function(Bh7){Bh6.push(e("div",{class:"vhv-line",text:Bh7}))});
 Bh0.szczegoly.forEach(function(Bh7){Bh6.push(e("p",{class:"vhv-note",text:Bh7}))});
 BhPanel=e("div",{class:"vhv-panel",style:"display:none"},Bh6);

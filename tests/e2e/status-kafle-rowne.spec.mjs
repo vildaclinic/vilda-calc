@@ -120,6 +120,7 @@ test.describe('Status Karty pacjenta — kafelki jednego rozmiaru (komputer)', (
     await expect(sds, 'pełne zdanie nie stoi na kafelku').not.toContainText('Krótsze odstępy');
     await expect(pane, 'o rozwijaniu mówi sama strzałka').not.toContainText('kliknij, aby rozwinąć');
     await expect(sds).toHaveAttribute('aria-expanded', 'false');
+    await expect(sds, 'odmowa przygaszona klasą jak dotąd stylem').toHaveCSS('opacity', '0.78');
 
     await sds.click();
     await expect(sds).toHaveAttribute('aria-expanded', 'true');

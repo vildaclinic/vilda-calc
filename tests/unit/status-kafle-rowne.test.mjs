@@ -114,8 +114,9 @@ describe('Karta pacjenta (vilda_auth_ui.js): podpisy kafelków', () => {
 
   it('SDS tempa: o rozwijaniu mówi sama strzałka; odmowa też się rozwija, przygaszona', () => {
     expect(auth).not.toContain('kliknij, aby rozwin\\u0105\\u0107');
-    expect(auth).toContain('BhOdm?"vilda-patient-stat vhv-tile":"vilda-patient-stat vilda-patient-stat--ok vhv-tile"');
-    expect(auth).toContain('BhOdm&&(BhA.style="opacity:.78")');
+    expect(auth).toContain('BhOdm?"vilda-patient-stat vhv-tile vhv-odm":"vilda-patient-stat vilda-patient-stat--ok vhv-tile"');
+    expect(auth, 'przygaszenie odmowy klasą w arkuszu, nie stylem na elemencie (P-STYLE)')
+      .toContain('".vhv-tile.vhv-odm{opacity:.78}"');
     expect(auth).toContain('Bh5.setAttribute("aria-expanded",Bh9?"false":"true")');
   });
 });

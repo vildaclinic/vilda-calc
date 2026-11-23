@@ -47177,7 +47177,8 @@ oknem oceny normy)” dużą czcionką), a SDS tempa — trzy zdania powodu odmo
    w `vilda_height_velocity.js`, pole wyniku `opisPowoduKrotki`; wynik policzony ma `null`). Kafelek rozwija się
    strzałką ▾ jak wynik policzony; panel pod siatką: pełny powód (`opisPowodu`), przy odstępie poza zakresem — „Odstęp
    pomiarów: N mies. Zakres odstępów tej normy: a–b mies.” (z danych normy: `oknoMiesMin`, `oknoMiesMax`) i cytowanie
-   z PMID. Kafelek odmowy zostaje przygaszony (`opacity: .78`), bez koloru „ok”.
+   z PMID. Kafelek odmowy zostaje przygaszony (`opacity: .78`, klasa `vhv-odm` w arkuszu bloku — nie styl na elemencie,
+   P-STYLE), bez koloru „ok”.
 4. Bez dopisku „kliknij, aby rozwinąć” na kafelkach „SDS tempa” i „Walidacja prognoz”; kafelek SDS tempa ma
    `aria-expanded`.
 5. „Walidacja prognoz”: liczba punktów odmieniona („1 punkt”, „2 punkty”, „5 punktów”, „22 punkty”); dotąd zawsze
