@@ -35,7 +35,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // that lost to the patient tombstone here; dormant behind the same hidden switch) and E3-PR0e1 (a card emptied by the
 // move phase of the synchronization merge disappears together with the patient tombstone known to that merge, from
 // the payload or local, written only when no local tombstone or an earlier one exists; in effect at once).
-const BASE = 'c6f210c65e3d97cf5adb9ad79a42587ca05ebd2eb672f4491580048beabbcb61';
+const BASE = '75fa66c9e580e9ac051c7300b621de8cb03ede637cad026afc0f15c7b1a0ec68';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

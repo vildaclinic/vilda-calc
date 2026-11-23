@@ -4394,12 +4394,17 @@ async function Bsw_poprawTresc(p, teraz, opcje) {const PatientClinicalOperationA
 // przy zapisie z otwartego formularza G albo przy „Scal kopie konta”, a nagrobek dochodzil dopiero w nastepnej
 // wymianie. Znany nagrobek nie jest nowy ani z data G: to ten sam nagrobek, ktory urzadzenie scalajace juz wyslalo,
 // wiec na trzecim urzadzeniu usunie tylko to, co usunalby oryginal, a tu przegral juz z zapisem G, wiec nie wygra
-// z nim ani z pozniejszym (Bsl_zdejmijNagrobek zostawia przegrany nagrobek, gdy karty nie ma). Bez znanego nagrobka
-// (np. wersja przyszla koperta albo delta bez nagrobka G) — jak dotad bez nagrobka: karta G nie zostala usunieta przez
-// uzytkownika, wszystkie jej wersje sa nowsze pod F, wiec inne urzadzenia oprozniaja G ta sama regula, a nagrobek
-// z data G (np. z poprawki G na tym urzadzeniu) moglby wygrac na trzecim urzadzeniu z zapisem G, ktorego tu nie znamy,
-// i usunac go razem z karta. Przy decyzji 'zabierz' bez tej reguly: G jest w zbiorze N, a nagrobek G zapisuje zaraz
-// po fazie Bsl_usunPacjenta (ten sam stan).
+// z nim ani z pozniejszym (Bsl_zdejmijNagrobek zostawia przegrany nagrobek, gdy karty nie ma). Ten nagrobek moze
+// jednak dotrzec dalej, niz dotarl oryginal: gdy urzadzenie scalajace juz sie nie synchronizuje, a pelny eksport tego
+// urzadzenia zastapil w chmurze jego ladunek, wizyta zapisana w G na trzecim urzadzeniu przed scaleniem i nieznana
+// scalajacemu ginie tam teraz tak, jak zginelaby od oryginalu (dotad przezywala tylko dlatego, ze nagrobek tu znikal;
+// jak F-R2 przy Bkz_usunZObcych; wizyty nieznane scalajacemu — E3-PR0f). Bez znanego nagrobka (wersja przyszla koperta
+// albo delta bez nagrobka G) — jak dotad bez nagrobka; nagrobek dopisze pozniej koperta albo delta nagrobka G droga
+// zbioru N, o ile wczesniej nie przegrala tu z zapisem G. Powod dawnej zasady zostaje: karta G nie zostala usunieta
+// przez uzytkownika, wszystkie jej wersje sa nowsze pod F, wiec inne urzadzenia oprozniaja G ta sama regula,
+// a nagrobek z data G (np. z poprawki G na tym urzadzeniu) moglby wygrac na trzecim urzadzeniu z zapisem G, ktorego
+// tu nie znamy, i usunac go razem z karta. Przy decyzji 'zabierz' bez tej reguly: G jest w zbiorze N, a nagrobek G
+// zapisuje zaraz po fazie Bsl_usunPacjenta (ten sam stan).
 // Decyzja 'zabierz' (p.zabierz, G w zbiorze N — zaraz zniknie): wersja przechodzi takze wtedy, gdy zmieniono ja tu po
 // decyzji — rekord G nie moze wygrac z karta, ktora znika — z rekordem W3 obu kopii (Bsw_rekordW3 na swiezym odczycie:
 // poprawka zrobiona w miedzyczasie w innej karcie przegladarki, pod blokada G, przechodzi pod F, o ile jest pozniejsza
@@ -4510,11 +4515,12 @@ async function Bsw_nastepca(ctx, p) {
 // znika razem z nim. Najpierw usuniecie karty, potem odczyt tutejszego nagrobka G (Bpu_nagrobek) i zapis znanego tylko
 // wtedy, gdy tutejszego nie ma albo jest wczesniejszy — pozniejszy zostaje (jak Bsl_lok w Bsl_usunPacjenta); odczyt
 // i zapis tylko w sesji scalania (Bses_pilnuj przed odczytem i tuz przed zapisem, bez await pomiedzy). Zapis przez
-// magazyn, bez wiersza kolejki zdarzen w chwili scalania (jak nagrobek w Bkz_usunZObcych). Blad usuniecia karty albo
-// zapisu nagrobka przerywa scalanie jak kazdy zapis tej fazy (bez polykania): karta jest juz usunieta, wersja lezy
-// pod F, a ponowienie tego samego ladunku zapisuje nagrobek droga zbioru N (Bsl_usunPacjenta). Bez nagrobekISO
-// (nagrobek nieznany, decyzja 'zabierz', Bsw_przeniesPrzezyta — tam nagrobek stawia Bsl_usunPacjenta) — bez nagrobka,
-// jak dotad.
+// magazyn, bez wiersza kolejki zdarzen w chwili scalania (jak nagrobek w Bkz_usunZObcych). Bledy przerywaja scalanie
+// jak kazdy zapis tej fazy (bez polykania). Blad zapisu nagrobka: karta jest juz usunieta, wersja lezy pod F,
+// a ponowienie tego samego ladunku zapisuje nagrobek droga zbioru N (Bsl_usunPacjenta). Blad usuniecia karty (przed
+// nagrobkiem): karta zostaje bez wersji i bez nagrobka, a ponowienie jej nie usuwa (wersji do przeniesienia juz nie ma,
+// zapis karty jest pozniejszy niz nagrobek, wiec nie trafia do zbioru N) — jak dotad. Bez nagrobekISO (nagrobek
+// nieznany, decyzja 'zabierz', Bsw_przeniesPrzezyta — tam nagrobek stawia Bsl_usunPacjenta) — bez nagrobka, jak dotad.
 async function Bsw_poOddaniu(G, rekG, zostalo, pozostale, opcje, nagrobekISO) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   const Bng_n = zostalo > 0 ? await Bng_zmiana(rekG, pozostale, null) : null;
   Bses_pilnuj(opcje); // P-CHMURA-OPIS: karta G tylko w sesji scalania, bez await przed zapisem
@@ -4557,7 +4563,8 @@ async function Bpu_nagrobek(patientId) {
  * nagrobka: niepobrana, z pliku, nagrobek przyciety po 365 dniach) — zapis jak dotad. Karta oprozniona tu przy
  * synchronizacji (faza przeniesien zabrala jej ostatnia wersje pod karte, z ktora ja scalono) ma od E3-PR0e1 nagrobek,
  * gdy scalanie go znalo (Bsw_poOddaniu) — odmowa ze wskazaniem karty docelowej, jak na urzadzeniu, ktore scalilo; bez
- * znanego nagrobka (np. wersje przyszly koperta albo delta bez nagrobka tej karty) — zapis jak dotad.
+ * znanego nagrobka (wersje przyszly koperta albo delta bez nagrobka tej karty) — zapis jak dotad, dopoki nagrobek nie
+ * dojdzie osobno (koperta albo delta nagrobka, Bsl_usunPacjenta).
  */
 const Bzu_pamiec = new Map();
 

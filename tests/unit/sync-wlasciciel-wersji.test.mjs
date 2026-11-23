@@ -43,11 +43,13 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // w starej karcie na urządzeniu, które o „Scal pacjentów” nie wiedziało, trafia do tej wizyty w karcie scalonej na
 // urządzeniu, które scaliło karty (KS1–KS9); na 816282da czerwone 27 (KS1–KS5 i strażnik źródła KS9), kontrole KS6–KS8
 // zielone.
-// Od E3-PR0e1 (decyzja 1 właściciela z 2026-11-23) 382 testy: +20 — karta opróżniona w fazie przeniesień znika ze
-// znanym nagrobkiem „Scal pacjentów” (pełna kopia, delta nagrobka z kartą docelową, błąd zapisu nagrobka — czerwone, oraz
-// kontrole: delta karty przed deltą nagrobka, pozostała wersja, trzecie urządzenie, późniejszy tutejszy nagrobek,
-// granica 365 dni, błąd usunięcia karty, „zabierz”) i strażnik źródła importu; na a7b2920b czerwone 6. Strażnik źródła
-// fazy przeniesień przepisany razem z kodem (dotąd przypinał brak zapisu nagrobka w Bsw_poOddaniu).
+// Od E3-PR0e1 (decyzja 1 właściciela z 2026-11-23) 384 testy: +22 — karta opróżniona w fazie przeniesień znika ze
+// znanym nagrobkiem „Scal pacjentów” (pełna kopia, delta nagrobka z kartą docelową, błąd zapisu nagrobka, granica 365 dni
+// i wizyta nieznana urządzeniu scalającemu, zapisana w starej karcie na trzecim urządzeniu, w chmurze w dwóch
+// kolejnościach — czerwone, oraz kontrole: delta karty przed deltą nagrobka, pozostała wersja, trzecie urządzenie
+// z nową wizytą po scaleniu, późniejszy tutejszy nagrobek, błąd usunięcia karty, „zabierz”) i strażnik źródła importu;
+// na a7b2920b czerwone 9. Strażnik źródła fazy przeniesień przepisany razem z kodem (dotąd przypinał brak zapisu
+// nagrobka w Bsw_poOddaniu).
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -2933,7 +2935,7 @@ describe('P-SYNC-WLASCICIEL — karta opróżniona w fazie przeniesień znika ze
   const pelnaKopia = async (od, do_) => do_.v.mergeSyncPayload(kopia(await od.v.exportSyncPayload()));
   // A, B (i C przy trzecie = true): X [x1 x2], Y [y1 y2], pełna synchronizacja; B: „Scal pacjentów” X → Y (ym, nagrobek
   // X z chwilą T), potem poprawka x2 pod Y z zachowaną chwilą zapisu (rev 2).
-  async function przygotuj(kolejnoscId, { trzecie = false } = {}) {
+  async function przygotuj(kolejnoscId, { trzecie = false, przedScaleniem = null } = {}) {
     const A = await urzadzenie('A'), B = await urzadzenie('B'), C = trzecie ? await urzadzenie('C') : null;
     const X = await karta(A.v);
     await chwila(4);
@@ -2943,6 +2945,7 @@ describe('P-SYNC-WLASCICIEL — karta opróżniona w fazie przeniesień znika ze
     if (C) await sync(C);
     const et = await etykiety(A, { X, Y });
     const x2 = idPo(et, 'x2');
+    if (przedScaleniem) await przedScaleniem({ A, B, C, X, Y, et });
     await chwila(5);
     et[(await B.v.mergePatients(X, Y)).snapshotId] = 'ym';
     const T = await nagrobek(B, X);
@@ -3046,6 +3049,34 @@ describe('P-SYNC-WLASCICIEL — karta opróżniona w fazie przeniesień znika ze
     for (const d of [p.A, p.B]) await oczekuj(d, p, Z_NOWA, [], `${d.nazwa} po kopii C`);
   }, CZAS);
 
+  // Wizyta nieznana urządzeniu scalającemu (C zapisał ją w X bez połączenia jeszcze przed „Scal pacjentów” na B), chmura
+  // jak vilda_sync.js, B wysyła raz i więcej się nie synchronizuje. Przed E3-PR0e1 w kolejności B, A, C ta wizyta
+  // przeżywała w X na C i na A (zwrócony duplikat), ale tylko dlatego, że A gubiło nagrobek X przy opróżnieniu karty,
+  // a jego pełny eksport zastępował w chmurze ładunek B; w kolejności B, C, A (albo gdy B zsynchronizuje się jeszcze
+  // raz) ginęła także wtedy. Teraz A przekazuje dalej ten sam nagrobek, który wysłało B, więc wynik nie zależy od
+  // kolejności: wizyta ginie tak, jak zginęłaby od nagrobka B (znana usterka wizyty nieznanej scalającemu, do E3-PR0f).
+  it.each(KOLEJNOSCI)('[CZERWONY na bazie] wizyta zapisana na trzecim urządzeniu w X przed scaleniem, nieznana urządzeniu, które scaliło (%s): w chmurze w kolejności B, A, C i B, C, A ten sam wynik — X znika z tą wizytą i z nagrobkiem z chwilą scalenia na wszystkich trzech (znana usterka do E3-PR0f)', async (kolejnoscId) => {
+    const wynik = {};
+    for (const [opis, kolejnosc] of [['B, A, C', ['B', 'A', 'C', 'A', 'C']], ['B, C, A', ['B', 'C', 'A', 'C', 'A']]]) {
+      const p = await przygotuj(kolejnoscId, {
+        trzecie: true,
+        przedScaleniem: async (q) => { await chwila(5); q.et[(await zapiszWersje(q.C, q.X, [60, 66, 72])).snapshotId] = 'c'; },
+      });
+      await poprawkaA(p);
+      for (const k of kolejnosc) await p.sync(p[k]);
+      wynik[opis] = {};
+      for (const d of [p.A, p.B, p.C]) {
+        const s = await stan(d, p.et);
+        wynik[opis][d.nazwa] = { karty: s.karty, nagrobki: s.nagrobki, kosz: s.kosz, sieroty: s.sieroty, nagrobekX: (await nagrobek(d, p.X)) === p.T };
+      }
+    }
+    // Każde urządzenie: tylko Y z wersjami sprzed scalenia, nagrobek X z chwilą scalenia, bez wpisu w Koszu (wizyta c
+    // ginie bez śladu — jak od nagrobka B przed zmianą). Przed E3-PR0e1 w kolejności B, A, C: A i C z X [c], bez nagrobka.
+    const wszedzie = { karty: SCALONA, nagrobki: ['X'], kosz: [], sieroty: 0, nagrobekX: true };
+    expect(wynik['B, A, C'], 'kolejność B, A, C').toEqual({ A: wszedzie, B: wszedzie, C: wszedzie });
+    expect(wynik['B, C, A'], 'kolejność B, C, A — ten sam wynik').toEqual(wynik['B, A, C']);
+  }, CZAS);
+
   it.each(KOLEJNOSCI)('[kontrola] późniejszy tutejszy nagrobek X zapisany w trakcie fazy przeniesień, jak „Usuń pacjenta” w innej karcie przeglądarki (%s): zostaje późniejszy', async (kolejnoscId) => {
     const p = await przygotuj(kolejnoscId);
     await poprawkaA(p);
@@ -3060,7 +3091,7 @@ describe('P-SYNC-WLASCICIEL — karta opróżniona w fazie przeniesień znika ze
     expect(await nagrobek(p.A, p.X), 'późniejszy tutejszy nagrobek').toBe(pozniej);
   }, CZAS);
 
-  it('[kontrola] nagrobek z chwilą scalenia tuż przed granicą 365 dni: po przekroczeniu granicy eksport A nie niesie nagrobka X, tak samo jak eksport urządzenia, które scaliło', async () => {
+  it('[CZERWONY na bazie] nagrobek z chwilą scalenia tuż przed granicą 365 dni: tuż przed granicą eksport A niesie nagrobek X z chwilą scalenia, a po jej przekroczeniu już go nie niesie — tak samo jak eksport urządzenia, które scaliło', async () => {
     const p = await przygotuj('X<Y');
     await poprawkaA(p);
     const nagrobkiEksportu = async (d) => (kopia(await d.v.exportSyncPayload()).tombstones || []).filter((t) => t.patientId === p.X).map((t) => t.deletedAtISO);
@@ -3071,6 +3102,8 @@ describe('P-SYNC-WLASCICIEL — karta opróżniona w fazie przeniesień znika ze
       expect(await nagrobkiEksportu(p.B), 'B tuż przed granicą').toEqual([p.T]);
       await pelnaKopia(p.B, p.A);
       await oczekuj(p.A, p, SCALONA, null, 'A');
+      // Bez tego sprawdzenia przypadek przechodził także wtedy, gdy A nie miało nagrobka wcale (przed E3-PR0e1).
+      expect(await nagrobkiEksportu(p.A), 'A tuż przed granicą — nagrobek z chwilą scalenia, jak B').toEqual([p.T]);
       vi.setSystemTime(t0 + 365 * 864e5 + 2 * 36e5);
       expect(await nagrobkiEksportu(p.B), 'B po granicy').toEqual([]);
       expect(await nagrobkiEksportu(p.A), 'A po granicy — tak samo jak B').toEqual([]);
@@ -3092,13 +3125,19 @@ describe('P-SYNC-WLASCICIEL — karta opróżniona w fazie przeniesień znika ze
     expect(await nagrobek(p.A, p.X)).toBe(p.T);
   }, CZAS);
 
-  it.each(KOLEJNOSCI)('[kontrola] błąd usunięcia opróżnionej karty X w fazie przeniesień (%s): scalanie zgłasza błąd, nagrobka X nie ma', async (kolejnoscId) => {
+  it.each(KOLEJNOSCI)('[kontrola] błąd usunięcia opróżnionej karty X w fazie przeniesień (%s): scalanie zgłasza błąd, nagrobka X nie ma; ponowienie tego samego ładunku zostawia X pustą kartą bez nagrobka — znane ograniczenie, tak samo przed E3-PR0e1', async (kolejnoscId) => {
     const p = await przygotuj(kolejnoscId);
     await poprawkaA(p);
+    const ladunek = kopia(await p.B.v.exportSyncPayload());
     const st = bladRaz(p.A, 'removePatientForUser', p.X, 'Fikcyjny błąd usunięcia karty');
-    await expect(pelnaKopia(p.B, p.A), 'scalanie z błędem usunięcia karty').rejects.toThrow('Fikcyjny błąd usunięcia karty');
+    await expect(p.A.v.mergeSyncPayload(kopia(ladunek)), 'scalanie z błędem usunięcia karty').rejects.toThrow('Fikcyjny błąd usunięcia karty');
     expect(st.bledy).toBe(1);
     expect(await nagrobek(p.A, p.X), 'bez nagrobka X po błędzie usunięcia').toBe(null);
+    // Wersje X leżą już pod Y, a X (zapis po scaleniu) nie przegrywa z nagrobkiem, więc ponowienie nie wchodzi ani do
+    // fazy przeniesień, ani do zbioru N: X zostaje bez wersji z dawnym licznikiem — jak przed E3-PR0e1 (błąd usunięcia
+    // karty w tej fazie nie jest naprawiany ponowieniem; błąd zapisu samego nagrobka jest — przypadek wyżej).
+    await p.A.v.mergeSyncPayload(kopia(ladunek));
+    await oczekuj(p.A, p, { X: karta2(1, []), Y: SCALONA.Y }, [], 'A po ponowieniu');
   }, CZAS);
 
   it.each(KOLEJNOSCI)('[kontrola] decyzja „zabierz” — A bez poprawki, X w zbiorze N (%s): wynik jak dotąd, nagrobek X z chwilą scalenia zapisany raz (Bsl_usunPacjenta)', async (kolejnoscId) => {

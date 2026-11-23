@@ -89,8 +89,8 @@
 //   Karta opróżniona ze znanym nagrobkiem (E3-PR0e1, decyzja 1 właściciela z 2026-11-23): K scala X → Y i poprawia x pod
 //        Y, P (bez wiedzy) poprawia x w starej X, konto B ma kopię kart A; przełączenie na B zaraz po usunięciu
 //        opróżnionej X konta A w Bsw_poOddaniu albo przy odczycie tutejszego nagrobka X tamże — SESSION_CHANGED, po
-//        przełączeniu żadnego zapisu (nagrobek X ani w koncie B, ani w koncie A); po zalogowaniu A to samo scalenie
-//        zapisuje nagrobek X z chwilą scalenia. Na a7b2920b czerwony tylko drugi (sejf bez odczytu nagrobka w
+//        przełączeniu żadnego zapisu (nagrobek X ani w koncie B, ani w koncie A) i żadnego wywołania magazynu w koncie
+//        B, także odczytu tutejszego nagrobka; po zalogowaniu A to samo scalenie zapisuje nagrobek X z chwilą scalenia. Na a7b2920b czerwony tylko drugi (sejf bez odczytu nagrobka w
 //        Bsw_poOddaniu: przełączenie nie zachodzi, scalenie „ok”); pierwszy zielony z natury.
 //   S-K1 K dopisuje do X nową wizytę; przełączenie na B po odczycie po kluczu tej wersji (Bsw_decyzja) — żadnego zapisu
 //        po przełączeniu, konto B bez tej wersji; po zalogowaniu A wizyta pod X.
@@ -907,6 +907,9 @@ describe('P-KOSZ-PO-KLUCZU — karta opróżniona w fazie przeniesień ze znanym
     await kopiaWB(u.P);
     return { u, T };
   }
+  // Wywołania magazynu w koncie B po przełączeniu (odczyty i zapisy): odczyt tutejszego nagrobka X też tylko w sesji
+  // scalania (Bses_pilnuj przed nim), nie tylko jego zapis.
+  const wKoncieB = (v, st) => v.__wyw.slice(st.od).filter(([, uid]) => uid === v.__uidB).map(([k]) => k);
   async function poZalogowaniu(u, T) {
     await zalogujA(u.P);
     expect(await kartaX(u.P, u), 'A: karta X usunięta przed przełączeniem').toBe(false);
@@ -925,6 +928,7 @@ describe('P-KOSZ-PO-KLUCZU — karta opróżniona w fazie przeniesień ze znanym
     expect(await scal(u.K, u.P)).toBe('SESSION_CHANGED');
     expect(st.zrobione, 'przełączenie po usunięciu opróżnionej X konta A (Bsw_poOddaniu)').toBe(true);
     expect(zapisyPo(u.P, st), 'po przełączeniu żadnego zapisu').toEqual([]);
+    expect(wKoncieB(u.P, st), 'po przełączeniu żadnego wywołania magazynu w koncie B').toEqual([]);
     await poZalogowaniu(u, T);
   });
 
@@ -934,6 +938,7 @@ describe('P-KOSZ-PO-KLUCZU — karta opróżniona w fazie przeniesień ze znanym
     expect(await scal(u.K, u.P)).toBe('SESSION_CHANGED');
     expect(st.zrobione, 'przełączenie przy odczycie nagrobka X (Bsw_poOddaniu)').toBe(true);
     expect(zapisyPo(u.P, st), 'po przełączeniu żadnego zapisu').toEqual([]);
+    expect(wKoncieB(u.P, st), 'po przełączeniu żadnego wywołania magazynu w koncie B').toEqual([]);
     await poZalogowaniu(u, T);
   });
 });

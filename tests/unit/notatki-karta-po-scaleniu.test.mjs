@@ -10,9 +10,13 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // (rev i chwila zmiany równe) — mniejszy patientId; inaczej karta zwycięzcy treści (gdy obie istnieją — wersji zapisanej
 // później). Gdy wygrywa tutejsza treść, a reguła daje kartę z ładunku — zapis samej karty pod blokadą notatki na
 // świeżym odczycie (Bnp_zmienKarte). Plan opieki (gałąź planu w Le) — tylko „karta martwa”, bez reguły remisu.
-// E3-PR0e1 (kontrola, obie kolejności identyfikatorów): notatka dawnej karty opróżnionej przy synchronizacji
-// z urządzeniem, które ją scaliło, zostaje pod kartą scaloną także po pełnej kopii urządzenia, które o scaleniu nie wie
-// — tak samo jak na urządzeniu, które scaliło (zielone na a7b2920b).
+// E3-PR0e1 (obie kolejności identyfikatorów): notatka dawnej karty opróżnionej przy synchronizacji z urządzeniem, które
+// ją scaliło, zostaje pod kartą scaloną po pełnej kopii urządzenia, które o scaleniu nie wie — tak samo jak na
+// urządzeniu, które scaliło: gdy kopia niesie starszą wersję notatki (kontrola, zielona na a7b2920b) i gdy niesie
+// nowszą, poprawioną na tamtym urządzeniu po scaleniu (na a7b2920b czerwony: bez tutejszego nagrobka dawna karta nie
+// była „martwa”, więc nowsza wersja przenosiła notatkę pod kartę, której już nie ma — niewidoczną). Notatka utworzona
+// tam w dawnej karcie przed scaleniem (starsza niż nagrobek) zostaje w magazynie pod dawną kartą — tak samo jak na
+// urządzeniu, które scaliło (kontrola, zielona na a7b2920b; notatka bez karty — klasa P6 wyroczni A ≡ B).
 // Prawdziwy vilda_vault.js, magazyn w pamięci, dane wyłącznie fikcyjne (bez PESEL).
 
 function magazyn() {
@@ -278,7 +282,7 @@ describe('E3-PR0e1 — notatka dawnej karty opróżnionej przy synchronizacji z 
      (wersja n z B jest nowsza niż kopia C, więc o karcie notatki decyduje zwycięzca treści, nie nagrobek P).
      Identyfikatory kart nadane jawnie (obie kolejności). */
   const ID = { 'P<Q': ['fikcyjna-karta-a', 'fikcyjna-karta-b'], 'P>Q': ['fikcyjna-karta-b', 'fikcyjna-karta-a'] };
-  async function przygotuj(kolejnosc) {
+  async function przygotuj(kolejnosc, przedScaleniem = null) {
     const A = await urzadzenie();
     const [pid, qid] = ID[kolejnosc];
     const ids = { P: (await A.v.savePatient(zapis('Fikcyjna', 'Ola', 131), { patientId: pid, dedup: false })).patientId, Q: (await A.v.savePatient(zapis('Fikcyjna', 'Ewa', 128), { patientId: qid, dedup: false })).patientId };
@@ -287,6 +291,7 @@ describe('E3-PR0e1 — notatka dawnej karty opróżnionej przy synchronizacji z 
     const B = await urzadzenie(A), C = await urzadzenie(A);
     await pelny(A, B); await pelny(A, C);
     const sid = (await A.v.getPatient(ids.P)).snapshots[0].snapshotId;
+    const wynikPrzed = przedScaleniem ? await przedScaleniem({ A, B, C, ids }) : null;
     await chwila(5);
     await B.v.mergePatients(ids.P, ids.Q);
     await chwila(5);
@@ -296,7 +301,7 @@ describe('E3-PR0e1 — notatka dawnej karty opróżnionej przy synchronizacji z 
     await pelny(B, A);
     expect(await kartaJest(A, ids.P), 'kontrola: P opróżniona na A').toBe(false);
     expect(await gdzie(A, n.id, ids), 'kontrola: n pod Q po kopii B').toBe('Q');
-    return { A, B, C, ids, n };
+    return { A, B, C, ids, n, wynikPrzed };
   }
 
   it.each(Object.keys(ID))('[kontrola] pełna kopia urządzenia, które o scaleniu nie wie (%s): n zostaje pod Q, P nie wraca — tak samo jak na urządzeniu, które scaliło', async (kolejnosc) => {
@@ -307,6 +312,36 @@ describe('E3-PR0e1 — notatka dawnej karty opróżnionej przy synchronizacji z 
       wynik[nazwa] = { P: await kartaJest(d, s.ids.P), n: await gdzie(d, s.n.id, s.ids) };
     }
     expect(wynik.A, 'A').toEqual({ P: false, n: 'Q' });
+    expect(wynik.A, 'A tak samo jak urządzenie, które scaliło').toEqual(wynik.B);
+  });
+
+  it.each(Object.keys(ID))('[czerwony na bazie] urządzenie, które o scaleniu nie wie, poprawia n pod P po scaleniu (nowsza treść); jego pełna kopia (%s): n z poprawką zostaje pod Q, P nie wraca — tak samo jak na urządzeniu, które scaliło', async (kolejnosc) => {
+    const s = await przygotuj(kolejnosc);
+    await chwila(5);
+    await s.C.v.savePatientNote({ id: s.n.id, patientId: s.ids.P, title: 'n (fikcja, poprawka C)', body: 'fikcyjna treść C', category: 'followup' });
+    const wynik = {};
+    for (const [nazwa, d] of [['A', s.A], ['B', s.B]]) {
+      await pelny(s.C, d);
+      wynik[nazwa] = { P: await kartaJest(d, s.ids.P), n: await gdzie(d, s.n.id, s.ids), tytul: await tytul(d, s.n.id) };
+    }
+    // Przed E3-PR0e1 na A: n pod P (bez karty) — P nie była tu „martwa” (brak tutejszego nagrobka), więc nowsza wersja
+    // przenosiła notatkę pod kartę, której nie ma; widoczna wracała dopiero po wymianie z urządzeniem, które scaliło.
+    expect(wynik.A, 'A').toEqual({ P: false, n: 'Q', tytul: 'n (fikcja, poprawka C)' });
+    expect(wynik.A, 'A tak samo jak urządzenie, które scaliło').toEqual(wynik.B);
+  });
+
+  it.each(Object.keys(ID))('[kontrola] notatka m utworzona w P przed scaleniem na urządzeniu, które o scaleniu nie wie (starsza niż nagrobek P); jego pełna kopia (%s): m zostaje pod P bez karty, n pod Q, żadna notatka nie dostaje nagrobka — tak samo jak na urządzeniu, które scaliło', async (kolejnosc) => {
+    const s = await przygotuj(kolejnosc, async (q) => {
+      await chwila(5);
+      return q.C.v.savePatientNote({ patientId: q.ids.P, title: 'm (fikcja)', body: 'fikcyjna treść m', category: 'followup' });
+    });
+    const m = s.wynikPrzed;
+    const wynik = {};
+    for (const [nazwa, d] of [['A', s.A], ['B', s.B]]) {
+      await pelny(s.C, d);
+      wynik[nazwa] = { P: await kartaJest(d, s.ids.P), m: await gdzie(d, m.id, s.ids), n: await gdzie(d, s.n.id, s.ids), nagrobkiNotatek: (await d.baza.listPatientNoteTombstonesForUser(d.uid)).length };
+    }
+    expect(wynik.A, 'A').toEqual({ P: false, m: 'P (bez karty)', n: 'Q', nagrobkiNotatek: 0 });
     expect(wynik.A, 'A tak samo jak urządzenie, które scaliło').toEqual(wynik.B);
   });
 });

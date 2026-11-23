@@ -542,8 +542,10 @@ const NPIK = 'notatka pod inną kartą';
 //   rekord („najpierw rev”, P-SYNC-WLASCICIEL), więc wersja z wyższą rev zostaje w starej karcie;
 // - „nagrobek karty opróżnionej” (niewidoczna): nagrobek karty P tylko po jednej stronie, karty P nie ma po żadnej —
 //   karta opróżniona przeniesieniem ostatniej wersji pod inną kartę znika bez nagrobka (Bsw_poOddaniu). Od E3-PR0e1
-//   karta znika ze znanym scalaniu nagrobkiem (z ładunku albo tutejszym); klasa zostaje, gdy scalanie nagrobka nie znało
-//   (np. koperta wersji przed kopertą nagrobka);
+//   karta znika ze znanym scalaniu nagrobkiem (z ładunku albo tutejszym); klasa zostaje, gdy scalanie, które opróżniło
+//   kartę, nagrobka nie znało, a koperta nagrobka przegrała tu wcześniej z późniejszym zapisem tej karty (np. wersja
+//   przyszła potem kopertą odsyłania, bez nagrobka — ziarno 5 profilu pełnego z przełącznikiem); koperta nagrobka, która
+//   przychodzi dopiero po kopercie wersji, zapisuje nagrobek drogą zbioru N;
 // - „rekord złożony po jednej stronie”: wersja na obu, ta sama chwila zmiany, inna treść; strona z późniejszą chwilą
 //   treści ma rekord złożony (treść z jednego rekordu, gwiazdka z drugiego: _pinnedState.zl, Bgw_zlozony) i wyższą rev.
 const MIEJSCE_WIZYTY = 'miejsce wizyty po „Scal pacjentów”';
