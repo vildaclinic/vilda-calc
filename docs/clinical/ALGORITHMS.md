@@ -44428,6 +44428,8 @@ wpisy po niej.
   „Waga”, romby na siatce „Podsumowania wyników”, **analiza trajektorii karty zaawansowanej z wpisami (wariant B)**,
   „Porównanie” i PDF działają jak na stronie głównej; bloków „pomiar od pacjenta” w „Poprzednich pomiarach” DocPro nie ma.
   Ten sam wpływ kliniczny co na stronie głównej: analiza trajektorii karty zaawansowanej w DocPro liczy z masami od pacjenta.
+  **Decyzja właściciela 2026-11-23:** „zostaw tak jak na str. głównej” — DocPro liczy analizę trajektorii karty
+  zaawansowanej z masami od pacjenta (wariant B), tak jak strona główna i Karta pacjenta.
 
 **Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna ur. 11.04.2013; wizyty 11 l. 63,0 kg, 12 l. 70,5, 13 l. 80,0;
 bieżący pomiar 13 l. 6 mies. 75,2 kg (13.10.2026); masy od pacjenta 10.07 (77,8), 12.08 (76,9), 12.11.2026 (74,6)):

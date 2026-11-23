@@ -2332,7 +2332,8 @@ Przy źródle Palczewska PDF tworzy osobny przycisk (`generatePalczewskaCentileC
 Siatki publikacyjne (`window.publicationCharts`), raport pacjenta i Kreator nie podają flagi — bez rombów. **DocPro**:
 sprawdzone na prawdziwej stronie (e2e ST-8) — linijka pod „Waga”, romby na siatce „Podsumowania wyników” i analiza
 trajektorii karty zaawansowanej z wpisami działają jak na stronie głównej (te same pliki); bloków „pomiar od pacjenta”
-w „Poprzednich pomiarach” DocPro nie ma (`VildaAdvDziennik` tylko przy `#advHistoryToggle`).
+w „Poprzednich pomiarach” DocPro nie ma (`VildaAdvDziennik` tylko przy `#advHistoryToggle`). Decyzja właściciela 2026-11-23: DocPro
+zostaje jak strona główna (analiza z masami od pacjenta).
 
 
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
