@@ -195,7 +195,6 @@ test.describe('touch footer navigation', () => {
       await expect(analysis).toHaveAttribute('aria-selected', 'true');
       await frame.locator('#height').fill(standalone ? '160' : '159');
       await frame.locator('#weight').fill(standalone ? '44' : '43');
-      await frame.locator('#currentSummaryCard').getByRole('tab', { name: 'Siatka centylowa', exact: true }).click();
       const toggle = frame.locator('#vhomeOtherToolsToggle');
       if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
       const lastTool = frame.locator('#vhomeOtherToolsGrid [data-home-tool]:enabled').last();
@@ -207,7 +206,6 @@ test.describe('touch footer navigation', () => {
           visitId: state.visitId, mode: state.mode,
           height: document.getElementById('height').value, weight: document.getElementById('weight').value,
           analysis: document.getElementById('vhomeGabinetAnalysisTab').getAttribute('aria-selected'),
-          summaryTab: document.querySelector('#currentSummaryCard [role="tab"][aria-selected="true"]')?.textContent,
           tools: document.getElementById('vhomeOtherToolsToggle').getAttribute('aria-expanded'),
         };
       }, ids.a);
