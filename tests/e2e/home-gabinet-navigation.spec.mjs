@@ -246,11 +246,14 @@ for (const visitKind of ['new', 'edit']) {
       const history = start.locator('#vhomeVisitHistory');
       await history.getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
       await start.locator('#vhomeVisitDetail').getByRole('button', { name: 'Edytuj wizytę' }).click();
-      const editGuard = start.getByRole('dialog', { name: /^Zapisać (wpisane dane|zmiany) przed wczytaniem/ });
+      const editGuard = start.getByRole('dialog', { name: 'Zapisać zmiany w otwartej wizycie?', exact: true });
       await expect(editGuard).toBeVisible();
       await expect(history).toBeVisible();
       await editGuard.getByRole('button', { name: 'Anuluj', exact: true }).click();
       await expect(editGuard).toBeHidden();
+      const detail = start.locator('#vhomeVisitDetail');
+      await expect(detail).toBeVisible();
+      await detail.getByRole('button', { name: 'Zamknij podgląd wizyty', exact: true }).click();
       await expect(history.getByRole('heading', { name: 'Wizyty pacjenta' })).toBeVisible();
       await history.getByRole('button', { name: /^Wróć/ }).click();
       await expect(header.getByRole('button', { name: 'Opcje', exact: true })).toBeFocused();
