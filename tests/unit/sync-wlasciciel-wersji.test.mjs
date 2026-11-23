@@ -46,7 +46,8 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Od E3-PR0e1 (decyzja 1 właściciela z 2026-11-23) 382 testy: +20 — karta opróżniona w fazie przeniesień znika ze
 // znanym nagrobkiem „Scal pacjentów” (pełna kopia, delta nagrobka z kartą docelową, błąd zapisu nagrobka — czerwone, oraz
 // kontrole: delta karty przed deltą nagrobka, pozostała wersja, trzecie urządzenie, późniejszy tutejszy nagrobek,
-// granica 365 dni, błąd usunięcia karty, „zabierz”) i strażnik źródła importu; na a7b2920b czerwone 6.
+// granica 365 dni, błąd usunięcia karty, „zabierz”) i strażnik źródła importu; na a7b2920b czerwone 6. Strażnik źródła
+// fazy przeniesień przepisany razem z kodem (dotąd przypinał brak zapisu nagrobka w Bsw_poOddaniu).
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -1757,7 +1758,8 @@ describe('P-SYNC-WLASCICIEL — liczniki i przypadki brzegowe', () => {
 
   // [CZERWONY na audyt — x1 przechodził pod Y, X zostawała z licznikiem 1 bez żadnej wersji; CZERWONY na 88f558c —
   // ostatnia wersja zostawała przy X] Ostatnia wersja karty przechodzi pod kartę z nowszym rekordem tak jak pozostałe,
-  // a karta bez wersji znika — bez nagrobka (karty nie usunął użytkownik; inne urządzenia opróżniają ją tą samą regułą).
+  // a karta bez wersji znika — bez nagrobka (karty nie usunął użytkownik; inne urządzenia opróżniają ją tą samą regułą;
+  // od E3-PR0e1 z nagrobkiem tylko wtedy, gdy scalanie go zna — blok E3-PR0e1 niżej).
   // Tu X ma jedną wersję, A scala X → Y, a ładunek A nie niesie nagrobka X (delta karty Y bez nagrobków albo nagrobek
   // przycięty po 365 dniach). Dotąd X zostawała z x1 na B (rozbieżność), a nagrobek X z osobnej delty usuwał ją potem
   // razem z x1.
@@ -3137,13 +3139,36 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(rz).toBeGreaterThan(r1);
     expect(fr.indexOf('Bsw_poOddaniu(X, rekX, pozostale.length, pozostale, opcje)')).toBeGreaterThan(rz);
     expect(fr).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {6}await I\(\)\.putSnapshotForUser\(b, PatientClinicalWriteValue\(b,Object\.assign\(Bm1\(g\), g, \{ patientId: H \}\)\)\);/);
+    // E3-PR0e1 (decyzja 1 właściciela z 2026-11-23 — zmiana zasady łączenia danych synchronizacji): strażnik przypinał
+    // dotąd „karta opróżniona w fazie przeniesień znika bez nagrobka” (brak putTombstoneForUser w Bsw_poOddaniu; powód
+    // w komentarzu nad Bsw_przenies: nagrobek z datą karty mógłby wygrać na trzecim urządzeniu). Właściciel przyjął
+    // zmianę: karta znika razem z nagrobkiem znanym temu scalaniu. Strażnik przypina teraz zasady nowego zachowania:
+    // znany nagrobek tylko z ctx.Bsw_m (w imporcie null — strażnik importu w bloku E3-PR0e1) i tylko poza decyzją
+    // „zabierz” (tam nagrobek zapisuje zaraz Bsl_usunPacjenta); Bsw_przeniesPrzezyta woła bez szóstego argumentu (wyżej);
+    // w Bsw_poOddaniu karta z pozostałymi wersjami bez nagrobka, a przy pustej — najpierw usunięcie karty, potem odczyt
+    // tutejszego nagrobka i jeden warunkowy zapis znanego (tylko gdy tutejszego nie ma albo jest wcześniejszy), oba tuż
+    // po Bses_pilnuj, bez Bem_/Bob_ (bez wiersza kolejki zdarzeń w chwili scalania).
     const fp = src.slice(src.indexOf('async function Bsw_przenies('), src.indexOf('async function Bsw_poOddaniu('));
-    expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }), opcje)');
+    expect(fp).toContain('usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }), opcje, !p.zabierz && ctx.Bsw_m ? ctx.Bsw_m[G] : null) };');
     const fo = src.slice(src.indexOf('async function Bsw_poOddaniu('), src.indexOf('// Najnowszy lokalny nagrobek pacjenta'));
+    expect(fo.startsWith('async function Bsw_poOddaniu(G, rekG, zostalo, pozostale, opcje, nagrobekISO) {')).toBe(true);
     expect(fo).toContain('else await I().removePatientForUser(b, PatientClinicalWriteValue(b,G));');
     // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): karta G po oddaniu wersji — zapis albo usunięcie tylko w sesji scalania, bez await przed nim
     expect(fo).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {2}if \(zostalo > 0\) await I\(\)\.putPatientForUser/);
-    expect(fo).not.toContain('putTombstoneForUser');
+    expect(fo.match(/putTombstoneForUser/g), 'jeden zapis nagrobka karty opróżnionej').toHaveLength(1);
+    const iUs = fo.indexOf('else await I().removePatientForUser(');
+    const iZost = fo.indexOf('if (zostalo > 0) return PatientClinicalWriteValue(PatientClinicalOperationAccount,0);');
+    const iZnany = fo.indexOf('if (nagrobekISO) {');
+    const iOdczyt = fo.indexOf('const Bsw_lok = await Bpu_nagrobek(G);');
+    const iZapis = fo.indexOf('if (!Bsw_lok || Bsw_lok.deletedAtISO < nagrobekISO) await I().putTombstoneForUser(b, PatientClinicalWriteValue(b,{ patientId: G, deletedAtISO: nagrobekISO }));');
+    expect(iUs).toBeGreaterThan(0);
+    expect(iZost, 'karta z pozostałymi wersjami wraca bez nagrobka').toBeGreaterThan(iUs);
+    expect(iZnany, 'nagrobek tylko znany scalaniu').toBeGreaterThan(iZost);
+    expect(iOdczyt, 'odczyt tutejszego nagrobka po usunięciu karty').toBeGreaterThan(iZnany);
+    expect(iZapis, 'zapis po odczycie, tylko gdy tutejszego nie ma albo jest wcześniejszy').toBeGreaterThan(iOdczyt);
+    expect(fo).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {4}const Bsw_lok = await Bpu_nagrobek\(G\);/);
+    expect(fo).toMatch(/Bses_pilnuj\(opcje\);[^\n]*\n {4}if \(!Bsw_lok \|\| Bsw_lok\.deletedAtISO < nagrobekISO\) await I\(\)\.putTombstoneForUser/);
+    expect(fo).not.toMatch(/\b(?:Bem|Bob)_/);
   });
 
   it('Bsl_usunPacjenta (przegląd poprawki P1 D-21, F2): pod blokadą pacjenta najpierw lokalny nagrobek karty (późniejsza chwila wygrywa), potem świeży rekord', () => {

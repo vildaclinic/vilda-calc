@@ -3659,12 +3659,14 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     chwila zapisu wersji (miejsce w historii karty) — ze strony, ktora wygrala przypisanie karty, wiec przeniesiona
  *     dawna glowa scalonej karty nie wyprzedza glowy scalenia;
  *   - przeniesienie miedzy dwiema istniejacymi kartami w osobnej fazie, pod blokadami obu kart (Bsl_przeniesWersje);
- *     przechodzi tez ostatnia wersja karty, a karta bez wersji znika (bez nagrobka) — inaczej delta karty celu
- *     i osobna delta nagrobka scalonej karty gubily jej najnowsza wersje. Ta sama faza przenosi wersje karty ze zbioru
- *     N (decyzja 'zabierz'; uwaga Codex P1 do #689): dotad szla pod F od razu, pod sama blokada F, wiec poprawka tej
- *     wersji w innej karcie przegladarki (blokada G) odczytana przed przeniesieniem i zapisana po nim wpisywala ja
- *     z powrotem pod G, a usuniecie G kasowalo ja razem z karta. Gdy miedzy decyzja a faza inna karta przegladarki
- *     scali albo usunie F lub G, faza odtwarza wynik zapisu od razu (P-SYNC-WLASCICIEL-2, Bsw_przenies);
+ *     przechodzi tez ostatnia wersja karty, a karta bez wersji znika — inaczej delta karty celu i osobna delta
+ *     nagrobka scalonej karty gubily jej najnowsza wersje. Od E3-PR0e1 karta znika razem z nagrobkiem tej karty
+ *     znanym temu scalaniu (z ladunku albo tutejszym; Bsw_poOddaniu), a gdy scalanie go nie zna — bez nagrobka, jak
+ *     dotad. Ta sama faza przenosi wersje karty ze zbioru N (decyzja 'zabierz'; uwaga Codex P1 do #689): dotad szla
+ *     pod F od razu, pod sama blokada F, wiec poprawka tej wersji w innej karcie przegladarki (blokada G) odczytana
+ *     przed przeniesieniem i zapisana po nim wpisywala ja z powrotem pod G, a usuniecie G kasowalo ja razem z karta.
+ *     Gdy miedzy decyzja a faza inna karta przegladarki scali albo usunie F lub G, faza odtwarza wynik zapisu od razu
+ *     (P-SYNC-WLASCICIEL-2, Bsw_przenies);
  *   - licznik zapisow karty = liczba jej wersji, takze naprawa licznika rozjechanego wczesniej; przyjeta z ladunku
  *     poprawka wersji podnosi chwile ostatniego zapisu karty (jak nowa wersja);
  *   - delta nagrobka karty scalonej w tej sesji niesie karte docelowa (Bsw_deltaNagrobka) — u odbiorcy dziala jak
@@ -4212,11 +4214,12 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
     if (p.zabierz) wynik.zabrane += 1;
     wynik.dodane += r.dodana;
     wynik.usuniete += r.usunieta;
-    // Decyzja 1 (2026-10-26) na calej flocie: pusta karta zrodla „Scal pacjentow” z innego urzadzenia zniknela tu bez
-    // nagrobka (Bsw_poOddaniu, np. delta karty docelowej przed delta nagrobka) — cien jej wersji zdejmie koncowy zapis listy
-    // (Bpc_usuniete), jak na urzadzeniu, ktore scalilo (Bpu_usun zrodla). Zrodlo, ktore tu zostaje (ma wersje spoza
-    // scalenia, np. wizyte zapisana tu po nim — D-21), zachowuje cien. Dodanie po zwolnieniu blokad obu kart (W5P-4):
-    // nadal przed koncowym zapisem listy tego scalenia, a zbior tylko rosnie, wiec blokada nie jest potrzebna.
+    // Decyzja 1 (2026-10-26) na calej flocie: pusta karta zrodla „Scal pacjentow” z innego urzadzenia zniknela tu
+    // (Bsw_poOddaniu: od E3-PR0e1 z nagrobkiem znanym temu scalaniu, a bez nagrobka, gdy scalanie go nie znalo, np.
+    // delta karty docelowej przed delta nagrobka) — cien jej wersji zdejmie koncowy zapis listy (Bpc_usuniete), jak na
+    // urzadzeniu, ktore scalilo (Bpu_usun zrodla). Zrodlo, ktore tu zostaje (ma wersje spoza scalenia, np. wizyte
+    // zapisana tu po nim — D-21), zachowuje cien. Dodanie po zwolnieniu blokad obu kart (W5P-4): nadal przed koncowym
+    // zapisem listy tego scalenia, a zbior tylko rosnie, wiec blokada nie jest potrzebna.
     // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): zbior kart usunietych tylko w sesji scalania — po await blokad sprawdzenie sesji
     // tuz przed Bpc_usunieta (jak w Bkz_usunZObcych i Bsl_usunPacjenta); przerwane scalenie dopisze karte w nastepnym
     // (nagrobek).
@@ -4380,13 +4383,23 @@ async function Bsw_poprawTresc(p, teraz, opcje) {const PatientClinicalOperationA
 // decyzji, a karta F istnieje albo jej nagrobek nadal przegrywa z zapisem z ladunku (wtedy F powstaje z naglowkiem
 // z ladunku). Rekord wedlug W3 obu kopii (Bsw_rekordW3; bez porownania W3 — nowsza tresc wg Bsw_nowszaTresc,
 // Bsw_rekord), chwila zapisu wersji — z ladunku (F wygrala przypisanie). Licznik F = liczba jej wersji.
-// Ostatnia wersja G tez przechodzi (ta sama regula wlasciciela co dla pozostalych), a pusta karta G znika — bez nagrobka.
+// Ostatnia wersja G tez przechodzi (ta sama regula wlasciciela co dla pozostalych), a pusta karta G znika.
 // Dotad ostatnia wersja zostawala przy G: delta karty Y po „Scal pacjentow” X -> Y (buildPatientDelta, bez nagrobkow)
 // przenosila spod X wszystko poza glowa X, a osobna delta nagrobka X usuwala potem X razem z ta glowa — wersja ginela
-// (uwaga recenzenta do 88f558c; w pelnym ladunku nagrobek X jest w zbiorze N i dziala wyjatek „zabierz”). Bez
-// nagrobka, bo karta G nie zostala usunieta przez uzytkownika: wszystkie jej wersje sa nowsze pod F, wiec inne
-// urzadzenia oprozniaja G ta sama regula, a nagrobek z data G (np. z poprawki G na tym urzadzeniu) moglby wygrac na
-// trzecim urzadzeniu z zapisem G, ktorego tu nie znamy, i usunac go razem z karta.
+// (uwaga recenzenta do 88f558c; w pelnym ladunku nagrobek X jest w zbiorze N i dziala wyjatek „zabierz”).
+// E3-PR0e1 (P-SYNC-WLASCICIEL, decyzja wlasciciela z 2026-11-23): pusta karta G znika razem z nagrobkiem G znanym temu
+// scalaniu (ctx.Bsw_m: najpozniejszy z ladunku i tutejszy; w imporcie i bez magazynu nagrobkow brak), a nie bez sladu.
+// Dotad karta oprozniona tu bez nagrobka (np. tu poprawka wersji w starej karcie G bez wiedzy o scaleniu, a pelna
+// kopia z urzadzenia, ktore scalilo G i tez poprawilo te wersje, zabrala G wszystkie wersje) wracala jako duplikat
+// przy zapisie z otwartego formularza G albo przy „Scal kopie konta”, a nagrobek dochodzil dopiero w nastepnej
+// wymianie. Znany nagrobek nie jest nowy ani z data G: to ten sam nagrobek, ktory urzadzenie scalajace juz wyslalo,
+// wiec na trzecim urzadzeniu usunie tylko to, co usunalby oryginal, a tu przegral juz z zapisem G, wiec nie wygra
+// z nim ani z pozniejszym (Bsl_zdejmijNagrobek zostawia przegrany nagrobek, gdy karty nie ma). Bez znanego nagrobka
+// (np. wersja przyszla koperta albo delta bez nagrobka G) — jak dotad bez nagrobka: karta G nie zostala usunieta przez
+// uzytkownika, wszystkie jej wersje sa nowsze pod F, wiec inne urzadzenia oprozniaja G ta sama regula, a nagrobek
+// z data G (np. z poprawki G na tym urzadzeniu) moglby wygrac na trzecim urzadzeniu z zapisem G, ktorego tu nie znamy,
+// i usunac go razem z karta. Przy decyzji 'zabierz' bez tej reguly: G jest w zbiorze N, a nagrobek G zapisuje zaraz
+// po fazie Bsl_usunPacjenta (ten sam stan).
 // Decyzja 'zabierz' (p.zabierz, G w zbiorze N — zaraz zniknie): wersja przechodzi takze wtedy, gdy zmieniono ja tu po
 // decyzji — rekord G nie moze wygrac z karta, ktora znika — z rekordem W3 obu kopii (Bsw_rekordW3 na swiezym odczycie:
 // poprawka zrobiona w miedzyczasie w innej karcie przegladarki, pod blokada G, przechodzi pod F, o ile jest pozniejsza
@@ -4413,7 +4426,7 @@ async function Bsw_przenies(p, teraz, ctx, opcje) {
   if (!rekG) return null;
   const r = await Bsw_doF(p, teraz, ctx, g, opcje);
   if (!r || r.dalej) return r;
-  return { dodana: r.dodana, usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }), opcje) };
+  return { dodana: r.dodana, usunieta: await Bsw_poOddaniu(G, rekG, wersjeG.length - 1, wersjeG.filter(function (s) { return s && s.snapshotId !== p.S.snapshotId; }), opcje, !p.zabierz && ctx.Bsw_m ? ctx.Bsw_m[G] : null) };
 }
 
 // Zapis wersji pod F w fazie przeniesien (Bsw_przenies, pod blokadami F i G); g — tutejszy rekord wersji (wersja znikla
@@ -4490,15 +4503,31 @@ async function Bsw_nastepca(ctx, p) {
   return null;
 }
 
-// Karta G po oddaniu wersji (pod blokada G): licznik = liczba pozostalych wersji, a bez wersji — karta znika (bez
-// nagrobka; powod przy Bsw_przenies). Wersja jest juz zapisana pod F, wiec usuniecie G nie zabiera zadnej wersji.
-// Naglowek G z jej najnowszej pozostalej wersji (D-3 A), w tym samym zapisie. Zwraca 1, gdy karta zniknela.
-async function Bsw_poOddaniu(G, rekG, zostalo, pozostale, opcje) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
+// Karta G po oddaniu wersji (pod blokada G): licznik = liczba pozostalych wersji, a bez wersji — karta znika. Wersja
+// jest juz zapisana pod F, wiec usuniecie G nie zabiera zadnej wersji. Naglowek G z jej najnowszej pozostalej wersji
+// (D-3 A), w tym samym zapisie. Zwraca 1, gdy karta zniknela.
+// E3-PR0e1 (P-SYNC-WLASCICIEL): nagrobekISO — nagrobek G znany temu scalaniu (powod przy Bsw_przenies); pusta karta
+// znika razem z nim. Najpierw usuniecie karty, potem odczyt tutejszego nagrobka G (Bpu_nagrobek) i zapis znanego tylko
+// wtedy, gdy tutejszego nie ma albo jest wczesniejszy — pozniejszy zostaje (jak Bsl_lok w Bsl_usunPacjenta); odczyt
+// i zapis tylko w sesji scalania (Bses_pilnuj przed odczytem i tuz przed zapisem, bez await pomiedzy). Zapis przez
+// magazyn, bez wiersza kolejki zdarzen w chwili scalania (jak nagrobek w Bkz_usunZObcych). Blad usuniecia karty albo
+// zapisu nagrobka przerywa scalanie jak kazdy zapis tej fazy (bez polykania): karta jest juz usunieta, wersja lezy
+// pod F, a ponowienie tego samego ladunku zapisuje nagrobek droga zbioru N (Bsl_usunPacjenta). Bez nagrobekISO
+// (nagrobek nieznany, decyzja 'zabierz', Bsw_przeniesPrzezyta — tam nagrobek stawia Bsl_usunPacjenta) — bez nagrobka,
+// jak dotad.
+async function Bsw_poOddaniu(G, rekG, zostalo, pozostale, opcje, nagrobekISO) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   const Bng_n = zostalo > 0 ? await Bng_zmiana(rekG, pozostale, null) : null;
   Bses_pilnuj(opcje); // P-CHMURA-OPIS: karta G tylko w sesji scalania, bez await przed zapisem
   if (zostalo > 0) await I().putPatientForUser(b, PatientClinicalWriteValue(b,Object.assign({}, rekG, { snapshotCount: zostalo }, Bng_n ? { headerCipher: Bng_n.headerCipher } : null)));
   else await I().removePatientForUser(b, PatientClinicalWriteValue(b,G));
-  return PatientClinicalWriteValue(PatientClinicalOperationAccount,zostalo > 0 ? 0 : 1);
+  if (zostalo > 0) return PatientClinicalWriteValue(PatientClinicalOperationAccount,0);
+  if (nagrobekISO) {
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: odczyt nagrobka G tylko w sesji scalania
+    const Bsw_lok = await Bpu_nagrobek(G);
+    Bses_pilnuj(opcje); // P-CHMURA-OPIS: nagrobek G tylko w sesji scalania, bez await przed zapisem
+    if (!Bsw_lok || Bsw_lok.deletedAtISO < nagrobekISO) await I().putTombstoneForUser(b, PatientClinicalWriteValue(b,{ patientId: G, deletedAtISO: nagrobekISO }));
+  }
+  return PatientClinicalWriteValue(PatientClinicalOperationAccount,1);
 }
 
 // Najnowszy lokalny nagrobek pacjenta albo null (magazyn bez nagrobkow — null).
@@ -4525,7 +4554,10 @@ async function Bpu_nagrobek(patientId) {
  *
  * Wyjatki: wewnetrzny zapis „Scal pacjentow” (Bpz_bez), jawny import starego pliku JSON (_import — przywraca karte jak
  * import karty, P-IMPORT-NAGROBEK), synchronizacja i import karty (nie wolaja savePatient). Karta nieznana (bez
- * nagrobka: niepobrana, z pliku, nagrobek przyciety po 365 dniach) — zapis jak dotad.
+ * nagrobka: niepobrana, z pliku, nagrobek przyciety po 365 dniach) — zapis jak dotad. Karta oprozniona tu przy
+ * synchronizacji (faza przeniesien zabrala jej ostatnia wersje pod karte, z ktora ja scalono) ma od E3-PR0e1 nagrobek,
+ * gdy scalanie go znalo (Bsw_poOddaniu) — odmowa ze wskazaniem karty docelowej, jak na urzadzeniu, ktore scalilo; bez
+ * znanego nagrobka (np. wersje przyszly koperta albo delta bez nagrobka tej karty) — zapis jak dotad.
  */
 const Bzu_pamiec = new Map();
 

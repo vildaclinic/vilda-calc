@@ -120,7 +120,8 @@
 //        removePatientForUser, Bpc_usunieta, nagrobkiem karty (F-R2) i removeSnapshotForUser; Bsl_przeniesWersje —
 //        tuż przed Bpc_usunieta(G) (F-S1); Bkz_zostawOstatnia — tuż przed odczytem treści
 //        wpisu kosza (Bpc_pelny) i zapisem wersji; Bsw_poprawTresc, Bsw_doF, Bsw_poOddaniu — każdy zapis magazynu tuż
-//        po Bses_pilnuj (także removeTombstoneForUser karty F, do którego żaden przypadek tanio nie dochodzi);
+//        po Bses_pilnuj (także removeTombstoneForUser karty F, do którego żaden przypadek tanio nie dochodzi, i od
+//        E3-PR0e1 nagrobek karty opróżnionej w Bsw_poOddaniu);
 //        Bsw_przeniesPrzezyta — zapis wersji pod kartą docelową i zbiór kart usuniętych tuż po Bses_pilnuj;
 //        Bkz_gdzieIndziej i Bkz_gdzieIndziejRazem (F-S2) — każdy odczyt magazynu (po kluczu, lista kart, lista wersji)
 //        i każda decyzja do ctx po await tuż po Bses_pilnuj (także wpis odłożony do kolejki i lista wersji karty z pętli
@@ -1084,7 +1085,9 @@ describe('P-KOSZ-PO-KLUCZU — strażniki źródła (sesja)', () => {
   it('S2: Bsw_poprawTresc, Bsw_doF, Bsw_poOddaniu — każdy zapis magazynu (wersja, karta, nagrobek) tuż po Bses_pilnuj', () => {
     expect(bezStrazy('Bsw_poprawTresc', ZAPIS_MAG), 'Bsw_poprawTresc: rekord W3 i nagłówek G').toEqual({ ile: 2, zle: [] });
     expect(bezStrazy('Bsw_doF', ZAPIS_MAG), 'Bsw_doF: zdjęcie nagrobka F, rekord W3, karta F').toEqual({ ile: 3, zle: [] });
-    expect(bezStrazy('Bsw_poOddaniu', ZAPIS_MAG), 'Bsw_poOddaniu: licznik albo usunięcie pustej karty G').toEqual({ ile: 2, zle: [] });
+    // E3-PR0e1 (decyzja 1 właściciela z 2026-11-23): pusta karta G znika razem z nagrobkiem znanym scalaniu — trzeci zapis
+    // magazynu w Bsw_poOddaniu (dotąd 2: licznik albo usunięcie), wciąż tuż po Bses_pilnuj (zasada strażnika bez zmian).
+    expect(bezStrazy('Bsw_poOddaniu', ZAPIS_MAG), 'Bsw_poOddaniu: licznik albo usunięcie pustej karty G i nagrobek karty opróżnionej').toEqual({ ile: 3, zle: [] });
   });
 
   it('F-S1: Bsl_przeniesWersje — zbiór kart usuniętych (Bpc_usunieta) po zwolnieniu blokad tuż po Bses_pilnuj', () => {
