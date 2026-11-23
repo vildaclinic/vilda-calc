@@ -382,4 +382,20 @@ describe('P-GH-PROGRAM-EDYCJA — koniec edycji bez zapisu: pole wraca do progra
     a.usun('ig-k3');
     expect([a.stan().edycjaWidoczna, a.pole('therProg').value]).toEqual([true, 'IGF-1']);
   });
+
+  // Drugi przegląd (2026-11-23): kurs bez programu bieżącego (ostatni punkt Increlex bez programu, wcześniej tylko programy
+  // rhGH) — formularz wsteczny otwarty w trakcie edycji bierze program, który pole pokazuje poza edycją (dawne wyrażenie
+  // F(): Włączenie — SNP), a nie program edytowanego punktu z zablokowanego pola (wersja 05e1c7fe: PWS).
+  it('formularz wsteczny w trakcie edycji, kurs bez programu bieżącego (W Genotropin SNP → K Genotropin PWS → K Increlex bez programu; edycja K PWS): program SNP jak poza edycją, nie PWS edytowanego punktu', () => {
+    const KURS = [P('pz-w', 'start', 7, 0, GEN, 'SNP'), P('pz-k1', 'continue', 7, 6, GEN, 'PWS'),
+      bez(P('pz-k2', 'continue', 8, 0, INC, 'IGF-1'), 'program')];
+    const a = atrapa(KURS);
+    expect(a.pole('therProg').value).toBe('SNP');
+    a.edytuj('pz-k1');
+    expect(a.pole('therProg').value).toBe('PWS');
+    a.kliknij('btnGhRetro');
+    expect(a.pole('ghRetroProg').value).toBe('SNP');
+    expect(a.stan().edycjaWidoczna).toBe(true);
+    expect(a.pole('therProg').value).toBe('PWS');
+  });
 });

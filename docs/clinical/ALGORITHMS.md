@@ -46065,7 +46065,10 @@ P-GH-EDYCJA-PACJENT) i odczyt listy `D()` formularza wstecznego (`i()` przy otwa
 edytowanego punktu nie ma już na liście; dziś po zakończeniu edycji w tych miejscach `ghPoKoncuEdycji()` (`F()`, jak
 poza edycją). Tam, gdzie po `Gek()` idzie `F()` (odświeżenie listy, zapis edycji, `He`), bez zmian. (3) Formularz
 wstecznego punktu otwarty w trakcie edycji dodaje nowy punkt, więc kopiuje program i lek bieżący kursu
-(`ghWstecznyZKarty`; brak — pole i preparat karty, jak dotąd), nie program edytowanego punktu.
+(`ghWstecznyZKarty`; program — `ghProgramPozaEdycji`: program, który pole pokazuje poza edycją, czyli bez programu
+bieżącego dawne wyrażenie `F()` z Włączenia; preparat — lek bieżący, brak — preparat karty, jak dotąd), nie program
+edytowanego punktu (drugi przegląd 2026-11-23: W Genotropin SNP → K Genotropin PWS → K Increlex bez programu, edycja K PWS
+— formularz wsteczny SNP jak poza edycją; wersja 05e1c7fe brała PWS z zablokowanego pola).
 
 **Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; wartości z kodu — unit i e2e; wiek l.;mies.; „pole” = pole
 podczas edycji = program zapisany edycją bez zmian; „po” = pole po zapisie).
@@ -46131,16 +46134,17 @@ podczas edycji = program zapisany edycją bez zmian; „po” = pole po zapisie)
   `vilda_vault.js`.
 
 **Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
-- nowy `tests/unit/gh-program-edycja.test.mjs` (29): prawdziwy monitor w atrapie obok tego samego monitora z cofniętymi
+- nowy `tests/unit/gh-program-edycja.test.mjs` (30): prawdziwy monitor w atrapie obok tego samego monitora z cofniętymi
   wpięciami P-GH-PROGRAM-EDYCJA (`ZAMIANY_PRZED`; wariant „przed” sprawdzony poza repozytorium na pliku z 77cb60dc — te same
-  29 wyników): 15 przypadków z tabeli (pole podczas edycji = zapisany program, pole po zapisie; zapis różni się od
+  wyniki): 15 przypadków z tabeli (pole podczas edycji = zapisany program, pole po zapisie; zapis różni się od
   dotychczasowego tylko programem; lista preparatów edycji bez zmian; pkt 2 = `Gp_biezacy` Karty wycięte
   z `vilda_auth_ui.js` na punktach do edytowanego, z lekiem z formularza) + I→G szczegółowo (lista, punkt, karta bez
   zdarzeń, odświeżenie w trakcie edycji, Kontynuacja z karty), lista preparatów punktu bez programu i bez leku, punkt
   niespójny, zmiana rodzaju w edycji, bez modułu kursów, formularz wsteczny w trakcie edycji, przypadek 2 przeglądu
   (wybór Increlexu → IGF-1, powrót → SNP), pkt 3 przy wybranym preparacie, punkt z programem przy zmianie preparatu,
   koniec edycji bez zapisu (zmiana pacjenta w innej ramce, formularz wsteczny po zniknięciu punktu, usunięcie
-  edytowanego punktu, lista bez punktu, odświeżenie tej samej listy, usunięcie innego punktu).
+  edytowanego punktu, lista bez punktu, odświeżenie tej samej listy, usunięcie innego punktu), formularz wsteczny
+  w trakcie edycji przy kursie bez programu bieżącego (drugi przegląd; na wersji 05e1c7fe nie przechodzi).
 - zmienione oczekiwania z powodem w nazwie i komentarzu („od P-GH-PROGRAM-EDYCJA”): `gh-punkty-charakterystyka-monitor`
   — R9 (pole i zapis PWS; dotąd SNP) i „bez punktu Włączenia” (SNP; dotąd PWS); `gh-program-biezacy` — S2 (zapis, pole
   i Kontynuacja z karty SNP; dotąd IGF-1) i edycja Kontynuacji Genotropin w I→G (SNP; dotąd IGF-1).

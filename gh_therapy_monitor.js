@@ -246,7 +246,27 @@ function ghPoKoncuEdycji() {
 function ghWstecznyZKarty(pole, wartosc) {
   if (x == null) return wartosc;
   const lista = Gpo();
+  if (pole === "program") return ghProgramPozaEdycji(lista) || wartosc;
   return ghBiezacy(ghPunktyBiezacegoKursu(ghKursyMonitora(lista), lista))[pole] || wartosc;
+}
+/** Program, ktory pole pokazuje poza edycja (F(), x == null): program biezacy biezacego kursu, a bez niego dawne
+    wyrazenie F() — Wlaczenie biezacego kursu przy kilku kursach, inaczej pierwsze Wlaczenie albo pierwszy punkt listy
+    (kolejnosc F(): wiersze kursow, bez modulu kursow — rodzaj, potem wiek). Formularz wsteczny otwarty w trakcie edycji
+    nie bierze wiec programu edytowanego punktu z zablokowanego pola, gdy kurs nie ma programu biezacego (przeglad
+    2026-11-23: W Genotropin SNP → K Genotropin PWS → K Increlex bez programu, edycja K PWS — formularz wsteczny SNP
+    jak poza edycja, nie PWS). */
+function ghProgramPozaEdycji(lista) {
+  const Gwk = ghKursyMonitora(lista);
+  const b = ghBiezacy(ghPunktyBiezacegoKursu(Gwk, lista)).program;
+  if (b) return b;
+  const r = { start: 0, continue: 1, end: 2 };
+  const wiek = (pk) => (pk.ageYears || 0) * 12 + (pk.ageMonths || 0);
+  const i = Gwk ? Gwk.wiersze.map((w) => w.p)
+    : lista.slice().sort((o, d) => ((r[o.type] ?? 1) - (r[d.type] ?? 1)) || (wiek(o) - wiek(d)));
+  const s = i.find((y) => y.type === "start");
+  let l = s && s.program ? s.program : (i[0] && i[0].program) || "";
+  if (Gwk && Gwk.wiele) l = ghProgramKursu(Gwk.biezacy) || l;
+  return l ? String(l) : "";
 }
 /** Reczna data kontroli i wlasna liczba dni karty po zdarzeniach zmiany (u() w gh_igf_therapy.js je czysci): wpisane
     wczesniej wracaja przez restoreState karty (bez zdarzen); dawka w trybie pola, ktore lekarz wypelnia (kg albo podawana). */

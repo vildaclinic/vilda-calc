@@ -2832,7 +2832,8 @@ lista)`; punkt spoza kursów — sam punkt; edytowany punkt z lekiem z formularz
 Po przeglądzie w tym samym bloku: `ghZmianaPreparatuEdycji` (słuchacz `change` na dokumencie, instalowany raz przy
 starcie skryptu z flagą `window.__ghProgramEdycjiBound`, jak inne słuchacze monitora: zmiana `#ghEditDrug` w trakcie
 edycji punktu bez programu → `F()`), `ghPoKoncuEdycji` (`F()` po zakończeniu edycji tam, gdzie dotąd po `Gek()` nie
-było `F()`) i `ghWstecznyZKarty` (formularz wsteczny w trakcie edycji — program i lek bieżący kursu). Dopiski
+było `F()`) i `ghWstecznyZKarty` z `ghProgramPozaEdycji` (formularz wsteczny w trakcie edycji — program, który pole pokazuje poza
+edycją, i lek bieżący kursu). Dopiski
 w komentarzach P-GH-WZNOWIENIE (część 2), `ghProgramKursu`, `ghKursProgramu` i P-GH-PROGRAM-BIEZACY („Edycja punktu —
 bez zmian”). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-EDYCJA. Zminifikowane ciało: `F()` od
 P-GH-PROGRAM-BIEZACY woła już `ghProgramPola` (bez nowej kotwicy); po przeglądzie cztery kotwice występujące dokładnie
