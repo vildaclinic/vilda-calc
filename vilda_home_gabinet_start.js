@@ -237,7 +237,7 @@
       '<div class="vgs-launch-tiles">' + entries.map(card).join('') + '</div><p class="vgs-launch-status" role="status"></p>';
     const page = element('section','vgs-start vgs-office');
     let day = civilDay(new Date());
-    page.innerHTML = '<div class="vgs-heading"><h1>Gabinet</h1><div class="vgs-heading-actions"><div class="vgs-date">' + icon('calendar') +
+    page.innerHTML = '<div class="vgs-heading"><h1 tabindex="-1">Gabinet</h1><div class="vgs-heading-actions"><div class="vgs-date">' + icon('calendar') +
       '<time><span class="vgs-date-long"></span><span class="vgs-date-short"></span></time></div><button type="button" class="vgs-quick">' +
       icon('calc') + 'Szybkie obliczenie</button></div></div><div class="vgs-office-grid">' +
       '<section class="vgs-box vgs-search" aria-labelledby="vgs-search-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('users') + '</span><h2 id="vgs-search-title">Znajdź pacjenta</h2></div>' +
@@ -570,7 +570,7 @@
         }
       }
       if (focus) {
-        const nextFocus = view === 'office' ? query : get('[data-entry="office"]');
+        const nextFocus = view === 'office' ? page.querySelector('h1') : get('[data-entry="office"]');
         nextFocus.focus({preventScroll:true});
       }
       options.onViewChange?.(view);
@@ -597,7 +597,9 @@
     get('[data-entry="rapid"]').onclick = () => openEntry(options.onRapid);
     get('[data-entry="quick"]').onclick = get('.vgs-quick').onclick = openQuick;
     bindQuick(dialog,current);
-    active = {scope,vault,destroy,refresh,showView,focusSearch:()=>showView('office',true)};
+    active = {scope,vault,destroy,refresh,showView,focusSearch() {
+      if (view === 'office' && current()) query.focus({preventScroll:true});
+    }};
     if (!watched.has(vault)) {
       watched.add(vault);
       vault.onLock(() => { if (active?.vault === vault) active.destroy(); });
