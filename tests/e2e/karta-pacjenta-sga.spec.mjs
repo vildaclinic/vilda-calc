@@ -105,6 +105,30 @@ test('szczegóły zachowują porównanie trzech źródeł; sam Malewski nie daje
   await expect(dialog.locator('[data-sga-metric="length"]')).toContainText(/niedostępn|brak/i);
 });
 
+// P-SGA-KAFEL-NORMY (zgłoszenie i decyzja właściciela 2026-11-23): dziecko z samą masą
+// urodzeniową, SGA według Malewskiego. INTERGROWTH daje dokładnie −2,00 SDS (próg jest ostry:
+// < −2), więc nie SGA. Kafel pokazywał „Do oceny / Niepełna ocena dla części norm” i chował
+// wynik dodatni; teraz czerwone „Tak” z nazwą normy i parametru.
+test('sama masa: SGA wg Malewskiego daje „Tak” z nazwą normy, choć INTERGROWTH nie', async ({ page }) => {
+  const fixture = await openSgaFixture(page);
+  await computeSga(fixture.frame, {
+    inputs: { sex: 'female', weeks: '33', days: '0', weight: '1150', length: '', head: '' },
+    sources: ['intergrowth', 'malewski']
+  });
+  await saveSga(fixture.frame, fixture.ids.a);
+  await openStatusCard(fixture.frame, fixture.ids.a);
+  const tile = fixture.frame.locator(SGA_TILE);
+  await expect(tile.locator('.vilda-patient-stat-value')).toHaveText('Tak');
+  await expect(tile.locator('.vilda-patient-stat-sub')).toHaveText('wg 1 z 2 norm: Malewski (masa)');
+  await expect(tile).toHaveClass(/vilda-patient-stat--alert/);
+  await tile.click();
+  const dialog = fixture.frame.locator(SGA_DIALOG);
+  await expect(dialog.locator('.vilda-sga-conclusion')).toContainText('SGA: Tak');
+  await expect(dialog.locator('.vilda-sga-conclusion')).toContainText('wg 1 z 2 norm: Malewski (masa)');
+  await expect(dialog.locator('[data-sga-source="intergrowth"]')).toBeVisible();
+  await expect(dialog.locator('[data-sga-source="malewski"]')).toBeVisible();
+});
+
 test('wczytanie nie odmładza daty oceny; zmiana wejścia bez Oblicz nie prezentuje starego SDS', async ({ page }) => {
   const fixture = await openSgaFixture(page);
   const birth = await computeSga(fixture.frame);

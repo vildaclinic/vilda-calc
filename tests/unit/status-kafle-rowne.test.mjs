@@ -129,6 +129,11 @@ describe('Walidacja prognoz (vilda_growth_prediction_validation.js): liczba punk
     expect(src).not.toContain('kliknij, aby rozwin');
   });
 
+  it('kafel bez prognoz ma krótki podpis (P-WALIDACJA-KAFEL-KROTKO)', () => {
+    expect(src).toContain('r("div",{class:"vilda-patient-stat-sub",text:"uzupełnij wiek kostny lub wzrost rodziców"})');
+    expect(src).not.toContain('za mało danych do prognoz');
+  });
+
   it('punkty odmienione po polsku', () => {
     expect(m, 'odmiana stoi w podpisie kafelka').not.toBeNull();
     const odmien = new Function(`return ${m[0]};`)();

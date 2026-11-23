@@ -2902,6 +2902,17 @@ z `origin/audyt` 9662e33b); bez ponownej minifikacji.
 panel trajektorii, opis pacjenta, podsumowanie i schowek — bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił
 `npm run podbij-wersje`.
 
+## Łatka P-WALIDACJA-KAFEL-KROTKO — krótki podpis kafla „Walidacja prognoz” bez prognoz (`vilda_growth_prediction_validation.js` 15 → 16, 2026-11-23, decyzja właściciela)
+
+Opis: `docs/clinical/ALGORITHMS.md`, wpis P-WALIDACJA-KAFEL-KROTKO. Jedna kotwica występująca dokładnie raz, bez ponownej
+minifikacji.
+
+```
+// vilda_growth_prediction_validation.js — Pe() (buildStatusSection), kafel bez prognoz (i===0)
+// r("div",{class:"vilda-patient-stat-sub",text:"za mało danych do prognoz — uzupełnij wiek kostny i/lub wzrost rodziców"})
+// → /* P-WALIDACJA-KAFEL-KROTKO … */r("div",{class:"vilda-patient-stat-sub",text:"uzupełnij wiek kostny lub wzrost rodziców"})
+```
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
