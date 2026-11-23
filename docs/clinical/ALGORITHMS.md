@@ -45405,7 +45405,9 @@ D8) i zakaz punktu w zajętym miesiącu bez zmian.
   Włączenia (pierwszy punkt w wieku …)”; zmiana preparatu tylko w obrębie kursu; ten sam wiersz-separator w tabeli metryk;
 - program (wiersz i blokada `#therProg`) z Włączenia bieżącego (ostatniego) kursu, a bez niego z pierwszego punktu kursu;
   przy edycji — z kursu edytowanego punktu [od P-GH-PROGRAM-BIEZACY (2026-11-23): wiersz i pole poza edycją — program
-  bieżący bieżącego kursu (program ostatniego punktu, jak Karta); przy edycji bez zmian];
+  bieżący bieżącego kursu (program ostatniego punktu, jak Karta); przy edycji bez zmian] [od P-GH-PROGRAM-EDYCJA
+  (2026-11-23): przy edycji — program edytowanego punktu, bez niego program bieżący jego kursu z chwili punktu; Włączenie
+  kursu edytowanego punktu tylko jako zapas];
 - podpowiedź `#ghTherapyStartHint`: jeden kurs bez Włączenia — dawny tekst; bieżący kurs bez Włączenia po Zakończeniu
   (W2) — „Kurs k (po „Zakończeniu leczenia”) nie ma punktu „Włączenie leczenia”. Dodaj go (także wstecznie) — w wieku nie
   późniejszym niż pierwszy punkt tego kursu (…) — aby czas leczenia, tempo i zmiany liczyły się od wznowienia.”; po
@@ -45462,7 +45464,9 @@ siatki (wzrost − (77 + 6·wiek)) / 5,5):
 - Edycja Z → K przy istniejącym kursie 2 — przyjęta (ta sama symulacja: lista bez Zakończenia to jeden kurs z Włączeniem);
   wynik jak po scaleniu duplikatów (drugie Włączenie wewnątrz kursu); odmowa zablokowałaby poprawkę omyłkowego
   Zakończenia.
-- `#therProg` przy edycji z programu kursu edytowanego punktu (inaczej edycja punktu kursu 1 przejęłaby program kursu 2).
+- `#therProg` przy edycji z programu kursu edytowanego punktu (inaczej edycja punktu kursu 1 przejęłaby program kursu 2)
+  [od P-GH-PROGRAM-EDYCJA (2026-11-23): program edytowanego punktu; bez programu — program bieżący kursu tego punktu
+  z chwili punktu, więc dalej nie z kursu 2].
 - Podpowiedź przy pustej liście — bez zmian (ukryta); separator kursu także w tabeli metryk.
 - Łańcuch „Preparaty (historia)” w podsumowaniu Karty bez podziału na kursy (`poKursach: false`), bo specyfikacja nie
   zmienia Karty poza ramką W2.
@@ -45821,7 +45825,8 @@ bieżącego kursu (`d`, jak „Aktualna dawka” i „Ostatnia kontrola”):
   do decyzji właściciela. [od P-GH-PROGRAM-BIEZACY (decyzja właściciela 2026-11-23, wpis niżej): pole poza edycją punktu
   i wiersz „Program terapeutyczny: …” nad tabelą = program bieżący bieżącego kursu wg tej samej reguły co Karta (po I→G —
   SNP), a lista preparatów karty idzie za polem, gdy program pola zgadza się z rodzajem bieżącego preparatu; edycja
-  punktu, blokada i pusta lista bez zmian.]
+  punktu, blokada i pusta lista bez zmian.] [od P-GH-PROGRAM-EDYCJA (2026-11-23): przy edycji punktu pole i program
+  zapisany edycją = program edytowanego punktu, nie program Włączenia.]
 - `gh_igf_therapy.js` (Terminarz, `Qe`): wizyta kontrolna z ostatniego punktu wg wieku, dawka wg leku punktu — bez błędu.
   Tytuł nowego wpisu „Leczenie IGF-1 (mekasermina)” przy „Increlex albo program IGF-1” punktu — różni się od reguły pkt 4
   tylko przy niespójnym punkcie; to zapis wpisu (dane), bez zmian.
@@ -45899,7 +45904,9 @@ modułu kursów — cała lista wg wieku, stabilnie, jak `Gw_punktyProgramu`):
 3. lek bieżący: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy lek tego samego rodzaju (`ghBiezacy` =
    `{ lek, program, increlex }`, jak `Gp_biezacy`).
 Zastosowanie: `#therProg` poza edycją punktu i wiersz „Program terapeutyczny: …” (jedna funkcja); pole dalej zablokowane
-przy punktach. Edycja punktu (`x != null`) — bez zmian (dawne wyrażenie z kursem edytowanego punktu). Lista preparatów
+przy punktach. Edycja punktu (`x != null`) — bez zmian (dawne wyrażenie z kursem edytowanego punktu) [od
+P-GH-PROGRAM-EDYCJA (2026-11-23): przy edycji — program edytowanego punktu, bez niego program bieżący jego kursu z chwili
+punktu; dawne wyrażenie tylko jako zapas]. Lista preparatów
 (poza edycją) — tylko gdy oba warunki: wybrany preparat karty nie należy do programu pola (preparaty programu jak
 w edycji i punkcie wstecznym) i program pola zgadza się z rodzajem bieżącego preparatu (`/^IGF/` programu = Increlex
 z pkt 1). Wtedy karta przelicza listę jak po zmianie programu (zdarzenie change pola: `u()` — czyści ręczną datę kontroli
@@ -45927,16 +45934,18 @@ zapisywała się jako Increlex/IGF-1.
 | cały kurs SNP; wznowienie | W→K→K Genotropin SNP; kurs 1 Increlex IGF-1 (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0) | SNP, wiersz SNP, „Kurs 2 — wznowienie w wieku 9 l. 0 mies.”, tabela, preparat, lista i dawka karty — bez zmian | tak samo |
 | cały kurs IGF-1 | W→K Increlex IGF-1 | IGF-1, wiersz IGF-1 — bez zmian; przy karcie z listą rhGH (Omnitrope 10 mg, 0,027) lista idzie za polem: Increlex 40 mg, 0,08 mg/kg/d | Omnitrope 10 mg, 0,027 mg/kg/d przy programie IGF-1 |
 | S1 sprzeczny zapis | W Increlex IGF-1 7;0 → K Genotropin 12 mg z programem IGF-1 7;6 i 8;0; karta na Genotropin 12 mg z ręczną datą kontroli | IGF-1 (program ostatniego punktu), karta bez zmian i bez zdarzeń: Genotropin 12 mg, lista rhGH, dawka i data kontroli jak przed wczytaniem; Kontynuacja z karty — Genotropin 12 mg, IGF-1 | tak samo |
-| S2 edycja ostatniej K | I→G, karta na Genotropin 12 mg; edycja K 8;0 zapisana bez zmian (program z Włączenia — IGF-1, pytanie 17) | pole IGF-1, karta bez zmian i bez zdarzeń (Genotropin 12 mg, data kontroli zostaje); Kontynuacja z karty — Genotropin 12 mg, IGF-1 | tak samo (pole IGF-1 także przed edycją) |
+| S2 edycja ostatniej K | I→G, karta na Genotropin 12 mg; edycja K 8;0 zapisana bez zmian (program z Włączenia — IGF-1, pytanie 17) | pole IGF-1, karta bez zmian i bez zdarzeń (Genotropin 12 mg, data kontroli zostaje); Kontynuacja z karty — Genotropin 12 mg, IGF-1 [od P-GH-PROGRAM-EDYCJA (2026-11-23): edycja zapisuje SNP — pole SNP, Kontynuacja z karty SNP; tego stanu edycja już nie tworzy] | tak samo (pole IGF-1 także przed edycją) |
 | S3 luka B | W Increlex IGF-1 → K Genotropin bez programu (7;6, 8;0); karta na Genotropin 12 mg | IGF-1 (program bieżący pusty — zapas jak dotąd), karta bez zmian i bez zdarzeń: Genotropin 12 mg, lista, dawka | tak samo |
-| edycja | I→G, edycja Włączenia Increlex; edycja Kontynuacji Genotropin | Włączenie: pole IGF-1 podczas edycji (lista karty bez zmian), po zapisie edycji — SNP, Włączenie dalej IGF-1; Kontynuacja: pole IGF-1, zapis z IGF-1 — jak dotąd (stan obecny, pytanie 17) | tak samo (po zapisie edycji — IGF-1) |
+| edycja | I→G, edycja Włączenia Increlex; edycja Kontynuacji Genotropin | Włączenie: pole IGF-1 podczas edycji (lista karty bez zmian), po zapisie edycji — SNP, Włączenie dalej IGF-1; Kontynuacja: pole IGF-1, zapis z IGF-1 — jak dotąd (stan obecny, pytanie 17) [od P-GH-PROGRAM-EDYCJA (2026-11-23): Kontynuacja — pole i zapis SNP] | tak samo (po zapisie edycji — IGF-1) |
 | pusta lista | brak punktów | pole odblokowane, bez wiersza programu, bez przeliczania listy | tak samo |
 | luki, zmiana programu | I→G z Kontynuacjami bez leku (SNP), karta z listą Increlex; Genotropin SNP → Genotropin ZT; W2 (K Increlex IGF-1 po Z) | SNP — lista SNP, preparat domyślny programu (Omnitrope 10 mg; w kursie brak leku rhGH do wyboru, nowa Kontynuacja z karty — Omnitrope 10 mg, SNP, o ile lekarz nie zmieni preparatu); ZT; IGF-1 | IGF-1 (karta Increlex 40 mg, Kontynuacja Increlex, IGF-1); SNP; IGF-1 |
 
 **Czego to nie zmienia (inwentarz).**
 - Edycja punktu (`O()` + `F()`): pole jak dotąd z programu Włączenia kursu edytowanego punktu — `F()` nadpisuje program
   wpisany przez `O()`; edycja Kontynuacji Genotropin w I→G zapisuje IGF-1 (stan obecny, pytanie 17, testy charakterystyki
-  R9) — do decyzji właściciela.
+  R9) — do decyzji właściciela [od P-GH-PROGRAM-EDYCJA (2026-11-23, decyzja właściciela „popraw edycję punktu (pytanie
+  17)”): pole i zapis — program edytowanego punktu (I→G — SNP, R9 — PWS), bez programu — program bieżący kursu z chwili
+  punktu; wpis niżej].
 - Panel wiersza (`vilda_gh_punkt_z_wiersza.js`, `domyslne`): program i preparat z ostatniego punktu wg wieku (po I→G — SNP,
   Genotropin 12 mg), wybierane w panelu — bez błędu „program z Włączenia”; ostatni punkt bez programu → pierwszy program
   listy (nie reguła Karty) — opis, bez zmian pliku.
@@ -45962,7 +45971,8 @@ zapisywała się jako Increlex/IGF-1.
   kursów; prawdziwy monitor w atrapie: I→G, G→I (lista preparatów), kurs jednym programem / wznowienie / luka B / bez
   Włączenia = monitor z usuniętymi wywołaniami łatki („jak dotąd”: pole, wiersz, tabela, preparat, lista, dawka, brak
   zdarzeń karty; różnica tylko przy programie IGF-1 z kartą rhGH), S1–S3 (karta bez zdarzeń, Kontynuacja jak dotąd),
-  bez modułu kursów, wznowienie, edycja Włączenia i Kontynuacji, pusta lista.
+  bez modułu kursów, wznowienie, edycja Włączenia i Kontynuacji, pusta lista [od P-GH-PROGRAM-EDYCJA (2026-11-23): S2
+  i edycja Kontynuacji — zmienione oczekiwania (SNP)].
 - `tests/unit/gh-punkty-siatka.test.mjs` (26 → 28) i `tests/scripts/gh-punkty-wzorzec.mjs`: złota siatka — 534 z 5128
   przypadków z modułem dawki (nowy punkt z karty na listach W+bez-id → ZT i W+obce-pole → IGF-1) mają program bieżący;
   przypadki reprezentatywne (6) = wynik wzorca z programem bieżącym, skrót z programem cofniętym do programu Włączenia =
@@ -45988,9 +45998,160 @@ względem `origin/audyt` a4986460. Bez nowego pliku ładowanego i bez nowych sty
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; program przy edycji punktu (pytanie 17) — droga
 edycji tworzy stan „Genotropin z programem IGF-1” (S2: edycja ostatniej Kontynuacji po I→G zapisuje IGF-1, pole pokazuje
 IGF-1); od tej poprawki karta nie przechodzi przez to na Increlex (zostaje Genotropin), ale następna Kontynuacja z karty
-dostaje program IGF-1 jak dotąd; lek bieżący przy przeliczonej liście; program bieżący przy zmianie programu bez zmiany
-leku i przy luce w programie; preparat domyślny programu, gdy w kursie nie ma leku zgodnego z programem (luka w leku —
-stare punkty bez preparatu); powrót ręcznej daty kontroli i własnej liczby dni po przeliczeniu listy.
+dostaje program IGF-1 jak dotąd [rozstrzygnięte 2026-11-23: „popraw edycję punktu (pytanie 17)” — P-GH-PROGRAM-EDYCJA:
+edycja zapisuje program edytowanego punktu, więc stanu S2 już nie tworzy]; lek bieżący przy przeliczonej liście; program
+bieżący przy zmianie programu bez zmiany leku i przy luce w programie; preparat domyślny programu, gdy w kursie nie ma
+leku zgodnego z programem (luka w leku — stare punkty bez preparatu); powrót ręcznej daty kontroli i własnej liczby dni
+po przeliczeniu listy.
+
+## P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (pytanie 17) (SW 1.1.576, `gh_therapy_monitor.js` 67, 2026-11-23)
+
+**Zmiana kliniczna: TAK — przy edycji istniejącego punktu program zapisywany = program edytowanego punktu (bez programu
+— program bieżący kursu z chwili punktu), nie program Włączenia.** Pole „Program terapeutyczny” (`#therProg`) pokazuje
+w trakcie edycji ten sam program i zostaje zablokowane. Wzory, dawki zapisane w punktach, progi, lista preparatów
+formularza edycji, karta terapii (`#therDrug`), zapis punktów poza programem zapisanym przy edycji, walidacja
+(`VildaGhPunkty.sprawdzRodzaj`), kursy (P-GH-WZNOWIENIE), sejf i Karta — bez zmian. Łatka: `docs/ZRODLA_ARTEFAKTOW.md`,
+„Łatka P-GH-PROGRAM-EDYCJA”.
+
+**Decyzja właściciela.** P-GH-PROGRAM-BIEZACY zostawił program przy edycji punktu do decyzji (pytanie 17, „Co pozostaje
+decyzją właściciela”); właściciel 2026-11-23: „popraw edycję punktu (pytanie 17)” — po rekomendacji: przy edycji pole
+pokazuje program edytowanego punktu, a nie program Włączenia; edycja nie zmienia danych, których lekarz nie dotknął;
+punkt bez programu — program bieżący kursu z chwili tego punktu.
+
+**Źródło, populacja, jednostki.** Jak w P-GH-PREPARAT-BIEZACY i P-GH-PROGRAM-BIEZACY (ChPL Increlex, EMA, PDF
+z 26.03.2026, pkt 4.2; preparaty somatotropiny i somatrogonu — bez zmian). Zmiana nie wprowadza nowych liczb ani progów:
+edycja zachowuje program zapisany w punkcie (a z nim listę preparatów programu w formularzu edycji). Populacja: dzieci
+leczone w programach GH/IGF-1, których punkty lekarz poprawia w monitorze DocPro — zwłaszcza po zmianie preparatu między
+mekaserminą a rhGH w kursie, przy kilku programach w kursie i w kursie bez Włączenia.
+
+**Stan przed zmianą (`audyt` 77cb60dc, prawdziwy monitor w atrapie i prawdziwe DocPro w e2e).** „Edytuj” w tabeli
+punktów → `O()` wpisywało do `#therProg` program punktu, ale `F()` zaraz nadpisywało pole dawnym wyrażeniem
+(`ghProgramPola` przy `x != null` zwracało je bez zmian): program Włączenia kursu edytowanego punktu
+(`ghProgramKursu(ghKursProgramu(Gwk))`), przy jednym kursie — `s.program` pierwszego Włączenia, bez niego program
+pierwszego punktu wg wieku. Zapis edycji (`Gph` → `VildaGhPunkty.polaZPodawanej`) bierze program z `#therProg`, więc
+punkt dostawał program Włączenia. Po I→G edycja Kontynuacji Genotropin — także bez żadnej zmiany — zapisywała ją
+z programem IGF-1 (stan „Genotropin z programem IGF-1”, S2 w P-GH-PROGRAM-BIEZACY), a edycja ostatniej Kontynuacji
+przestawiała program bieżący: pole i następna Kontynuacja z karty — IGF-1. Bez Włączenia — program pierwszego punktu
+(test charakterystyki: edycja starszego SNP 10;0 przy młodszym PWS 8;0 → PWS); punkt z programem innym niż Włączenie
+(R9: PWS w kursie z Włączeniem SNP) → SNP.
+
+**Reguła** (czytelna część `gh_therapy_monitor.js`: funkcja `ghProgramEdycji(Gwk, dotad)` w bloku P-GH-PROGRAM-EDYCJA
+zaraz po `ghProgramPola`; `ghProgramPola` woła ją przy `x != null`; `F()` już woła `ghProgramPola`, więc w zminifikowanym
+ciele nie ma nowych kotwic). Przy edycji punktu pole `#therProg`, a więc program zapisany edycją:
+1. program edytowanego punktu, gdy jest (niepusty) — także gdy przeczy lekowi punktu (np. dawny zapis „Genotropin
+   + IGF-1”): edycja nie poprawia programu po cichu;
+2. bez programu — program bieżący kursu z chwili tego punktu: `ghBiezacy` (reguła P-GH-PROGRAM-BIEZACY = `Gp_biezacy`
+   Karty) na punktach kursu edytowanego punktu wg wieku do edytowanego punktu włącznie (kilka kursów — kurs punktu
+   z `ghKursy`; jeden kurs albo brak modułu kursów — cała lista wg wieku; punkt spoza kursów, np. bez wieku — sam punkt):
+   rodzaj z ostatniego punktu z lekiem albo programem (więc z leku edytowanego punktu, gdy go ma), program — ostatni
+   wcześniejszy program tego rodzaju; późniejsze punkty się nie liczą;
+3. bez tego — jak dotąd (dawne wyrażenie: program Włączenia kursu edytowanego punktu, bez niego jego pierwszego punktu).
+Edytowany punkt = pierwszy o równym `String(id)` na bieżącej liście, jak w `O()` i `zmienWMiejscu`. Rozstrzygnięcie
+wykonawcy: gdy edytowanego punktu nie ma już na liście (usunięty w trakcie edycji — `re()` woła `F()` przed zakończeniem
+edycji `Gek()`), pole bierze program bieżący, jak poza edycją; dotąd zostawało dawne wyrażenie (po I→G — IGF-1, a z nim
+następna Kontynuacja z karty).
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; wartości z kodu — unit i e2e; wiek l.;mies.; „pole” = pole
+podczas edycji = program zapisany edycją bez zmian; „po” = pole po zapisie).
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd (77cb60dc) |
+|---|---|---|---|
+| I→G, Kontynuacja Genotropin | W Increlex 40 mg IGF-1 7;0 → K Genotropin 12 mg SNP 7;6 → K Genotropin SNP 8;0; edycja K 7;6 bez zmian | pole SNP (zablokowane), preparaty edycji — 6 rhGH, wybrany Genotropin 12 mg; zapis SNP, punkt jak przed edycją (`dose` i `doseAbs` z dawki podawanej formularza, jak dotąd); po — SNP, „Program terapeutyczny: SNP”, karta Genotropin 12 mg bez zdarzeń; Kontynuacja z karty — Genotropin 12 mg, SNP | pole i zapis IGF-1; po — SNP |
+| S2, ostatnia Kontynuacja | I→G, karta na Genotropin 12 mg z ręczną datą kontroli; edycja K 8;0 bez zmian | pole i zapis SNP; po — SNP, karta i data kontroli bez zmian; Kontynuacja z karty — Genotropin 12 mg, SNP | IGF-1; po — IGF-1; Kontynuacja z karty IGF-1 |
+| I→G, Włączenie Increlex | edycja W 7;0 bez zmian | pole i zapis IGF-1 (preparaty edycji: Increlex 40 mg); po — SNP (lista karty wraca za programem bieżącym) | tak samo |
+| R9 (charakterystyka) | W SNP 9;0, K Omnitrope 10 mg PWS 9;6, K SNP 8;6; edycja K 9;6 zapisana jako Zakończenie | pole PWS, zapis `program: 'PWS'` | SNP |
+| bez Włączenia (charakterystyka) | K SNP 10;0, K PWS 8;0; edycja K 10;0 | zapis SNP | PWS |
+| bez programu po W rhGH | W Genotropin SNP 7;0 → K Genotropin bez programu 7;6 | pole i zapis SNP (pkt 2); preparaty edycji — wszystkie 7, wybrany Genotropin 12 mg | tak samo |
+| bez programu po W Increlex | W Increlex IGF-1 7;0 → K Genotropin bez programu 7;6 | IGF-1 (pkt 3 — w kursie przed punktem brak programu rhGH); zapis Genotropin z IGF-1 | tak samo |
+| bez programu, I→G | I→G, K 8;0 Genotropin bez programu | pole i zapis SNP (z K 7;6) | IGF-1 |
+| bez leku i programu | I→G + K 8;6 bez leku i programu | SNP (rodzaj z K Genotropin 8;0); preparat formularza — pierwszy z listy (Omnitrope 5 mg) i z nim zapis, jak dotąd | IGF-1 |
+| bez programu przed SNP | W Increlex IGF-1 7;0 → K Genotropin bez programu 7;6 → K Genotropin SNP 8;0; edycja 7;6 | IGF-1 (pkt 3 — późniejsze SNP się nie liczy); po — SNP | tak samo |
+| punkt niespójny | W Increlex IGF-1 7;0 → K Genotropin z programem IGF-1 7;6 i 8;0 (zapis dawną edycją); karta na Genotropin 12 mg; edycja 8;0 | pole IGF-1 (pkt 1, bez cichej poprawki); preparaty edycji programu IGF-1 — tylko Increlex 40 mg, Genotropinu brak, pole preparatu puste: zapis bez zmian odmawia „Wybierz program i preparat…”, punkt, lista i karta (Genotropin, bez zdarzeń) bez zmian | tak samo |
+| wznowienie | kurs 1 Increlex IGF-1 (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0); edycja Z 8;0 / K 10;0 | IGF-1 / SNP; po — SNP | tak samo |
+| wznowienie, I→G w kursie 2 | kurs 1 Genotropin SNP (W 7;0 → Z 8;0 bez programu), kurs 2 W Increlex IGF-1 9;0 → K Genotropin SNP 9;6 → K Genotropin bez programu 10;0 | K 9;6 — SNP; K 10;0 — SNP (pkt 2, kurs 2); Z 8;0 — SNP (pkt 2, kurs 1 — nie IGF-1 kursu 2); po — SNP | K 9;6 i K 10;0 — IGF-1 (po — IGF-1); Z 8;0 — SNP |
+| zmiana rodzaju w edycji | I→G, edycja K 8;0 zapisana przyciskiem „Zakończenie” | `type: 'end'`, program SNP | IGF-1 |
+| bez modułu kursów | I→G, edycja K 7;6; luka (K 8;0 bez programu) | SNP; SNP (cała lista wg wieku do punktu) | IGF-1 |
+| formularz wsteczny w trakcie edycji | I→G, edycja K 7;6, „Wsteczny punkt” | program SNP, preparat Genotropin 12 mg (formularz kopiuje pole i preparat karty, który `O()` ustawia na lek punktu) | IGF-1, Increlex 40 mg |
+| koniec edycji bez zapisu | I→G: edycja K 8;0, potem „Usuń” tego punktu | edycja zamknięta, pole SNP; Kontynuacja z karty — Genotropin 12 mg, SNP | pole IGF-1, Kontynuacja z karty IGF-1 |
+| lista bez edytowanego punktu | edycja K 8;0, lista z innej ramki bez niego (P-GH-EDYCJA-LISTA); odświeżenie tej samej listy | edycja zamknięta, pole SNP; ta sama lista — edycja trwa, pole SNP | pole SNP; ta sama lista — IGF-1 |
+
+**Czego to nie zmienia (inwentarz innych dróg edycji).**
+- Panel wiersza (`vilda_gh_punkt_z_wiersza.js`): tylko nowe punkty z wiersza karty zaawansowanej („Edycja i usuwanie
+  punktu zostają w monitorze DocPro”), program i preparat wybierane w panelu — bez zmian.
+- Karta pacjenta (`vilda_auth_ui.js`): nie edytuje punktów; skok do punktu (`vilda:gh-jump` → `pe()` w monitorze) tylko
+  otwiera „Monitorowanie” i podświetla wiersz — bez zmian. `O()` wołają wyłącznie „Edytuj” w tabeli i odtworzenie stanu
+  edycji (`restoreState`) — oba idą przez `F()`, więc przez nową regułę.
+- Import, scalanie i sejf (`vilda_data_import_export.js`, `vilda_vault.js`): przenoszą listę punktów bez `#therProg` —
+  bez zmian.
+- Zmiana rodzaju punktu przyciskiem W/K/Z w edycji (`btnGhStart`/`btnGhContinue`/`btnGhEnd` przy `x`): ten sam zapis
+  edycji (`Gph`) — program wg reguły wyżej; reguła rodzaju (kursy) bez zmian.
+- Formularz wstecznego punktu otwarty w trakcie edycji kopiuje pole i preparat karty: dziś program i lek edytowanego
+  punktu (dotąd program Włączenia z preparatem tego programu — po I→G IGF-1 i Increlex 40 mg).
+- Lista preparatów formularza edycji (`#ghEditDrug`: preparaty programu punktu, bez programu — wszystkie; lek punktu
+  wybrany) — bez zmian. Spójność z pkt 2: punkt Genotropin bez programu → program SNP, lista — wszystkie, Genotropin
+  wybrany (spójne); punkt bez leku → pierwszy preparat listy trafia do zapisu (jak dotąd); punkt Genotropin bez programu
+  przed pierwszym programem rhGH w kursie po Włączeniu Increlex → IGF-1 (pkt 3) z Genotropinem — jak dotąd.
+- Punkty niespójne: bez cichej poprawki. Formularz edycji ma listę preparatów programu IGF-1 bez Genotropinu, więc zapis
+  bez wyboru preparatu odmawia (jak dotąd), a wybór Increlex 40 mg zmienia lek punktu — świadomie. Zapisane wcześniej
+  punkty nie są poprawiane.
+- Karta terapii przy edycji: `ghPreparatyKarty` przy `x != null` nic nie robi (bez zmian). Po zapisie albo końcu edycji
+  — jak po P-GH-PROGRAM-BIEZACY (`F()` z `x == null`, program bieżący; np. po edycji Włączenia Increlex lista karty wraca
+  do SNP).
+- Koniec edycji bez zapisu (monitor nie ma przycisku „Anuluj edycję”): wczytanie listy bez punktu albo innego pacjenta
+  (`D()` → `Gek()`, potem `F()`), reset monitora (`Q()` → `F()`) i usunięcie edytowanego punktu (rozstrzygnięcie wyżej)
+  odświeżają pole. Zmiana pacjenta sesji karty w innej ramce (zdarzenie `storage` `vildaCurrentPatientId`,
+  P-GH-EDYCJA-PACJENT) kończy edycję bez `F()` — pole zostaje z chwili edycji (dziś program punktu, dotąd program
+  Włączenia) do najbliższego wczytania listy; opis, bez zmiany. Reset przy otwartej edycji zostawia formularz edycji
+  widoczny (P-GH-EDYCJA-LISTA, „chowanie formularza po resecie nadal do decyzji”) — bez zmian.
+- `vilda_auth_ui.js`, `vilda_gh_punkty.js`, `gh_igf_therapy.js`, `vilda_gh_punkt_z_wiersza.js`, `gh_therapy_segments.js`,
+  `vilda_vault.js`.
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- nowy `tests/unit/gh-program-edycja.test.mjs` (22): prawdziwy monitor w atrapie obok tego samego monitora z `ghProgramPola`
+  sprzed zmiany (zachowanie 77cb60dc): 13 przypadków z tabeli (pole podczas edycji = zapisany program, pole po zapisie;
+  zapis różni się od dotychczasowego tylko programem; lista preparatów edycji bez zmian; pkt 2 = `Gp_biezacy` Karty
+  wycięte z `vilda_auth_ui.js` na punktach do edytowanego) + I→G szczegółowo (lista, punkt, karta bez zdarzeń,
+  odświeżenie w trakcie edycji, Kontynuacja z karty), lista preparatów punktu bez programu i bez leku, punkt niespójny,
+  zmiana rodzaju w edycji, bez modułu kursów, formularz wsteczny w trakcie edycji, koniec edycji bez zapisu (usunięcie
+  edytowanego punktu, lista bez punktu, odświeżenie tej samej listy, usunięcie innego punktu).
+- zmienione oczekiwania z powodem w nazwie i komentarzu („od P-GH-PROGRAM-EDYCJA”): `gh-punkty-charakterystyka-monitor`
+  — R9 (pole i zapis PWS; dotąd SNP) i „bez punktu Włączenia” (SNP; dotąd PWS); `gh-program-biezacy` — S2 (zapis, pole
+  i Kontynuacja z karty SNP; dotąd IGF-1) i edycja Kontynuacji Genotropin w I→G (SNP; dotąd IGF-1).
+- `tests/unit/gh-punkty-siatka.test.mjs` (28 → 30) i `tests/scripts/gh-punkty-wzorzec.mjs`: złota siatka — 253 z 963
+  zapisów edycji z modułem dawki (bez odmów reguły kursów; W+bez-id, punkt bez id → ZT: 112; W+obce-pole, `fikc-k2` →
+  IGF-1: 141; dotąd SNP Włączenia) mają program edytowanego punktu (`wplywProgramuEdycji` — program czyta prawdziwy
+  monitor podczas edycji); 3 przypadki reprezentatywne = wynik wzorca z programem punktu od zapisu dalej
+  (`zProgramemEdytowanego`), skrót z programem cofniętym = skrót BAZA; nowy test struktury, nowa kontrola negatywna (pole
+  przy edycji znów z dawnego wyrażenia), a kontrola „#therProg z programu Włączenia” obejmuje też te edycje. Plik wzorca
+  bez zmian.
+- e2e (prawdziwe DocPro): `tests/e2e/gh-program-biezacy-docpro.spec.mjs` — nowe GPB-9 (I→G, edycja K 7;6: pole SNP,
+  preparaty rhGH, zapis SNP, karta SNP i Genotropin; usunięcie edytowanego punktu — pole SNP, Kontynuacja z karty SNP)
+  i GPB-10 (punkt bez programu → SNP, wszystkie preparaty; punkt niespójny → IGF-1, pole preparatu puste, odmowa, punkt
+  i karta bez zmian), zmienione GPB-7 (S2: zapis, pole i Kontynuacja z karty SNP; dotąd IGF-1 — edycja tworzyła stan
+  „Genotropin + IGF-1”); `gh-program-biezacy-docpro-mobile.spec.mjs` — nowe GPBM-2 (telefon: pole i zapis SNP, bez
+  przewijania w bok). Wagi obu plików w `tests/fixtures/czasy-e2e.json` zmierzone na nowo.
+- Kontrola negatywna na `origin/audyt` 77cb60dc: e2e — nie przechodzą 4 z 4 nowych i zmienionych (GPB-7, GPB-9, GPB-10,
+  GPBM-2), pozostałe 8 testów obu plików przechodzą; unit — nowy plik nie ładuje się (brak wywołania `ghProgramEdycji`),
+  a w wariancie bez tej kotwicy nie przechodzi 13 z 22 (przechodzą: edycja Włączenia, punkty bez programu z wynikiem jak
+  dotąd ×3, wznowienie ×2, Zakończenie kursu 1 bez programu, punkt niespójny, usunięcie innego punktu — pilnują braku
+  zmiany); `gh-program-biezacy` w tym samym wariancie — 2 z 32 (S2, edycja Kontynuacji); charakterystyka — 2 z 20;
+  siatka — 2 z 30 (test struktury i nowa kontrola negatywna).
+
+**Wdrożenie.** Od razu przy wydaniu; dotyczy punktów edytowanych po wdrożeniu. Rekord pacjenta, sejf, zapis punktów
+(poza programem zapisanym przy edycji) i synchronizacja bez zmian. Zapisane wcześniej punkty nie są poprawiane
+(Kontynuacje zapisane dawną edycją z programem IGF-1 przy rhGH zostają — S1; ich edycja zachowuje IGF-1).
+**Cofnięcie** = rewert PR: pole przy edycji znów z dawnego wyrażenia (program Włączenia kursu).
+
+**Wersje.** `gh_therapy_monitor.js` 66 → 67 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.575 → 1.1.576
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `origin/audyt` 77cb60dc. Bez nowego pliku ładowanego i bez nowych stylów.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; punkty niespójne (np. Genotropin z programem IGF-1):
+edycja ich nie poprawia, a lista preparatów formularza edycji idzie za programem punktu (bez Genotropinu), więc zapis bez
+zmian odmawia — sposób poprawki to osobna decyzja (np. program edytowalny przy edycji albo lista preparatów wg leku
+punktu); punkt bez programu, przed którym w kursie nie ma programu tego rodzaju (pkt 3 — program Włączenia, np. Genotropin
+z IGF-1), i to, że pkt 2 nie patrzy na późniejsze punkty; preparat punktu bez leku przy edycji (pierwszy z listy, jak
+dotąd); pole z chwili edycji po zmianie pacjenta w innej ramce do najbliższego wczytania listy; rozstrzygnięcie dla
+punktu usuniętego w trakcie edycji (pole — program bieżący).
 
 ## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.568, `vilda_vault.js` 283, 2026-11-20)
 

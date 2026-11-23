@@ -9,7 +9,8 @@ ${l} mg/kg/d`}function G(e,n,t){const r=parseFloat(e),i=parseFloat(n);if(!isFini
    (dotad wg rodzaju, potem wieku) z wierszem „Kurs k — …” przed kazdym kursem od drugiego; zmiana preparatu tylko
    w obrebie kursu; program (wiersz i blokada #therProg) z Wlaczenia biezacego kursu (przy edycji — kursu edytowanego
    punktu) [od P-GH-PROGRAM-BIEZACY (2026-11-23): wiersz i #therProg poza edycja — program biezacy biezacego kursu,
-   jak Karta; przy edycji bez zmian].
+   jak Karta; przy edycji bez zmian] [od P-GH-PROGRAM-EDYCJA (2026-11-23): przy edycji — program edytowanego punktu,
+   bez niego program biezacy jego kursu z chwili punktu; Wlaczenie kursu edytowanego punktu tylko jako zapas].
    Metryki (hSDS, tempo, hSDS−mpSDS, „od wlaczenia” i „vs poprzednia”) liczone osobno w kazdym kursie: baza =
    Wlaczenie kursu (albo jego pierwszy punkt), para nie laczy punktow z roznych kursow. Ocena B.64 tylko z wierszy
    biezacego kursu (przerwa Zakonczenie -> Wlaczenie nie jest „tempem w trakcie leczenia”). Odcinki lekow dzieli kurs
@@ -80,13 +81,16 @@ function ghSeparatorKursu(tbody, Gwk, pk) {
   return !0;
 }
 /** Program kursu: z jego Wlaczenia, a bez niego z pierwszego punktu kursu. Od P-GH-PROGRAM-BIEZACY — tylko przy
-    edycji punktu (#therProg) i jako zapas, gdy kurs nie ma programu biezacego (ghProgramWiersza, ghProgramPola). */
+    edycji punktu (#therProg) i jako zapas, gdy kurs nie ma programu biezacego (ghProgramWiersza, ghProgramPola);
+    od P-GH-PROGRAM-EDYCJA przy edycji tez tylko zapas: punkt bez programu i bez programu biezacego z chwili punktu
+    (ghProgramEdycji). */
 function ghProgramKursu(k) {
   if (!k) return null;
   if (k.wlaczenie && k.wlaczenie.program) return k.wlaczenie.program;
   return (k.punkty[0] && k.punkty[0].program) || null;
 }
-/** Kurs, z ktorego #therProg bierze program: przy edycji — kurs edytowanego punktu, inaczej biezacy (ostatni). */
+/** Kurs, z ktorego #therProg bierze program: przy edycji — kurs edytowanego punktu, inaczej biezacy (ostatni).
+    Od P-GH-PROGRAM-EDYCJA przy edycji tylko zapas (ghProgramEdycji, pkt 3). */
 function ghKursProgramu(Gwk) {
   if (x != null) {
     const wr = Gwk.wiersze.find((q) => q.p && String(q.p.id) === String(x));
@@ -108,7 +112,8 @@ function ghKursProgramu(Gwk) {
      inny przy rhGH); brak — program jak dotad (Wlaczenie kursu, pierwszy punkt listy, a bez nich pole bez zmiany).
    - Lek biezacy: lek ostatniego punktu; gdy pusty — ostatni wczesniejszy lek tego samego rodzaju (jak Karta).
    Kurs jednym programem — wynik jak dotad. Edycja punktu (x != null) — bez zmian: pole jak dotad (O i F, kurs edytowanego
-   punktu — ghKursProgramu). Lista preparatow karty (#therDrug) idzie za programem pola (poza edycja) tylko wtedy, gdy
+   punktu — ghKursProgramu) [od P-GH-PROGRAM-EDYCJA (2026-11-23): przy edycji program edytowanego punktu, bez niego
+   program biezacy jego kursu z chwili punktu — ghProgramEdycji]. Lista preparatow karty (#therDrug) idzie za programem pola (poza edycja) tylko wtedy, gdy
    wybrany preparat nie nalezy do programu (R — preparaty programu, jak w edycji i punkcie wstecznym; np. lista innego
    programu po wczytaniu pacjenta) ORAZ program pola zgadza sie z rodzajem biezacego preparatu (IGF… przy Increlexie, inny
    przy rhGH): karta przelicza liste jak po zmianie programu (zdarzenie change pola: lista i preparat domyslny programu,
@@ -165,9 +170,37 @@ function ghPunktyBiezacegoKursu(Gwk, lista) {
 function ghProgramWiersza(Gwk, dotad) {
   return ghProgramBiezacy(ghPunktyBiezacegoKursu(Gwk, Gpo())) || dotad;
 }
-/** #therProg (F, lista z punktami): przy edycji — jak dotad (dotad: kurs edytowanego punktu); inaczej jak wiersz. */
+/** #therProg (F, lista z punktami): przy edycji — ghProgramEdycji (od P-GH-PROGRAM-EDYCJA; dotad: kurs edytowanego
+    punktu, jak dotad — tylko zapas); inaczej jak wiersz. */
 function ghProgramPola(Gwk, dotad) {
-  return x != null ? dotad : ghProgramWiersza(Gwk, dotad);
+  return x != null ? ghProgramEdycji(Gwk, dotad) : ghProgramWiersza(Gwk, dotad);
+}
+/* P-GH-PROGRAM-EDYCJA (decyzja wlasciciela 2026-11-23: „popraw edycje punktu (pytanie 17)”; opis:
+   docs/clinical/ALGORITHMS.md, wpis P-GH-PROGRAM-EDYCJA; latka: docs/ZRODLA_ARTEFAKTOW.md). Przy edycji punktu (x != null)
+   pole „Program terapeutyczny” (#therProg), a wiec program zapisany edycja (Gph: program z #therProg), to:
+   1. program edytowanego punktu, gdy jest — takze gdy przeczy lekowi punktu (np. dawny zapis Genotropin z programem
+      IGF-1): edycja nie poprawia programu po cichu;
+   2. bez programu — program biezacy kursu z chwili tego punktu: ghBiezacy (regula P-GH-PROGRAM-BIEZACY, jak Gp_biezacy
+      Karty) na punktach kursu edytowanego punktu wg wieku do edytowanego punktu wlacznie (kilka kursow — kurs punktu
+      z ghKursy; jeden kurs albo brak modulu kursow — cala lista wg wieku, jak ghPunktyBiezacegoKursu; punkt spoza
+      kursow, np. bez wieku — sam punkt): rodzaj z ostatniego punktu z lekiem albo programem (wiec z leku edytowanego
+      punktu, gdy go ma), program — ostatni wczesniejszy program tego rodzaju;
+   3. bez tego — jak dotad (dotad: program Wlaczenia kursu edytowanego punktu, bez niego jego pierwszego punktu).
+   Dotad O() wpisywalo program punktu, a F() zaraz nadpisywalo go programem Wlaczenia: edycja Kontynuacji Genotropin (SNP)
+   po Wlaczeniu Increlex (IGF-1) zapisywala ja — takze bez zadnej zmiany — z programem IGF-1. Edytowanego punktu nie ma juz
+   na liscie (usuniety w trakcie edycji: F() biegnie przed zakonczeniem edycji, Gek) — edycja sie skonczyla: pole jak poza
+   edycja (program biezacy). Blokada pola, lista preparatow formularza edycji (#ghEditDrug: preparaty programu punktu albo
+   wszystkie), lista preparatow karty (ghPreparatyKarty nic nie robi przy edycji), zapis, walidacja, kursy i sejf — bez
+   zmian; zapisane wczesniej punkty nie sa poprawiane. */
+function ghProgramEdycji(Gwk, dotad) {
+  const lista = Gpo();
+  const pk = lista.find((q) => String(q.id) === String(x));
+  if (!pk) return ghProgramWiersza(Gwk, dotad);
+  if (pk.program) return String(pk.program);
+  const wr = Gwk && Gwk.wiele ? Gwk.wgPunktu.get(pk) : null;
+  const kurs = wr && wr.kurs ? wr.kurs.punkty : ghPunktyBiezacegoKursu(null, lista);
+  const j = kurs.indexOf(pk);
+  return ghProgramBiezacy(j >= 0 ? kurs.slice(0, j + 1) : [pk]) || dotad;
 }
 /** Reczna data kontroli i wlasna liczba dni karty po zdarzeniach zmiany (u() w gh_igf_therapy.js je czysci): wpisane
     wczesniej wracaja przez restoreState karty (bez zdarzen); dawka w trybie pola, ktore lekarz wypelnia (kg albo podawana). */

@@ -2820,6 +2820,39 @@ na listach z innym programem ostatniego punktu mają dziś program bieżący (`w
 w `tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
 precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (`gh_therapy_monitor.js` 66 → 67, 2026-11-23, decyzja właściciela, pytanie 17)
+
+Czytelne źródło reguły: `gh_therapy_monitor.js`, czytelna część na górze pliku — nowy blok P-GH-PROGRAM-EDYCJA (komentarz
+i funkcja `ghProgramEdycji(Gwk, dotad)`) zaraz po `ghProgramPola` (blok P-GH-PROGRAM-BIEZACY). `ghProgramPola` przy edycji
+punktu (`x != null`) woła `ghProgramEdycji` zamiast zwracać dawne wyrażenie: program edytowanego punktu (pierwszy
+o równym `String(id)` na liście, jak `O()`), bez programu — `ghProgramBiezacy` na punktach kursu punktu wg wieku do
+niego włącznie (kilka kursów — kurs z `Gwk.wgPunktu`; jeden kurs albo brak modułu kursów — `ghPunktyBiezacegoKursu(null,
+lista)`; punkt spoza kursów — sam punkt), bez tego — `dotad` (dawne wyrażenie); punktu nie ma na liście (usunięty
+w trakcie edycji) — `ghProgramWiersza`, jak poza edycją. Dopiski w komentarzach P-GH-WZNOWIENIE (część 2),
+`ghProgramKursu`, `ghKursProgramu` i P-GH-PROGRAM-BIEZACY („Edycja punktu — bez zmian”). Opis: `docs/clinical/ALGORITHMS.md`,
+wpis P-GH-PROGRAM-EDYCJA. Zminifikowane ciało bez zmian — `F()` od P-GH-PROGRAM-BIEZACY woła już `ghProgramPola`, więc
+łatka nie ma nowych kotwic w ciele. Skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py`
++ `ge_monitor_blok.js`, poza repozytorium) odtwarza wynik z `origin/audyt` 77cb60dc; bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelna część:
+// 1. ghProgramPola: return x != null ? dotad : ghProgramWiersza(Gwk, dotad);
+//    → return x != null ? ghProgramEdycji(Gwk, dotad) : ghProgramWiersza(Gwk, dotad);
+//    a zaraz po funkcji blok P-GH-PROGRAM-EDYCJA (komentarz + ghProgramEdycji)
+// 2.–5. dopiski [od P-GH-PROGRAM-EDYCJA (2026-11-23): …] w komentarzach P-GH-WZNOWIENIE (część 2), ghProgramKursu,
+//    ghKursProgramu i P-GH-PROGRAM-BIEZACY
+// Kontrola: tests/unit/gh-program-edycja.test.mjs i kontrola negatywna złotej siatki podmieniają
+//   'x != null ? ghProgramEdycji(Gwk, dotad) :' → 'x != null ? dotad :' (zachowanie 77cb60dc).
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+`vilda_gh_punkty.js` (zapis i walidacja), `vilda_auth_ui.js` (Karta), `gh_igf_therapy.js`, `vilda_gh_punkt_z_wiersza.js`
+(panel wiersza), lista preparatów formularza edycji (`O()`), `ghPreparatyKarty`, blokada pola, kursy i sejf — bez zmian.
+Złota siatka punktów (`tests/fixtures/gh-punkty-wzorzec.json`) bez zmian pliku: zapisy edycji punktu o innym programie
+niż Włączenie mają dziś program edytowanego punktu (`wplywProgramuEdycji`, `zProgramemEdytowanego` w
+`tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
+precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
