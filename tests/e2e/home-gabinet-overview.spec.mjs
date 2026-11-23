@@ -54,7 +54,7 @@ async function scrollToVisibleFooter(frame, screen, requireOverflow = false) {
   await expect.poll(() => frame.locator('.site-footer').evaluate(async footer => {
     const scroller = document.scrollingElement;
     scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'instant' });
-    await new Promise(resolve => requestAnimationFrame(resolve));
+    await new Promise(resolve => { requestAnimationFrame(resolve); });
     const { top, bottom } = footer.getBoundingClientRect();
     return {
       atEnd: Math.abs(scroller.scrollHeight - scroller.clientHeight - scroller.scrollTop) <= 1,
