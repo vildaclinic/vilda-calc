@@ -45858,7 +45858,7 @@ wszystko z `npm run podbij-wersje` względem `origin/audyt` a7b2920b. Bez nowego
 (pkt 6); pole „Preparat” z leku bieżącego (pkt 3); program karty terapii w DocPro po zmianie preparatu (inwentarz)
 [rozstrzygnięte 2026-11-23: „popraw program w formularzu monitora DocPro” — P-GH-PROGRAM-BIEZACY].
 
-## P-GH-PROGRAM-BIEZACY — DocPro: program w formularzu monitora wg bieżącego preparatu (SW 1.1.574, `gh_therapy_monitor.js` 66, 2026-11-23)
+## P-GH-PROGRAM-BIEZACY — DocPro: program w formularzu monitora wg bieżącego preparatu (SW 1.1.575, `gh_therapy_monitor.js` 66, 2026-11-23)
 
 **Zmiana kliniczna: TAK — po zmianie Increlex ↔ rhGH w kursie pole „Program terapeutyczny”, wiersz programu i program
 nowych punktów z karty terapii = program bieżący (jak Karta, P-GH-PREPARAT-BIEZACY), nie program Włączenia.** Za polem
@@ -45952,9 +45952,9 @@ przy przeliczonej liście — także rozstrzygnięcie wykonawcy (po I→G karta 
 poprawiane (Kontynuacje zapisane z programem IGF-1 przy rhGH zostają). **Cofnięcie** = rewert PR: pole i wiersz znów
 z programu Włączenia, lista preparatów bez przeliczania.
 
-**Wersje.** `gh_therapy_monitor.js` 65 → 66 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.573 → 1.1.574
+**Wersje.** `gh_therapy_monitor.js` 65 → 66 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.574 → 1.1.575
 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
-względem `origin/audyt` e163b85a. Bez nowego pliku ładowanego i bez nowych stylów.
+względem `origin/audyt` a4986460. Bez nowego pliku ładowanego i bez nowych stylów.
 
 **Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; program przy edycji punktu (pytanie 17); preparat
 bieżący kursu przy przeliczonej liście; program bieżący przy zmianie programu bez zmiany leku i przy luce w programie.
