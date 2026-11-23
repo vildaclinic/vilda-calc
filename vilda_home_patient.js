@@ -30,6 +30,11 @@
     try { return w.sessionStorage.getItem('vildaCurrentPatientId') || null; }
     catch (_) { return null; }
   }
+  function documentationBinding(id) {
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true) return null;
+    var host = w.VildaHomeGabinet || w.VildaHomeEncounter, capture = host?.captureDocumentationBinding;
+    return typeof capture === 'function' ? capture.call(host, id) : {blocked:true};
+  }
   function presentationFrom(record) {
     var header = record && record.header;
     if (!header || typeof header !== 'object' || Array.isArray(header)) return null;
@@ -214,8 +219,8 @@
       onClose: options.onClose, onAnalysis: options.onAnalysis, showError: function () { inlineIssue(this); } };
     var scope = inline;
     scope.captureVisitBinding = function (patientId) {
-      if (!ownsInline(scope, patientId)) return null;
-      return w.VildaHomeEncounter?.captureBinding?.(patientId) || null;
+      if (!ownsInline(scope, patientId)) return w.__VILDA_HOME_GABINET_PREVIEW__ === true ? {blocked:true} : null;
+      return w.__VILDA_HOME_GABINET_PREVIEW__ === true ? documentationBinding(patientId) : w.VildaHomeEncounter?.captureBinding?.(patientId) || null;
     };
     scope.registerBack = function (callback) { return inlineBack(scope, callback); };
     // Status uses the saved values and measurement age from the selected visit.
@@ -610,6 +615,9 @@
       if (!w.VildaCarePlans?.mount) { empty(host, 'Nie można otworzyć planów opieki. Odśwież aplikację.'); return false; }
       nativeView = w.VildaCarePlans.mount(host, {
         full: true, patientId: view.owner.patientId, vault: view.vault,
+        captureVisitBinding: w.__VILDA_HOME_GABINET_PREVIEW__ === true ? function (id) {
+          return current(view) && id === view.owner.patientId ? documentationBinding(id) : {blocked:true};
+        } : undefined,
         planId: options.planId || options.carePlanId || null, noteId: options.noteId || options.careNoteId || null,
         detail: options.detail, isCurrent: function () { return current(view) && dialog?.open && dialog.isConnected && modal?.mode === 'care'; },
         onDialog: fitNativeDialog, onChange: function () { onSaved(view); },

@@ -10,6 +10,50 @@ const CURRENT = { ...clone(OLD), user: { ...OLD.user, ageMonths: 4, measuredAtIS
   advanced: { data: { measurements: [...OLD.advanced.data.measurements, { ageMonths: 156, height: 158, weight: 46 }] } } };
 
 describe('shell authorizes the actual restored document on handoff', () => {
+  it('invalidates a captured documentation binding when the pane or account session changes', () => {
+    const patientId = 'fictional-documentation-patient';
+    let epoch = 0;
+    const vault = () => ({
+      isUnlocked: () => true,
+      getCurrentUser: () => ({userId: 'fictional-documentation-doctor'}),
+      captureSyncOperationSession: () => epoch,
+      assertSyncOperationSession: token => { if (token !== epoch) throw new Error('Account session changed'); }
+    });
+    const p = powloka(null, win => {
+      win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+      win.sessionStorage = {getItem: key => key === 'vildaCurrentPatientId' ? patientId : null};
+      win.VildaVault = vault();
+    });
+    p.shell.navigate('start');
+    const start = p.load('start'), home = start.contentWindow;
+    start.isConnected = true;
+    home.VildaVault = vault();
+    const visitContext = {version: 1, visitId: '06a12f42-b3dc-4cac-9d4a-bd54727489a0', clinicalDateISO: '2026-11-20'};
+    home.VildaHomeGabinet = {captureDocumentationBinding: (id, options) =>
+      id === patientId && options.isCurrent() ? {visitContext, isCurrent: options.isCurrent} : {blocked: true}};
+    const dialogBinding = p.shell.captureActiveHomeDocumentationBinding(patientId);
+    expect(dialogBinding?.visitContext).toEqual(visitContext);
+    expect(dialogBinding.isCurrent()).toBe(true);
+    p.shell.navigate('lab');
+    expect(dialogBinding.isCurrent()).toBe(false);
+    expect(p.shell.captureActiveHomeDocumentationBinding(patientId)).toBeNull();
+    const frame = p.load('lab'), lab = frame.contentWindow;
+    frame.isConnected = true;
+    lab.VildaVault = vault();
+    const captured = p.shell.captureDocumentationBinding(lab, patientId);
+    expect(captured?.visitContext).toEqual(visitContext);
+    expect(captured.isCurrent()).toBe(true);
+    expect(p.shell.captureDocumentationBinding(lab, 'another-fictional-patient')).toBeNull();
+
+    epoch++;
+    expect(captured.isCurrent()).toBe(false);
+    const reopened = p.shell.captureDocumentationBinding(lab, patientId);
+    expect(reopened.isCurrent()).toBe(true);
+    p.shell.navigate('start');
+    expect(reopened.isCurrent()).toBe(false);
+    expect(p.shell.captureDocumentationBinding(lab, patientId)?.blocked).toBe(true);
+  });
+
   it.each([true, false])('keeps Start active until the first lab visit snapshot is confirmed (%s)', async confirmed => {
     const p = powloka();
     p.shell.navigate('start');

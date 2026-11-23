@@ -333,12 +333,14 @@
   }
   function openEditor(owner, options) {
     if (!current(owner) || owner.phase !== 'ready') return false;
+    var visitBinding = owner.options.captureVisitBinding?.(owner.patientId) || null;
+    if (visitBinding?.blocked) { status(owner, 'Poczekaj na zakończenie operacji wizyty i ponownie otwórz formularz.', true); return false; }
     if (activeEditor && !closeEditor(activeEditor, false, true)) return false;
     var dialog = ensureEditor(); if (!dialog) { status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
     var opener = d.activeElement, view = { owner: owner, dialog: dialog, kind: options.kind, dto: options.dto || null,
       opener: opener, hint: { action: opener && opener.dataset.treatmentAction, id: opener && opener.dataset.treatmentId },
       dirty: false, saving: false, uncertain: false, closed: false, beforeUnload: null, submit: options.submit, read: options.read, releaseBack: null, releaseDialog: null, history: null, picker: null };
-    view.visitBinding = owner.options.captureVisitBinding?.(owner.patientId) || null;
+    view.visitBinding = visitBinding;
     activeEditor = view;
     dialog.querySelector('#vhomePatientTreatmentTitle').textContent = options.title;
     var ownerLabel = dialog.querySelector('.vpt-editor-owner');

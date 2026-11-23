@@ -42,7 +42,19 @@ if(HomeInline&&HomeInline.snapshotId)d=HomeInline.historicalSnapshots(d);var c=d
   ['}Xn=t;var Vt=null;', '}Xn=t;}var Vt=null;'],
   ['ia({screen:"card",patientId:t,tab:', 'HomeTab({screen:"card",patientId:t,tab:', 7],
   ['onclick:function(){fi(t,a,n)}','onclick:function(){if(HomeInline)HomeInline.openedEdit=true;fi(t,a,n)}'],
-  ['module.mount(CarePatientHost,{full:true,patientId:t,vault:o,','module.mount(CarePatientHost,{full:true,patientId:t,vault:o,captureVisitBinding:HomeInline&&HomeInline.captureVisitBinding,'],
+  ['module.mount(CarePatientHost,{full:true,patientId:t,vault:o,',`module.mount(CarePatientHost,{full:true,patientId:t,vault:o,captureVisitBinding:HomeInline&&HomeInline.captureVisitBinding||
+  (HomePatientRequested&&i.__VILDA_HOME_GABINET_PREVIEW__===true?function(patientId){
+    if(patientId!==t)return null;
+    if(!HomePatientIsCurrent())return{blocked:true};
+    try{
+      if(i.VildaHomeGabinet){
+        return typeof i.VildaHomeGabinet.captureDocumentationBinding==="function"
+          ?i.VildaHomeGabinet.captureDocumentationBinding(patientId):{blocked:true};
+      }
+      return typeof i.VildaHomeEncounter?.captureDocumentationBinding==="function"
+        ?i.VildaHomeEncounter.captureDocumentationBinding(patientId):{blocked:true};
+    }catch(_){return{blocked:true}}
+  }:void 0),`],
   ['registerBack:gr,','registerBack:HomeInline?HomeInline.registerBack:gr,',2],
   ['backgroundRefresh:GdTlo,activeTab:r&&r.activeTab||"antro"', 'inline:HomeInline,backgroundRefresh:GdTlo||!!HomeInline,activeTab:HomeInline?HomeInline.selected:r&&r.activeTab||"antro"'],
   ['resumeRefresh:Gd7,','resumeRefresh:HomeInline?i.VildaHomePatient.refresh:Gd7,'],

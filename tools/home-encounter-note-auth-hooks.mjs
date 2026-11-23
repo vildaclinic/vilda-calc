@@ -3,17 +3,34 @@
 const pairs = [
   ['const n=!!(t&&t.note&&t.note.id),r=t&&t.note||{};',
    `const n=!!(t&&t.note&&t.note.id),r=t&&t.note||{};
-const EncounterEditor = i.__VILDA_HOME_GABINET_PREVIEW__ === true && i.VildaHomePatient?.isInlineOpen?.();
-const EncounterBinding = EncounterEditor && !n && t?.patientId ? i.VildaHomeEncounter?.captureBinding(t.patientId) : null;
-if(EncounterEditor && !n && !EncounterBinding && i.VildaHomeEncounter?.state(t?.patientId).mode !== 'browse'){
-  i.alert("Poczekaj na zakończenie operacji wizyty i ponownie otwórz formularz.");return;
+const EncounterEditor = i.__VILDA_HOME_GABINET_PREVIEW__ === true;
+function EncounterCaptureDocumentation(patientId) {
+  try {
+    if (i.VildaHomeGabinet) {
+      if (typeof i.VildaHomeGabinet.captureDocumentationBinding === 'function')
+        return i.VildaHomeGabinet.captureDocumentationBinding(patientId);
+    } else if (typeof i.VildaHomeEncounter?.captureDocumentationBinding === 'function') {
+      return i.VildaHomeEncounter.captureDocumentationBinding(patientId);
+    } else {
+      const shell = i.parent !== i && i.parent?.VildaShell;
+      if (typeof shell?.captureDocumentationBinding === 'function') return shell.captureDocumentationBinding(i,patientId);
+    }
+  } catch (_) { /* An unavailable owner is not a general-document decision. */ }
+  return Object.freeze({blocked:true,message:'Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.'});
+}
+const EncounterBinding = EncounterEditor && !n && t?.patientId ? EncounterCaptureDocumentation(t.patientId) : null;
+if(EncounterBinding && (EncounterBinding.blocked === true || EncounterBinding.isCurrent?.() !== true)){
+  i.alert(EncounterBinding.message || "Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.");return;
 }
 const EncounterOrigin = EncounterEditor && (n ? r.visitContext : EncounterBinding?.visitContext);
 let EncounterNoteId = null;
 function EncounterEditorCurrent() {
-  return !!(EncounterBinding && EncounterBinding.isCurrent() && d.isConnected && (!t.isCurrent || t.isCurrent()));
+  try { return !!(EncounterBinding && EncounterBinding.blocked !== true && EncounterBinding.isCurrent() && d.isConnected && (!t.isCurrent || t.isCurrent())); }
+  catch (_) { return false; }
 }
 `],
+  [';var Bt;n&&r.clinicalDateISO?', ';if(EncounterEditor&&!n)Et=null;var Bt;n&&r.clinicalDateISO?'],
+  ['pt.appendChild(At);var Dt=null;', 'pt.appendChild(At);if(EncounterEditor&&!n)At.textContent="Notatka ogólna pozostaje w kartotece pacjenta. Możesz też podać niezależną datę zdarzenia.";var Dt=null;'],
   ['Xt.checked=Bt==="date";', 'Xt.checked=!!EncounterOrigin||Bt==="date";'],
   ['Ee(),c.appendChild(pt);const Ie=',
    `Ee(),c.appendChild(pt);
@@ -30,6 +47,7 @@ const Ie=`],
 if(EncounterOrigin){
   Vt.linkedAgeMonths=n ? r.linkedAgeMonths : null;
   Vt.clinicalDateISO=ce.value||null;
+  Vt.visitContext=EncounterOrigin;
 }
 if(EncounterBinding){
   if(!EncounterEditorCurrent() || !await EncounterBinding.ensureRecorded() || !EncounterEditorCurrent()){
@@ -37,8 +55,9 @@ if(EncounterBinding){
   }
   EncounterNoteId ||= "visit-note-"+Array.from(i.crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,"0")).join("");
   Vt.id=EncounterNoteId;Vt.visitContext=EncounterBinding.visitContext;
-  Gc3=await a.savePatientNoteOnce(Vt,{isCurrent:EncounterEditorCurrent});
+  Gc3=await a.savePatientNoteOnce(Vt,{isCurrent:EncounterEditorCurrent,requireActiveVisit:true});
   if(!Gc3?.saved){Gd3("Nie zapisano wpisu do wizyty. Sprawdź stan kartoteki i spróbuj ponownie.");return;}
+  if(!EncounterEditorCurrent())return;
 }else Gc3=await a.savePatientNote(Vt);`]
 ];
 const listPairs = [

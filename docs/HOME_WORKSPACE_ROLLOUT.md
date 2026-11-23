@@ -34,7 +34,7 @@ Produkcja nadal pochodzi z `audyt`. Pierwsza baza: `28ee1c3e`.
 5. Zalecenia dietetyczne wraz z drogą do normy BMI.
 6. Karta pacjenta i Przypomnienia.
 7. Pozostałe narzędzia i wspólny wybór dokumentów/siatek.
-8. Jawne powiązania notatek, badań i planów z wizytą.
+8. Automatyczne powiązanie nowych notatek, badań i wpisów w planach z otwartą wizytą.
 9. Historyczny kontekst leczenia i rozróżnienie informacji bieżących.
 10. Przestrzenny nawigator wizyt i ich szczegóły.
 

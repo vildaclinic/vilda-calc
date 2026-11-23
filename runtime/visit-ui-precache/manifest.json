@@ -107,24 +107,24 @@
       "sha256": "0280464c2496960fc20568b398fd0bb3f2dd7d57429cd70e6aa9452cab97b56b"
     },
     {
-      "path": "vilda_home_patient.js?v=8",
-      "sha256": "e10ccb283293364dc2240769afebfef550bbbb51b300d5b875099440bf62298c"
+      "path": "vilda_home_patient.js?v=9",
+      "sha256": "d8394f3145cd5a18ead01a6f9f0f791232179a8e3e89ba9e3486ab9f5783fad1"
     },
     {
       "path": "vilda_home_patient.css?v=2",
       "sha256": "4d53f179f8ae5629b88b21f4682b768881ee395a69b295777ad37d0e3f398a36"
     },
     {
-      "path": "vilda_home_patient_native.js?v=8",
-      "sha256": "79608c546cbce0221ccf7764d824ab1e4195252fadf1609fcf637a9fc38767e8"
+      "path": "vilda_home_patient_native.js?v=9",
+      "sha256": "7ae7dc98ad6786e4f490d2a387ad7edf81e12e68a78fcbe346702d61c41bd315"
     },
     {
       "path": "vilda_home_patient_native.css?v=5",
       "sha256": "df87ba548059922ceae94dba3d78526184e55ea6bced006d72f137174be9895a"
     },
     {
-      "path": "vilda_patient_treatment_ui.js?v=3",
-      "sha256": "785ae7168ae2d9513821a75ffaa45ecda9e7812fd8c9dc7fcedec2ae4c209993"
+      "path": "vilda_patient_treatment_ui.js?v=4",
+      "sha256": "a38bb8ffc775199b116c7723855cc57b84ace19e35f3184b65d26ea2816d1188"
     },
     {
       "path": "vilda_patient_treatment_ui.css?v=1",
@@ -159,8 +159,8 @@
       "sha256": "df502d67db1fdf94df58d2d06f7882c752b94ac0f930e259dbad0a808373d854"
     },
     {
-      "path": "vilda_home_reminders_runtime.js?v=2",
-      "sha256": "177e98f3e7a6ea77d603fdfab360efec5b9693db19203b3f784c03f0ef32d31a"
+      "path": "vilda_home_reminders_runtime.js?v=3",
+      "sha256": "d8edb1a8e4d1464adecbf383f9714a864def3de55bf15517787053ed1cde50b8"
     },
     {
       "path": "vilda_home_gabinet.css?v=8",
@@ -179,12 +179,12 @@
       "sha256": "32765be07af749f4ba5f8bf213633467d49d06c85eddee09d69ac35797853cdf"
     },
     {
-      "path": "vilda_home_encounter.js?v=7",
-      "sha256": "cf6a3878a01a0085927453d80221a6fff1fe94036d461204ccf5b81a2e0363be"
+      "path": "vilda_home_encounter.js?v=8",
+      "sha256": "3906bba21219856dff52d31d12fdba8cddd40aaddcdf0e2b75033a67c861e0f4"
     },
     {
-      "path": "vilda_home_gabinet.js?v=12",
-      "sha256": "7daf67f7b241eda22ea353c3dab8695d5b0fea284ee943388f3a20450ec9ba13"
+      "path": "vilda_home_gabinet.js?v=13",
+      "sha256": "22994a361b8eec9231da6358fe75dec12a539ae273793d7be63b89b08a4817ad"
     },
     {
       "path": "vilda_home_visit_scene.css?v=2",
@@ -228,9 +228,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-53d7e0413bc8.json",
-    "sha256": "53d7e0413bc83f75ee4c14b7dadfeebe737a47f0153fe5a83baddee642cb43e2",
-    "byteLength": 2053889
+    "path": "runtime/visit-ui-precache/precache-b08acaf0cfe9.json",
+    "sha256": "b08acaf0cfe9d4ba202055e4ee2781851bb5e15ea939af1000439ffd1d4957ad",
+    "byteLength": 2057149
   },
   "historicalPacks": [
     {
@@ -662,6 +662,11 @@
       "path": "runtime/visit-ui-precache/precache-1b3200568539.json",
       "sha256": "1b3200568539f2b88e8ebefe144407b9b44b7fd5eba28fadad150fc349c44cb6",
       "byteLength": 2042675
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-53d7e0413bc8.json",
+      "sha256": "53d7e0413bc83f75ee4c14b7dadfeebe737a47f0153fe5a83baddee642cb43e2",
+      "byteLength": 2053889
     }
   ]
 }

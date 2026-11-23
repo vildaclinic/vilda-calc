@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 import { choosePatient } from '../support/gabinet-patient-fixture.mjs';
-import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
+import { openMenuPatient, visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 test.use({ serviceWorkers: 'block' });
 test.setTimeout(180_000);
@@ -106,6 +106,71 @@ test('Gabinet opens the selected patient in Overview from the sidebar database o
   await expectOverview(start, ids.a, 'Antoni', '46');
   expect(await savedVisits(start, ids.a)).toEqual(beforeA);
   expect(await savedVisits(start, ids.b)).toEqual(beforeB);
+  await expectNoLegacyChooser(page);
+});
+
+test('DocPro patient-card route keeps the active measurement-free visit and attaches its note without changing archived visits', async ({ page }) => {
+  let { start, ids } = await prepareGabinet(page);
+  await choosePatient(start, 'Antoni');
+  const records = () => start.evaluate(async id => ({
+    snapshots: (await window.VildaVault.getPatient(id)).snapshots,
+    visits: await window.VildaVault.getPatientVisits(id),
+  }), ids.a);
+  const before = await records();
+  await start.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await expect.poll(() => start.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
+  const visit = await start.evaluate(() => window.VildaDataImportExport.captureCurrentUserDataReadOnly().visit);
+  expect(visit).toMatchObject({ patientId: ids.a, origin: 'explicit' });
+  expect(visit.visitId).toBeTruthy();
+  await expect(start.locator('#height')).toHaveValue('');
+  await expect(start.locator('#weight')).toHaveValue('');
+
+  const docpro = await openDocPro(page);
+  await expect(docpro.locator('#height')).toHaveValue('');
+  await expect(docpro.locator('#weight')).toHaveValue('');
+  await openMenuPatient(page);
+  await expect(page.locator('iframe.app-pane[title="Start"]')).toBeVisible({ timeout: 15_000 });
+  start = await shellFrame(page);
+  const header = start.locator('#vhomeGabinetHeader');
+  await expect(header.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect.poll(() => start.evaluate(id => ({
+    selected: sessionStorage.getItem('vildaCurrentPatientId'),
+    mode: window.VildaHomeEncounter.state(id).mode,
+    visitId: window.VildaHomeEncounter.state(id).visitId,
+  }), ids.a)).toEqual({ selected: ids.a, mode: 'new', visitId: visit.visitId });
+  await expect(start.locator('#height')).toHaveValue('');
+  await expect(start.locator('#weight')).toHaveValue('');
+  const overview = start.locator('#vhomePatientOverview');
+  await overview.getByRole('tab', { name: 'Notatki', exact: true }).click();
+  await overview.getByRole('button', { name: /Dodaj notatkę/ }).click();
+  const editor = start.locator('.vilda-patient-note-editor-overlay');
+  await expect(editor).toBeVisible({ timeout: 15_000 });
+  await expect(editor.locator('[name="b3-anchor"]')).toHaveCount(0);
+  expect(await records()).toEqual(before);
+  const title = 'Fikcyjna notatka DocPro z wizyty bez pomiarów';
+  await editor.getByPlaceholder('np. Wprowadzono Euthyrox').fill(title);
+  await editor.locator('textarea').first().fill('Fikcyjna konsultacja bez wprowadzania masy ani wzrostu.');
+  await editor.getByLabel('Data badania lub zdarzenia (opcjonalnie)').fill('2025-12-19');
+  await editor.getByRole('button', { name: 'Dodaj notatkę', exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  const note = await start.evaluate(async ({ patientId, title }) =>
+    (await window.VildaVault.listPatientNotesForPatient(patientId)).find(row => row.title === title),
+  { patientId: ids.a, title });
+  expect(note).toMatchObject({ patientId: ids.a, clinicalDateISO: '2025-12-19', visitContext: {
+    version: 1, visitId: visit.visitId, clinicalDateISO: visit.clinicalDateISO,
+  } });
+  const after = await records();
+  expect(after.snapshots.filter(row => row.payload?.visit?.visitId !== visit.visitId)).toEqual(before.snapshots);
+  expect(after.visits.filter(row => row.visitId !== visit.visitId)).toEqual(before.visits);
+  const recorded = after.visits.filter(row => row.visitId === visit.visitId);
+  expect(recorded).toHaveLength(1);
+  expect(recorded[0].payload.visit).toEqual(visit);
+  expect(Number(recorded[0].payload.user.height || 0)).toBe(0);
+  expect(Number(recorded[0].payload.user.weight || 0)).toBe(0);
+  await expect(start.locator('#height')).toHaveValue('');
+  await expect(start.locator('#weight')).toHaveValue('');
+  await expect(docpro.locator('#height')).toHaveValue('');
+  await expect(docpro.locator('#weight')).toHaveValue('');
   await expectNoLegacyChooser(page);
 });
 

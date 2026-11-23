@@ -38,7 +38,7 @@
       .then(function () { return templateAsset('vilda_care_template_transfer.js?v=1', function () { return !!win.VildaCareTemplateTransfer; }); })
       .then(function () { return Promise.all([
       templateAsset('vilda_care_templates.css?v=4', null, true),
-      templateAsset('vilda_care_templates.js?v=7', function () { return !!win.VildaCareTemplates; })
+      templateAsset('vilda_care_templates.js?v=8', function () { return !!win.VildaCareTemplates; })
     ]); }).catch(function (error) { templateUiPromise = null; throw error; });
     return templateUiPromise;
   }
@@ -1136,6 +1136,8 @@
     }
     function showEditor(title, plan, build, saveLabel, submit) {
       if (!current() || state.editing || state.busy) return null;
+      var visitBinding = options.captureVisitBinding?.(plan ? plan.patientId : options.patientId) || null;
+      if (visitBinding?.blocked) { notify('Poczekaj na zakończenie operacji wizyty i ponownie otwórz formularz.'); return null; }
       var origin = doc.activeElement, dialog = node('dialog', 'vcp vcp-dialog'), form = node('form', 'vcp-form');
       if (remindersLayout) dialog.classList.add('vcp-reminders-dialog');
       var header = node('header', 'vcp-form-head'), titleWrap = node('div', '');
@@ -1145,7 +1147,7 @@
       var body = node('div', 'vcp-form-body'), errors = node('div', 'vcp-form-errors'); body.appendChild(errors); form.appendChild(body);
       var footer = node('footer', 'vcp-form-actions'), cancelButton = button('Anuluj', 'vcp-outline', cancel), saveButton = node('button', 'vcp-primary', saveLabel); saveButton.type = 'submit'; footer.appendChild(cancelButton); footer.appendChild(saveButton); form.appendChild(footer); dialog.appendChild(form);
       var model = { dialog: dialog, form: form, body: body, errors: errors, save: saveButton, cancel: cancel, plan: plan, operationId: operationId() };
-      model.visitBinding = options.captureVisitBinding?.(options.patientId) || null;
+      model.visitBinding = visitBinding;
       editor = model; busy(false, true); doc.body.appendChild(dialog);
       function cancel() {
         if (state.busy) return;
@@ -1190,6 +1192,8 @@
     }
     function stagedEditor(title, plan, build, saveLabel, submit) {
       if (!current() || state.editing || state.busy || !stagedWritable(plan)) return null;
+      var visitBinding = options.captureVisitBinding?.(plan.patientId) || null;
+      if (visitBinding?.blocked) { notify('Poczekaj na zakończenie operacji wizyty i ponownie otwórz formularz.'); return null; }
       var origin = doc.activeElement, dialog = node('dialog', 'vcp vcp-dialog vcp-staged-dialog'), form = node('form', 'vcp-form');
       if (remindersLayout) dialog.classList.add('vcp-reminders-dialog');
       var header = node('header', 'vcp-form-head'), titleWrap = node('div', ''); titleWrap.appendChild(node('p', 'vcp-form-patient', name(plan)));
@@ -1199,7 +1203,7 @@
       var footer = node('footer', 'vcp-form-actions'), cancelButton = button('Anuluj', 'vcp-outline', cancel), checkButton = button('Sprawdź zapis', 'vcp-outline', checkOutcome), saveButton = node('button', 'vcp-primary', saveLabel); saveButton.type = 'submit'; checkButton.hidden = true;
       footer.appendChild(cancelButton); footer.appendChild(checkButton); footer.appendChild(saveButton); form.appendChild(footer); dialog.appendChild(form);
       var model = { dialog: dialog, form: form, body: body, errors: errors, save: saveButton, cancel: cancel, plan: plan, pending: null, uncertain: false, submitted: false };
-      model.visitBinding = options.captureVisitBinding?.(options.patientId) || null;
+      model.visitBinding = visitBinding;
       editor = model; busy(false, true); doc.body.appendChild(dialog);
       function cancel() {
         if (state.busy) return;

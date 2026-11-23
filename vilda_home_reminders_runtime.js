@@ -21,6 +21,10 @@
     try { return !suspended && (!w.frameElement || w.frameElement.isConnected && !w.frameElement.hidden); }
     catch (_) { return false; }
   }
+  function captureDocumentationBinding(id) {
+    var host = w.VildaHomeGabinet || w.VildaHomeEncounter, capture = host?.captureDocumentationBinding;
+    return typeof capture === 'function' ? capture.call(host, id) : {blocked:true};
+  }
   function ownerSnapshot(verifiedSave) {
     try {
       var vault = w.VildaVault, importer = w.VildaDataImportExport, panel = w.VildaPanelPacjent;
@@ -34,8 +38,11 @@
       var measured = w.VildaDobAge?.readMeasuredAtISO();
       var encounter = integrated() && w.VildaHomeEncounter?.state(id);
       if (encounter && encounter.busy) return null;
-      var binding = encounter && (encounter.mode === 'new' || encounter.mode === 'edit')
-        && encounter.visitId && encounter.date ? Object.freeze({ mode: encounter.mode, visitId: encounter.visitId, date: encounter.date }) : null;
+      var documentation = integrated() ? captureDocumentationBinding(id) : null;
+      if (documentation?.blocked) return null;
+      if (encounter && (encounter.mode === 'new' || encounter.mode === 'edit') && !documentation) return null;
+      var binding = documentation ? Object.freeze({ mode: encounter.mode, visitId: documentation.visitContext.visitId,
+        date: documentation.visitContext.clinicalDateISO }) : null;
       return { account: user.userId, patientId: id, encounter: binding, load: importer.getApplyLoadedDataSequence(),
         identity: ['firstName', 'lastName', 'sex', 'dobInput'].map(value),
         visit: w.VildaVisitContext?.capture({ user: { measuredAtISO: measured } }, { patientId: id, readOnly: true }) || null };
@@ -207,7 +214,8 @@
     var api = w.VildaAuthUI, view = null;
     if (owner) {
       try {
-        var binding = owner.encounter ? w.VildaHomeEncounter.captureBinding(owner.patientId) : null;
+        var binding = owner.encounter ? captureDocumentationBinding(owner.patientId) : null;
+        if (binding?.blocked) binding = null;
         view = { owner: owner, binding: binding, key: JSON.stringify(owner), vault: w.VildaVault,
           token: w.VildaVault.captureSyncOperationSession(), generation: generation, note: null, dialogs: new Set() };
       } catch (_) { view = null; }

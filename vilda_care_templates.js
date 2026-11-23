@@ -421,6 +421,7 @@
       if (application.pending && !retry) return;
       if (!retry) {
         application.visitBinding = options.captureVisitBinding?.(application.patient.patientId) || null;
+        if (application.visitBinding?.blocked) { fail(new Error('Poczekaj na zakończenie operacji wizyty i ponów zapis planu.')); renderFeedback(); return; }
         var definition = applicationDefinition(application); if (!definition) { renderFeedback(); return; }
         application.pending = Object.freeze({ operationId: id(), token: application.token, patientId: application.patient.patientId,
           templateId: application.templateId, revisionId: application.expectedRevisionId, definition: freezeApplicationDefinition(definition) });

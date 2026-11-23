@@ -138,6 +138,69 @@ describe('Applying a care template through its guarded provider', () => {
     expect(d.vault.saveCarePlanTemplateRevision).not.toHaveBeenCalled(); expect(JSON.stringify(request)).not.toContain('active'); d.controller.destroy();
   });
 
+  it('passes the exact active visit binding when the reviewed plan is submitted', async () => {
+    const binding = Object.freeze({visitContext:{version:1, visitId:'fictional-visit', clinicalDateISO:'2026-11-23'},
+      isCurrent:vi.fn(() => true), ensureRecorded:vi.fn(async () => true)});
+    const captureVisitBinding = vi.fn(() => binding);
+    const d = fixture({patientId:'fictional-patient-a', options:{captureVisitBinding}});
+    await review(d);
+    expect(captureVisitBinding).not.toHaveBeenCalled();
+    button(d.host, 'Utwórz plan').click(); await settle();
+    expect(captureVisitBinding).toHaveBeenCalledExactlyOnceWith('fictional-patient-a');
+    expect(d.application.commit).toHaveBeenCalledOnce();
+    expect(d.application.commit.mock.calls[0][1]).toBe(binding);
+    // The provider owns confirmation/persistence; the UI only carries its scope.
+    expect(binding.ensureRecorded).not.toHaveBeenCalled();
+    expect(d.onApplied).toHaveBeenCalledOnce(); d.controller.destroy();
+  });
+
+  it('keeps a genuinely general plan independent when there is no active visit binding', async () => {
+    const captureVisitBinding = vi.fn(() => null);
+    const d = fixture({options:{captureVisitBinding}}); await review(d);
+    button(d.host, 'Utwórz plan').click(); await settle();
+    expect(captureVisitBinding).toHaveBeenCalledExactlyOnceWith('fictional-patient-a');
+    expect(d.application.commit).toHaveBeenCalledOnce();
+    expect(d.application.commit.mock.calls[0][1]).toBeNull();
+    expect(d.application.commit.mock.calls[0][0]).not.toHaveProperty('visitContext');
+    expect(d.onApplied).toHaveBeenCalledOnce(); d.controller.destroy();
+  });
+
+  it('retains the review without submitting a general plan when the active visit is blocked', async () => {
+    let binding = {blocked:true};
+    const captureVisitBinding = vi.fn(() => binding);
+    const d = fixture({patientId:'fictional-patient-a', options:{captureVisitBinding}}); await review(d);
+    change(field(d.host, 'Nazwa planu'), 'Fikcyjny zachowany szkic');
+    button(d.host, 'Utwórz plan').click(); await settle();
+    expect(d.application.commit).not.toHaveBeenCalled(); expect(d.onApplied).not.toHaveBeenCalled();
+    expect(d.host.textContent).toContain('Poczekaj na zakończenie operacji wizyty');
+    expect(field(d.host, 'Nazwa planu').value).toBe('Fikcyjny zachowany szkic');
+    expect(field(d.host, 'Nazwa planu').disabled).toBe(false);
+    expect(button(d.host, 'Sprawdź wynik')).toBeUndefined();
+    binding = {visitContext:{version:1, visitId:'fictional-confirmed-visit', clinicalDateISO:'2026-11-23'},
+      isCurrent:() => true, ensureRecorded:async () => true};
+    button(d.host, 'Utwórz plan').click(); await settle();
+    expect(d.application.commit).toHaveBeenCalledOnce();
+    expect(d.application.commit.mock.calls[0][0].definition.name).toBe('Fikcyjny zachowany szkic');
+    expect(d.application.commit.mock.calls[0][1]).toBe(binding); d.controller.destroy();
+  });
+
+  it('retries an unconfirmed operation with its original binding instead of another open visit', async () => {
+    const original = {visitContext:{version:1, visitId:'fictional-original-visit', clinicalDateISO:'2026-11-23'},
+      isCurrent:() => true, ensureRecorded:async () => true};
+    const captureVisitBinding = vi.fn().mockReturnValueOnce(original).mockReturnValue({blocked:true});
+    const d = fixture({patientId:'fictional-patient-a', options:{captureVisitBinding}, serviceOverrides:{commit:vi.fn()
+      .mockResolvedValueOnce({saved:false, outcome:'unknown'})
+      .mockImplementation(async request => ({saved:true, planId:'fictional-created-plan', patientId:request.patientId}))}});
+    await review(d); button(d.host, 'Utwórz plan').click(); await settle();
+    const request = d.application.commit.mock.calls[0][0];
+    button(d.host, 'Ponów tę samą próbę').click(); await settle();
+    expect(captureVisitBinding).toHaveBeenCalledOnce();
+    expect(d.application.commit).toHaveBeenCalledTimes(2);
+    expect(d.application.commit.mock.calls[1][0]).toBe(request);
+    expect(d.application.commit.mock.calls[0][1]).toBe(original);
+    expect(d.application.commit.mock.calls[1][1]).toBe(original); d.controller.destroy();
+  });
+
   it('requires at least one selected step and distinguishes a blank timing offset from zero', async () => {
     const d = fixture({ patientId: 'fictional-patient-a' }); await review(d);
     include(d.host, 'Fikcyjny pierwszy krok', false); expect(button(d.host, 'Utwórz plan').disabled).toBe(true);

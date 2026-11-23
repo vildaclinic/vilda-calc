@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
+import { restoreVisitDocumentBaseline } from './visit-document-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = '981b7dd790d068486be0ab6b3a3346ba86550ca4e32f180f05aa0f4d8e618b9f';
@@ -147,6 +148,7 @@ export function applyPatientProfileDelta(base, repository = ROOT) {
   return built.source;
 }
 export function restorePatientProfileBaseline(source, repository = ROOT) {
+  source = restoreVisitDocumentBaseline(source, repository);
   if (!source.includes(START)) return source;
   const { manifest, fragment } = definition(repository), integrated = source;
   if (digest(source) !== manifest.integratedVaultSHA256) fail('unexpected integrated image');
@@ -167,7 +169,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     writeFileSync(resolve(args[2]), built.source);
     process.stdout.write('Built exact patient profile Vault delta.\n');
   } else if (!args.length) {
-    const source = readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8');
+    const source = restoreVisitDocumentBaseline(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'), ROOT);
     if (applyPatientProfileDelta(restorePatientProfileBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Patient profile: immutable encrypted revisions and exact outer Vault delta verified.\n');
   } else fail('usage: node tools/patient-profile-vault-delta.mjs [--build BASE_FILE OUTPUT_FILE]');
