@@ -127,6 +127,7 @@
     const grid = el('div', 'vd-grid');
     (info?.sections || []).forEach(section => {
       const block = card(section.title);
+      if (section.description) block.append(el('p', 'vd-meta', section.description));
       (section.entries || []).forEach(entry => {
         const record = el('article', 'vd-record');
         if (entry.title) record.append(el('strong', '', entry.title));
@@ -134,14 +135,14 @@
         if (entry.meta) record.append(el('small', '', entry.meta));
         block.append(record);
       });
-      if (!section.entries?.length) block.append(el('p', 'vd-empty', 'Brak wpisów.'));
+      if (!section.entries?.length) block.append(el('p', 'vd-empty', section.emptyText || 'Brak wpisów.'));
       grid.append(block);
     });
     if (grid.children.length) container.append(grid);
     if (openRecord) {
       const links = card('Dokumentacja pacjenta');
       const actions = el('div', 'vd-record-actions');
-      [['lab', 'Badania pacjenta'], ['notes', 'Notatki pacjenta'], ['care', 'Plany opieki']].forEach(([key, label]) => {
+      [['treatment', 'Leczenie pacjenta'], ['lab', 'Badania pacjenta'], ['notes', 'Notatki pacjenta'], ['care', 'Plany opieki']].forEach(([key, label]) => {
         actions.append(button(label, 'record', key));
       });
       links.append(actions);
@@ -149,6 +150,7 @@
     } else if (!grid.children.length) {
       container.append(el('p', 'vd-empty', 'Brak informacji ogólnych do wyświetlenia.'));
     }
+    if (info?.retry) container.append(button('Spróbuj ponownie', 'retry-general'));
   }
 
   function open(options) {
@@ -315,7 +317,17 @@
       if (focus) (scroll.querySelector(focus) || d.getElementById('vd-tab-' + tab))?.focus({ preventScroll: true });
     }
 
-    function refresh() { render(null, false); }
+    function refresh() {
+      const focused = d.activeElement;
+      const previous = focused && dialog.contains(focused) ? focused.closest('button[data-vd-action]') : null;
+      const hint = previous ? {action: previous.dataset.vdAction, value: previous.dataset.vdValue} : null;
+      render(null, false);
+      if (hint && current()) {
+        const next = Array.from(dialog.querySelectorAll('button[data-vd-action]')).find(item =>
+          item.dataset.vdAction === hint.action && item.dataset.vdValue === hint.value && !item.disabled);
+        (next || d.getElementById('vd-tab-' + tab))?.focus({preventScroll: true});
+      }
+    }
 
     dialog.addEventListener('click', event => {
       if (!current()) return;
@@ -329,6 +341,7 @@
       }
       const action = b.dataset.vdAction, value = b.dataset.vdValue;
       if (action === 'close') return close();
+      if (action === 'retry-general') return options.onRefreshGeneral?.();
       if (action === 'record' && options.onOpenRecord) {
         close(false);
         options.onOpenRecord(value);

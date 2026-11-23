@@ -89,6 +89,8 @@
     const doc = host.ownerDocument, vault = w.VildaVault, projection = w.VildaHomeVisitProjection;
     const token = vault.captureSyncOperationSession();
     let scene, detail, bin, restoring = false, rows = [], notes = null, plans = null, closed = false, readingDocuments;
+    let notesStatus = 'loading', monitoringStatus = 'loading', latestVisit = null;
+    let documentRead = 0, monitoringRead = 0;
     function current() {
       if (closed || !isCurrent() || w.VildaVault !== vault || !vault.isUnlocked()) return false;
       try { vault.assertSyncOperationSession(token); return true; } catch (_) { return false; }
@@ -113,6 +115,7 @@
     function destroy() {
       if (closed) return;
       closed = true;
+      documentRead++; monitoringRead++;
       listeners.delete(onLock);
       bin?.close(false);
       detail?.close(false);
@@ -121,24 +124,59 @@
       doc.removeEventListener('keydown', escape);
       doc.removeEventListener('focusin', check, true);
       doc.removeEventListener('pointerdown', check, true);
+      w.removeEventListener('pagehide', onLock);
       scopeEvents.forEach(event => doc.removeEventListener(event, check));
       w.clearInterval(timer);
-      rows = []; notes = plans = null;
+      rows = []; notes = plans = latestVisit = null;
       host.replaceChildren();
       host.removeAttribute('aria-busy');
     }
     async function readDocuments() {
+      if (!check()) return;
+      const request = ++documentRead;
+      notesStatus = 'loading';
       const [documents, care] = await Promise.allSettled([
         vault.listPatientNotesForPatient(patientId), vault.listCarePlans({patientId})
       ]);
-      if (!check()) return;
+      if (!check() || request !== documentRead) return;
       notes = Array.isArray(documents.value) ? documents.value.filter(note => note?.patientId === patientId) : null;
+      notesStatus = notes ? 'ready' : 'error';
       plans = Array.isArray(care.value) ? care.value : null;
     }
+    async function readVisits() {
+      if (!check()) return [];
+      const request = ++monitoringRead;
+      monitoringStatus = 'loading';
+      try {
+        const saved = await vault.getPatientVisits(patientId);
+        if (!check()) return [];
+        if (!Array.isArray(saved)) throw new Error('Invalid visit list');
+        const visits = saved.filter(row => row?.patientId === patientId && row.visitId && row.payload);
+        if (request === monitoringRead) {
+          latestVisit = visits[0] || null;
+          monitoringStatus = 'ready';
+        }
+        return visits;
+      } catch (error) {
+        if (current() && request === monitoringRead) { latestVisit = null; monitoringStatus = 'error'; }
+        throw error;
+      }
+    }
+    async function refreshGeneral() {
+      if (!check()) return;
+      notesStatus = monitoringStatus = 'loading';
+      detail?.refresh();
+      readingDocuments ||= readDocuments().finally(() => { readingDocuments = null; });
+      await Promise.allSettled([readVisits(), readingDocuments]);
+      if (check()) detail?.refresh();
+    }
     function general() {
-      if (!notes) return {sections: [{title: 'Notatki ogólne', entries: [{body: 'Nie udało się odczytać notatek pacjenta.'}]}]};
-      const data = projection.getGeneral({patientId, name: patientName}, notes);
-      return {sections: [{title: 'Notatki ogólne', entries: data.notes.map(note => ({...note, meta: note.dateLabel}))}]};
+      const data = projection.getGeneral({patientId, name: patientName}, notes,
+        {currentRecords: true, notesStatus, latestVisit, monitoringStatus});
+      const noteEntries = notesStatus === 'ready' ? data.notes.map(note => ({...note, meta: note.dateLabel})) :
+        [{body: notesStatus === 'loading' ? 'Odczytywanie notatek pacjenta…' : 'Nie udało się odczytać notatek pacjenta.'}];
+      return {sections: [...data.sections, {title: 'Notatki ogólne', entries: noteEntries}],
+        retry: data.currentStatus === 'error' || monitoringStatus === 'error'};
     }
     function open(index, opener) {
       if (!check() || !rows[index] || detail) return;
@@ -150,7 +188,7 @@
           if (restoreFocus && options.initialVisitId && !closed) onBack();
         },
         onEdit: options.onEdit, onOpenRecord: options.onOpenRecord,
-        getGeneral: general, getComparison: projection.getComparison,
+        getGeneral: general, getComparison: projection.getComparison, onRefreshGeneral: refreshGeneral,
         renderChart: (container, row, metric, expanded) => projection.renderChart(container, row, rows, metric, expanded),
         appendDocuments(container, row, refresh) {
           w.VildaVisitHistory.appendDocuments(container, row, patientId, notes, plans, async () => {
@@ -241,9 +279,8 @@
       host.setAttribute('aria-busy', 'true');
       message('Odczytywanie historii wizyt…');
       try {
-        const [saved] = await Promise.all([vault.getPatientVisits(patientId), readDocuments()]);
+        const [visits] = await Promise.all([readVisits(), readDocuments()]);
         if (!check()) return;
-        const visits = saved.filter(row => row?.patientId === patientId && row.visitId && row.payload);
         const totals = new Map(), positions = new Map();
         visits.forEach(row => totals.set(row.clinicalDateISO, (totals.get(row.clinicalDateISO) || 0) + 1));
         const excerpts = new Map();
@@ -279,6 +316,7 @@
     doc.addEventListener('keydown', escape);
     doc.addEventListener('focusin', check, true);
     doc.addEventListener('pointerdown', check, true);
+    w.addEventListener('pagehide', onLock);
     scopeEvents.forEach(event => doc.addEventListener(event, check));
     const timer = w.setInterval(check, 250);
     back?.enter();

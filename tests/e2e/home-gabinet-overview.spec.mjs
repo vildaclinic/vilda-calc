@@ -807,17 +807,27 @@ test('comparison follows clinical visit dates, offers an explicit measured basel
   expect(values[1].measured).toBeNull();
 });
 
-test('browsing visit history from Analysis on a phone preserves the open visit and its unsaved measurements', async ({ page }) => {
+test('browsing visit history from Analysis on a phone preserves the open visit and its unsaved measurements', { tag: '@gabinet-webkit' }, async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const notes = { archived: 'Notatka z fikcyjnej wizyty', general: 'Notatka ogólna Antoniego', other: 'Notatka ogólna Beaty' };
-  await frame.evaluate(async ({ ids, notes }) => {
+  const treatment = { diagnosis: 'Fikcyjne rozpoznanie aktualne', active: 'Fikcyjne leczenie aktualne',
+    closed: 'Fikcyjne leczenie zakończone', foreign: 'Fikcyjne leczenie Beaty', drug: 'Fikcyjny preparat', dose: '0,030 mg/kg/d' };
+  await frame.evaluate(async ({ ids, notes, treatment }) => {
     const vault = window.VildaVault;
     const [archived] = await vault.getPatientVisits(ids.a);
     await vault.savePatientNote({ patientId: ids.a, category: 'observation', title: notes.archived,
       visitContext: { version: 1, visitId: archived.visitId, clinicalDateISO: archived.clinicalDateISO } });
     await vault.savePatientNote({ patientId: ids.a, category: 'observation', title: notes.general });
     await vault.savePatientNote({ patientId: ids.b, category: 'observation', title: notes.other });
-  }, { ids, notes });
+    const scope = window.VildaPatientTreatmentStore.createScope({vault, patientId:ids.a, isCurrent:()=>true});
+    const diagnosis = await scope.createDiagnosis({name:treatment.diagnosis, code:'I10', status:'active', dateISO:'2026-11-20'});
+    await scope.createEpisode({title:treatment.active, method:'pharmacological', status:'active',
+      medication:treatment.drug, dose:treatment.dose, diagnosisIds:[diagnosis.id], startDateISO:'2026-11-20'});
+    await scope.createEpisode({title:treatment.closed, method:'other', status:'closed', endDateISO:'2026-10-31'});
+    scope.dispose();
+    const foreign = window.VildaPatientTreatmentStore.createScope({vault, patientId:ids.b, isCurrent:()=>true});
+    await foreign.createEpisode({title:treatment.foreign, method:'other', status:'active'});foreign.dispose();
+  }, { ids, notes, treatment });
   await page.setViewportSize({ width: 390, height: 844 });
   await choosePatient(frame, 'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
@@ -830,6 +840,7 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   const patientState = () => frame.evaluate(async patientId => ({
     encounter: window.VildaHomeEncounter.state(patientId),
     snapshots: (await window.VildaVault.getPatient(patientId)).snapshots.map(row => [row.snapshotId, row.rev]),
+    documents: await window.VildaVault.listPatientNotesForPatient(patientId),
   }), ids.a);
   const before = await patientState();
   expect(before.encounter.mode).toBe('new');
@@ -843,6 +854,7 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await expect(detail.getByRole('tabpanel', { name: 'Wyniki', exact: true })).toContainText('46 kg');
   await expect(detail).toContainText(notes.archived);
   await expect(detail).not.toContainText(notes.general);
+  await expect(detail).not.toContainText(treatment.active);
   await detail.getByRole('tab', { name: 'Siatka centylowa' }).click();
   await expect(detail.getByRole('tabpanel', { name: 'Siatka centylowa' }).locator('svg')).toBeVisible();
   await detail.getByRole('tab', { name: 'Porównanie' }).click();
@@ -854,11 +866,31 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await expect(general).toContainText(notes.general);
   await expect(general).not.toContainText(notes.archived);
   await expect(general).not.toContainText(notes.other);
+  await expect(general).toContainText('I10 — ' + treatment.diagnosis);
+  await expect(general).toContainText(treatment.active);
+  await expect(general).toContainText(treatment.drug);
+  await expect(general).toContainText(treatment.dose);
+  await expect(general).not.toContainText(treatment.closed);
+  await expect(general).not.toContainText(treatment.foreign);
+  await expect(general.getByRole('button', {name:'Leczenie pacjenta', exact:true})).toBeVisible();
   await detail.getByRole('button', { name: 'Zamknij podgląd wizyty' }).click();
   await history.getByRole('button', { name: /^Wróć/ }).click();
   await expect(history).toBeHidden();
   await expect(analysis).toHaveAttribute('aria-selected', 'true');
   await expect(trigger).toBeFocused();
+  await expect(frame.locator('#height')).toHaveValue('159');
+  await expect(frame.locator('#weight')).toHaveValue('49');
+  expect(await patientState()).toEqual(before);
+
+  await trigger.click();
+  await history.getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
+  await detail.getByRole('tab', { name: 'Informacje ogólne' }).click();
+  await detail.getByRole('button', {name:'Leczenie pacjenta', exact:true}).click();
+  await expect(history).toBeHidden();
+  const patientCard = frame.locator('#vhomePatientOverview');
+  await expect(patientCard.getByRole('combobox', {name:'Sekcja karty', exact:true})).toHaveValue('treatment');
+  await expect(patientCard).toContainText(treatment.active);
+  await analysis.click();
   await expect(frame.locator('#height')).toHaveValue('159');
   await expect(frame.locator('#weight')).toHaveValue('49');
   expect(await patientState()).toEqual(before);
