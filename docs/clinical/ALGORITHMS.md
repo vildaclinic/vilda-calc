@@ -46040,7 +46040,7 @@ bieżący przy zmianie programu bez zmiany leku i przy luce w programie; prepara
 leku zgodnego z programem (luka w leku — stare punkty bez preparatu); powrót ręcznej daty kontroli i własnej liczby dni
 po przeliczeniu listy.
 
-## P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (pytanie 17) (SW 1.1.576, `gh_therapy_monitor.js` 67, 2026-11-23)
+## P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (pytanie 17) (SW 1.1.577, `gh_therapy_monitor.js` 67, 2026-11-23)
 
 **Zmiana kliniczna: TAK — przy edycji istniejącego punktu program zapisywany = program edytowanego punktu (bez programu
 — program bieżący kursu z chwili punktu), nie program Włączenia.** Pole „Program terapeutyczny” (`#therProg`) pokazuje
@@ -46219,9 +46219,9 @@ podczas edycji = program zapisany edycją bez zmian; „po” = pole po zapisie)
 (Kontynuacje zapisane dawną edycją z programem IGF-1 przy rhGH zostają — S1; ich edycja zachowuje IGF-1).
 **Cofnięcie** = rewert PR: pole przy edycji znów z dawnego wyrażenia (program Włączenia kursu).
 
-**Wersje.** `gh_therapy_monitor.js` 66 → 67 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.575 → 1.1.576
+**Wersje.** `gh_therapy_monitor.js` 66 → 67 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.576 → 1.1.577
 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
-względem `origin/audyt` 77cb60dc. Bez nowego pliku ładowanego i bez nowych stylów.
+względem `origin/audyt` d6f133eb. Bez nowego pliku ładowanego i bez nowych stylów.
 
 **Decyzje właściciela (2026-11-23, po PR).** „akceptuję 3-5, punkty 1 - nie ma takiego przypadku do tej pory w aplikacji
 więc można o nim zapomnieć, punt 2 odłóż.”
