@@ -254,6 +254,11 @@
       drawFooter(ctx);
     });
     ctx.restore();
+    // P-OTYLOSC-STRONA (temat D): wykresy z „Generuj siatkę” strony rysują romby pomiarów od pacjenta (dataset.vildaRomby,
+    // inline_index_07.js) — legenda „dane z gabinetu / dane od pacjenta” pod stopką, raz na stronę.
+    var romby = charts.slice(0, 2).some(function (c) { return c.dataset && Number(c.dataset.vildaRomby) > 0; });
+    var dziennik = root.VildaDziennikOtylosci;
+    if (romby && dziennik && typeof dziennik.rysujLegendePdf === 'function') dziennik.rysujLegendePdf(ctx, g.pageWidth / 2, g.footerBaselineY + 40);
     return canvas;
   }
 

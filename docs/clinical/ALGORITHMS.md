@@ -22123,7 +22123,8 @@ sejfu, te same kroki co w teście e2e).** Punkt Increlex 20 kg (`dose` 0,24 mg/k
 „Aktualna dawka 0,24 mg/kg/d”; stary punkt 13 kg bez `doseAbs` (`dose` 0,08): „Aktualna dawka 0,08 mg/kg/d”.
 
 **Reguła.** Karta „Leczony IGF-1 (mekasermina)” (program IGF-1 albo preparat Increlex, jednostka punktu nie
-tygodniowa), ostatni punkt terapii:
+tygodniowa) [od P-GH-PREPARAT-BIEZACY (2026-11-23): Increlex czy rhGH wg bieżącego preparatu — leku ostatniego punktu
+kursu, bez leku — programu; nie wg programu Włączenia], ostatni punkt terapii:
 - „Aktualna dawka” = „2 × {mg na podanie} mg na dobę ({dose / 2} mg/kg na podanie)”;
 - mg na podanie = `doseAbs` / 2 (mg/d — P-GH-INCRELEX-PODANIE); bez `doseAbs` — `dose` × masa punktu / 2; bez masy —
   tylko „… mg/kg na podanie”;
@@ -22177,7 +22178,8 @@ te same kroki co w teście e2e).**
 - Wykres trendu z punktów pokazywał już % dawki zalecanej (bez mg/kg; 100% = 0,12 mg/kg na podanie od
   P-GH-INCRELEX-PODANIE) — bez zmian.
 
-**Reguła.** Increlex = preparat „Increlex…” albo program IGF-1, jednostka nie tygodniowa. Tekst dawki jak w
+**Reguła.** Increlex = preparat „Increlex…” albo program IGF-1, jednostka nie tygodniowa [od P-GH-PREPARAT-BIEZACY
+(2026-11-23): gdy punkt ma lek — decyduje lek, bez leku — program punktu]. Tekst dawki jak w
 P-GH-INCRELEX-KARTA: „2 × {mg na podanie} mg na dobę ({mg/kg/d / 2} mg/kg na podanie)”; bez dawki w mg — tylko
 „… mg/kg na podanie”.
 - Tabela „Trend leczenia GH”: wiersz Increlex z punktu — mg z `doseAbs` / 2 (bez `doseAbs` — `dose` × masa / 2); wiersz
@@ -44448,9 +44450,19 @@ wpisy po niej.
   włącznie): żeton „◇ w odcinku N pomiar(y) od pacjenta” i linijka pod „Dziś” w wierszu „Waga” z ostatnią z nich.
   **Zmiana w tabeli zostaje liczona między pomiarami z wizyt.**
 
-**Poza zakresem (bez zmian):** kafelek tempa w „Status” Karty, PDF z Karty, DocPro, siatka Palczewskiej 1–18 lat
-i strona „standardowa” PDF, karta „Obliczenia wzrostowe” (tryb podstawowy), „Analiza punktu pomiarowego” dla bloku
-z dziennika. Sejf i zapis bez zmian.
+**Poza zakresem (bez zmian):** kafelek tempa w „Status” Karty, PDF z Karty, strona „standardowa” PDF, karta
+„Obliczenia wzrostowe” (tryb podstawowy), „Analiza punktu pomiarowego” dla bloku z dziennika. Sejf i zapis bez zmian.
+
+**Uzupełnienie 2026-11-23 (P-OTYLOSC-STRONA-2, polecenie właściciela):**
+- **PDF siatek Palczewskiej** (przycisk „Generuj siatkę” przy źródle Palczewska — wcześniej bez rombów, także 0–3 lata):
+  puste romby i legenda „dane z gabinetu” / „dane od pacjenta” — na stronie wagi (pionowo, legenda pod wykresem) albo
+  pod stopką strony poziomej; ramka podsumowania bez zmian.
+- **DocPro** (sprostowanie: wpis wyżej wymieniał DocPro jako bez zmian, a DocPro ładuje te same pliki): linijka pod
+  „Waga”, romby na siatce „Podsumowania wyników”, **analiza trajektorii karty zaawansowanej z wpisami (wariant B)**,
+  „Porównanie” i PDF działają jak na stronie głównej; bloków „pomiar od pacjenta” w „Poprzednich pomiarach” DocPro nie ma.
+  Ten sam wpływ kliniczny co na stronie głównej: analiza trajektorii karty zaawansowanej w DocPro liczy z masami od pacjenta.
+  **Decyzja właściciela 2026-11-23:** „zostaw tak jak na str. głównej” — DocPro liczy analizę trajektorii karty
+  zaawansowanej z masami od pacjenta (wariant B), tak jak strona główna i Karta pacjenta.
 
 **Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna ur. 11.04.2013; wizyty 11 l. 63,0 kg, 12 l. 70,5, 13 l. 80,0;
 bieżący pomiar 13 l. 6 mies. 75,2 kg (13.10.2026); masy od pacjenta 10.07 (77,8), 12.08 (76,9), 12.11.2026 (74,6)):
@@ -44475,7 +44487,8 @@ i zmiana w „Porównaniu” liczą się jak dotąd z pomiarów wizyt. Progi bez
 - `tests/unit/otylosc-strona.test.mjs` (14): `pomiaryStrony` na prawdziwym sejfie (bez dziennika, inny pacjent,
   `doWiekuMies`, wpis z gabinetu), `pomiaryOdcinka` i opisy, `analyze` z flagą karty zaawansowanej i bez, podgląd
   siatki z prawdziwymi producentami (`reported`, `probe`), źródła łatek, czyste funkcje `VildaAdvDziennik`.
-- e2e `tests/e2e/otylosc-strona.spec.mjs` ST-1…ST-5.
+- e2e `tests/e2e/otylosc-strona.spec.mjs` ST-1…ST-8 (ST-6/ST-7 — PDF siatki Palczewskiej 1–18 lat pionowo i poziomo,
+  z dziennikiem i bez; ST-8 — DocPro).
 
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.
 
@@ -45427,7 +45440,8 @@ D8) i zakaz punktu w zajętym miesiącu bez zmian.
   początku), przed pierwszym wierszem kursu k ≥ 2 wiersz „Kurs k — wznowienie w wieku L l. M mies.” albo „Kurs k — bez
   Włączenia (pierwszy punkt w wieku …)”; zmiana preparatu tylko w obrębie kursu; ten sam wiersz-separator w tabeli metryk;
 - program (wiersz i blokada `#therProg`) z Włączenia bieżącego (ostatniego) kursu, a bez niego z pierwszego punktu kursu;
-  przy edycji — z kursu edytowanego punktu;
+  przy edycji — z kursu edytowanego punktu [od P-GH-PROGRAM-BIEZACY (2026-11-23): wiersz i pole poza edycją — program
+  bieżący bieżącego kursu (program ostatniego punktu, jak Karta); przy edycji bez zmian];
 - podpowiedź `#ghTherapyStartHint`: jeden kurs bez Włączenia — dawny tekst; bieżący kurs bez Włączenia po Zakończeniu
   (W2) — „Kurs k (po „Zakończeniu leczenia”) nie ma punktu „Włączenie leczenia”. Dodaj go (także wstecznie) — w wieku nie
   późniejszym niż pierwszy punkt tego kursu (…) — aby czas leczenia, tempo i zmiany liczyły się od wznowienia.”; po
@@ -45768,6 +45782,251 @@ Tabela trendu w ramce dziedziczy rozmiar tekstu komórek z motywu strony, jak w 
 
 **Wdrożenie.** Od razu przy wydaniu; dane, sejf, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: GH znów
 podsumowanie z polami i belka „Dane analityczne”, trend w „Siatkach centylowych”, przycisk notatki „↗ Siatki / punkt GH”.
+
+## P-GH-PREPARAT-BIEZACY — Karta: Increlex czy rhGH wg bieżącego preparatu (SW 1.1.573, `vilda_auth_ui.js` 582, 2026-11-23)
+
+**Zmiana kliniczna: TAK — po zmianie Increlex → rhGH (albo odwrotnie) Karta opisuje bieżący preparat: znacznik, program,
+dawka (bez dzielenia dawki rhGH na podanie).** Wzory, dawki zapisane w punktach, % dawki zalecanej, progi, kursy
+(P-GH-WZNOWIENIE), DocPro, Terminarz, sejf i zapis — bez zmian. Łatka: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka
+P-GH-PREPARAT-BIEZACY”.
+
+**Decyzja właściciela.** Przegląd etapu 3 Karty „Leczenie” (2026-11-21) znalazł błąd sprzed etapu 3; właściciel
+2026-11-23: „popraw ten błąd” (zgoda na zmianę kliniczną).
+
+**Źródło, populacja, jednostki.** Jak w P-GH-INCRELEX-PODANIE i P-GH-INCRELEX-KARTA: ChPL Increlex (EMA, PDF
+z 26.03.2026), pkt 4.2 — dawka mekaserminy wyrażana na podanie (mg/kg), 2× na dobę; preparaty somatotropiny i somatrogonu
+— dawka mg/kg/d albo mg/kg/tydz (bez zmian). Zmiana nie wprowadza nowych liczb ani progów: przypisuje istniejący sposób
+pokazania dawki do preparatu, który dziecko przyjmuje teraz. Populacja: dzieci leczone w programach GH/IGF-1 ze zmianą
+preparatu między mekaserminą a rhGH (oraz zapisy z brakującym lekiem lub programem w punkcie).
+
+**Stan przed zmianą (`audyt` a7b2920b, prawdziwe `wl`/`Pl` w teście jednostkowym i prawdziwa Karta w e2e).** Podsumowanie
+GH (`wl`) brało program z punktu Włączenia bieżącego kursu (`c=r.program||d.program`), a `s=c==="IGF-1"||/^Increlex/…` —
+program startu przesądzał o Increlexie, choć bieżący lek (ostatni punkt) to Genotropin. Przypadek I→G niżej: znacznik
+„Leczony IGF-1 (mekasermina)”, „Program IGF-1 · 3 punkty kontrolne” (dymek „IGF-1 — pierwotny niedobór IGF-1”), kafelek
+„Preparat i dawka” „2 × 0,35 mg na dobę” · „0,017 mg/kg na podanie · Genotropin 12 mg” (dawka Genotropinu dzielona na pół
+jak dawka Increlexu na podanie), pasek leczenia „2 × 0,35 mg na dobę (0,017 mg/kg na podanie) · 12 mies. · …”, linia
+„Analizy” „IGF-1 — pierwotny niedobór IGF-1 · Genotropin 12 mg · …”, etykieta przełącznika „Leczony IGF-1 (mekasermina) —
+widok karty”. Odwrotnie (G→I) znacznik i dawka były już IGF-1 (lek ostatniego punktu), ale program — SNP (Włączenia).
+Trend (`Pl`): program pasa „Pokaż typowy zakres dawki” = program pierwszego Włączenia z programem w kursie (I→G — pas
+IGF-1 0,08–0,24 mg/kg/d przy punktach Genotropinu; pas widać tylko na wykresie w mg/kg, gdy żaden punkt nie ma % dawki
+zalecanej). Punkt pojedynczy (`Gwl_isInc`): „Increlex ALBO program IGF*” — Genotropin z programem IGF-1 w dawce na podanie.
+
+**Reguła** (blok `Gp_*` w `vilda_auth_ui.js`). Stan bieżący leczenia GH opisuje bieżący preparat — ostatni punkt wg wieku
+bieżącego kursu (`d`, jak „Aktualna dawka” i „Ostatnia kontrola”):
+1. **Increlex czy rhGH**: ostatni punkt kursu (wg wieku, od końca), który ma lek albo program — gdy ma lek, decyduje lek
+   (`/^Increlex/`), bez leku — jego program (`/^IGF/`); bez leku i programu w całym kursie — rhGH.
+   **Lek bieżący**: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy lek **tego samego rodzaju** (Increlex albo rhGH);
+   brak — „—” (lek drugiego rodzaju nigdy nie podpisuje bieżącej dawki).
+2. **Program bieżący** (cichy tekst „Program …”, dymek pełnej nazwy, pole „Program” przy karcie, która się nie złożyła):
+   program ostatniego punktu; gdy pusty — ostatni wcześniejszy program **tego samego rodzaju** (IGF… przy Increlexie, inny
+   przy rhGH); brak — „—” (program Włączenia IGF-1 nie przechodzi na kurs rhGH). Uzupełnianie „tylko tego samego rodzaju”
+   dodano po niezależnym przeglądzie (2026-11-23): w starych zapisach z lukami (punkt bez leku z programem SNP po Włączeniu
+   Increlex; Genotropin bez programu po Włączeniu Increlex) znacznik, program, dawka i wiersz trendu nie mogą sobie przeczyć.
+3. Z 1 i 2 — jak dotąd z `c`/`s`: znacznik, „Aktualna dawka” (Increlex na podanie `Gwl_inc` vs mg/kg/d, mg/kg/tydz),
+   kafelek „Preparat i dawka” (`Kg_dawkaCz`), pasek leczenia (`Kl_daneGh`), cichy tekst nagłówka, etykieta przełącznika,
+   linia „Analizy” (`Kl_wy.program`, `programPelny`). Pole „Preparat” i podpis kafelka (`Kl_wy.preparat`) — ten sam lek
+   bieżący (dotąd `d.drug||r.drug`; różnica tylko przy ostatnim punkcie bez leku — rozstrzygnięcie wykonawcy, by kafelek
+   nie podpisał dawki rhGH preparatem Włączenia).
+4. **Punkt pojedynczy** (`Gwl_isInc`: wiersz tabeli trendu, legenda i skala wykresu w mg/kg — `Gwl_all`, odcinki leków
+   w „Analizie”, Historia i edytor notatki — `Gwl_hist`): gdy punkt ma lek — decyduje lek; bez leku — program punktu
+   (`/^IGF/`, jak dotąd). Różnica tylko dla punktu z niespójnymi danymi (np. Genotropin z programem IGF-1).
+5. **Trend** (`Pl`): program pasa „Pokaż typowy zakres dawki” — program bieżący z pkt 2 (punkty bieżącego kursu,
+   `Gw_punktyProgramu`). % dawki zalecanej per punkt (`VildaGhSegments.ghDosePercent`) — bez zmian.
+6. Kurs jednym preparatem i jednym programem (każdy punkt z lekiem i programem, jak zapisuje je DocPro) — wynik
+   identyczny jak dotąd. Wynik inny niż dotąd również (z tej samej reguły) przy: punkcie bez leku/programu (pkt 1–2 sięgają
+   do wcześniejszego punktu kursu) i **zmianie programu w kursie bez zmiany leku** (np. Genotropin SNP → Genotropin ZT:
+   Karta pokazuje program ostatniego punktu, dotąd program Włączenia — tak jak lista „aktualnie leczonych” w sejfie, która
+   bierze program ostatniego punktu).
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; wartości z kodu; wiek l.;mies.).
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| I→G | W Increlex 40 mg, IGF-1, 7;0 (18 kg, 0,08 mg/kg/d, 1,44 mg/d) → K Genotropin 12 mg, SNP, 7;6 (0,033) → K Genotropin, SNP, 8;0 (21,3 kg, 0,033, 0,7 mg/d) | „Leczony hormonem wzrostu (rhGH)”, „Program SNP · 3 punkty kontrolne” (dymek „SNP — somatotropinowa niedoczynność przysadki”); kafelek „0,033” + „mg/kg/d” · Genotropin 12 mg; pasek „0,033 mg/kg/d · 12 mies. · …”; linia „Analizy” „SNP — … · Genotropin 12 mg · ostatnia kontrola w wieku 8 l. 0 mies.”; tabela trendu: „2 × 0,72 mg na dobę (0,04 mg/kg na podanie)”, „0,033 mg/kg/d”, „0,033 mg/kg/d”; pas typowego zakresu SNP | IGF-1, „2 × 0,35 mg na dobę” · 0,017 mg/kg na podanie; tabela bez zmian; pas IGF-1 |
+| G→I | W Genotropin 12 mg, SNP, 7;0 (0,025) → K Increlex 40 mg, IGF-1, 7;6 (19,6 kg, 0,08, 1,6 mg/d) | „Leczony IGF-1 (mekasermina)”, „Program IGF-1 · 2 punkty kontrolne”; kafelek „2 × 0,8 mg” + „na dobę” · 0,04 mg/kg na podanie · Increlex 40 mg; pasek „2 × 0,8 mg na dobę (0,04 mg/kg na podanie) · 6 mies. · …” | „Program SNP · …” (reszta jak po zmianie) |
+| cały Increlex / cały rhGH | P-GH-INCRELEX-* (Increlex 40 mg, IGF-1), G1 etapu 3 (Genotropin, SNP), Ngenla, zakończone, wznowienie GR1, W2, bez Włączenia | bez zmian (testy etapu 3 i P-GH-INCRELEX-* bez zmian oczekiwań) | — |
+| punkt bez leku | I→G z ostatnim punktem bez leku i programu | rhGH, „Program SNP · 3 punkty kontrolne”, „0,033 mg/kg/d” · Genotropin 12 mg; wiersz trendu „0,033 mg/kg/d” | IGF-1, „2 × 0,35 mg na dobę” · 0,017 mg/kg na podanie · Increlex 40 mg |
+| luki po Włączeniu Increlex | A: Kontynuacje bez leku z programem SNP; B: Kontynuacje Genotropin bez programu | A: rhGH, „Program SNP · 3 punkty kontrolne”, „0,033 mg/kg/d” bez podpisu preparatu, wiersz trendu „0,033 mg/kg/d”; B: rhGH, „3 punkty kontrolne” (bez programu), „0,033 mg/kg/d” · Genotropin 12 mg, bez pasa typowego zakresu | A: IGF-1, dawka na podanie, „Program IGF-1”; B: IGF-1, dawka na podanie |
+| niespójny punkt | G1 z programem IGF-1 we wszystkich punktach | rhGH, „Program IGF-1 · 3 punkty kontrolne” (program jak zapisany), „0,033 mg/kg/d”; tabela trendu w mg/kg/d, legenda „dawka (mg/kg/d)” | IGF-1, „2 × 0,49 mg na dobę” · 0,017 mg/kg na podanie; tabela na podanie |
+| wznowienie | kurs 1 Increlex (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0) | „kurs 2 z 2”, rhGH, „Program SNP · 2 punkty kontrolne w kursie (4 łącznie)”, „0,033 mg/kg/d” | tak samo (bieżący kurs zaczyna Genotropin — już dotąd) |
+
+**Czego to nie zmienia (inwentarz poza Kartą).**
+- `gh_therapy_monitor.js` (monitor DocPro): tabela i dawka per wiersz z leku punktu (`Gmpod` — `VildaGhDawka.preparat`),
+  bez reguły „program ze startu”. Pole „Program terapeutyczny” karty terapii (`#therProg`) bierze program z Włączenia
+  kursu i jest zablokowane przy punktach (P-GH-PROGRAM-ODBLOKUJ) — po I→G pokazuje IGF-1; to pole zasila program nowych
+  punktów z karty terapii i kalkulator dawki (preparaty wg programu), więc zmiana nie jest małą poprawką wyświetlania —
+  do decyzji właściciela. [od P-GH-PROGRAM-BIEZACY (decyzja właściciela 2026-11-23, wpis niżej): pole poza edycją punktu
+  i wiersz „Program terapeutyczny: …” nad tabelą = program bieżący bieżącego kursu wg tej samej reguły co Karta (po I→G —
+  SNP), a lista preparatów karty idzie za polem, gdy program pola zgadza się z rodzajem bieżącego preparatu; edycja
+  punktu, blokada i pusta lista bez zmian.]
+- `gh_igf_therapy.js` (Terminarz, `Qe`): wizyta kontrolna z ostatniego punktu wg wieku, dawka wg leku punktu — bez błędu.
+  Tytuł nowego wpisu „Leczenie IGF-1 (mekasermina)” przy „Increlex albo program IGF-1” punktu — różni się od reguły pkt 4
+  tylko przy niespójnym punkcie; to zapis wpisu (dane), bez zmian.
+- `vilda_vault.js`: listy automatyczne „GH” (`De`) — „aktywne” z programu ostatniego punktu wg wieku, „kiedykolwiek” —
+  z dowolnego punktu, zmiana preparatu z `fromDrug/toDrug` — bez błędu; tytuł wpisów Historii z punktów — per punkt
+  „Increlex albo IGF-1” (jak Terminarz) — sejf bez zmian.
+- `gh_therapy_segments.js`: 100% dawki zalecanej per punkt (`ghRecommendedDose`: „program IGF-1 albo lek Increlex” →
+  0,24 mg/kg/d) — w I→G poprawne (każdy punkt ze swoim programem); niespójny punkt Genotropin + IGF-1 dostaje cel
+  Increlexu — tylko opis (bez zmian pliku). Program odcinka = program 1. punktu odcinka.
+- `vilda_trajectory_analysis.js` (`ghKursy`: etykieta kursu = preparat ostatniego punktu z preparatem),
+  `vilda_summary_cards.js`, epikryza (`vilda_epicrisis.js`) — bez rozróżnienia Increlex/rhGH ani programu z punktów.
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- `tests/unit/karta-leczenie.test.mjs` (104 → 114; prawdziwe `wl`, `kl`, `Pl`, `Kl_leczenie` i blok `Gp_*`): I→G (karta,
+  pasek, trend), I→G z odcinkami, G→I, cały Increlex / cały rhGH, punkt bez leku, luki po Włączeniu Increlex (A, B), niespójny punkt, wznowienie, pas
+  typowego zakresu w trendzie, reguła w kodzie (`Gp_biezacy`, `Gp_program`, `Gwl_isInc`, `Gwl_all`). Bez zmian oczekiwań
+  istniejących testów.
+- e2e: nowe `tests/e2e/karta-gh-preparat-biezacy.spec.mjs` KP-1 (I→G), KP-2 (G→I) — komputer;
+  `karta-gh-preparat-biezacy-mobile.spec.mjs` KPM-1 (I→G) — telefon; pacjenci w `tests/support/karta-leczenie.mjs`.
+- Kontrola negatywna na `origin/audyt` a7b2920b: nie przechodzi 7 z 9 nowych testów jednostkowych (przechodzą „cały kurs”
+  i „wznowienie” — pilnują braku zmiany) i 3 z 3 nowych e2e.
+- Porównanie rysunku Karty (drzewo DOM zakładki, paski, trend) z `origin/audyt` dla 18 przypadków bez zmiany Increlex ↔
+  rhGH (w tym Genotropin → Omnitrope, Ngenla, wznowienie, bez Włączenia, bez dawki, bez leku) w trzech konfiguracjach
+  modułów — identyczne (skrypt poza repozytorium).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, sejf, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta znów
+bierze program Włączenia i „Increlex albo program IGF-1” per punkt.
+
+**Wersje.** `vilda_auth_ui.js` 581 → 582 (wszystkie strony, które go ładują), `vilda_chrome.js` 320 → 321
+i `vilda_session_bridge.js` 236 → 237 (wstrzykują `vilda_auth_ui.js` z nowym `?v=`); precache (append-only);
+`SW_VERSION` 1.1.572 → 1.1.573 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` —
+wszystko z `npm run podbij-wersje` względem `origin/audyt` a7b2920b. Bez nowego pliku ładowanego i bez nowych stylów.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; program bieżący przy zmianie programu bez zmiany leku
+(pkt 6); pole „Preparat” z leku bieżącego (pkt 3); program karty terapii w DocPro po zmianie preparatu (inwentarz)
+[rozstrzygnięte 2026-11-23: „popraw program w formularzu monitora DocPro” — P-GH-PROGRAM-BIEZACY].
+
+## P-GH-PROGRAM-BIEZACY — DocPro: program w formularzu monitora wg bieżącego preparatu (SW 1.1.575, `gh_therapy_monitor.js` 66, 2026-11-23)
+
+**Zmiana kliniczna: TAK — po zmianie Increlex ↔ rhGH w kursie pole „Program terapeutyczny”, wiersz programu i program
+nowych punktów z karty terapii = program bieżący (jak Karta, P-GH-PREPARAT-BIEZACY), nie program Włączenia.** Za polem
+idą lista preparatów karty (`#therDrug`), podpowiedź i kalkulator dawki, formularz wstecznego punktu i wizyta kontrolna
+w Terminarzu — gdy program pola zgadza się z rodzajem bieżącego preparatu (przy sprzeczności, np. Genotropin z programem
+IGF-1, karta zostaje jak dotąd). Wzory, dawki zapisane w punktach, progi, kursy (P-GH-WZNOWIENIE), walidacja
+(`VildaGhPunkty.sprawdzRodzaj`), edycja punktu, blokada pola (P-GH-PROGRAM-ODBLOKUJ), sejf i Karta — bez zmian. Łatka:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-GH-PROGRAM-BIEZACY”.
+
+**Decyzja właściciela.** P-GH-PREPARAT-BIEZACY zostawił program karty terapii w DocPro do decyzji (inwentarz „Czego to nie
+zmienia”); właściciel 2026-11-23: „popraw program w formularzu monitora DocPro” (zgoda na zmianę — dotyczy też programu
+zapisywanego w nowych punktach).
+
+**Źródło, populacja, jednostki.** Jak w P-GH-PREPARAT-BIEZACY (ChPL Increlex, EMA, PDF z 26.03.2026, pkt 4.2; preparaty
+somatotropiny i somatrogonu — bez zmian). Zmiana nie wprowadza nowych liczb ani progów: przypisuje istniejący program
+(a z nim listę preparatów programu i dawkę zalecaną karty) do preparatu, który dziecko przyjmuje teraz. Populacja: dzieci
+leczone w programach GH/IGF-1 ze zmianą preparatu między mekaserminą a rhGH w jednym kursie (oraz zapisy z brakującym
+lekiem lub programem w punkcie i zmianą programu w kursie).
+
+**Stan przed zmianą (`audyt` e163b85a, prawdziwy monitor w atrapie i prawdziwe DocPro w e2e).** `F()`
+(`renderGHTherapyTable`) brało program z punktu Włączenia: pole — `s.program` pierwszego Włączenia, bez niego program
+pierwszego wiersza, przy kilku kursach `ghProgramKursu(ghKursProgramu(Gwk))` (Włączenie bieżącego kursu albo jego pierwszy
+punkt); wiersz nad tabelą — to samo dla bieżącego kursu. Przypadek I→G niżej: pole i wiersz „IGF-1”, nowa Kontynuacja
+z karty z programem IGF-1, formularz wsteczny IGF-1; karta z listą Increlex 40 mg (np. stan karty zapisany przy dawnym
+polu) — wizyta kontrolna w Terminarzu „Leczenie IGF-1 (mekasermina)”, program IGF-1. Programowe ustawienie pola nie
+przeliczało listy preparatów: po wczytaniu pacjenta lista zostawała z poprzedniego programu karty (np. kurs Increlex przy
+karcie z listą rhGH: program IGF-1, preparat Omnitrope 10 mg, dawka zalecana SNP — Kontynuacja z karty dostawała program
+IGF-1 z preparatem rhGH).
+
+**Reguła** (czytelna część `gh_therapy_monitor.js`, blok P-GH-PROGRAM-BIEZACY). Ta sama reguła co Karta (`Gp_biezacy`
+w `vilda_auth_ui.js`), na punktach bieżącego kursu wg wieku (kilka kursów — ostatni kurs `ghKursy`; jeden kurs albo brak
+modułu kursów — cała lista wg wieku, stabilnie, jak `Gw_punktyProgramu`):
+1. rodzaj (Increlex czy rhGH): ostatni punkt kursu z lekiem albo programem — lek decyduje (`/^Increlex/`), bez leku —
+   program (`/^IGF/`);
+2. program: program ostatniego punktu; gdy pusty — ostatni wcześniejszy program tego samego rodzaju; brak — jak dotąd
+   (dawne wyrażenie: Włączenie, pierwszy punkt listy, a bez nich pole bez zmiany);
+3. lek bieżący: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy lek tego samego rodzaju (`ghBiezacy` =
+   `{ lek, program, increlex }`, jak `Gp_biezacy`).
+Zastosowanie: `#therProg` poza edycją punktu i wiersz „Program terapeutyczny: …” (jedna funkcja); pole dalej zablokowane
+przy punktach. Edycja punktu (`x != null`) — bez zmian (dawne wyrażenie z kursem edytowanego punktu). Lista preparatów
+(poza edycją) — tylko gdy oba warunki: wybrany preparat karty nie należy do programu pola (preparaty programu jak
+w edycji i punkcie wstecznym) i program pola zgadza się z rodzajem bieżącego preparatu (`/^IGF/` programu = Increlex
+z pkt 1). Wtedy karta przelicza listę jak po zmianie programu (zdarzenie change pola: `u()` — czyści ręczną datę kontroli
+i własną liczbę dni, `De()` — lista i preparat domyślny programu, `pe()` — dawka zalecana i podpowiedź programu, `T()` —
+kalkulator; `gh_igf_therapy.js`), a gdy na nowej liście jest lek bieżący z pkt 3 — wybiera go (zdarzenie change preparatu:
+`u()`, `pe()`, `Gdpo` — dawka podawana na kroku wstrzykiwacza nowego preparatu, `T()`). Ręczną datę kontroli i własną
+liczbę dni wpisane przed przeliczeniem karta dostaje z powrotem (`restoreState` karty ze stanem po przeliczeniu, bez
+zdarzeń); dawka zostaje dawką zalecaną nowego programu. Sprzeczność (lek rhGH przy programie IGF-1 albo odwrotnie —
+z zapisu albo z zapasu przy luce w programie) i preparat należący do programu — bez zdarzeń i bez zmiany karty (jak
+dotąd). Formularz wsteczny kopiuje pole i preparat karty (jak dotąd), Terminarz (`Je()`) czyta pole i preparat karty
+(jak dotąd).
+Rozstrzygnięcie wykonawcy: reguła mieszka w monitorze, nie w `VildaGhPunkty` — monitor i panel wiersza przyjmują tylko API
+wersji 4 (bramka zapisu), a nowa funkcja API oznaczałaby nową wersję i zmianę obu bramek; spójność z Kartą pilnuje test
+jednostkowy na wspólnym zbiorze przypadków. Wybór preparatu bieżącego kursu (zamiast preparatu domyślnego programu karty)
+przy przeliczonej liście — także rozstrzygnięcie wykonawcy (po I→G karta pokazuje Genotropin 12 mg, nie Omnitrope 10 mg).
+Warunek zgodności rodzaju i lek bieżący wg reguły Karty — po niezależnym przeglądzie (2026-11-23): bez niego karta przy
+Genotropinie z programem IGF-1 (S1–S3 niżej) przechodziła na Increlex 40 mg z dawką 0,08 mg/kg/d, a następna Kontynuacja
+zapisywała się jako Increlex/IGF-1.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; wartości z kodu; wiek l.;mies.).
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| I→G | W Increlex 40 mg IGF-1 7;0 → K Genotropin 12 mg SNP 7;6 → K Genotropin SNP 8;0; wizyta 8;6, 22,5 kg; karta przed wczytaniem z programem IGF-1 (lista Increlex 40 mg) i ręczną datą kontroli | `#therProg` SNP (zablokowane), „Program terapeutyczny: SNP”; lista 6 preparatów rhGH, wybrany Genotropin 12 mg, dawka 0,027 mg/kg/d (zalecana SNP 0,025 na kroku wstrzykiwacza: 0,6 mg/d), „zalecana dawka dla programu SNP”, ręczna data kontroli zostaje; Kontynuacja z karty 8;6 — Genotropin 12 mg, SNP; formularz wsteczny SNP + Genotropin 12 mg; Terminarz „Leczenie rhGH”, „Program: SNP (Somatotropinowa niedoczynność przysadki).”; po wczytaniu z sejfu i F5 — SNP. Karta z listą rhGH (Omnitrope 10 mg, 0,027) — bez zmian karty | IGF-1 w polu i wierszu; lista Increlex 40 mg, 0,08 mg/kg/d; Kontynuacja IGF-1 + Increlex; Terminarz „Leczenie IGF-1 (mekasermina)”; po F5 — IGF-1 |
+| G→I | W Genotropin SNP 7;0 → K Increlex IGF-1 7;6; karta z listą rhGH (Omnitrope 10 mg, 0,027 mg/kg/d) | IGF-1, „Program terapeutyczny: IGF-1”, lista Increlex 40 mg (wybrany), dawka 0,08 mg/kg/d (podanie 0,9 mg przy 22,5 kg), podpowiedź IGF-1 (mekasermina); Kontynuacja z karty 8;0 — Increlex 40 mg, IGF-1; wczytanie z sejfu — stan zapisu „zapisano” | SNP; Omnitrope 10 mg, 0,027 mg/kg/d |
+| cały kurs SNP; wznowienie | W→K→K Genotropin SNP; kurs 1 Increlex IGF-1 (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0) | SNP, wiersz SNP, „Kurs 2 — wznowienie w wieku 9 l. 0 mies.”, tabela, preparat, lista i dawka karty — bez zmian | tak samo |
+| cały kurs IGF-1 | W→K Increlex IGF-1 | IGF-1, wiersz IGF-1 — bez zmian; przy karcie z listą rhGH (Omnitrope 10 mg, 0,027) lista idzie za polem: Increlex 40 mg, 0,08 mg/kg/d | Omnitrope 10 mg, 0,027 mg/kg/d przy programie IGF-1 |
+| S1 sprzeczny zapis | W Increlex IGF-1 7;0 → K Genotropin 12 mg z programem IGF-1 7;6 i 8;0; karta na Genotropin 12 mg z ręczną datą kontroli | IGF-1 (program ostatniego punktu), karta bez zmian i bez zdarzeń: Genotropin 12 mg, lista rhGH, dawka i data kontroli jak przed wczytaniem; Kontynuacja z karty — Genotropin 12 mg, IGF-1 | tak samo |
+| S2 edycja ostatniej K | I→G, karta na Genotropin 12 mg; edycja K 8;0 zapisana bez zmian (program z Włączenia — IGF-1, pytanie 17) | pole IGF-1, karta bez zmian i bez zdarzeń (Genotropin 12 mg, data kontroli zostaje); Kontynuacja z karty — Genotropin 12 mg, IGF-1 | tak samo (pole IGF-1 także przed edycją) |
+| S3 luka B | W Increlex IGF-1 → K Genotropin bez programu (7;6, 8;0); karta na Genotropin 12 mg | IGF-1 (program bieżący pusty — zapas jak dotąd), karta bez zmian i bez zdarzeń: Genotropin 12 mg, lista, dawka | tak samo |
+| edycja | I→G, edycja Włączenia Increlex; edycja Kontynuacji Genotropin | Włączenie: pole IGF-1 podczas edycji (lista karty bez zmian), po zapisie edycji — SNP, Włączenie dalej IGF-1; Kontynuacja: pole IGF-1, zapis z IGF-1 — jak dotąd (stan obecny, pytanie 17) | tak samo (po zapisie edycji — IGF-1) |
+| pusta lista | brak punktów | pole odblokowane, bez wiersza programu, bez przeliczania listy | tak samo |
+| luki, zmiana programu | I→G z Kontynuacjami bez leku (SNP), karta z listą Increlex; Genotropin SNP → Genotropin ZT; W2 (K Increlex IGF-1 po Z) | SNP — lista SNP, preparat domyślny programu (Omnitrope 10 mg; w kursie brak leku rhGH do wyboru, nowa Kontynuacja z karty — Omnitrope 10 mg, SNP, o ile lekarz nie zmieni preparatu); ZT; IGF-1 | IGF-1 (karta Increlex 40 mg, Kontynuacja Increlex, IGF-1); SNP; IGF-1 |
+
+**Czego to nie zmienia (inwentarz).**
+- Edycja punktu (`O()` + `F()`): pole jak dotąd z programu Włączenia kursu edytowanego punktu — `F()` nadpisuje program
+  wpisany przez `O()`; edycja Kontynuacji Genotropin w I→G zapisuje IGF-1 (stan obecny, pytanie 17, testy charakterystyki
+  R9) — do decyzji właściciela.
+- Panel wiersza (`vilda_gh_punkt_z_wiersza.js`, `domyslne`): program i preparat z ostatniego punktu wg wieku (po I→G — SNP,
+  Genotropin 12 mg), wybierane w panelu — bez błędu „program z Włączenia”; ostatni punkt bez programu → pierwszy program
+  listy (nie reguła Karty) — opis, bez zmian pliku.
+- Terminarz (`gh_igf_therapy.js`, `Je`/`Qe`): czyta pole i preparat karty albo ostatni punkt wg wieku — poprawiony przez
+  pole (e2e GPB-1), bez zmian pliku. Formularz wsteczny: kopiuje pole (jak dotąd).
+- Po otwarciu karty GH/IGF-1 pole pokazuje program domyślny karty (SNP), dopóki monitor nie odświeży tabeli (zakładka
+  „Monitorowanie”, zmiana listy) — `F()` przy montowaniu karty biegnie przed wypełnieniem listy programów; jak dotąd.
+- Stan formularza karty: programowe zdarzenia change pola i preparatu przy przeliczeniu listy zapisuje autozapis stanu
+  strony (`vilda_persist_runtime.js` przyjmuje też zdarzenia nie od użytkownika) — `therProg` zawsze, `therDrug` tylko
+  wtedy, gdy po przeliczeniu listy monitor wybiera lek bieżący zdarzeniem zmiany preparatu (gdy przeliczona lista od razu
+  wskazuje ten lek, np. G→I — Increlex 40 mg, zapisany zostaje dawny preparat karty). Po F5 karta wraca z zapisanym stanem,
+  a monitor przy odświeżeniu tabeli przelicza listę ponownie tą samą regułą (preparat spoza programu → lista programu);
+  wskaźnik zapisu pacjenta pomija zdarzenia nie od użytkownika — stan
+  zapisu zostaje „zapisano” (e2e GPB-8). Własna liczba dni i ręczna data kontroli wracają przez `restoreState` karty, bez
+  zdarzeń. Rekord pacjenta, punkty, sejf i synchronizacja — bez zmian.
+- `vilda_auth_ui.js` (Karta), `vilda_gh_punkty.js`, `gh_therapy_segments.js`, `vilda_vault.js`.
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- nowy `tests/unit/gh-program-biezacy.test.mjs` (32): spójność reguły — `ghBiezacy(ghPunktyBiezacegoKursu(…))` monitora
+  (`{ lek, program, increlex }`) = `Gp_biezacy` (wl) Karty, program = `Gp_program(Gw_punktyProgramu(…))` (Pl), funkcje
+  wycięte z obu plików, 19 list (I→G, G→I, cały kurs, wznowienie w obie strony, luki, niespójny punkt, zmiana programu,
+  bez Włączenia, W2, równy wiek, punkty bez wieku, inny rodzaj wpisu, pusta) + lek i rodzaj z wartościami + bez modułu
+  kursów; prawdziwy monitor w atrapie: I→G, G→I (lista preparatów), kurs jednym programem / wznowienie / luka B / bez
+  Włączenia = monitor z usuniętymi wywołaniami łatki („jak dotąd”: pole, wiersz, tabela, preparat, lista, dawka, brak
+  zdarzeń karty; różnica tylko przy programie IGF-1 z kartą rhGH), S1–S3 (karta bez zdarzeń, Kontynuacja jak dotąd),
+  bez modułu kursów, wznowienie, edycja Włączenia i Kontynuacji, pusta lista.
+- `tests/unit/gh-punkty-siatka.test.mjs` (26 → 28) i `tests/scripts/gh-punkty-wzorzec.mjs`: złota siatka — 534 z 5128
+  przypadków z modułem dawki (nowy punkt z karty na listach W+bez-id → ZT i W+obce-pole → IGF-1) mają program bieżący;
+  przypadki reprezentatywne (6) = wynik wzorca z programem bieżącym, skrót z programem cofniętym do programu Włączenia =
+  skrót BAZA; nowa kontrola negatywna (pole znów z programu Włączenia). Plik wzorca bez zmian.
+- e2e: nowe `tests/e2e/gh-program-biezacy-docpro.spec.mjs` GPB-1…GPB-8 (komputer; GPB-1 z ręczną datą kontroli,
+  GPB-6 S1, GPB-7 S2, GPB-8 G→I z sejfu i stan zapisu) i `gh-program-biezacy-docpro-mobile.spec.mjs` GPBM-1 (telefon).
+- Kontrola negatywna na `origin/audyt` e163b85a: e2e — nie przechodzi 7 z 9 nowych (przechodzą GPB-4 i GPB-6 — pilnują
+  braku zmiany); unit — plik nowych testów nie ładuje się (brak funkcji reguły), a w wariancie bez wycinania nie przechodzi
+  26 z 32 (przechodzą: S1, S2, S3, wznowienie, edycja Kontynuacji, pusta lista — pilnują braku zmiany); siatka — nie
+  przechodzą 2 nowe. Wobec wersji sprzed przeglądu (bez warunku rodzaju i przywracania daty): nie przechodzą e2e GPB-1
+  (data kontroli), GPB-6, GPB-7 i unit S1–S3 oraz „kurs jednym programem” (luka B).
+
+**Wdrożenie.** Od razu przy wydaniu; rekord pacjenta, sejf, zapis punktów i synchronizacja bez zmian (stan formularza
+karty po przeliczeniu listy zapisuje autozapis strony, jak po ręcznej zmianie — inwentarz wyżej). Zapisane wcześniej
+punkty nie są poprawiane (Kontynuacje zapisane z programem IGF-1 przy rhGH zostają; karta przy nich nie przechodzi na
+Increlex — S1). **Cofnięcie** = rewert PR: pole i wiersz znów
+z programu Włączenia, lista preparatów bez przeliczania.
+
+**Wersje.** `gh_therapy_monitor.js` 65 → 66 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.574 → 1.1.575
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `origin/audyt` a4986460. Bez nowego pliku ładowanego i bez nowych stylów.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; program przy edycji punktu (pytanie 17) — droga
+edycji tworzy stan „Genotropin z programem IGF-1” (S2: edycja ostatniej Kontynuacji po I→G zapisuje IGF-1, pole pokazuje
+IGF-1); od tej poprawki karta nie przechodzi przez to na Increlex (zostaje Genotropin), ale następna Kontynuacja z karty
+dostaje program IGF-1 jak dotąd; lek bieżący przy przeliczonej liście; program bieżący przy zmianie programu bez zmiany
+leku i przy luce w programie; preparat domyślny programu, gdy w kursie nie ma leku zgodnego z programem (luka w leku —
+stare punkty bez preparatu); powrót ręcznej daty kontroli i własnej liczby dni po przeliczeniu listy.
 
 ## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.568, `vilda_vault.js` 283, 2026-11-20)
 

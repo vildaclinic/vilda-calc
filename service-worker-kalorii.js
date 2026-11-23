@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.573';
+const SW_VERSION = '1.1.575';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -3146,7 +3146,6 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=282',
   '/vilda_vault.js?v=283',
   '/vilda_vault.js?v=284',
-  '/vilda_vault.js?v=285',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -3194,6 +3193,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=579',
   '/vilda_auth_ui.js?v=580',
   '/vilda_auth_ui.js?v=581',
+  '/vilda_auth_ui.js?v=582',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3909,6 +3909,7 @@ const OPTIONAL_ASSETS = [
   '/inline_index_07.js?v=14',
   '/inline_index_07.js?v=15',
   '/inline_index_07.js?v=16',
+  '/inline_index_07.js?v=17',
   '/inline_docpro_05.js?v=2',
   '/vilda_centile_interpolation.js?v=2',
   '/inline_index_03.js?v=12',
@@ -4148,6 +4149,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_cykle_leczenia.js?v=11',
   '/vilda_cykle_leczenia.js?v=12',
   '/vilda_cykle_leczenia.js?v=13',
+  '/vilda_cykle_leczenia.js?v=14',
   '/growth-basic-module.js?v=14',
   '/vilda_advanced_growth.js?v=35',
   '/vilda_auth_ui.js?v=414',
@@ -4760,6 +4762,7 @@ const OPTIONAL_ASSETS = [
   '/gh_therapy_monitor.js?v=63',
   '/gh_therapy_monitor.js?v=64',
   '/gh_therapy_monitor.js?v=65',
+  '/gh_therapy_monitor.js?v=66',
   '/gh_therapy_segments.js?v=4',
   '/gh_therapy_segments.js?v=5',
   '/gh_therapy_segments.js?v=6',
@@ -5298,6 +5301,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_centile_landscape.js',
   '/vilda_centile_landscape.js?v=1',
   '/vilda_centile_landscape.js?v=2',
+  '/vilda_centile_landscape.js?v=3',
 ];
 
 const PRECACHE_URLS = [...new Set([...CORE_SHELL_URLS, ...OPTIONAL_DOCUMENTS, ...OPTIONAL_ASSETS])];

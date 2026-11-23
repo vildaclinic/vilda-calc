@@ -2305,9 +2305,36 @@ data w dymku), `vilda_professional_summary.css` (`.professional-summary-reported
 `.vilda-romb-pacjent`, `.pt-s.pt-pacjent`).
 
 **Granice.** Sejf, dziennik, zapis wizyty, autozapis i `collectAdvancedMeasurements()` bez zmian — pomiary z dziennika
-są tylko rysowane i pokazywane. Bez zmian: Karta pacjenta (temat C), DocPro, siatka Palczewskiej 1–18 lat i strona
-„standardowa” PDF, karta „Obliczenia wzrostowe” (tryb podstawowy). Wersje `?v=`, precache i `SW_VERSION` ustawił
-`npm run podbij-wersje`.
+są tylko rysowane i pokazywane. Bez zmian: Karta pacjenta (temat C), strona „standardowa” PDF, karta „Obliczenia
+wzrostowe” (tryb podstawowy). Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`. Sprostowanie
+(2026-11-23): DocPro ładuje te same pliki, więc zmiany działają także tam (poza blokami „Poprzednich pomiarów”) — patrz
+łatka P-OTYLOSC-STRONA-2 niżej; siatki Palczewskiej (własny przycisk) dostały romby w P-OTYLOSC-STRONA-2.
+
+## Łatka P-OTYLOSC-STRONA-2 — romby i legenda w PDF siatek Palczewskiej; DocPro (`vilda_cykle_leczenia.js` 13 → 14, `inline_index_07.js` 16 → 17, `vilda_centile_landscape.js` 2 → 3, 2026-11-23, polecenie właściciela)
+
+Przy źródle Palczewska PDF tworzy osobny przycisk (`generatePalczewskaCentileCharts`, `Re` w `inline_index_07.js`), nie
+`generateCentileChart`, więc łatka P-OTYLOSC-STRONA go nie obejmowała — ani 0–3 lata, ani 1–18 lat. Czytelne źródła:
+`vilda_cykle_leczenia.js` — `rysujLegendePdf` wydzielona z `rysujPdf` (eksport `VildaDziennikOtylosci`);
+`vilda_centile_landscape.js` — `buildPage` rysuje legendę pod stopką strony poziomej, gdy któryś wykres narysował romby.
+
+```
+// inline_index_07.js
+// 1. Fe (jeden wykres 1–18 lat):  …modelOnly:__modelOnly}){  →  …modelOnly:__modelOnly,pomiaryDziennika:__dz07}){
+// 2. Fe, po serii pomiarów, przed blokiem samego wzrostu (o==="height"&&…; adnotacje Kreatora zostają tuż po nim —
+//    pilnuje tests/unit/publication-creator.test.mjs): (function(){if(__dz07!==!0||S)return;…Dz.rysujPdf(e,{minX:12,maxX:216,[o]:{px:te+120,
+//    py:ne+80,pw:Z-220,ph:U-160,minY:F,maxY:R},legend (tylko strona pionowa):{x:Y/2,y:xe-175},current:{ageMonths:ve,
+//    weight:l,height:f},measurements:advancedGrowthData.measurements});Me.dataset.vildaRomby=String(n)})(),
+// 3. ze: destrukturyzacja …,pomiaryDziennika:__dzZ},__lay) i przekazanie do obu wywołań Fe (…layout:__lay,pomiaryDziennika:__dzZ})
+// 4. Ie (0–3 lata): …userHeight:l,pomiaryDziennika:__dzI}) i do buildCentilePageCanvas …userHeight:l,pomiaryDziennika:__dzI===!0,
+// 5. Re (przycisk strony): __a={…,pomiaryDziennika:!0} (1–18 lat, pion i poziom) oraz Ie({…,pomiaryDziennika:!0})
+```
+
+Siatki publikacyjne (`window.publicationCharts`), raport pacjenta i Kreator nie podają flagi — bez rombów. **DocPro**:
+sprawdzone na prawdziwej stronie (e2e ST-8) — linijka pod „Waga”, romby na siatce „Podsumowania wyników” i analiza
+trajektorii karty zaawansowanej z wpisami działają jak na stronie głównej (te same pliki); bloków „pomiar od pacjenta”
+w „Poprzednich pomiarach” DocPro nie ma (`VildaAdvDziennik` tylko przy `#advHistoryToggle`). Decyzja właściciela 2026-11-23: DocPro
+zostaje jak strona główna (analiza z masami od pacjenta).
+
 
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
@@ -2706,6 +2733,92 @@ DOM bez zmian. `Pl` bez trzeciego argumentu rysuje jak dotąd (nagłówek i marg
 w „Siatkach”). Sejf, dane, obliczenia, progi, teksty kafelków panelu i DocPro bez zmian. Strażnik treści edytora notatki
 (`tests/unit/care-plan-auth-ui-boundary.test.mjs`) dostał nowy odcisk z opisem zmiany (etykieta i opcja otwarcia Karty).
 Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-GH-PREPARAT-BIEZACY — Karta: Increlex czy rhGH wg bieżącego preparatu (`vilda_auth_ui.js` 581 → 582, 2026-11-23, decyzja właściciela)
+
+Czytelne źródło reguły: `vilda_auth_ui.js` — nowy czytelny blok P-GH-PREPARAT-BIEZACY zaraz po `Gw_punktyProgramu`
+(koniec bloku P-GH-WZNOWIENIE, przed blokiem P-KARTA-LECZENIE, etap 1): `Gp_rodzajPunktu` (rodzaj punktu: Increlex,
+rhGH albo nieznany — lek decyduje, bez leku program `/^IGF/`), `Gp_program` (program bieżący kursu, jak w `Gp_biezacy`),
+`Gp_increlexPunktu` (punkt pojedynczy: lek decyduje, bez leku — program punktu `/^IGF/`, jak dotąd), `Gp_biezacy` (stan
+bieżący podsumowania: Increlex czy rhGH z ostatniego punktu z lekiem albo programem; lek i program ostatniego punktu,
+a gdy pusty — ostatni wcześniejszy tego samego rodzaju). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-PREPARAT-BIEZACY. Zminifikowane miejsca zmienione kotwicami występującymi
+dokładnie raz; skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_auth.py` + `gp_blok.js`) odtwarza wynik
+z `origin/audyt` a7b2920b; bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — Gwl_isInc (punkt pojedynczy: wiersz trendu xl, legenda Gwl_all, odcinki w kl, Historia/edytor Gwl_hist)
+// 1. function Gwl_isInc(d,p){return/^Increlex/.test(String(d||""))||/^IGF/.test(String(p||""))}
+//    → function Gwl_isInc(d,p){/* P-GH-PREPARAT-BIEZACY … */return Gp_increlexPunktu(d,p)}
+// vilda_auth_ui.js — wl (podsumowanie GH)
+// 2. var d=n[n.length-1],c=r.program||d.program||"",s=c==="IGF-1"||/^Increlex/.test(String(d.drug||r.drug||"")),
+//    → var d=n[n.length-1];/* P-GH-PREPARAT-BIEZACY … */var Gp_s=Gp_biezacy(Gw_p),c=Gp_s.program,s=Gp_s.increlex,
+//    (Gw_p — punkty bieżącego kursu wg wieku; jeden kurs — wszystkie punkty wg wieku; c i s zasilają jak dotąd znacznik,
+//    pole/cichy tekst „Program”, dymek, Gwl_inc/Kg_dawkaCz, Kl_wy.odznaka/dawka/dawkaCz/program/programPelny)
+// 3. h("Preparat",d.drug||r.drug||"—") → h("Preparat",Gp_s.lek||"—")
+// 4. Kl_wy.preparat=d.drug||r.drug||"" → Kl_wy.preparat=Gp_s.lek   (podpis kafelka „Preparat i dawka”, linia „Analizy”)
+// vilda_auth_ui.js — Pl (Trend leczenia GH): program pasa „Pokaż typowy zakres dawki”
+// 5. var d="",Gw_pp=Gw_punktyProgramu(a);if(Array.isArray(Gw_pp))for(var c=0;c<Gw_pp.length;c+=1){var s=Gw_pp[c];
+//    if(s&&s.program&&(d=s.program,s.type==="start"))break}
+//    → /* P-GH-PREPARAT-BIEZACY … */var d=Gp_program(Gw_punktyProgramu(a));
+// vilda_auth_ui.js — komentarz P-GH-INCRELEX-WIDOKI przed Gwl_isInc (dopisek, bez zmiany kodu)
+// 6. Increlex = preparat Increlex albo program IGF-1; → … albo program IGF-1 [od P-GH-PREPARAT-BIEZACY (2026-11-23): …];
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+Kurs jednym preparatem z jednym programem w każdym punkcie — rysunek Karty (DOM), pasek i trend identyczne z `origin/audyt`
+(porównanie drzew DOM 18 przypadków × 3 konfiguracje modułów, poza repozytorium). Różnica tylko przy zmianie preparatu
+Increlex ↔ rhGH, punkcie bez leku lub programu i zmianie programu w kursie. `gh_therapy_monitor.js`, `gh_igf_therapy.js`,
+`gh_therapy_segments.js`, `vilda_vault.js`, sejf, zapis punktów i wpisów — bez zmian. Wersje `?v=`, precache
+i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-GH-PROGRAM-BIEZACY — DocPro: program w formularzu monitora wg bieżącego preparatu (`gh_therapy_monitor.js` 65 → 66, 2026-11-23, decyzja właściciela)
+
+Czytelne źródło reguły: `gh_therapy_monitor.js`, czytelna część na górze pliku — nowy blok P-GH-PROGRAM-BIEZACY zaraz po
+`ghKursProgramu` (blok P-GH-WZNOWIENIE, część 2): `ghRodzajPunktu` (Increlex, rhGH albo nieznany — lek decyduje, bez leku
+program `/^IGF/`, jak `Gp_rodzajPunktu` Karty), `ghBiezacy` (`{ lek, program, increlex }` — ta sama reguła co
+`Gp_biezacy` w `vilda_auth_ui.js`: rodzaj z ostatniego punktu z lekiem albo programem, lek i program ostatniego punktu,
+a gdy pusty — ostatni wcześniejszy tego samego rodzaju), `ghProgramBiezacy` (= `ghBiezacy(…).program`),
+`ghPunktyBiezacegoKursu` (kilka kursów — ostatni kurs `ghKursy`; jeden kurs albo brak modułu — cała lista wg wieku, jak
+`Gw_punktyProgramu` Karty), `ghProgramWiersza`, `ghProgramPola` (przy edycji — jak dotąd), `ghPrzywrocDateKarty`,
+`ghPreparatyKarty` (lista preparatów karty za programem pola). Spójność z Kartą (lek, program, rodzaj) pilnuje test
+jednostkowy `tests/unit/gh-program-biezacy.test.mjs` (funkcje wycięte z obu plików, ten sam zbiór przypadków). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-BIEZACY. Zminifikowane ciało (`F()`, `renderGHTherapyTable`) zmienione
+kotwicami występującymi dokładnie raz; skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py`
++ `gp_monitor_blok.js`, poza repozytorium) odtwarza wynik z `origin/audyt` e163b85a; bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelna część: blok P-GH-PROGRAM-BIEZACY po function ghKursProgramu (funkcje wyżej),
+//   komentarz ghProgramKursu (od tej łatki: edycja punktu i zapas) i dopisek w komentarzu bloku P-GH-WZNOWIENIE, część 2
+// 1. F(), wiersz „Program terapeutyczny: …” nad tabelą:
+//    Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));if(!o&&i[0]&&(o=i[0].program),o){
+//    → Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));/* P-GH-PROGRAM-BIEZACY */o=ghProgramWiersza(Gwk,o);if(!o&&…
+// 2. F(), #therProg (lista z punktami):
+//    Gwk&&Gwk.wiele&&(l=ghProgramKursu(ghKursProgramu(Gwk))||l),l&&(o.value=l),o.disabled=!0}else o.disabled=!1}
+//    → …||l),/* P-GH-PROGRAM-BIEZACY */l=ghProgramPola(Gwk,l),l&&(o.value=l),o.disabled=!0,ghPreparatyKarty(o,l,Gwk)}else o.disabled=!1}
+//    (dawne wyrażenie zostaje jako zapas: program bieżący pusty → program jak dotąd; edycja punktu → jak dotąd)
+// ghPreparatyKarty: tylko poza edycją, tylko gdy wybrany preparat #therDrug nie należy do programu pola (R — preparaty
+//   programu, jak w edycji i punkcie wstecznym) i tylko gdy program pola zgadza się z rodzajem bieżącego preparatu
+//   (/^IGF/.test(program) === ghBiezacy(…).increlex): zdarzenie change pola (gh_igf_therapy.js: u — ręczna data kontroli
+//   i własna liczba dni czyszczone, De — lista i preparat domyślny, pe — dawka zalecana i podpowiedź, T — kalkulator),
+//   potem — gdy lek bieżący (ghBiezacy(…).lek) jest na nowej liście — jego wybór i zdarzenie change preparatu (u, pe, Gdpo,
+//   T); na końcu ghPrzywrocDateKarty: ręczna data kontroli i własna liczba dni sprzed przeliczenia wracają przez
+//   vildaGhIgfPersistApi.restoreState (stan po przeliczeniu, dawka w trybie pola, które lekarz wypełnia; bez zdarzeń).
+//   Sprzeczność rodzaju albo preparat z programu — bez zdarzeń (jak dotąd).
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+`vilda_gh_punkty.js` (`VildaGhPunkty`) bez zmian: monitor i panel wiersza przyjmują tylko API wersji 4 (bramka zapisu
+`A.wersja===4`), więc nowa funkcja w API oznaczałaby nową wersję i zmianę obu bramek; reguła mieszka w czytelnej części
+monitora, a Karta zostaje przy `Gp_biezacy`. `vilda_auth_ui.js`, `gh_igf_therapy.js` (Terminarz `Je()` czyta pole),
+`vilda_gh_punkt_z_wiersza.js`, zapis punktów, walidacja (`sprawdzRodzaj`), kursy i sejf — bez zmian. Kurs jednym
+programem — pole, wiersz, tabela, preparat, lista i dawka karty identyczne jak dotąd (test jednostkowy: monitor
+z wywołaniami łatki usuniętymi = „jak dotąd”); wyjątek — kurs Increlex przy karcie z listą rhGH (lista idzie za polem).
+Zdarzenia change karty przy przeliczeniu zapisuje autozapis stanu strony (`therProg`, `therDrug`, jak po ręcznej zmianie);
+wskaźnik zapisu pacjenta je pomija. Złota siatka punktów (`tests/fixtures/gh-punkty-wzorzec.json`) bez zmian pliku: przypadki nowego punktu z karty
+na listach z innym programem ostatniego punktu mają dziś program bieżący (`wplywProgramuBiezacego`, `zProgramemNowego`
+w `tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
+precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 

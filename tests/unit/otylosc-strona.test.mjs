@@ -267,6 +267,15 @@ describe('źródła łatek w artefaktach zminifikowanych (temat D)', () => {
     expect(pdf).toContain('legacyLayout:__legacyLayout,pomiaryDziennika:__dz04}){');
     expect(pdf).toContain('suppressSummaryBox:!!t,pomiaryDziennika:!t}).toDataURL(');
     expect(pdf).toContain('if(__dz04!==!0)return;');
+    // Siatki Palczewskiej (przycisk „Generuj siatkę” przy źródle Palczewska): 0–3 lata przez buildCentilePageCanvas,
+    // 1–18 lat przez Fe (strona pionowa) i vilda_centile_landscape.js (strona pozioma).
+    const pal = plik('inline_index_07.js');
+    expect(pal).toContain('__a={sex:B,userAgeMonths:c,userWeight:x,userHeight:X,pomiaryDziennika:!0}');
+    expect(pal).toContain('J.push(Ie({sex:B,userAgeMonths:c,userWeight:x,userHeight:X,pomiaryDziennika:!0}))');
+    expect(pal).toContain('userHeight:l,pomiaryDziennika:__dzI===!0,');
+    expect(pal).toContain('if(__dz07!==!0||S)return;');
+    expect(pal.match(/layout:__lay,pomiaryDziennika:__dzZ\}/g)).toHaveLength(2);
+    expect(plik('vilda_centile_landscape.js')).toContain("dziennik.rysujLegendePdf(ctx, g.pageWidth / 2, g.footerBaselineY + 40)");
   });
 });
 
