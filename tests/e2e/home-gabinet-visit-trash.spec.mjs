@@ -6,8 +6,19 @@ test.setTimeout(180_000);
 
 const headerOf = frame => frame.locator('#vhomeGabinetHeader');
 
+async function expectNoTrashAction(header) {
+  const options = header.getByRole('button', { name: 'Opcje', exact: true });
+  await expect(options).toBeVisible();
+  await options.click();
+  await expect(header.locator('[data-trash-visit]')).toBeHidden();
+  await expect(header.getByRole('button', { name: 'Historia wizyt', exact: true })).toBeVisible();
+  await options.click();
+  await expect(options).toHaveAttribute('aria-expanded', 'false');
+}
+
 async function editVisit(frame, visitId) {
   const header = headerOf(frame);
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
   await header.getByRole('button', { name: 'Historia wizyt', exact: true }).click();
   const history = frame.locator('#vhomeVisitHistory');
   await history.getByRole('button', { name: 'Lista', exact: true }).click();
@@ -19,20 +30,22 @@ async function editVisit(frame, visitId) {
 
 async function openTrashConfirmation(frame) {
   const header = headerOf(frame);
-  await header.getByRole('button', { name: 'Działania', exact: true }).click();
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
   await header.getByText('Przenieś wizytę do kosza', { exact: true }).click();
+  await expect(header.getByRole('button', { name: 'Opcje', exact: true })).toHaveAttribute('aria-expanded', 'false');
   return frame.getByRole('dialog', { name: 'Przenieść wizytę do kosza?' });
 }
 
 async function restoreVisit(frame, expectedDate) {
   const header = headerOf(frame);
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
   await header.getByRole('button', { name: 'Historia wizyt', exact: true }).click();
   await frame.locator('#vhomeVisitHistory').getByRole('button', { name: 'Kosz wizyt', exact: true }).click();
   const trash = frame.getByRole('dialog', { name: 'Kosz wizyt' });
   await expect(trash).toContainText(expectedDate);
   await trash.getByRole('button', { name: 'Przywróć wizytę', exact: true }).click();
   await expect(trash).toBeHidden();
-  await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true })).toBeEnabled({ timeout: 15_000 });
+  await expect(header.getByRole('button', { name: 'Nowa wizyta', exact: true })).toBeEnabled({ timeout: 15_000 });
 }
 
 function activeVisits(frame, patientId) {
@@ -62,8 +75,8 @@ test('editing a historical visit can cancel, trash all its versions and restore 
   const analysis = header.getByRole('tab', { name: 'Analiza', exact: true });
   const comparison = frame.locator('#vhomeVisitComparison');
   const weightDelta = comparison.locator('[data-comparison-metric="weight"]');
-  const actions = header.getByRole('button', { name: 'Działania', exact: true });
-  await expect(actions).toBeHidden();
+  const actions = header.getByRole('button', { name: 'Opcje', exact: true });
+  await expectNoTrashAction(header);
   await analysis.click();
   await expect(comparison).toContainText('18.09.2026');
   await expect(weightDelta).toContainText('50');
@@ -84,7 +97,7 @@ test('editing a historical visit can cancel, trash all its versions and restore 
   await (await openTrashConfirmation(frame)).getByRole('button', { name: 'Przenieś do kosza', exact: true }).click();
   await expect(confirmation).toBeHidden({ timeout: 15_000 });
   await expect(header.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
-  await expect(actions).toBeHidden();
+  await expectNoTrashAction(header);
   await expect.poll(() => activeVisits(frame, ids.a)).toEqual([latest, earlier]);
   await analysis.click();
   await expect(comparison).toContainText('17.06.2026');
@@ -155,7 +168,7 @@ test('trashing the sole visit leaves the patient available for a new consultatio
   await expect(patientCard).toContainText('Brak zapisanych wizyt.');
   await patientCard.getByRole('combobox', { name: 'Sekcja karty' }).selectOption({ label: 'Notatki' });
   await expect(patientCard).toContainText(note);
-  const start = header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true });
+  const start = header.getByRole('button', { name: 'Nowa wizyta', exact: true });
   await expect(start).toBeEnabled();
   const analysis = header.getByRole('tab', { name: 'Analiza', exact: true });
   await analysis.click();
@@ -175,7 +188,7 @@ test('trashing the sole visit leaves the patient available for a new consultatio
   await expect(frame.locator('#advMotherHeight')).toHaveValue('166');
   await expect(frame.locator('#advFatherHeight')).toHaveValue('183');
   await expect.poll(() => frame.evaluate(() => window.VildaDsSource.getState().population)).toBe('DS');
-  await expect(header.getByRole('button', { name: 'Działania', exact: true })).toBeHidden();
+  await expectNoTrashAction(header);
   await save.click();
   await expect(start).toBeEnabled({ timeout: 15_000 });
   const fresh = await activeVisits(frame, ids.b);

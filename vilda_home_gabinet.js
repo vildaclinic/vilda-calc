@@ -9,19 +9,24 @@
   let sequence = 0, selecting = false, frame = 0, pendingNote = null, pendingOfficeRecord = null;
   let rapid = null, rapidHeader, entryView = 'launch';
   let registration = null, registrationHost;
+  let displayedVisit = null;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
   const entryTrails = {
     start: [null,'Ekran startowy'], office: ['Ekran startowy','Gabinet'],
     registration: ['Ekran startowy','Dodaj pacjenta'], rapid: ['Ekran startowy','Szybka ścieżka'],
     history: ['Karta pacjenta','Historia wizyt']
   };
-  const startVisitLabel = 'Rozpocznij nową wizytę';
   const paths = {
     home: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     overview: '<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="5" rx="1"/>',
     analysis: '<path d="M3 3v17h18M6 15l4-5 4 2 6-7"/>',
     history: '<path d="M3 11a9 9 0 1 1 2 7M2 4v7h7m3-4v5l4 2"/>',
-    start: '<path d="M12 5v14M5 12h14"/>', save: '<path d="m4 12 5 5L20 6"/>', chevron: '<path d="m9 5 7 7-7 7"/>'
+    calendar: '<path d="M8 3v4m8-4v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/>',
+    lock: '<path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/>',
+    edit: '<path d="m14 6 4 4M4 20l4.5-1 11-11a2 2 0 0 0-3-3l-11 11L4 20z"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/>',
+    start: '<path d="M12 5v14M5 12h14"/>', save: '<path d="m4 12 5 5L20 6"/>',
+    chevron: '<path d="m9 5 7 7-7 7"/>', down: '<path d="m6 9 6 6 6-6"/>'
   };
   function icon(key) {
     return '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.65">' + paths[key] + '</svg>';
@@ -53,11 +58,14 @@
   function patientName() {
     return patientPresentation()?.displayName || [field('firstName'), field('lastName')].filter(Boolean).join(' ') || field('name') || 'Pacjent';
   }
-  function setVisitMenu(open) {
+  function setVisitMenu(open, restoreFocus = false) {
     const toggle = header.querySelector('[data-visit-actions]');
     if (toggle.getAttribute('aria-expanded') === String(open)) return;
+    if (restoreFocus) toggle.focus({preventScroll: true});
+    const menu = header.querySelector('#gbVisitActions');
     toggle.setAttribute('aria-expanded', String(open));
-    header.querySelector('#gbVisitActions').hidden = !open;
+    menu.hidden = !open;
+    if (open) menu.querySelector('button:not([hidden]):enabled')?.focus({preventScroll: true});
   }
   function visitMeasurementsReadOnly() {
     if (isRapidIntake()) return !!rapid.receipt || rapid.busy;
@@ -83,40 +91,40 @@
     const ageText = age ? w.VildaDobAge.describeAge(age) : years || months ? w.VildaDobAge.describeAge({years: Number(years), ageMonths: Number(months)}) + (identity ? ' w zapisie' : '') : '';
     header.querySelector('h1').textContent = patientName();
     header.querySelector('.gb-identity-meta').textContent = [ageText, birth && 'ur. ' + birth.split('-').reverse().join('.')].filter(Boolean).join(' · ');
-    const badge = header.querySelector('.gb-encounter-state');
-    badge.hidden = false;
-    badge.dataset.mode = status.mode;
     const stateLabel = draft ? (status.mode === 'edit' ? 'Edycja wizyty' : 'Nowa wizyta') :
       status.visitId ? 'Ostatnia wizyta' : 'Karta pacjenta';
-    badge.querySelector('[data-state-label]').textContent = stateLabel;
+    const context = header.querySelector('.gb-visit-context');
+    const readOnly = !draft && !!status.visitId;
+    context.hidden = !draft && !readOnly;
+    context.querySelector('[data-state-label]').textContent = readOnly ? 'Dane z wizyty' : stateLabel;
+    context.querySelector('.gb-readonly-badge').hidden = !readOnly;
     const date = status.dateCertain && status.date ? status.date : '';
     const formatted = date.split('-').reverse().join('.');
-    const dateButton = badge.querySelector('[data-home-visit-date]');
-    const canOpen = !draft && !!status.visitId && !!status.snapshotId;
-    dateButton.hidden = !canOpen;
-    dateButton.disabled = status.busy || selecting;
-    dateButton.setAttribute('aria-label', formatted ? 'Otwórz wizytę z ' + formatted : 'Otwórz wizytę bez potwierdzonej daty');
-    const savedTime = dateButton.querySelector('time'), plainTime = badge.querySelector('[data-state-date]');
-    plainTime.hidden = canOpen || !status.visitId;
-    [savedTime, plainTime].forEach(time => {
-      if (date) time.dateTime = date; else time.removeAttribute('datetime');
-      time.textContent = formatted || 'Data nieustalona';
-    });
+    const time = context.querySelector('time');
+    if (date) time.dateTime = date; else time.removeAttribute('datetime');
+    time.textContent = formatted || 'Data nieustalona';
     const formLabel = analysis.querySelector('.vhome-card-heading > span');
     if (formLabel) formLabel.textContent = stateLabel;
     const button = header.querySelector('[data-home-encounter]');
     const action = draft ? 'save' : 'start';
-    const actionLabel = status.mode === 'edit' ? 'Zapisz zmiany' : draft ? 'Zapisz wizytę' : startVisitLabel;
+    const actionLabel = status.mode === 'edit' ? 'Zapisz zmiany' : draft ? 'Zapisz wizytę' : 'Nowa wizyta';
     const caption = button.querySelector('[data-action-caption]');
     if (caption.textContent !== actionLabel) {
       button.dataset.homeEncounter = action;
       caption.innerHTML = icon(action) + '<span>' + actionLabel + '</span>';
     }
-    button.disabled = !!status.busy || selecting;
-    const visitActions = header.querySelector('.gb-visit-actions');
-    visitActions.hidden = status.mode !== 'edit' || !status.snapshotId;
-    visitActions.querySelector('[data-visit-actions]').disabled = !!status.busy || selecting;
-    if (visitActions.hidden || status.busy || selecting) setVisitMenu(false);
+    const busy = !!status.busy || selecting;
+    button.disabled = busy;
+    const edit = header.querySelector('[data-edit-visit]');
+    const canEdit = readOnly && !!status.snapshotId;
+    if (displayedVisit && (displayedVisit.patientId !== target || displayedVisit.visitId !== status.visitId ||
+      displayedVisit.snapshotId !== status.snapshotId || displayedVisit.revision !== status.revision || !canEdit)) setVisitMenu(false, true);
+    displayedVisit = canEdit ? {patientId: target, visitId: status.visitId, snapshotId: status.snapshotId, revision: status.revision} : null;
+    edit.hidden = !canEdit;
+    edit.querySelector('span').textContent = formatted ? 'Edytuj wizytę z ' + formatted : 'Edytuj wizytę';
+    header.querySelector('[data-trash-visit]').hidden = status.mode !== 'edit' || !status.snapshotId;
+    header.querySelector('[data-visit-actions]').disabled = busy;
+    if (busy) setVisitMenu(false);
     header.querySelectorAll('[role="tab"]').forEach(tab => {
       const active = screen === tab.dataset.screen;
       tab.setAttribute('aria-selected', String(active));
@@ -140,8 +148,8 @@
   function openVisitHistory(id, options) {
     if (!root || !owns(id) || target !== id || screen === 'start' || !options.isCurrent()) return false;
     if (historyView) return true;
-    const focus = options.initialVisitId ? header.querySelector('[data-home-visit-date]') :
-      d.activeElement?.closest('[role="menuitem"]') ? overview.querySelector('.vhome-b1-menu-toggle') : header.querySelector('[data-history]');
+    const focus = d.activeElement?.closest('[role="menuitem"]') ? overview.querySelector('.vhome-b1-menu-toggle') :
+      header.querySelector('[data-visit-actions]');
     const scroll = w.scrollY;
     function back(restore = true) {
       dismissHistory();
@@ -215,7 +223,9 @@
       target = null; screen = 'start'; section = 'antro'; account = nextAccount;
       header.querySelector('h1').textContent = '';
       header.querySelector('.gb-identity-meta').textContent = '';
-      header.querySelector('.gb-encounter-state').hidden = true;
+      header.querySelector('.gb-visit-context').hidden = true;
+      displayedVisit = null;
+      setVisitMenu(false);
       showMessage('');
     }
     if (!account) {
@@ -633,13 +643,19 @@
     };
     root.innerHTML = '<div id="vhomeGabinetStart"></div><div id="vhomeGabinetHeader" hidden>' +
       '<div class="gb-header-top"><nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji"><button type="button" data-start>' + icon('home') +
-      '<span>Gabinet</span></button>' + icon('chevron') + '<span aria-current="page">Karta pacjenta</span></nav><div class="gb-encounter-state" hidden><span data-state-label></span><button type="button" data-home-visit-date hidden><time></time></button><time data-state-date></time></div></div>' +
-      '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div></div><div class="gb-card-actions"><button type="button" data-history>' +
-      icon('history') + 'Historia wizyt</button><button type="button" class="gb-primary" data-home-encounter>' +
-      '<span class="gb-action-copy" data-action-caption></span><span class="gb-action-copy gb-action-reserve" aria-hidden="true" data-longest="' + startVisitLabel + '"></span></button></div></div>' +
-      '<div class="gb-patient-nav"><div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div>' +
-      '<div class="gb-visit-actions" role="group" aria-label="Działania wizyty" hidden><button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Działania <span aria-hidden="true">⌄</span></button>' +
-      '<div id="gbVisitActions" hidden><button type="button" data-trash-visit>Przenieś wizytę do kosza</button></div></div></div></div>' +
+      '<span>Gabinet</span></button>' + icon('chevron') + '<span aria-current="page">Karta pacjenta</span></nav></div>' +
+      '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div>' +
+      '<div class="gb-visit-context" hidden><span class="gb-visit-source">' + icon('calendar') +
+      '<span data-state-label></span> <time></time></span><span class="gb-readonly-badge" hidden>' + icon('lock') + '<span>Tylko odczyt</span></span></div></div>' +
+      '<div class="gb-card-actions" role="group" aria-label="Działania wizyty"><div class="gb-visit-actions">' +
+      '<button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Opcje ' + icon('down') + '</button>' +
+      '<div id="gbVisitActions" role="group" aria-label="Opcje wizyty" hidden>' +
+      '<button type="button" data-edit-visit hidden>' + icon('edit') + '<span>Edytuj wizytę</span></button>' +
+      '<button type="button" data-history>' + icon('history') + '<span>Historia wizyt</span></button>' +
+      '<button type="button" data-trash-visit hidden>' + icon('trash') + '<span>Przenieś wizytę do kosza</span></button></div></div>' +
+      '<button type="button" class="gb-primary" data-home-encounter><span class="gb-action-copy" data-action-caption></span>' +
+      '<span class="gb-action-copy gb-action-reserve" aria-hidden="true" data-longest="Zapisz zmiany"></span></button></div></div>' +
+      '<div class="gb-patient-nav"><div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div></div>' +
       '<div id="gbRapidHeader" hidden><h1 id="gbRapidTitle">Analiza</h1></div>' +
       '<section id="vhomeGabinetRegistration" hidden aria-labelledby="gbRegistrationTitle"><div class="gb-registration-heading">' +
       '<h1 id="gbRegistrationTitle">Dodaj pacjenta</h1></div><div data-registration-form></div></section>' +
@@ -683,24 +699,37 @@
       });
     }
     header.querySelector('[data-start]').onclick = closePatientCard;
-    header.querySelector('[data-history]').onclick = () => { if (owns(target)) w.VildaHomeEncounter.history(target, patientName()); };
-    header.querySelector('[data-home-visit-date]').onclick = () => {
-      const status = w.VildaHomeEncounter.state(target);
-      if (owns(target) && status.mode === 'browse' && status.visitId && !status.busy && !selecting)
-        w.VildaHomeEncounter.history(target, patientName(), status.visitId);
+    header.querySelector('[data-history]').onclick = () => {
+      setVisitMenu(false, true);
+      if (owns(target)) w.VildaHomeEncounter.history(target, patientName());
+    };
+    header.querySelector('[data-edit-visit]').onclick = async () => {
+      const expected = displayedVisit, id = target;
+      setVisitMenu(false, true);
+      if (!expected || expected.patientId !== id) return;
+      const inPatientScreen = capturePatientScreen(id);
+      const current = () => inPatientScreen() && !historyView && !selecting;
+      let cancelled = false;
+      const opened = await w.VildaHomeEncounter.editDisplayedVisit(id, expected, current, () => { cancelled = true; });
+      if (!current() || !owns(id)) return;
+      if (opened && showAnalysis()) header.querySelector('#vhomeGabinetAnalysisTab').focus({preventScroll: true});
+      else if (!opened && !cancelled) showMessage('Nie otwarto wizyty do edycji. Sprawdź aktualny zapis w Historii wizyt.');
     };
     const visitActions = header.querySelector('.gb-visit-actions'), toggle = visitActions.querySelector('[data-visit-actions]');
-    toggle.onclick = () => setVisitMenu(toggle.getAttribute('aria-expanded') !== 'true');
+    toggle.onclick = () => {
+      const open = toggle.getAttribute('aria-expanded') !== 'true';
+      setVisitMenu(open, !open);
+    };
     visitActions.onkeydown = event => {
       if (event.key === 'Escape' && toggle.getAttribute('aria-expanded') === 'true') {
-        event.preventDefault(); event.stopPropagation(); setVisitMenu(false); toggle.focus();
+        event.preventDefault(); event.stopPropagation(); setVisitMenu(false, true);
       }
     };
     d.addEventListener('pointerdown', event => { if (!visitActions.contains(event.target)) setVisitMenu(false); });
     visitActions.onfocusout = event => { if (!visitActions.contains(event.relatedTarget)) setVisitMenu(false); };
     header.querySelector('[data-trash-visit]').onclick = async () => {
       const id = target, capture = owns(id) && w.VildaHomeEncounter.captureVisitTrash(id);
-      setVisitMenu(false);
+      setVisitMenu(false, true);
       if (!capture) return;
       const current = () => target === id && !header.hidden && owns(id) && capture.isCurrent();
       const confirmed = await w.VildaHomeVisitHistory.confirmRemoval(capture, current, toggle);

@@ -49,7 +49,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await expect(inputs.locator('[data-home-tool-field="sbpRaw"]')).toHaveValue('124');
   await expect(inputs.locator('[data-home-tool-field="sbpRaw"]')).not.toBeEditable();
   await dialog.locator('.vhome-dialog-close').click();
-  await header.getByRole('button', {name: 'Rozpocznij nową wizytę'}).click();
+  await header.getByRole('button', {name: 'Nowa wizyta'}).click();
   await expect(header.getByRole('button', {name: 'Zapisz wizytę', exact: true})).toBeEnabled({timeout: 15_000});
   await header.getByRole('tab', {name: 'Analiza', exact: true}).click();
   for (const id of ['height', 'weight', 'waistCm', 'hipCm']) {
@@ -63,7 +63,7 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await expect(card).toContainText('124/79');
   const visitId = await frame.evaluate(id => window.VildaHomeEncounter.state(id).visitId, patientId);
   await header.getByRole('button', {name: 'Zapisz wizytę', exact: true}).click();
-  const startVisit = header.getByRole('button', {name: 'Rozpocznij nową wizytę', exact: true});
+  const startVisit = header.getByRole('button', {name: 'Nowa wizyta', exact: true});
   await expect(startVisit).toBeEnabled({timeout: 15_000});
   const saved = await frame.evaluate(async id => (await window.VildaVault.getPatientVisits(id)).map(row => ({
     id: row.visitId, user: row.payload.user,

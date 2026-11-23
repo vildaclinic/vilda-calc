@@ -54,6 +54,7 @@ test('DocPro assigns a medication from notes only in an explicitly opened visit'
   const menu = await visibleChromeMenu(page);
   await menu.locator('a[href="index.html"]').click();
   const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
   await header.getByRole('button', {name: 'Historia wizyt', exact: true}).click();
   const history = frame.locator('#vhomeVisitHistory');
   await history.getByRole('button', {name: 'Lista', exact: true}).click();

@@ -9,7 +9,7 @@ test('Gabinet preserves the open visit and specimen dates for single and package
   test.setTimeout(120_000);
   const { frame, ids } = await prepareGabinet(page);
   await choosePatient(frame, 'Antoni');
-  await frame.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+  await frame.locator('#vhomeGabinetHeader').getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
   await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
   const visit = await frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().visit);
   const menu = await visibleChromeMenu(page);

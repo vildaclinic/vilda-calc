@@ -240,9 +240,8 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
 
   await choosePatient(frame, 'Dietetyczny');
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
-  await header.getByRole('button', { name: /^Otwórz wizytę z / }).click();
-  const visit = frame.locator('#vhomeVisitDetail');
-  await visit.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
+  await header.getByRole('button', { name: /^Edytuj wizytę z / }).click();
   await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('edit');
   const editable = await show(frame);
   await expect(draft(editable, 'palFactor')).toBeEnabled();
