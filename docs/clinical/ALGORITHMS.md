@@ -46511,7 +46511,7 @@ sejf), SW 1.1.567 → 1.1.568 — `npm run podbij-wersje`; baza `origin/audyt` `
 sejf, `vilda_sync.js`, `runtime/`, `tools/` i testy synchronizacji bez zmian względem `bc2d88f8`, E3-PR0d; pomiary na
 `119f0225`). Bez nowego pliku w pamięci offline.
 
-## Karta opróżniona przy „Scal pacjentów” zachowuje znany nagrobek scalenia (P-SYNC-WLASCICIEL, E3-PR0e1, SW 1.1.573, `vilda_vault.js` 285, 2026-11-23)
+## Karta opróżniona przy „Scal pacjentów” zachowuje znany nagrobek scalenia (P-SYNC-WLASCICIEL, E3-PR0e1, SW 1.1.576, `vilda_vault.js` 285, 2026-11-23)
 
 **Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się lista
 usuniętych pacjentów na urządzeniu, z którego stara karta zniknęła przy synchronizacji z urządzeniem, które ją scaliło
@@ -46932,6 +46932,8 @@ zbioru N przy następnym ładunku z nimi; rewert cofa też skróty kontroli gran
 Bez zmian: `Le`, `Bsw_przeniesPrzezyta`, `Bsw_doF`, `Bpu_nagrobek`, `Bsl_usunPacjenta`, `Bsl_zdejmijNagrobek`,
 `Bzu_odmowa`, `Bks_powod`, `Bkz_usunZObcych`, strażnik natywny.
 
-**Wersje.** `vilda_vault.js` 284 → 285, `vilda_chrome.js` 320 → 321 i `vilda_session_bridge.js` 236 → 237 (wstrzykują
-sejf), SW 1.1.572 → 1.1.573 — `npm run podbij-wersje`; baza `origin/audyt` `a7b2920b` (po vildaclinic/vilda-calc#1026).
+**Wersje.** `vilda_vault.js` 284 → 285, `vilda_chrome.js` 321 → 322 i `vilda_session_bridge.js` 237 → 238 (wstrzykują
+sejf), SW 1.1.575 → 1.1.576 — `npm run podbij-wersje`; baza `origin/audyt` `77cb60dc` (po vildaclinic/vilda-calc#1040;
+sejf, `vilda_sync.js`, `runtime/` i `tools/` bez zmian od `a7b2920b`, więc czerwone na bazie i piny granicy
+liczone na `a7b2920b` są ważne).
 Bez nowego pliku w pamięci offline.
