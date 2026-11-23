@@ -1,0 +1,74 @@
+{
+  "namespace": "vilda-treatment-documentation-vault",
+  "version": 1,
+  "baseVaultSHA256": "294774d6ee7fdb494e238b68c9bd81d74eb61aefb348acb71cc69ab6b241870c",
+  "source": "runtime/treatment-documentation-v1/vault-fragment.js",
+  "sourceSHA256": "b87c2f1aac84607586065aaa2beb1a54db044f57fc619a3e1633e6ee5409ddaf",
+  "fragmentSHA256": "47a2484626ff1d30a9bc13d8004e4182e9a586788416528d2a323defbf284919",
+  "integratedVaultSHA256": "c50d9f4359adb8c94ce38194d2b6633cb3ca43d7698dcffda2a9c7d58a3e10da",
+  "hooks": [
+    {
+      "name": "new-diagnosis-and-episode-canonical-option",
+      "before": "vault.savePatientNoteOnce(note, { isCurrent: function () { return checkVisit(binding); } });",
+      "after": "vault.savePatientNoteOnce(note, TreatmentDocumentationCreateOptions(binding, function () { return checkVisit(binding); }));",
+      "beforeSHA256": "8858994cad2d115282f56585dc9aa0589f089fa1c85c2daaf21d36070b763eb4",
+      "afterSHA256": "23cb781af3ba64fdbe850bc61ca2b3fa13a9944ad6cb1bc1d01ddeb632f6cde3"
+    },
+    {
+      "name": "new-followup-separate-witness-parameter",
+      "before": "async function update(kind, dto, values, binding) {",
+      "after": "async function update(kind, dto, values, binding, newFollowup) {",
+      "beforeSHA256": "958e2438635fb8526e56cf9defeec2049d1aa076a7a359ad53aa6b1f6ab5d5dd",
+      "afterSHA256": "3ac61f63040c7aa1e5a5de72c7a3e3630efd67b147411b6d8d99955761bd32e0"
+    },
+    {
+      "name": "new-followup-update-options",
+      "before": "vault.updateExistingPatientNote(request, { isCurrent: function () { return checkVisit(binding); } });",
+      "after": "vault.updateExistingPatientNote(request, TreatmentDocumentationUpdateOptions(binding, function () { return checkVisit(binding); }, newFollowup));",
+      "beforeSHA256": "2e01b0d57ff39a7ab375a28f32d82e199fd48bb71562145013d94477c8c433ff",
+      "afterSHA256": "969e94549a059cc98537383dda9a71a7e06d70f4a46a0870cb3f11b817ca9b8f"
+    },
+    {
+      "name": "new-followup-exact-created-entry-witness",
+      "before": "      return update('therapy', original, { followups: entries }, binding);",
+      "after": "      return update('therapy', original, { followups: entries }, binding, !id && binding ? { id: entries[entries.length - 1].id, visitContext: entries[entries.length - 1].visitContext } : null);",
+      "beforeSHA256": "543ec03aff3039e3a1d8f5abfb87bf44e50e9fee3d7dd8e6f246a8b9ee7de7b5",
+      "afterSHA256": "11203d83fccc2d509d315a55a9e925ad544ee87fc9018d8ead924379e861337c"
+    },
+    {
+      "name": "patient-lease-before-existing-note-lease",
+      "before": "  return Ac(next.id, async function () {",
+      "after": "  return TreatmentDocumentationLock(next, treatmentOptions, remove, function () { return Ac(next.id, async function () {",
+      "beforeSHA256": "0d506dc4022bde79d12cb6b145613573647daf77bd2d9ba40d07cc18363ce0bf",
+      "afterSHA256": "4995ab954017d2260f1cbaa664fbfeea883636e6a4c4642b4d7eb8107c1af03e"
+    },
+    {
+      "name": "close-patient-lease-with-native-actor",
+      "before": "  });\n}\nfunction VildaUpdateExistingPatientNote(payload, treatmentOptions) {",
+      "after": "  }); });\n}\nfunction VildaUpdateExistingPatientNote(payload, treatmentOptions) {",
+      "beforeSHA256": "2f76b7bd38ca6f4d5b388e9197e74c0394e682db378ff5dab8d837e77e261b21",
+      "afterSHA256": "0e66a769b667f9a1b4c5f06fc35a1a4a74d9057232397e7682fc434c59c1ce7d"
+    },
+    {
+      "name": "new-followup-only-check-before-writing",
+      "before": "    const careNote = await Ft(stored); assertSession();",
+      "after": "    const careNote = await Ft(stored); assertSession();\n    if (treatmentOptions && Object.prototype.hasOwnProperty.call(treatmentOptions, 'newTreatmentFollowup')) {\n      await TreatmentDocumentationCheckFollowup(next, careNote, treatmentOptions, assertSession); assertSession();\n    }",
+      "beforeSHA256": "296cb4ebbb0c0171c7aee21579ecffd4d46d87749537f56cfe8f4bae0a44a7f1",
+      "afterSHA256": "de7abb46adf650abd5495b3d15121919d238971a77c75a29f3d945ad52ea3808"
+    },
+    {
+      "name": "capture-followup-options-before-native-queue",
+      "before": ";VisitDocumentInstall($s);",
+      "after": ";VisitDocumentInstall($s);TreatmentDocumentationInstall($s);",
+      "beforeSHA256": "a08bda84f1f9e178794347349af5d678bcb0a8c482ea98010f184def0e6f681c",
+      "afterSHA256": "8bea2e6360b9e33b24c94bf6979124f17a7ffe5b65d20eea333c54ec41c2bada"
+    },
+    {
+      "name": "readable-durability-source",
+      "before": "/* END VILDA PROFILE TRASH V1 */\n",
+      "after": "/* END VILDA PROFILE TRASH V1 */\n/* BEGIN VILDA TREATMENT DOCUMENTATION V1 */\n/* Only newly authored treatment documents acquire the open visit. An added\n * nested follow-up carries its own witness; the episode's original visit and\n * every previously recorded follow-up remain independent and immutable here. */\nfunction TreatmentDocumentationInvalid() {\n  const error = new Error('Nie można potwierdzić nowego wpisu leczenia. Otwórz formularz ponownie.');\n  error.code = 'TREATMENT_DOCUMENT_INVALID'; return error;\n}\nfunction TreatmentDocumentationWitness(options) {\n  if (!options || !Object.prototype.hasOwnProperty.call(options, 'newTreatmentFollowup')) return null;\n  const value = options.newTreatmentFollowup;\n  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 2\n      || typeof value.id !== 'string' || !/^[A-Za-z0-9_.-]{1,160}$/.test(value.id)\n      || !Object.prototype.hasOwnProperty.call(value, 'visitContext')) throw TreatmentDocumentationInvalid();\n  let origin;\n  try { origin = EncounterNoteFields({ visitContext: value.visitContext }).visitContext; }\n  catch (_) { throw TreatmentDocumentationInvalid(); }\n  return { id: value.id, visitContext: origin };\n}\nfunction TreatmentDocumentationCreateOptions(binding, isCurrent) {\n  return binding ? { isCurrent: isCurrent, requireActiveVisit: true } : { isCurrent: isCurrent };\n}\nfunction TreatmentDocumentationUpdateOptions(binding, isCurrent, followup) {\n  const options = { isCurrent: isCurrent };\n  if (binding && followup) options.newTreatmentFollowup = TreatmentDocumentationWitness({ newTreatmentFollowup: followup });\n  return options;\n}\nfunction TreatmentDocumentationLock(note, options, remove, action) {\n  const witness = TreatmentDocumentationWitness(options);\n  if (!witness) return action();\n  if (remove) throw TreatmentDocumentationInvalid();\n  // Enter only from the established actor after its workspace lease, and take\n  // the same patient lease as whole-visit Trash before entering the note lock.\n  return Bzw_podBlokada(note.patientId, action, options);\n}\nasync function TreatmentDocumentationCheckFollowup(next, previous, options, assertCurrent) {\n  const witness = TreatmentDocumentationWitness(options);\n  if (!witness) return;\n  let before, after;\n  try {\n    const model = v.VildaPatientTreatmentModel;\n    before = model.normalize(previous.treatmentContext); after = model.normalize(next.treatmentContext);\n    if (before.kind !== 'therapy' || after.kind !== 'therapy' || previous.category !== 'treatment' || next.category !== 'treatment') throw TreatmentDocumentationInvalid();\n    const original = before.followups, added = after.followups[original.length];\n    if (after.followups.length !== original.length + 1 || !added || added.id !== witness.id\n        || original.some(function (entry) { return entry.id === witness.id; })\n        || Bnp_kanon(after.followups.slice(0, original.length)) !== Bnp_kanon(original)\n        || Bnp_kanon(added.visitContext) !== Bnp_kanon(witness.visitContext)) throw TreatmentDocumentationInvalid();\n    delete before.followups; delete after.followups;\n    if (Bnp_kanon(before) !== Bnp_kanon(after)) throw TreatmentDocumentationInvalid();\n  } catch (_) { throw TreatmentDocumentationInvalid(); }\n  assertCurrent();\n  await VisitDocumentCheckActive({ patientId: next.patientId, visitContext: witness.visitContext }, { requireActiveVisit: true }, assertCurrent);\n  assertCurrent();\n}\nfunction TreatmentDocumentationInstall(api) {\n  const update = api.updateExistingPatientNote;\n  api.updateExistingPatientNote = function (payload, options) {\n    if (!options || !Object.prototype.hasOwnProperty.call(options, 'newTreatmentFollowup')) return update.apply(this, arguments);\n    try {\n      // Snapshot both the owner callback and the separate nested origin before\n      // the native workspace queue can yield to another pane or caller edit.\n      const captured = Object.assign({}, options, { newTreatmentFollowup: TreatmentDocumentationWitness(options) });\n      return update.call(this, payload, captured);\n    } catch (error) { return Promise.reject(error); }\n  };\n}\n/* END VILDA TREATMENT DOCUMENTATION V1 */\n",
+      "beforeSHA256": "8f4447511358d10f07768d76c0651c292f0c38bde8b4a5f1909e0950a28d4911",
+      "afterSHA256": "009e4d8fc976397b36ad6ab9d231057736ec6ae4c331c0eebd3dbed42d5f8dc2"
+    }
+  ]
+}

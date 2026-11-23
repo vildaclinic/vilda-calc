@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 import { prepareGabinet, choosePatient } from '../support/gabinet-patient-fixture.mjs';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
+import { orientacja, wygenerujPdf } from '../support/siatka-poziomo.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(240_000);
@@ -203,6 +205,41 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
   expect(await snapshot(frame, id)).toEqual(before);
   expect(await saved()).toEqual(storedBefore);
 
+  // The launcher retains the patient used by the sidebar Documents dialog.
+  await header.locator('[data-start]').click();
+  await expect(frame.locator('#vhomeGabinetStart')).toBeVisible();
+  async function openDocument(selector) {
+    const menu = await visibleChromeMenu(page);
+    await menu.locator('#patientDocumentsBtnSidebar, [data-drawer-btn="patientDocumentsBtnSidebar"]').filter({ visible: true }).first().click();
+    await page.locator('#patientDocumentsDialog').locator(selector).click();
+  }
+  await openDocument('[data-patient-documents-diet]');
+  await expect(readonly).toBeVisible();
+  await expect(readonly.locator('#vhomeDietPlanSummary')).toContainText(/Wariant diety\s*lekka/);
+  await expect(readonly.locator('[data-home-diet-field]:enabled')).toHaveCount(0);
+  await expect(apply(readonly)).toBeHidden();
+  await expect(generate(readonly)).toBeEnabled();
+  await page.keyboard.press('Escape');
+  await expect(readonly).toBeHidden();
+  await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('diet-'));
+  await openDocument('[data-patient-documents-creator]');
+  const charts = frame.locator('#vhomeGrowthChartsDialog');
+  await expect(charts).toBeVisible();
+  await expect(charts.locator('[data-chart-mode="creator"]')).toBeDisabled();
+  await expect(charts.locator('[data-chart-mode="publication"]')).toBeDisabled();
+  await expect(frame.locator('#vilda-pub-creator-overlay')).toBeHidden();
+  await charts.locator('[data-chart-preset="olaf"]').click();
+  const pages = await wygenerujPdf(frame, () => document.querySelector('#vhomeGrowthChartsDialog .vhome-dialog-apply').click());
+  expect(pages.map(orientacja)).toEqual(['pion']);
+  await expect(charts).toBeHidden();
+  await expect(frame.locator('#dietLevel')).toHaveValue('light');
+  const afterDocuments = await snapshot(frame, id);
+  expect(afterDocuments.payload.plan).toEqual(before.payload.plan);
+  expect(afterDocuments.session.plan).toEqual(before.session.plan);
+  expect(await saved()).toEqual(storedBefore);
+
+  await choosePatient(frame, 'Dietetyczny');
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await header.getByRole('button', { name: /^Otwórz wizytę z / }).click();
   const visit = frame.locator('#vhomeVisitDetail');
   await visit.getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();

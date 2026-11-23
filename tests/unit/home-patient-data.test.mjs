@@ -53,6 +53,158 @@ function fixture(overrides = {}) {
 }
 const read = (vault, isCurrent = () => true) => w.VildaHomePatientData.read({ vault, patientId: pid, isCurrent });
 
+// The history's general context projects current records independently of the
+// selected saved visit. Exercise its actual production API with the same real
+// treatment model used above, without mounting an editor or a browser DOM.
+function generalContext(notes = baseNotes, context = { currentRecords: true, notesStatus: 'ready' }, header = { ...patient.header, patientId: pid }) {
+  if (!w.VildaHomeVisitProjection) vm.runInContext(source('vilda_home_visit_projection.js'), vm.createContext(w));
+  return w.VildaHomeVisitProjection.getGeneral(header, notes, context);
+}
+function treatmentNote(kind, id, changes = {}, extra = {}) {
+  const fields = kind === 'diagnosis'
+    ? { schemaVersion: 1, kind, name: 'Fikcyjne rozpoznanie', code: '', status: 'active', dateISO: '2026-11-03' }
+    : { schemaVersion: 1, kind, title: 'Fikcyjne leczenie', method: 'other', status: 'active' };
+  return { id, patientId: pid, category: 'treatment', updatedAtISO: '2026-11-03T12:00:00Z',
+    treatmentContext: w.VildaPatientTreatmentModel.normalize({ ...fields, ...changes }), ...extra };
+}
+const section = (result, title) => result.sections.find(item => item.title === title);
+
+describe('visit history: current general documentation remains distinct from the archived visit', () => {
+  it('preserves the exact legacy return shape unless the current-record presentation is requested', () => {
+    const expected = { patientName: 'Fikcyjny pacjent', notes: [{ title: baseNotes[0].title, body: baseNotes[0].body, dateLabel: '03.11.2026' }] };
+    expect(generalContext(baseNotes, {})).toEqual(expected);
+    const legacy = w.VildaHomeVisitProjection.getGeneral({ ...patient.header, patientId: pid }, baseNotes);
+    expect(legacy).toEqual(expected); expect(Object.keys(legacy)).toEqual(['patientName', 'notes']);
+    expect(generalContext(baseNotes, { currentRecords: false })).toEqual(expected);
+  });
+
+  it('uses recorded active states while keeping diagnosis and treatment status independent', () => {
+    const notes = [
+      treatmentNote('diagnosis', 'fictional-active-diagnosis', { name: 'Fikcyjne nadciśnienie', code: 'I10' }),
+      treatmentNote('diagnosis', 'fictional-closed-diagnosis', { name: 'Fikcyjne zamknięte rozpoznanie', status: 'closed' }),
+      treatmentNote('therapy', 'fictional-active-therapy', { title: 'Fikcyjna aktywna terapia',
+        startDateISO: '2099-01-01', endDateISO: '2099-02-01' }),
+      treatmentNote('therapy', 'fictional-closed-therapy', { title: 'Fikcyjna zakończona terapia', status: 'closed' }),
+    ];
+    const result = generalContext(notes);
+    expect(result.currentStatus).toBe('ready');
+    expect(section(result, 'Aktualne rozpoznania').entries).toEqual([
+      { title: 'I10 — Fikcyjne nadciśnienie', meta: 'Data rozpoznania · 03.11.2026' },
+    ]);
+    const therapies = section(result, 'Aktywne leczenie').entries;
+    expect(therapies).toHaveLength(1); expect(therapies[0].title).toBe('Fikcyjna aktywna terapia');
+    expect(therapies[0].meta).toContain('Aktywne według dokumentacji');
+    // Dates do not silently infer either a different status or a missing end.
+    expect(therapies[0].meta).toContain('01.01.2099');
+    expect(JSON.stringify(result)).not.toContain('Fikcyjna zakończona terapia');
+  });
+
+  it('preserves literal recorded drug/dose and optional diagnosis code without inferring a prescription or ICD code', () => {
+    const dose = '0,025 mg / kg / dobę (fikcyjne)', drug = 'Fikcyjny preparat 5 mg';
+    const notes = [
+      treatmentNote('diagnosis', 'fictional-diagnosis-without-code', { name: 'Fikcyjne rozpoznanie bez kodu' }),
+      treatmentNote('therapy', 'fictional-drug', { title: 'Fikcyjne leczenie GH / IGF-1', method: 'pharmacological',
+        medication: drug, dose, diagnosisIds: ['fictional-diagnosis-without-code', 'fictional-unavailable-diagnosis'] }),
+      treatmentNote('therapy', 'fictional-empty-drug', { title: 'Fikcyjna farmakoterapia bez dawki', method: 'pharmacological' }),
+    ];
+    const result = generalContext(notes), entries = section(result, 'Aktywne leczenie').entries;
+    expect(section(result, 'Aktualne rozpoznania').entries[0].title).toBe('Fikcyjne rozpoznanie bez kodu');
+    const recorded = entries.find(item => item.title === 'Fikcyjne leczenie GH / IGF-1');
+    expect(recorded.body).toContain('Zapisany preparat: ' + drug);
+    expect(recorded.body).toContain('Zapisana dawka: ' + dose);
+    expect(recorded.body).toContain('Rozpoznanie: Fikcyjne rozpoznanie bez kodu · Rozpoznanie niedostępne');
+    const withoutPrescription = entries.find(item => item.title === 'Fikcyjna farmakoterapia bez dawki');
+    expect(withoutPrescription.body).toBe('Farmakoterapia');
+  });
+
+  it('keeps an unsupported treatment visible as an uncertainty instead of asserting an empty current treatment history', () => {
+    const notes = [{ id: 'fictional-future-treatment', patientId: pid, category: 'treatment', treatmentContext: {
+      schemaVersion: 99, kind: 'therapy', status: 'active', title: 'Fikcyjny przyszły format', dose: 'FUTURE-UNVERIFIED-DOSE',
+    } }];
+    const result = generalContext(notes), serialized = JSON.stringify(result);
+    expect(section(result, 'Pozostała dokumentacja leczenia').entries[0].body).toContain('nieobsługiwany format');
+    expect(serialized).not.toContain('FUTURE-UNVERIFIED-DOSE');
+    expect(section(result, 'Aktywne leczenie').entries).toEqual([]);
+    expect(section(result, 'Aktywne leczenie').emptyText).not.toBe('Brak zapisanej informacji o aktywnym leczeniu.');
+    expect(section(result, 'Aktualne rozpoznania').emptyText).not.toBe('Brak zapisanych aktywnych rozpoznań.');
+  });
+
+  it.each(['error', 'loading'])('keeps a %s read distinct from genuinely empty current documentation', notesStatus => {
+    const notes = [treatmentNote('therapy', 'fictional-not-yet-verified', { title: 'Fikcyjny niepotwierdzony odczyt' })];
+    const result = generalContext(notes, { currentRecords: true, notesStatus });
+    expect(result.currentStatus).toBe(notesStatus);
+    expect(section(result, 'Aktualne rozpoznania')).toBeUndefined();
+    expect(section(result, 'Aktywne leczenie')).toBeUndefined();
+    expect(section(result, 'Aktualne rozpoznania i leczenie').entries[0].body).toContain(notesStatus === 'error' ? 'Nie udało się' : 'Odczytywanie');
+    expect(JSON.stringify(result)).not.toContain('Fikcyjny niepotwierdzony odczyt');
+    expect(result.sections.every(item => !item.emptyText)).toBe(true);
+    const empty = generalContext([]);
+    expect(empty.currentStatus).toBe('ready');
+    expect(section(empty, 'Aktywne leczenie').entries).toEqual([]);
+    expect(section(empty, 'Aktywne leczenie').emptyText).toBe('Brak zapisanej informacji o aktywnym leczeniu.');
+  });
+
+  it('reports a missing model as an unavailable projection instead of inventing empty treatment data', () => {
+    w.VildaPatientTreatmentModel = null;
+    const result = generalContext([]);
+    expect(result.currentStatus).toBe('error');
+    expect(section(result, 'Aktualne rozpoznania i leczenie').entries[0].body).toContain('Nie udało się');
+    expect(section(result, 'Aktywne leczenie')).toBeUndefined();
+  });
+
+  it('reads neutral monitoring only from the latest canonical visit, independent of an older selected working form', () => {
+    const latest = { patientId: pid, visitId: 'fictional-latest-visit', clinicalDateISO: '2026-11-03', origin: 'explicit',
+      savedAtISO: '2026-11-03T12:00:00Z', payload: { ghTherapyPoints: [
+        { type: 'end', drug: 'UNVERIFIED-CANONICAL-DRUG', dose: 'UNVERIFIED-CANONICAL-DOSE' },
+      ] } };
+    w.lastLoadedData = { visit: { visitId: 'fictional-selected-old-visit' }, obesityTherapyPoints: [{ type: 'start', drug: 'WRONG-ARCHIVED-DRUG' }] };
+    const result = generalContext([], { currentRecords: true, notesStatus: 'ready', latestVisit: latest });
+    const monitor = section(result, 'Monitorowanie w ostatniej zapisanej wizycie');
+    expect(monitor.entries).toEqual([{ title: 'GH / IGF-1', meta: 'Wizyta z 03.11.2026' }]);
+    expect(monitor.description).toBe('Informacja z zapisanej wizyty.');
+    expect(JSON.stringify(monitor)).not.toMatch(/UNVERIFIED|WRONG-ARCHIVED|aktywne|zakończone/);
+    expect(section(result, 'Aktywne leczenie').entries).toEqual([]);
+    w.lastLoadedData = { obesityTherapyPoints: [{ type: 'end' }], ghTherapyPoints: [] };
+    expect(generalContext([], { currentRecords: true, notesStatus: 'ready', latestVisit: latest })).toEqual(result);
+  });
+
+  it('does not promote an inferred visit date, unknown point kind or a foreign patient to current monitor facts', () => {
+    const row = { patientId: pid, clinicalDateISO: '2024-01-01', origin: 'legacy', savedAtISO: '2026-11-03T12:00:00Z',
+      payload: { obesityTherapyPoints: [{ type: 'continue' }], ghTherapyPoints: [{ type: 'unknown-future-kind' }] } };
+    const result = generalContext([], { currentRecords: true, notesStatus: 'ready', latestVisit: row });
+    const monitor = section(result, 'Monitorowanie w ostatniej zapisanej wizycie');
+    expect(monitor.entries).toHaveLength(1); expect(monitor.entries[0].title).toBe('Leczenie otyłości');
+    expect(monitor.entries[0].meta).toContain('Data wizyty niepotwierdzona · zapis z ');
+    expect(monitor.entries[0].meta).not.toContain('01.01.2024');
+    expect(section(generalContext([], { currentRecords: true, notesStatus: 'ready', latestVisit: { ...row, patientId: 'fictional-foreign-patient' } }),
+      'Monitorowanie w ostatniej zapisanej wizycie')).toBeUndefined();
+  });
+
+  it('filters a foreign patient and leaves every current and archived input unchanged', () => {
+    const header = { patientId: pid, name: 'Fikcyjny pacjent' };
+    const notes = baseNotes.concat(treatmentNote('diagnosis', 'fictional-current-diagnosis'),
+      treatmentNote('therapy', 'fictional-foreign-treatment', { title: 'FOREIGN-TREATMENT-MUST-NOT-RENDER' }, { patientId: 'fictional-other-patient' }));
+    const latestVisit = { patientId: pid, payload: { ghTherapyPoints: [{ type: 'continue' }] } };
+    const context = { currentRecords: true, notesStatus: 'ready', latestVisit };
+    const before = JSON.stringify({ header, notes, context, patient });
+    const result = generalContext(notes, context, header);
+    expect(JSON.stringify(result)).not.toContain('FOREIGN-TREATMENT-MUST-NOT-RENDER');
+    expect(JSON.stringify({ header, notes, context, patient })).toBe(before);
+  });
+
+  it('requires a confirmed patient id before presenting typed records or ownerless legacy monitoring', () => {
+    const notes = [treatmentNote('therapy', 'fictional-unowned-treatment', { title: 'UNCONFIRMED-TREATMENT' },
+      { patientId: 'fictional-foreign-patient' })];
+    const result = generalContext(notes, { currentRecords: true, notesStatus: 'ready',
+      latestVisit: { payload: { ghTherapyPoints: [{ type: 'continue' }] } } }, {});
+    expect(result.currentStatus).toBe('error'); expect(result.notes).toEqual([]);
+    expect(section(result, 'Aktualne rozpoznania')).toBeUndefined();
+    expect(section(result, 'Aktywne leczenie')).toBeUndefined();
+    expect(section(result, 'Monitorowanie w ostatniej zapisanej wizycie')).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain('UNCONFIRMED-TREATMENT');
+  });
+});
+
 describe('home patient: native saved documentation projection', () => {
   it('matches native diary category exclusion for two real serialized versions and unreadable journal records', async () => {
     vm.runInContext(source('vilda_cykle_leczenia.js'), vm.createContext(w));

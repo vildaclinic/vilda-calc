@@ -243,12 +243,17 @@ describe('patient treatment through the real encrypted vault', () => {
 
 it('records the creating visit separately on diagnoses, episodes and later follow-ups', async () => {
   const dev = await device(), actor = scope(dev);
-  const visit = (id, date) => ({
-    visitContext: {version: 1, visitId: id, clinicalDateISO: date},
-    isCurrent: () => true, ensureRecorded: async () => true
-  });
-  const first = visit('fceacbed-3cbb-4fca-baca-eabbfdaaabc1', '2026-10-01');
-  const second = visit('fceacbed-3cbb-4fca-baca-eabbfdaaabc2', '2026-10-27');
+  const visit = async (id, date) => {
+    await dev.vault.savePatient({ ...PATIENT, user: { ...PATIENT.user, measuredAtISO: date },
+      visit: {version:1,visitId:id,patientId:dev.patientId,clinicalDateISO:date,createdAtISO:date+'T12:00:00Z',origin:'explicit'} },
+    {patientId:dev.patientId,dedup:false});
+    return {
+      visitContext: {version: 1, visitId: id, clinicalDateISO: date}, isCurrent: () => true,
+      ensureRecorded: async () => (await dev.vault.getPatientVisits(dev.patientId)).some(row => row.visitId === id && row.clinicalDateISO === date)
+    };
+  };
+  const first = await visit('fceacbed-3cbb-4fca-baca-eabbfdaaabc1', '2026-10-01');
+  const second = await visit('fceacbed-3cbb-4fca-baca-eabbfdaaabc2', '2026-10-27');
   const problem = await actor.createDiagnosis(diagnosis(), first);
   const started = await actor.createEpisode(episode(), first);
   const checked = await actor.addFollowup(started, {dateISO: DAY, kind: 'Kontrola', body: 'Fikcyjny wpis'}, second);

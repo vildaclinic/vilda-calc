@@ -6582,6 +6582,7 @@ async function VisitTrashChange(patientId, visitId, options, restore) {
         remaining = rows.concat(restored);
       } else {
         if (!live.length || live[0].snapshotId !== options.snapshotId || mt(live[0]) !== options.revision) throw VisitTrashConflict();
+        if (ProfileEnabled()) { change.profile = await ProfileTrashPrepare(patientId, visitId, rows, original, uid, adapter, guard); guard(); }
         const trashId = VisitTrashId();
         const tombs = new Map(entries.map(entry => [entry.snapshotId, entry]));
         const last = live.reduce((d, row) => {
@@ -6634,6 +6635,7 @@ async function VisitTrashChange(patientId, visitId, options, restore) {
       // One notification after the complete transaction; no request to rebind a
       // patient to any particular technical revision or to the identity record.
       Vn({patientId, visitId, visitTrashAction: restore ? 'restore' : 'trash'});
+      ProfileTrashNotify(change);
       return result;
     }, {timeoutMs: 30000});
   } finally { Bem_krokKoniec(); }
@@ -6652,7 +6654,9 @@ async function VisitTrashDatabase(user, change, stagePatient, openDatabase) {
   return new Promise(function (resolve, reject) {
     // Cloud-only keeps clinical data in memory and the encrypted trash in
     // account metadata. Stage that memory update only on durable success.
-    const tx = PatientClinicalWriteValue(user, db).transaction(stagePatient ? [le] : [le, bt, It, xt], 'readwrite');
+    const stores = stagePatient ? [le] : [le, bt, It, xt];
+    if (change.profile && !stagePatient) stores.push(vt, Kt);
+    const tx = PatientClinicalWriteValue(user, db).transaction(stores, 'readwrite');
     let applyStaged, problem;
     const meta = tx.objectStore(le), reads = [meta.get(fn)];
     const snapshots = stagePatient ? null : tx.objectStore(It);
@@ -6660,6 +6664,12 @@ async function VisitTrashDatabase(user, change, stagePatient, openDatabase) {
       reads.push(tx.objectStore(bt).get(change.patientId), snapshots.index('byPatient').getAll(IDBKeyRange.only(change.patientId)),
         tx.objectStore(xt).get(change.patientId));
       change.writes.forEach(row => reads.push(snapshots.get(row.snapshotId)));
+    }
+    let profileReads;
+    if (change.profile && snapshots) {
+      const notes = tx.objectStore(vt);
+      profileReads = [notes.index('byPatient').getAll(IDBKeyRange.only(change.patientId)), notes.get(change.profile.note.id), tx.objectStore(Kt).get(change.profile.note.id)];
+      reads.push(...profileReads);
     }
     tx.oncomplete = function () { if (applyStaged) applyStaged(); resolve(true); };
     tx.onabort = function () { reject(problem || tx.error || new Error('Nie zapisano zmiany wizyty.')); };
@@ -6669,9 +6679,11 @@ async function VisitTrashDatabase(user, change, stagePatient, openDatabase) {
       try {
         const nextMeta = VisitTrashNextMeta(change, reads[0].result);
         if (snapshots) {
-          VisitTrashReadChange(change, reads[1].result, reads[2].result, reads.slice(4).map(read => read.result), reads[3].result);
+          VisitTrashReadChange(change, reads[1].result, reads[2].result, reads.slice(4, 4 + change.writes.length).map(read => read.result), reads[3].result);
+          if (profileReads) ProfileTrashAssert(change, profileReads[0].result, profileReads[1].result, profileReads[2].result);
           change.removes.forEach(id => snapshots.delete(id)); change.writes.forEach(row => snapshots.put(row));
           tx.objectStore(bt).put(change.patient);
+          if (change.profile) tx.objectStore(vt).put(change.profile.note);
         } else applyStaged = stagePatient();
         PatientClinicalGuard(user); meta.put(nextMeta);
       } catch (error) { problem = error; tx.abort(); }
@@ -6684,10 +6696,12 @@ function VisitTrashStage(user, change, store, flush) {
   const rows = Array.from(store.snapshots.values()).filter(row => row.patientId === change.patientId);
   VisitTrashReadChange(change, store.patients.get(change.patientId), rows, change.writes.map(row => store.snapshots.get(row.snapshotId)),
     store.tombstones.get(change.patientId));
+  if (change.profile) ProfileTrashAssert(change, Array.from(store.patientNotes.values()), store.patientNotes.get(change.profile.note.id), store.patientNoteTombstones.get(change.profile.note.id));
   return function (meta) {
     change.removes.forEach(id => store.snapshots.delete(id));
     change.writes.forEach(row => store.snapshots.set(row.snapshotId, row));
     store.patients.set(change.patientId, change.patient);
+    if (change.profile) store.patientNotes.set(change.profile.note.id, change.profile.note);
     if (meta) store.meta = meta;
     flush();
   };
@@ -10620,7 +10634,7 @@ async function VildaChangeExistingPatientNote(payload, remove, treatmentOptions)
     }
     TreatmentOperationAssert(treatmentCurrent);
   }
-  return Ac(next.id, async function () {
+  return TreatmentDocumentationLock(next, treatmentOptions, remove, function () { return Ac(next.id, async function () {
     assertSession();
     const adapter = I();
     if (typeof adapter.listPatientNoteTombstonesForUser !== "function" ||
@@ -10648,6 +10662,9 @@ async function VildaChangeExistingPatientNote(payload, remove, treatmentOptions)
     // Dispatch plan-owned records only after acquiring this note's original
     // lock and checking its patient, tombstone and exact captured revision.
     const careNote = await Ft(stored); assertSession();
+    if (treatmentOptions && Object.prototype.hasOwnProperty.call(treatmentOptions, 'newTreatmentFollowup')) {
+      await TreatmentDocumentationCheckFollowup(next, careNote, treatmentOptions, assertSession); assertSession();
+    }
     if (careNote.careContext && ['step', 'calendar'].indexOf(careNote.careContext.role) >= 0) {
       if (remove) {
         const handled = await CareMvpLegacyDelete(next.id, next.baseRev); assertSession();
@@ -10668,7 +10685,7 @@ async function VildaChangeExistingPatientNote(payload, remove, treatmentOptions)
     const saved = await Ad(next, guard);
     if (saved.conflict) return Object.assign(result, saved, { reason: "conflict" });
     return Object.assign({}, saved, { isNew: false, updated: true });
-  });
+  }); });
 }
 function VildaUpdateExistingPatientNote(payload, treatmentOptions) {
   return VildaChangeExistingPatientNote(payload, false, treatmentOptions);
@@ -11824,7 +11841,75 @@ function EncounterPlanOperation(id, patientId) {
   EncounterPlanCheck(entry.binding,entry.patientId);
   return entry.binding.visitContext;
 }
+/* BEGIN VILDA STAGED DOCUMENTATION V1 */
+/* The staged service runs on either the portable plan store or the protected
+ * workspace. Both receive the same native effects and operation receipts. */
+function StagedDocumentInstall() {
+  const load = PatientWorkspaceModules;
+  const cache = new WeakMap();
+  // eslint-disable-next-line no-func-assign -- Wrap the sealed lazy loader once, preserving its import and retry behavior.
+  PatientWorkspaceModules = async function () {
+    const native = await load();
+    if (cache.has(native)) return cache.get(native);
+    const portable = new WeakSet();
+    function createLegacyPlanWorkspace(options) {
+      const workspace = native.createLegacyPlanWorkspace(Object.assign({}, options, {
+        commit(change) {
+          const entry = EncounterPlanBindings.get(change.operationId);
+          if (!entry) return options.commit(change);
+          // The workspace, template and portable-plan leases are already held.
+          return Bzw_podBlokada(entry.patientId, async function () {
+            await StagedDocumentCheck(change.operationId, change.state.record.patientId);
+            return options.commit(change);
+          }, entry.binding);
+        }
+      }));
+      portable.add(workspace);
+      return workspace;
+    }
+    function createCarePlanService(options) {
+      const workspace = options.workspace;
+      const scoped = Object.assign({}, workspace, {
+        transact(id, apply) {
+          if (!EncounterPlanBindings.has(id)) return workspace.transact(id, apply);
+          return workspace.transact(id, async function (tx) {
+            let writtenPatientId = null;
+            const result = await apply(Object.assign({}, tx, {
+              applyDocumentEffect(effect) {
+                if (effect.action !== 'createDocument' || effect.expectedRevision !== null)
+                  return tx.applyDocumentEffect(effect);
+                const visitContext = EncounterPlanOperation(id, effect.document.patientId);
+                return tx.applyDocumentEffect(Object.assign({}, effect, {
+                  document: Object.assign({}, effect.document, { visitContext })
+                }));
+              },
+              setPlan(planId, state) {
+                // The protected workspace holds its exclusive lease through
+                // commit. Recorded retries do not call setPlan.
+                writtenPatientId = state.record.patientId;
+                return tx.setPlan(planId, state);
+              }
+            }));
+            if (writtenPatientId && !portable.has(workspace)) await StagedDocumentCheck(id, writtenPatientId);
+            return result;
+          });
+        }
+      });
+      return native.createCarePlanService(Object.assign({}, options, { workspace: scoped }));
+    }
+    const modules = Object.assign({}, native, { createLegacyPlanWorkspace, createCarePlanService });
+    cache.set(native, modules);
+    return modules;
+  };
+}
+function StagedDocumentCheck(id, patientId) {
+  const visitContext = EncounterPlanOperation(id, patientId);
+  return VisitDocumentCheckActive({ patientId, visitContext }, { requireActiveVisit: true },
+    function () { EncounterPlanOperation(id, patientId); });
+}
+/* END VILDA STAGED DOCUMENTATION V1 */
 function EncounterInstallCare(api) {
+  StagedDocumentInstall();
   // The native model is loaded lazily on several routes. Adapt it at the same
   // synchronous registration point regardless of which route loaded it first.
   const install = model => model && EncounterDecoratePlanModel(model,function(id,patientId,planId){
@@ -11848,7 +11933,7 @@ function EncounterInstallCare(api) {
   };
 }
 async function CareMvpMutate(input, binding) {
-  if (binding) return EncounterPlanRun(input,binding,function(){return VisitDocumentCareLock(input,binding,function(){return CareMvpMutate(input)})});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
+  if (binding) return DocumentOutcomePatientLock(input,binding,function(){return CareMvpMutate(input)});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   if (!T()) throw new Error('Zaloguj się, by zapisać plan opieki.');
   CareMvpRequireLegacyContext(input); CareMvpRequireLegacyContext(input && input.payload);
   if (!input || typeof input !== 'object' || !CareMvpId(input.operationId) || !/^[A-Za-z0-9_-]{1,64}$/.test(input.operationId)
@@ -11880,6 +11965,7 @@ async function CareMvpMutate(input, binding) {
     if (raw && raw.rev !== request.baseRev) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'conflict', conflict: true, plan: await CareMvpNoteProjection(current, CareMvpView(current), assertSession) });
     const patient = await adapter.getPatientForUser(account, request.patientId); assertSession();
     if (!patient) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'deleted' });
+    if(visitOrigin)await DocumentOutcomeCheck(request,assertSession);
     if (!context) context = { version: 1, role: 'plan', status: 'active', goal: '', needsDecision: true, decisionDueDateISO: CareMvpToday(), steps: [], log: [], operations: [], closedAtISO: null, closeReason: '', closeText: '' };
     const lineage = await CareMvpLineage(context, current ? current.title : '', planId, assertSession); assertSession();
     if (!lineage.stamp) throw new Error('Nieprawidłowa historia pochodzenia planu. Zachowaj kopię i otwórz plan ponownie.');
@@ -11898,7 +11984,7 @@ async function CareMvpMutate(input, binding) {
     };
     const queue = async function (noteId, payload) {
       const existing = await read(noteId);
-      const origin = VisitDocumentCareOrigin(request, existing, payload);
+      const origin = DocumentOutcomeCareOrigin(request, existing, payload);
       if (origin) {
         await VisitDocumentCheckActive(Object.assign({ patientId: request.patientId }, origin), { requireActiveVisit: true }, assertSession);
         payload = Object.assign({}, payload, origin);
@@ -12693,18 +12779,21 @@ async function CareMvpReminderOutcome(request, fingerprint) {
   const next=result.stepId&&result.stepId!==step.id?result.plan.steps.find(function(item){return item.id===result.stepId;}):null;
   return Object.assign({},result,{id:request.id,nextId:next?next.reminderNoteId:null});
 }
-async function RemB22SaveOutcome(input) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
+async function RemB22SaveOutcome(input, binding) {
+  if (binding) return DocumentOutcomePatientLock(input,binding,function(){return RemB22SaveOutcome(input)});const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   if (!T()) throw new Error('Zaloguj się, by zapisać wykonanie przypomnienia.');
   if (!input || typeof input.id !== 'string' || !input.id || typeof input.patientId !== 'string'
       || !Number.isSafeInteger(input.baseRev) || input.baseRev < 0
       || typeof input.operationId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(input.operationId)
       || ['complete', 'result', 'reschedule'].indexOf(input.action) < 0) throw new Error('Niepełne dane wykonania.');
   const request = JSON.parse(JSON.stringify(input)), account = b, key = ot;
-  const assertSession = function () { if (!T() || b !== account || ot !== key) throw new Error('Sesja zmieniła się. Otwórz przypomnienie ponownie.'); };
+  const visitOrigin = EncounterPlanOperation(request.operationId,request.patientId);
+  if (visitOrigin) request.visitContext=visitOrigin; else delete request.visitContext;
+  const assertSession = function () { if(visitOrigin)EncounterPlanOperation(request.operationId,request.patientId); if (!T() || b !== account || ot !== key) throw new Error('Sesja zmieniła się. Otwórz przypomnienie ponownie.'); };
   const date = Ct(request.dateISO), comment = Z(String(request.text || '')).trim();
   if (!date || comment.length > 20000) throw new Error('Sprawdź datę i długość opisu (maksymalnie 20 000 znaków).');
   if (request.action === 'result' && !comment) throw new Error('Wpisz treść otrzymanego wyniku.');
-  const fingerprintInput = JSON.stringify([request.patientId, request.action, date, comment, request.next || null, request.test || null]);
+  const fingerprintInput = JSON.stringify([request.patientId, request.action, date, comment, request.next || null, request.test || null, ...(visitOrigin ? [visitOrigin] : [])]);
   const fingerprint = Array.from(new Uint8Array(await v.crypto.subtle.digest('SHA-256', new TextEncoder().encode(fingerprintInput)))).map(function (byte) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,byte.toString(16).padStart(2, '0')); }).join('');
   const next = request.next;
   if (next && (!Z(String(next.title || '')).trim() || !Ct(next.dateISO))) throw new Error('Uzupełnij treść i termin kolejnego kroku.');
@@ -12731,6 +12820,7 @@ async function RemB22SaveOutcome(input) {const PatientClinicalOperationAccount=b
     // wszystkich polach odczytu nie jest konfliktem (Bnp_takSamoWidoczna: ratunek D-21, import karty, zapis samego rev).
     if ((typeof request.baseUpdatedAtISO === 'string' && request.baseUpdatedAtISO ? (current.updatedAtISO || '') !== request.baseUpdatedAtISO : current.rev !== request.baseRev) && !Bnp_takSamoWidoczna(current, request.baseNote, request.id, request.baseUpdatedAtISO)) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, conflict: true, reason: 'conflict', current });
     if (current.completedAtISO || current.noShowAtISO) return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ saved: false, reason: 'already-closed' });
+    if(visitOrigin)await DocumentOutcomeCheck(request,assertSession);
     const children = [], resultId = request.action === 'result' ? 'rem-result-' + request.operationId : null;
     const nextId = next ? 'rem-next-' + request.operationId : null;
     const context = Object.assign({}, current.reminderContext || {}, { version: 1, operationId: request.operationId, fingerprint, action: request.action, dateISO: date, nextId, resultNoteId: resultId });
@@ -12751,12 +12841,14 @@ async function RemB22SaveOutcome(input) {const PatientClinicalOperationAccount=b
         category: 'wynik-badania', body: 'Otrzymano: ' + dayLabel + '\n\n' + comment, dueDateISO: null,
         // A narrative is never parsed as a numeric sample or assigned a sample date.
         labResult: { test, value: 'Wynik opisowy — pełna treść w notatce' },
-        reminderContext: { version: 1, parentId: current.id, action: 'result', dateISO: date }
+        reminderContext: { version: 1, parentId: current.id, action: 'result', dateISO: date },
+        ...EncounterNoteFields(request)
       }, guard));
     }
     if (nextId) children.push(await Ad({ id: nextId, patientId: current.patientId, title: Z(next.title).trim(),
       category: current.category, body: 'Kolejny krok po: ' + current.title, dueDateISO: next.dateISO,
-      dueTime: next.dueTime || null, reminderContext: { version: 1, parentId: current.id }
+      dueTime: next.dueTime || null, reminderContext: { version: 1, parentId: current.id },
+      ...EncounterNoteFields(request)
     }, guard));
     assertSession();
     const result = calendarOriginal
@@ -15144,18 +15236,18 @@ function PatientPortableInstallProjection(api) {
       await recordVisit(binding);
       var note = payload(id, next);
       if (binding) note.visitContext = clone(binding.visitContext);
-      var result = await guarded(function () { return vault.savePatientNoteOnce(note, { isCurrent: function () { return checkVisit(binding); } }); });
+      var result = await guarded(function () { return vault.savePatientNoteOnce(note, TreatmentDocumentationCreateOptions(binding, function () { return checkVisit(binding); })); });
       checkVisit(binding);
       if (!result || result.conflict || result.saved === false) throw failure('TREATMENT_CONFLICT', 'Nie zapisano leczenia. Odśwież kartę i sprawdź aktualny zapis.');
       return reread(id, kind);
     }
-    async function update(kind, dto, values, binding) {
+    async function update(kind, dto, values, binding, newFollowup) {
       check(); var original = captured(dto, kind), next = context(kind, values, original.context);
       if (kind === 'therapy') await links(next, original.context); else await read();
       var request = Object.assign(payload(original.id, next), { baseRev: original.rev,
         baseUpdatedAtISO: original.updatedAtISO, baseNote: original.baseNote });
       checkVisit(binding);
-      var result = await guarded(function () { return vault.updateExistingPatientNote(request, { isCurrent: function () { return checkVisit(binding); } }); });
+      var result = await guarded(function () { return vault.updateExistingPatientNote(request, TreatmentDocumentationUpdateOptions(binding, function () { return checkVisit(binding); }, newFollowup)); });
       checkVisit(binding);
       if (!result || result.updated !== true) throw failure('TREATMENT_CONFLICT', 'Zapis zmienił się albo został usunięty. Odśwież kartę przed ponowną edycją.');
       return reread(original.id, kind);
@@ -15173,7 +15265,7 @@ function PatientPortableInstallProjection(api) {
         if (binding) next.visitContext = clone(binding.visitContext);
         entries.push(Object.assign({}, next, { id: newId() }));
       }
-      return update('therapy', original, { followups: entries }, binding);
+      return update('therapy', original, { followups: entries }, binding, !id && binding ? { id: entries[entries.length - 1].id, visitContext: entries[entries.length - 1].visitContext } : null);
     }
     return Object.freeze({
       read: read,
@@ -15327,6 +15419,56 @@ function EncounterDecoratePlanModel(model, resolveOrigin) {
   return Object.freeze(Object.assign({}, model, {validateState,prepareTransaction}));
 }
 /* END VILDA PATIENT TREATMENT V1 */
+/* BEGIN VILDA DOCUMENT OUTCOMES V1 */
+/* Explicit provenance for newly authored reminder and legacy care outcomes.
+ * Existing parents, facts, dates, receipts and compound transactions retain
+ * their native contracts. Entered inside the original workspace actor. */
+function DocumentOutcomeCapture(binding) {
+  if (!binding || binding.blocked === true || typeof binding.isCurrent !== 'function'
+      || typeof binding.ensureRecorded !== 'function' || binding.isCurrent() !== true) {
+    throw VisitDocumentFailure('STALE', 'Zmieniono wizytę. Otwórz formularz ponownie.');
+  }
+  const origin = VisitDocumentOrigin({ visitContext: binding.visitContext });
+  const current = binding.isCurrent.bind(binding), record = binding.ensureRecorded.bind(binding);
+  return Object.freeze({ visitContext: Object.freeze(Object.assign({}, origin)),
+    isCurrent: current, ensureRecorded: record });
+}
+function DocumentOutcomePatientLock(request, binding, action) {
+  const session = Bses_opcje(null); Bpz_pilnuj(session);
+  // The native workspace / portable-plan lease is already held. Patient
+  // precedes reminder/plan-note locks and remains held through durable commit.
+  return Bzw_podBlokada(request.patientId, function () {
+    Bpz_pilnuj(session); EncounterPlanCheck(binding, request.patientId);
+    return action();
+  }, binding);
+}
+function DocumentOutcomeCareOrigin(request, existing, payload) {
+  if (existing.stored || !request.visitContext || !payload.careContext
+      || ['step', 'calendar', 'note', 'result'].indexOf(payload.careContext.role) < 0) return null;
+  return EncounterNoteFields(request);
+}
+async function DocumentOutcomeCheck(request, assertCurrent) {
+  if (!request.visitContext) return;
+  await VisitDocumentCheckActive({ patientId: request.patientId, visitContext: request.visitContext },
+    { requireActiveVisit: true }, assertCurrent);
+  assertCurrent();
+}
+function DocumentOutcomesInstall(api) {
+  ['saveReminderOutcome', 'mutateCarePlan'].forEach(function (name) {
+    const original = api[name];
+    api[name] = function (input, binding) {
+      if (!binding) return original.apply(this, arguments);
+      let request, captured;
+      try { request = JSON.parse(JSON.stringify(input)); captured = DocumentOutcomeCapture(binding); }
+      catch (error) { return Promise.reject(error); }
+      // Recording is a public operation and must finish BEFORE the native
+      // workspace queue/shared lease. The inner actor takes patient→note and
+      // validates the canonical visit without re-entering public actors.
+      return EncounterPlanRun(request, captured, function () { return original.call(api, request, captured); });
+    };
+  });
+}
+/* END VILDA DOCUMENT OUTCOMES V1 */
 /* BEGIN VILDA VISIT DOCUMENT V1 */
 /* Opt-in durability of newly authored visit documents. No origin is inferred,
  * reassigned or migrated. Existing receipts and historical documents retain
@@ -15732,6 +15874,7 @@ async function ProfilePublicPatient(patientId) {
 async function ProfileBeforeCreate(note, check) {
   if (!Object.prototype.hasOwnProperty.call(note, 'profileContext')) return;
   const context = ProfileModel().normalize(note.profileContext), current = await ProfileRead(note.patientId); check();
+  ProfileTrashAuthorizeBaseline(context, current);
   if (current.status === 'conflict' && context.parents.length > 1) {
     if (Bnp_kanon(context.parents) !== Bnp_kanon(current.heads.slice().sort())) throw ProfileFailure('CONFLICT', 'Zestaw równoległych zmian kartoteki się zmienił.', current);
     return;
@@ -15818,6 +15961,231 @@ function ProfileInstallPresentation(api) {
   api.getPatientNote = async function () { const note = await get.apply(this, arguments); return ProfileIsNote(note) ? null : note; };
 }
 /* END VILDA PATIENT PROFILE V1 */
+/* BEGIN VILDA PROFILE TRASH V1 */
+/* Additive projection support for immutable legacy profile baselines.
+ * Existing strict profile edits keep the original normalizer. A baseline is
+ * the exact legacy subset, without correcting or inventing patient facts.
+ */
+(function (root) {
+  'use strict';
+  var base = root && root.VildaPatientProfileModel;
+  if (!base || typeof base.normalize !== 'function' || typeof base.project !== 'function') {
+    throw new Error('Brak bazowego modelu kartoteki pacjenta.');
+  }
+  var KIND = 'patient-profile-legacy-baseline';
+  var LEGACY_ID = /^legacy:[0-9a-f]{64}$/;
+  var own = function (value, key) { return Object.prototype.hasOwnProperty.call(value, key); };
+  function fail() {
+    var error = new Error('Nieprawidłowa historyczna podstawa kartoteki.');
+    error.code = 'PATIENT_PROFILE_INVALID'; throw error;
+  }
+  function baseline(value) {
+    var descriptor = value && typeof value === 'object' && Object.getOwnPropertyDescriptor(value, 'kind');
+    return !!descriptor && own(descriptor, 'value') && descriptor.value === KIND;
+  }
+  function exactSurface(value, depth) {
+    depth = depth || 0;
+    if (depth > 16) fail();
+    if (value === null || typeof value !== 'object') return;
+    if (Object.getOwnPropertySymbols(value).length) fail();
+    var keys = Object.getOwnPropertyNames(value), array = Array.isArray(value);
+    if (array && keys.length !== value.length + 1) fail();
+    keys.forEach(function (key) {
+      if (array && key === 'length') return;
+      var descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !own(descriptor, 'value') || !descriptor.enumerable) fail();
+      exactSurface(descriptor.value, depth + 1);
+    });
+  }
+  function normalize(context) {
+    if (!baseline(context)) return base.normalize(context);
+    exactSurface(context);
+    var value = base.clone(context);
+    if (Object.keys(value).some(function (key) {
+      return ['schemaVersion', 'kind', 'parents', 'legacyRevisionId', 'data'].indexOf(key) < 0;
+    }) || value.schemaVersion !== 1 || !Array.isArray(value.parents) || value.parents.length !== 0
+      || typeof value.legacyRevisionId !== 'string' || !LEGACY_ID.test(value.legacyRevisionId)
+      || !value.data || typeof value.data !== 'object' || Array.isArray(value.data)) fail();
+    var data = base.clone(value.data), extracted = base.legacy(data, {});
+    if (JSON.stringify(data) !== JSON.stringify(base.clone(extracted))) fail();
+    return base.clone({ schemaVersion: 1, kind: KIND, parents: [], legacyRevisionId: value.legacyRevisionId, data: data });
+  }
+  function project(notes, options) {
+    // Preserve the original API and every existing projection outcome when
+    // this new record kind is absent.
+    if (!(notes || []).some(function (note) {
+      var descriptor = note && typeof note === 'object' && Object.getOwnPropertyDescriptor(note, 'profileContext');
+      return !!descriptor && own(descriptor, 'value') && baseline(descriptor.value);
+    })) return base.project(notes, options);
+    options = options || {}; var patientId = options.patientId;
+    var candidates = (notes || []).filter(base.isRevision), history = [], byId = new Map(), unsupported = false, incomplete = false;
+    // The graph rules below match the existing profile model. Only context
+    // normalization additionally accepts a faithful, parentless baseline.
+    candidates.forEach(function (note) {
+      var context;
+      try {
+        if (note.patientId !== patientId || !base.isRevisionId(note.id) || !own(note, 'profileContext')
+          || note.category !== 'observation' || note.visitContext != null || note.dueDateISO != null
+          || note.linkedAgeMonths != null || note.medication != null || note.labResult != null || note.careContext != null
+          || note.treatmentContext != null || note.reminderContext != null || note.ghPointId != null
+          || note.obesityPointId != null || note.seriesId != null) fail();
+        context = normalize(note.profileContext);
+        if (byId.has(note.id)) { if (JSON.stringify(byId.get(note.id).context) !== JSON.stringify(context)) fail(); return; }
+        var entry = { revisionId: note.id, id: note.id, parents: context.parents.slice(),
+          createdAtISO: note.createdAtISO || null, data: base.clone(context.data), context: context };
+        byId.set(note.id, entry); history.push(entry);
+      } catch (_) { unsupported = true; }
+    });
+    if (!candidates.length) return base.project(notes, options);
+    var referenced = new Set();
+    byId.forEach(function (entry) { entry.parents.forEach(function (id) { referenced.add(id); if (!byId.has(id)) incomplete = true; }); });
+    var active = new Set(), visited = new Set();
+    function visit(id) {
+      if (active.has(id)) { incomplete = true; return; }
+      if (visited.has(id) || !byId.has(id)) return;
+      active.add(id); byId.get(id).parents.forEach(visit); active.delete(id); visited.add(id);
+    }
+    byId.forEach(function (_, id) { visit(id); });
+    var heads = Array.from(byId.keys()).filter(function (id) { return !referenced.has(id); }).sort();
+    history.sort(function (a, b) { return (a.createdAtISO || '').localeCompare(b.createdAtISO || '') || a.id.localeCompare(b.id); });
+    var status = unsupported ? 'unsupported' : incomplete || !heads.length ? 'incomplete' : heads.length > 1 ? 'conflict' : 'ready';
+    return { status: status, data: status === 'ready' ? base.clone(byId.get(heads[0]).data) : null,
+      revisionId: status === 'ready' ? heads[0] : null, history: history.map(function (entry) { var value = base.clone(entry); delete value.context; return value; }),
+      heads: heads, editable: status === 'ready' };
+  }
+  root.VildaPatientProfileModel = Object.freeze(Object.assign({}, base, { normalize: normalize, project: project }));
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* Freeze a legacy chart only when an explicit Trash operation would remove
+ * its current source. The encrypted root and Trash share one storage commit;
+ * reading a chart never materializes or changes its profile. */
+function ProfileTrashRows(rows, patientId) {
+  return rows.filter(function (row) {
+    return row && row.patientId === patientId && typeof row.id === 'string' && row.id.indexOf('prf-') === 0;
+  });
+}
+function ProfileTrashAuthorizeBaseline(context, current) {
+  if (context.kind !== 'patient-profile-legacy-baseline') return;
+  if (current.status !== 'legacy' || context.legacyRevisionId !== current.revisionId
+      || Bnp_kanon(context.data) !== Bnp_kanon(current.data)) {
+    throw ProfileFailure('CONFLICT', 'Nie można zastąpić danych kartoteki inną podstawą ze starszego zapisu.', current);
+  }
+}
+async function ProfileTrashRevisionId(patientId, legacyRevisionId, guard) {
+  // Identical automatic preservation on two offline devices is one immutable
+  // root. Different legacy facts retain distinct roots and normal conflicts.
+  // No wall-clock or Trash operation metadata participates in its identity.
+  const input = new TextEncoder().encode(Bnp_kanon(['vilda-profile-trash-root-v1', patientId, legacyRevisionId]));
+  const bytes = new Uint8Array(await v.crypto.subtle.digest('SHA-256', input)).slice(0, 16); guard();
+  bytes[6] = bytes[6] & 15 | 128; bytes[8] = bytes[8] & 63 | 128;
+  const hex = Array.from(bytes, function (byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+  return 'prf-' + [hex.slice(0,8),hex.slice(8,12),hex.slice(12,16),hex.slice(16,20),hex.slice(20)].join('-');
+}
+async function ProfileTrashPrepare(patientId, visitId, rows, original, account, adapter, guard) {
+  const visible = rows.filter(function (row) { return !VisitTrashIdentity(row); });
+  const source = Bvisit_groups(visible, patientId)[0];
+  if (!source || source.visitId !== visitId) return null;
+  const notes = await adapter.listPatientNotesForUser(account); guard();
+  if (ProfileTrashRows(notes, patientId).length) return null;
+  try {
+    const header = await G(original.headerCipher.iv, original.headerCipher.data); guard();
+    const data = ProfileModel().legacy(source.payload, header);
+    const legacyRevisionId = await ProfileLegacyToken(data); guard();
+    let kind = 'patient-profile';
+    try {
+      if (Bnp_kanon(ProfileModel().normalizeData(data)) !== Bnp_kanon(data)) kind = 'patient-profile-legacy-baseline';
+    } catch (_) { kind = 'patient-profile-legacy-baseline'; }
+    const context = ProfileModel().normalize({ schemaVersion: 1, kind: kind, parents: [], legacyRevisionId: legacyRevisionId, data: data });
+    const id = await ProfileTrashRevisionId(patientId, legacyRevisionId, guard); guard();
+    const note = await Ad({ id: id, patientId: patientId, category: 'observation', title: 'Rewizja kartoteki pacjenta',
+      body: 'Dane kartoteki zachowane przed przeniesieniem źródłowej wizyty do kosza.',
+      linkedAgeMonths: null, clinicalDateISO: null, dueDateISO: null, profileContext: context },
+    { token: VildaExistingNoteUpdateToken, beforeCommit: guard, account: account, adapter: adapter, prepareOnly: true });
+    guard(); return { note: note };
+  } catch (error) {
+    guard();
+    if (error && error.code) throw error;
+    throw ProfileFailure('PRESERVATION_FAILED', 'Nie można bezpiecznie zachować danych starszej kartoteki. Sprawdź jej dane przed przeniesieniem wizyty do kosza.');
+  }
+}
+function ProfileTrashAssert(change, rows, existing, tombstone) {
+  change.guard();
+  if (change.profile && (ProfileTrashRows(rows, change.patientId).length || existing || tombstone)) {
+    throw ProfileFailure('CONFLICT', 'Kartoteka zmieniła się podczas przenoszenia wizyty do kosza. Otwórz aktualne dane.');
+  }
+}
+function ProfileTrashNotify(change) {
+  if (change.profile) qr({ id: change.profile.note.id, patientId: change.patientId, action: 'save' });
+}
+/* END VILDA PROFILE TRASH V1 */
+/* BEGIN VILDA TREATMENT DOCUMENTATION V1 */
+/* Only newly authored treatment documents acquire the open visit. An added
+ * nested follow-up carries its own witness; the episode's original visit and
+ * every previously recorded follow-up remain independent and immutable here. */
+function TreatmentDocumentationInvalid() {
+  const error = new Error('Nie można potwierdzić nowego wpisu leczenia. Otwórz formularz ponownie.');
+  error.code = 'TREATMENT_DOCUMENT_INVALID'; return error;
+}
+function TreatmentDocumentationWitness(options) {
+  if (!options || !Object.prototype.hasOwnProperty.call(options, 'newTreatmentFollowup')) return null;
+  const value = options.newTreatmentFollowup;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 2
+      || typeof value.id !== 'string' || !/^[A-Za-z0-9_.-]{1,160}$/.test(value.id)
+      || !Object.prototype.hasOwnProperty.call(value, 'visitContext')) throw TreatmentDocumentationInvalid();
+  let origin;
+  try { origin = EncounterNoteFields({ visitContext: value.visitContext }).visitContext; }
+  catch (_) { throw TreatmentDocumentationInvalid(); }
+  return { id: value.id, visitContext: origin };
+}
+function TreatmentDocumentationCreateOptions(binding, isCurrent) {
+  return binding ? { isCurrent: isCurrent, requireActiveVisit: true } : { isCurrent: isCurrent };
+}
+function TreatmentDocumentationUpdateOptions(binding, isCurrent, followup) {
+  const options = { isCurrent: isCurrent };
+  if (binding && followup) options.newTreatmentFollowup = TreatmentDocumentationWitness({ newTreatmentFollowup: followup });
+  return options;
+}
+function TreatmentDocumentationLock(note, options, remove, action) {
+  const witness = TreatmentDocumentationWitness(options);
+  if (!witness) return action();
+  if (remove) throw TreatmentDocumentationInvalid();
+  // Enter only from the established actor after its workspace lease, and take
+  // the same patient lease as whole-visit Trash before entering the note lock.
+  return Bzw_podBlokada(note.patientId, action, options);
+}
+async function TreatmentDocumentationCheckFollowup(next, previous, options, assertCurrent) {
+  const witness = TreatmentDocumentationWitness(options);
+  if (!witness) return;
+  let before, after;
+  try {
+    const model = v.VildaPatientTreatmentModel;
+    before = model.normalize(previous.treatmentContext); after = model.normalize(next.treatmentContext);
+    if (before.kind !== 'therapy' || after.kind !== 'therapy' || previous.category !== 'treatment' || next.category !== 'treatment') throw TreatmentDocumentationInvalid();
+    const original = before.followups, added = after.followups[original.length];
+    if (after.followups.length !== original.length + 1 || !added || added.id !== witness.id
+        || original.some(function (entry) { return entry.id === witness.id; })
+        || Bnp_kanon(after.followups.slice(0, original.length)) !== Bnp_kanon(original)
+        || Bnp_kanon(added.visitContext) !== Bnp_kanon(witness.visitContext)) throw TreatmentDocumentationInvalid();
+    delete before.followups; delete after.followups;
+    if (Bnp_kanon(before) !== Bnp_kanon(after)) throw TreatmentDocumentationInvalid();
+  } catch (_) { throw TreatmentDocumentationInvalid(); }
+  assertCurrent();
+  await VisitDocumentCheckActive({ patientId: next.patientId, visitContext: witness.visitContext }, { requireActiveVisit: true }, assertCurrent);
+  assertCurrent();
+}
+function TreatmentDocumentationInstall(api) {
+  const update = api.updateExistingPatientNote;
+  api.updateExistingPatientNote = function (payload, options) {
+    if (!options || !Object.prototype.hasOwnProperty.call(options, 'newTreatmentFollowup')) return update.apply(this, arguments);
+    try {
+      // Snapshot both the owner callback and the separate nested origin before
+      // the native workspace queue can yield to another pane or caller edit.
+      const captured = Object.assign({}, options, { newTreatmentFollowup: TreatmentDocumentationWitness(options) });
+      return update.call(this, payload, captured);
+    } catch (error) { return Promise.reject(error); }
+  };
+}
+/* END VILDA TREATMENT DOCUMENTATION V1 */
 // Retain the canonical native install/publish sequence for the private builder.
 function EncounterPublishVault(api){
   const $s=api;PatientWorkspaceInstall($s);v.VildaVault=$s}
@@ -15826,4 +16194,4 @@ isPatientIdentitySnapshot:VisitTrashIdentity,
 moveVisitToTrash:(patientId,visitId,options)=>VisitTrashChange(patientId,visitId,options,false),
 listTrashedVisits:VisitTrashList,
 restoreTrashedVisit:(patientId,visitId,options)=>VisitTrashChange(patientId,visitId,options,true),
-restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanNoteEntries:CareMvpNoteEntries,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};EncounterPublishVault($s);ProfileInstallPresentation($s);VisitDocumentInstall($s);EncounterInstallCare($s)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);
+restoreSnapshotAsNew:ro,setSnapshotPinned:ao,pruneSnapshotsForPatient:wr,updateSnapshotPayload:$e,deleteSnapshot:Ar,moveSnapshotToTrash:Bkz_doKosza,listTrashedSnapshots:Bkz_lista,restoreTrashedSnapshot:Bkz_przywroc,updateMeasurementRow:so,deleteMeasurementRow:io,removePatient:_n,getCurrentUserStats:co,exportPatientEnvelope:ts,previewPatientEnvelope:es,importPatientFromEnvelope:ns,exportVaultBackup:rs,restoreVaultBackup:as,importLegacyJsonPatient:fs,looksLikeLegacyPayload:Wr,shortHashOfPatientId:cn,onPatientSaved:ys,onPatientDeleted:hs,onPasskeyChanged:As,onCredentialChanged:Qe1,onPreferenceChanged:Os,listNotes:uo,getNote:lo,saveNote:po,removeNote:fo,onNoteChanged:gs,NOTE_CATEGORIES:kr,sanitizeNoteText:Z,CARE_TEMPLATE_BACKUP_MAX_BYTES:CareTplBackupMax,exportCarePlanTemplateLibrary:CareTplExport,importCarePlanTemplateLibrary:CareTplImport,getVaultBackupScope:CareTplBackupScope,getCarePlanTemplateCapability:CareTplCapability,listCarePlanTemplates:CareTplList,getCarePlanTemplate:CareTplGet,listCarePlanTemplateRevisions:CareTplRevisions,saveCarePlanTemplateRevision:function(t){return CareTplMutate('save',t)},setCarePlanTemplateArchived:function(t){return CareTplMutate('archive',t)},resolveCarePlanTemplateConflict:function(t){return CareTplMutate('resolve',t)},getCarePlanTemplateOperation:CareTplOperation,getCarePlanTemplateDraftFromPlan:CareTplDraftFromPlan,onCarePlanTemplateChanged:CareTplOnChanged,hasCareTemplateLibraryForCurrentUser:CareTplPresent,captureSyncOperationSession:CareTplCaptureNetworkSession,createPatientClinicalCheckpoint:PatientCheckpointCreate,inspectPatientAuthority:PatientClinicalInspect,inspectPatientAuthorityRecovery:PatientClinicalInspectRecovery,selectPatientClinicalRoute:PatientClinicalSelect,assertSyncOperationSession:CareTplAssertNetworkSession,captureCareTemplateSession:CareTplCapture,assertCareTemplateSession:function(t){CareTplAssert(t);return true;},getCareTemplateSyncState:CareTplSyncState,bindCareTemplateEpoch:CareTplBind,prepareCareTemplatePending:CareTplPending,applyCareTemplateEvents:CareTplApply,ackCareTemplateEvents:CareTplAck,mutateCarePlan:CareMvpMutate,listCarePlans:CareMvpList,getCarePlan:CareMvpGet,getCarePlanView:CareMvpGetView,listCarePlanResultCandidates:CareMvpResultCandidates,getCarePlanResultCandidate:CareMvpResultCandidate,getCarePlanResultReference:CareMvpResultReference,getCarePlanStepOmissions:CareMvpStepOmissions,getCarePlanNoteEntries:CareMvpNoteEntries,getCarePlanWriteCapability:CareMvpWriteCapability,getCarePlanSyncReview:CareMvpReview,getCarePlanCalendarRelations:CareMvpCalendarRelations,getCarePlanCalendarRelation:CareMvpCalendarRelation,needsCarePlanSyncRepair:CareMvpNeedsSyncRepair,saveReminderOutcome:RemB22SaveOutcome,savePatientNote:ie,savePatientNoteOnce:VildaSavePatientNoteOnce,updateExistingPatientNote:VildaUpdateExistingPatientNote,getPatientNote:Fe,listPatientNotesForPatient:Fn,sanitizeClinicalDateISO:Ct,sanitizeMedication:At,sanitizeLabResult:kt,listMedicationNamesForCurrentUser:Io,listLabTestNamesForCurrentUser:Oo,listAllPatientNotes:ht,removePatientNote:$o,removeExistingPatientNote:VildaRemoveExistingPatientNote,onPatientNoteChanged:ms,PATIENT_NOTE_CATEGORIES:Nr,CLINICAL_NOTE_CATEGORIES:Er,completePatientNote:ko,uncompletePatientNote:No,noShowPatientNote:Eo,snoozePatientNote:To,listPatientNotesDueByDate:_o,listPatientNotesInRange:Mo,listReminderHistory:RemA8History,savePatientList:on,listPatientLists:Rn,getPatientList:sn,deletePatientList:Lo,addPatientToList:Wo,removePatientFromList:Zo,evaluatePatientListRule:De,getPatientListMembers:Vo,previewPatientListRule:Yo,patientListRuleHasUnknownFields:Ro,listPatientListsForPatient:Ho,onPatientListChanged:Do,PATIENT_LIST_GH_PROGRAMS:Dr,PATIENT_LIST_OBESITY_DRUGS:Lr,listProcedureWaitlist:Xo,getWaitlistSchedules:Br,setWaitlistSchedule:Go,getWaitlistLists:xn,addWaitlistList:Jo,removeWaitlistList:Qo,searchPatientNotes:So,EXTERNAL_PATIENT_ID:jt,ACTIVITY_PATIENT_ID:se,listPatientNotesBySeries:bo,listPatientTimelineEvents:qo,_extractSnapshotMeasurements:Bn,listPatientLabSeries:Po,listPatientTreatmentPeriods:Ao,_extractMeasurementHistory:Bn,_generateObservations:Vr,ageMonthsFromForm:Bag,sanitizeDobISO:ut,normalizePatientName:Ne,calcAgeFromDOB:En,resolvePatientAge:Ba,formatDobForDisplay:Ka,parseDobFromDisplay:Va,startIdleTimer:ea,stopIdleTimer:Hn,resetIdleTimer:ks,setIdleConfigProvider:Na,refreshPersistedSession:Ta,onUnlock:Es,onLock:Ns,previewVaultBackupMerge:os,mergeVaultBackup:ss,exportSyncCode:Bs,importSyncCode:Ks,getSyncMaterial:Hr,exportSyncPayload:is,mergeSyncPayload:Le,getSyncStaleness:Gm,buildNoteDelta:cs,buildTombstoneDelta:us,buildNoteTombstoneDelta:ls,buildLibraryNoteDelta:Qb0,buildLibraryNoteTombstoneDelta:Qb1,buildPatientDelta:ds,applyEncryptedDelta:ps,encryptPayloadForCurrentUser:V,decryptPayloadForCurrentUser:G,isPrfSupported:Ts,registerPasskey:_s,registerPasskeyForRoaming:Cs,unlockWithPasskey:Fs,unlockWithPasskeyConditional:js,unlockWithPasskeyEphemeral:Rs,unlockWithPasskeyAndPersist:Ds,completeQRLoginEphemeral:QrContinuityCompleteEphemeral,listPasskeys:zs,removePasskey:xs,adoptSyncedPasskey:Ms,listAdoptablePasskeys:Us,initiateQRLogin:QrContinuityInitiate,pollQRLoginStatus:QrContinuityPoll,completeQRLogin:QrContinuityComplete,approveQRLogin:QrContinuityApprove,setEphemeralMode:Pe,isEphemeralMode:ka,setStorageAdapter:te,getStorageMode:pn,setStorageMode:Js,getCurrentStorageMode:Qs,getCurrentStorageModeSync:Xs,isCloudOnlyMode:qs,isCloudOnlyAdapterActive:Pa,canWarmStartCloudOnly:Aa,isPersistentCloudCacheEnabled:Je,STORAGE_MODE_LOCAL:gt,STORAGE_MODE_CLOUD_ONLY:Se,_eventLog:Bev_EKSPORT};EncounterPublishVault($s);ProfileInstallPresentation($s);VisitDocumentInstall($s);TreatmentDocumentationInstall($s);DocumentOutcomesInstall($s);EncounterInstallCare($s)})(typeof window<"u"?window:typeof globalThis<"u"?globalThis:null);

@@ -100,7 +100,7 @@
     return {ageLabel: ageAtVisit(user, '').label, rows};
   }
 
-  function getGeneral(patientHeader = {}, notes = []) {
+  function getGeneral(patientHeader = {}, notes = [], context = {}) {
     const patientName = patientHeader?.name || '';
     const patientId = patientHeader?.patientId;
     const general = (Array.isArray(notes) ? notes : []).filter(note => {
@@ -112,8 +112,75 @@
         && source.linkedAgeMonths == null && !source.clinicalDateISO && !source.visitContext && !source.dueDateISO
         && !source.careContext && !source.treatmentContext && !source.medication && !source.ghPointId && !source.labResult;
     });
-    return {patientName, notes: general.map(note => ({title: note.title, body: note.body,
+    const result = {patientName, notes: general.map(note => ({title: note.title, body: note.body,
       dateLabel: dayLabel(dayISO(String(note.dateISO || note.updatedAtISO || '').slice(0, 10)))}))};
+    if (context.currentRecords !== true) return result;
+    result.sections = [];
+    result.currentStatus = context.notesStatus === 'loading' ? 'loading' : 'error';
+    if (typeof patientId !== 'string' || !patientId) {
+      result.currentStatus = 'error';
+      result.sections.push({title: 'Aktualne rozpoznania i leczenie', entries: [{body: 'Nie można potwierdzić właściciela dokumentacji leczenia.'}]});
+      return result;
+    }
+    if (context.notesStatus === 'loading') {
+      result.sections.push({title: 'Aktualne rozpoznania i leczenie', entries: [{body: 'Odczytywanie aktualnej dokumentacji leczenia…'}]});
+    } else if (!Array.isArray(notes) || context.notesStatus !== 'ready' || !w.VildaPatientTreatmentModel?.project) {
+      result.sections.push({title: 'Aktualne rozpoznania i leczenie', entries: [{body: 'Nie udało się odczytać aktualnej dokumentacji leczenia.'}]});
+    } else try {
+      const data = w.VildaPatientTreatmentModel.project(notes, {patientId});
+      const diagnoses = data.diagnoses.filter(entry => entry.context.status === 'active');
+      const therapies = data.episodes.filter(entry => entry.context.status === 'active');
+      const diagnosisLabel = entry => [entry.context.code, entry.context.name].filter(Boolean).join(' — ');
+      result.sections.push({title: 'Aktualne rozpoznania', emptyText: data.unsupported.length
+        ? 'Brak aktywnych rozpoznań w obsługiwanych zapisach.' : 'Brak zapisanych aktywnych rozpoznań.',
+        entries: diagnoses.map(entry => ({title: diagnosisLabel(entry), meta: 'Data rozpoznania · ' + dayLabel(entry.context.dateISO)}))});
+      const methods = {pharmacological: 'Farmakoterapia', nonpharmacological: 'Postępowanie niefarmakologiczne', other: 'Inne postępowanie'};
+      result.sections.push({title: 'Aktywne leczenie', emptyText: data.unsupported.length
+        ? 'Nie można potwierdzić pełnego wykazu aktywnego leczenia.' : 'Brak zapisanej informacji o aktywnym leczeniu.',
+        entries: therapies.map(entry => {
+          const treatment = entry.context, body = [methods[treatment.method]];
+          if (treatment.method === 'pharmacological') {
+            if (treatment.medication) body.push('Zapisany preparat: ' + treatment.medication);
+            if (treatment.dose) body.push('Zapisana dawka: ' + treatment.dose);
+          }
+          if (treatment.diagnosisIds.length) body.push('Rozpoznanie: ' + treatment.diagnosisIds.map(id => {
+            const diagnosis = data.diagnoses.find(item => item.id === id);
+            return diagnosis ? diagnosisLabel(diagnosis) : 'Rozpoznanie niedostępne';
+          }).join(' · '));
+          const dates = ['Aktywne według dokumentacji'];
+          if (treatment.startDateISO) dates.push('Początek · ' + dayLabel(treatment.startDateISO));
+          if (treatment.nextDateISO) dates.push('Następna kontrola · ' + dayLabel(treatment.nextDateISO));
+          return {title: treatment.title, body: body.join('\n'), meta: dates.join(' · ')};
+        })});
+      if (data.unsupported.length) result.sections.push({title: 'Pozostała dokumentacja leczenia',
+        entries: [{body: 'Część zapisów ma nieobsługiwany format. Sprawdź dokumentację w zakładce Leczenie w aktualnej wersji aplikacji.'}]});
+      result.currentStatus = 'ready';
+    } catch (_) {
+      result.sections.push({title: 'Aktualne rozpoznania i leczenie', entries: [{body: 'Nie udało się odczytać aktualnej dokumentacji leczenia.'}]});
+    }
+    // This source is the newest canonical saved visit, never the selected
+    // historical card or the working form. Points prove recorded monitoring;
+    // they do not declare an active therapy or a currently prescribed dose.
+    const latest = context.monitoringStatus === 'loading' || context.monitoringStatus === 'error' ? null : context.latestVisit;
+    if (context.monitoringStatus === 'error') result.sections.push({title: 'Monitorowanie w ostatniej zapisanej wizycie',
+      entries: [{body: 'Nie udało się odczytać ostatniej zapisanej wizyty.'}]});
+    if (latest?.patientId === patientId) {
+      const recorded = values => Array.isArray(values) && values.some(point => point && ['start', 'continue', 'end'].includes(point.type));
+      const names = [];
+      if (recorded(latest.payload?.ghTherapyPoints)) names.push('GH / IGF-1');
+      if (recorded(latest.payload?.obesityTherapyPoints)) names.push('Leczenie otyłości');
+      if (names.length) {
+        const day = dayISO(latest.clinicalDateISO);
+        const certain = day && (latest.origin === 'explicit' || latest.dateSource === 'measuredAt');
+        const saved = Date.parse(latest.updatedAtISO || latest.savedAtISO);
+        const date = certain ? 'Wizyta z ' + dayLabel(day) : Number.isFinite(saved)
+          ? 'Data wizyty niepotwierdzona · zapis z ' + savedDate.format(saved) : 'Data wizyty niepotwierdzona';
+        result.sections.push({title: 'Monitorowanie w ostatniej zapisanej wizycie',
+          description: 'Informacja z zapisanej wizyty.',
+          entries: names.map(title => ({title, meta: date}))});
+      }
+    }
+    return result;
   }
 
   function earlierMeasurements(row, rows, ageMonths) {

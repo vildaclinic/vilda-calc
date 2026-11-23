@@ -204,6 +204,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { parse } from 'acorn';
 import { analyze } from 'eslint-scope';
 import { restoreVisitTrashBaseline } from '../../tools/visit-trash-vault-delta.mjs';
+import { restoreProfileTrashBaseline } from '../../tools/profile-trash-vault-delta.mjs';
 import { magazynZRejestrem, naglowek, okno, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { PRZEDROSTEK_URZADZENIA, SKRYPTY_PUNKTU, ZNACZNIK_MAGAZYNU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 
@@ -1414,7 +1415,9 @@ describe('U2(b): pliki produktu poza sejfem nie znają nowego API', () => {
         // four call sites are checked on the AST above. Every other name here
         // remains subject to the product-wide scan below.
         expect(() => restoreVisitTrashBaseline(ZRODLO)).not.toThrow();
-        expect(ile(ZRODLO, tresc), 'czytelne źródło kosza dokładnie raz w sejfie').toBe(1);
+        // The atomic profile layer is independently hash-checked and reversed;
+        // then the original compiled Trash source must still match exactly.
+        expect(ile(restoreProfileTrashBaseline(ZRODLO), tresc), 'czytelne źródło kosza dokładnie raz w sejfie').toBe(1);
         const calls = /\bBem_(?:krokStart|krokKoniec|zmiana)(?=\()/g;
         expect(tresc.match(calls)).toEqual(['Bem_krokStart', 'Bem_zmiana', 'Bem_zmiana', 'Bem_krokKoniec']);
         tresc = tresc.replace(calls, '');

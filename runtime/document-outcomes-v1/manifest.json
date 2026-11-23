@@ -1,0 +1,8 @@
+{
+  "namespace": "vilda-document-outcomes-vault",
+  "version": 1,
+  "baseVaultSHA256": "16c39d32d496738528142158ac57ad87e933538c17d710a4be1e290ed4fe0325",
+  "source": "runtime/document-outcomes-v1/vault-fragment.js",
+  "sourceSHA256": "20f4aaefdc27fdbd817058c86cf3b361cec787af86120651917865e87c8503e6",
+  "integratedVaultSHA256": "294774d6ee7fdb494e238b68c9bd81d74eb61aefb348acb71cc69ab6b241870c"
+}

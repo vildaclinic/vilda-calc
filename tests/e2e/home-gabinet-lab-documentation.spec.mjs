@@ -5,7 +5,7 @@ import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 import { wybierzBadanie } from '../support/lab-historia-dane.mjs';
 
 test.use({ serviceWorkers: 'block' });
-test('Gabinet preserves the open visit and specimen dates for single and package lab results', async ({ page }) => {
+test('Gabinet preserves the open visit and specimen dates for single and package lab results', { tag: '@gabinet-webkit' }, async ({ page }) => {
   test.setTimeout(120_000);
   const { frame, ids } = await prepareGabinet(page);
   await choosePatient(frame, 'Antoni');

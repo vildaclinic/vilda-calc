@@ -1171,6 +1171,39 @@ describe('zakładka Badania: „Opisz wynik” przy oczekującym wyniku', () => 
   const blad = (okno) => pole(okno, '.vilda-lab-hist-describe-error');
   const komunikat = (env) => env.host.querySelector('.vilda-lab-hist-notice');
 
+  async function integratedDescribe(capture, shell = false) {
+    const env = srodowisko(), vault = sejf();
+    env.win.__VILDA_HOME_WORKSPACE_PREVIEW__ = true;
+    env.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    if (shell) env.win.VildaShell = {captureActiveHomeDocumentationBinding:capture};
+    else env.win.VildaHomeGabinet = {captureDocumentationBinding:capture};
+    otworz(env,vault); await gotowe(env); przycisk(env,'Opisz wynik').click();
+    return {env,vault,dialog:env.doc.body.querySelector('#labPendingDescribeDialog')};
+  }
+  it.each([false,true])('captures documentation ownership when opening, including the native shell (%s)', async shell => {
+    const first={visitContext:{version:1,visitId:'fictional-opened-visit',clinicalDateISO:'2026-06-17'},isCurrent:()=>true,ensureRecorded:vi.fn(async()=>true)};
+    const capture=vi.fn(()=>first),{env,vault,dialog}=await integratedDescribe(capture,shell);
+    expect(dialog).not.toBeNull();expect(capture).toHaveBeenCalledExactlyOnceWith(PID);
+    capture.mockReturnValue({...first,visitContext:{...first.visitContext,visitId:'fictional-later-visit'}});
+    pole(dialog,'#labPendingDescribeText').value='Fikcyjny opis.';przycisk(env,'Zapisz opis').click();
+    await vi.waitFor(()=>expect(vault.saveReminderOutcome).toHaveBeenCalledOnce());
+    const binding=vault.saveReminderOutcome.mock.calls[0][1];expect(binding.visitContext).toEqual(first.visitContext);
+    expect(capture).toHaveBeenCalledTimes(1);expect(first.ensureRecorded).not.toHaveBeenCalled();
+  });
+  it('respects an authoritative general-document decision without falling back to another owner', async () => {
+    const capture=vi.fn(()=>null),{env,vault,dialog}=await integratedDescribe(capture);
+    env.win.VildaShell={captureActiveHomeDocumentationBinding:vi.fn(()=>({blocked:true}))};
+    pole(dialog,'#labPendingDescribeText').value='Fikcyjny opis ogólny.';przycisk(env,'Zapisz opis').click();
+    await vi.waitFor(()=>expect(vault.saveReminderOutcome).toHaveBeenCalledOnce());
+    expect(vault.saveReminderOutcome.mock.calls[0][1]).toBeNull();
+    expect(env.win.VildaShell.captureActiveHomeDocumentationBinding).not.toHaveBeenCalled();
+  });
+  it('keeps unavailable visit ownership blocked before opening an outcome editor', async () => {
+    const {env,vault,dialog}=await integratedDescribe(vi.fn(()=>({blocked:true})));
+    expect(dialog).toBeNull();expect(vault.saveReminderOutcome).not.toHaveBeenCalled();
+    expect(komunikat(env).textContent).toContain('Nie można teraz potwierdzić otwartej wizyty');
+  });
+
   it('okno: nazwa i termin wpisu, opis i data otrzymania (dziś); bez pól wartości i jednostki', async () => {
     const { okno } = await otworzOpis();
     expect(okno).not.toBeNull();
