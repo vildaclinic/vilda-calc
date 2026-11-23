@@ -35,6 +35,20 @@ Przypisanie musi być stabilne pomiędzy urządzeniami i utrwalone przed scaleni
 
 „Historia wersji” pozostaje narzędziem szczegółowej historii i jawnego przywracania. Osobna makieta przestrzennej osi wizyt nie jest częścią tej implementacji.
 
+### Odczyt, edycja i kartoteka
+
+Po wybraniu pacjenta Gabinet pokazuje ostatni zapis w trybie odczytu. W Analizie
+i osadzonym DocPro można obejrzeć zapisane pomiary, dane pokwitaniowe, dane
+okołoporodowe i zastosowane ustawienia obliczeń. Dane wizyty można zmieniać po
+wybraniu „Rozpocznij nową wizytę” lub „Edytuj wizytę” w szczegółach konkretnej
+wizyty. Samo otwarcie Historii wizyt zachowuje bieżący formularz.
+
+„Edytuj pacjenta” zapisuje dane stałe w [kartotece](PATIENT_PROFILE.md).
+Ogólne notatki i pozostała dokumentacja pacjenta mają własny zapis. Kalkulatory
+pomocnicze oraz wybór wersji dokumentu PDF mogą być dostępne także przy
+odczycie wizyty. Ich ustawienia pozostają w narzędziu lub w preferencjach
+użytkownika.
+
 ### Dokumentacja otwartej wizyty
 
 W nowym Gabinecie zapis nowego wpisu z rozpoczętej lub edytowanej wizyty
@@ -57,7 +71,7 @@ W edycji historycznej wizyty w nowym Gabinecie lekarz może przenieść do kosza
 
 Karta pacjenta przechowuje badania, notatki, plany opieki, rozpoznania z kodem ICD-10, epizody leczenia i przypomnienia jako samodzielne wpisy. Lekarz ma do nich dostęp również po przeniesieniu ostatniej wizyty do kosza. Każdy taki wpis zachowuje swój identyfikator oraz pierwotne powiązanie `visitContext`, jeśli zostało zapisane. Może to obejmować pojedynczą czynność w planie lub kontrolę w przebiegu leczenia. Data pobrania próbki, data kontroli i termin przypomnienia zachowują własne znaczenie.
 
-Pomiary oraz dane zapisane w wersji wizyty trafiają do kosza razem z nią. Dotyczy to m.in. danych okołoporodowych, wzrostu rodziców, oznaczenia zespołu Downa w formularzu i punktów terapii GH z DocPro. Jeśli te wartości zapisano także podczas innej wizyty, jej wersje zachowują swoją treść. Po przeniesieniu ostatniej wizyty zakładka Status pokazuje „Brak zapisanych wizyt”. Ze strony tej samej kartoteki można rozpocząć nową wizytę lub otworzyć historię i przywrócić poprzednią.
+Pomiary i pozostała treść zapisanej wersji trafiają do kosza razem z wizytą. Obejmuje to historyczne kopie danych okołoporodowych, wzrostu rodziców i oznaczenia zespołu Downa, a także zapisane w tej wersji punkty terapii GH z DocPro. Niezależna kartoteka i kopie tych wartości w pozostałych wizytach są nadal dostępne. Po przeniesieniu ostatniej wizyty zakładka Status pokazuje „Brak zapisanych wizyt”. Ze strony tej samej kartoteki można rozpocząć nową wizytę lub otworzyć historię i przywrócić poprzednią.
 
 Przywrócona wizyta ma ten sam `visitId`. Jej szczegóły ponownie odczytują dokumenty dla tej pary `patientId` i `visitId`, łącznie z późniejszymi poprawkami wpisanymi w Karcie pacjenta. Ogólne notatki oraz wpisy dotyczące innego spotkania zachowują własny zakres.
 

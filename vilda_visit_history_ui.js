@@ -136,7 +136,10 @@
         var item = element('li');
         if (text(entry.title)) item.appendChild(element('strong', '', text(entry.title)));
         if (text(entry.body)) item.appendChild(element('p', '', text(entry.body)));
-        if (category === 'Przypomnienia' && civilDate(entry.dueDateISO)) item.appendChild(element('span', '', 'Termin · ' + civilDate(entry.dueDateISO)));
+        var reminder = category === 'Przypomnienia' || entry.careContext?.role === 'step' || entry.careContext?.role === 'calendar';
+        var date = civilDate(reminder ? entry.dueDateISO : entry.clinicalDateISO);
+        if (date) item.appendChild(element('span', '', (reminder ? 'Termin' :
+          category === 'Wyniki badań' ? 'Data badania' : 'Data zdarzenia') + ' · ' + date));
         if (item.children.length) list.appendChild(item);
       });
       if (list.children.length) { section.appendChild(list); container.appendChild(section); }

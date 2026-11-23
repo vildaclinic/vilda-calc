@@ -1089,3 +1089,107 @@ test('a mobile reminder added to an existing plan retains the active visit and i
   expect(saved.visit).toMatchObject({patientId:ids.a, visitId:visit.visitId, clinicalDateISO:visit.clinicalDateISO});
   expect(dueDateISO).not.toBe(visit.clinicalDateISO);
 });
+
+test('saved Gabinet measurements keep Growth and clinical tools read-only until an explicit new or edit visit', async ({ page }) => {
+  const { frame, ids } = await prepare(page);
+  await choosePatient(frame, 'Antoni');
+  const header = frame.locator('#vhomeGabinetHeader');
+  const stored = () => frame.evaluate(async id => ({
+    snapshots: (await window.VildaVault.getPatient(id)).snapshots,
+    visits: await window.VildaVault.getPatientVisits(id),
+  }), ids.a);
+  const working = () => frame.evaluate(() => {
+    const payload = window.VildaDataImportExport.captureCurrentUserDataReadOnly();
+    const session = window.VildaPersistence.readMainSession();
+    delete payload.timestampISO;
+    if (session) delete session.timestampISO;
+    return { payload, session };
+  });
+  const archived = await stored();
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await expect(frame.locator('#height')).toHaveValue('158');
+  await expect(frame.locator('#weight')).toHaveValue('46');
+  await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('browse');
+  const before = await working();
+  async function growthData() {
+    await frame.locator('#vhomeGrowthExpand').click();
+    const dialog = frame.locator('#vhomeGrowthDialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('tab', { name: 'Dane i pomiary', exact: true }).click();
+    return dialog;
+  }
+  async function tool(id) {
+    const toggle = frame.locator('#vhomeOtherToolsToggle');
+    if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click();
+    await frame.locator(`[data-home-tool="${id}"]`).click();
+    const dialog = frame.locator('#vhomeToolDialog');
+    await expect(dialog).toBeVisible();
+    return { dialog, fields: dialog.frameLocator('iframe[data-home-tool-draft]') };
+  }
+  const readonlyGrowth = await growthData();
+  await expect(readonlyGrowth.locator('[data-growth-field="advBoneAge"]')).toBeDisabled();
+  await expect(readonlyGrowth.locator('[data-growth-field="advMotherHeight"]')).toBeDisabled();
+  await expect(readonlyGrowth.locator('[data-growth-history-field]').first()).toBeVisible();
+  await expect(readonlyGrowth.locator('[data-growth-history-field]:enabled')).toHaveCount(0);
+  await expect(readonlyGrowth.getByRole('button', { name: '+ Dodaj pomiar', exact: true })).toBeDisabled();
+  await expect(readonlyGrowth.locator('.vhome-growth-remove:enabled')).toHaveCount(0);
+  await expect(readonlyGrowth.locator('.vhome-dialog-apply')).toBeHidden();
+  await readonlyGrowth.locator('.vhome-dialog-cancel').click();
+  for (const id of ['whr', 'respiration']) {
+    const { dialog, fields } = await tool(id);
+    const input = fields.locator('.vhome-tool-fields input, .vhome-tool-fields select');
+    expect(await input.count()).toBeGreaterThan(0);
+    for (const field of await input.all()) await expect(field).toBeDisabled();
+    await expect(dialog.locator('.vhome-dialog-apply')).toBeHidden();
+    await dialog.locator('.vhome-dialog-cancel').click();
+  }
+  expect(await working()).toEqual(before);
+  expect(await stored()).toEqual(archived);
+
+  let visitId;
+  for (const [mode, boneAge, waist, hip] of [['new', '11.5', '70', '80'], ['edit', '12', '71', '81']]) {
+    if (mode === 'new') {
+      await header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true }).click();
+    } else {
+      await header.getByRole('button', { name: /^Otwórz wizytę z / }).click();
+      await frame.locator('#vhomeVisitDetail').getByRole('button', { name: 'Edytuj wizytę', exact: true }).click();
+    }
+    await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe(mode);
+    const activeId = await frame.evaluate(id => window.VildaHomeEncounter.state(id).visitId, ids.a);
+    if (mode === 'new') visitId = activeId;
+    else expect(activeId).toBe(visitId);
+    await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+    const growth = await growthData();
+    const bone = growth.locator('[data-growth-field="advBoneAge"]');
+    await expect(bone).toBeEditable();
+    await expect(growth.locator('[data-growth-history-field]').first()).toBeEditable();
+    await expect(growth.getByRole('button', { name: '+ Dodaj pomiar', exact: true })).toBeEnabled();
+    await bone.fill(boneAge);
+    await growth.locator('.vhome-dialog-apply').click();
+    await expect(growth).toBeHidden();
+    const { dialog, fields } = await tool('whr');
+    const waistField = fields.getByRole('spinbutton', { name: 'Obwód talii · cm', exact: true });
+    await expect(waistField).toBeEditable();
+    await waistField.fill(waist);
+    await fields.getByRole('spinbutton', { name: 'Obwód bioder · cm', exact: true }).fill(hip);
+    await dialog.locator('.vhome-dialog-apply').click();
+    await expect(dialog).toBeHidden();
+    await expect.poll(() => frame.evaluate(() => {
+      const session = window.VildaPersistence.readMainSession();
+      return [session?.advanced?.boneAgeYears, session?.user?.waist, session?.user?.hip];
+    })).toEqual([Number(boneAge), Number(waist), Number(hip)]);
+    const beforeSave = await stored();
+    expect(beforeSave.snapshots.filter(row => row.payload?.visit?.visitId !== visitId)).toEqual(archived.snapshots);
+    expect(beforeSave.visits.filter(row => row.visitId !== visitId)).toEqual(archived.visits);
+    await header.getByRole('button', { name: mode === 'new' ? 'Zapisz wizytę' : 'Zapisz zmiany', exact: true }).click();
+    await expect(header.getByRole('button', { name: 'Rozpocznij nową wizytę', exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('browse');
+    const after = await stored();
+    expect(after.snapshots).toHaveLength(archived.snapshots.length + 1);
+    expect(after.snapshots.filter(row => row.payload?.visit?.visitId !== visitId)).toEqual(archived.snapshots);
+    expect(after.visits.filter(row => row.visitId !== visitId)).toEqual(archived.visits);
+    const saved = after.visits.find(row => row.visitId === visitId);
+    expect(saved.payload.advanced.boneAgeYears).toBe(Number(boneAge));
+    expect(saved.payload.user).toMatchObject({ waist: Number(waist), hip: Number(hip) });
+  }
+});

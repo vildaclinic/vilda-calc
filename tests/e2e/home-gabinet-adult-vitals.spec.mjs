@@ -39,6 +39,15 @@ test('adult analysis projects the native pressure and pulse and opens the same m
   await expect(inputs.locator('[data-home-tool-field="sbpRaw"]')).toHaveValue('124');
   await expect(inputs.locator('[data-home-tool-field="dbpRaw"]')).not.toBeEditable();
   await expect(dialog.locator('.vhome-dialog-apply')).toBeDisabled();
+  await expect(dialog.locator('.vhome-dialog-apply')).toBeHidden();
+  await expect(inputs.getByRole('tab', {name:'Tętno', exact:true})).toBeEnabled();
+  await inputs.getByRole('tab', {name:'Tętno', exact:true}).click();
+  await expect(inputs.locator('[data-home-tool-field="pulseRaw"]')).toHaveValue('76');
+  await expect(inputs.locator('[data-home-tool-field="pulseRaw"]')).not.toBeEditable();
+  await expect(dialog.locator('.vhome-dialog-apply')).toBeHidden();
+  await inputs.getByRole('tab', {name:'Ciśnienie', exact:true}).click();
+  await expect(inputs.locator('[data-home-tool-field="sbpRaw"]')).toHaveValue('124');
+  await expect(inputs.locator('[data-home-tool-field="sbpRaw"]')).not.toBeEditable();
   await dialog.locator('.vhome-dialog-close').click();
   await header.getByRole('button', {name: 'Rozpocznij nową wizytę'}).click();
   await expect(header.getByRole('button', {name: 'Zapisz wizytę', exact: true})).toBeEnabled({timeout: 15_000});
