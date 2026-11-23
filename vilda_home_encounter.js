@@ -266,35 +266,54 @@
     working.revision = Number.isInteger(revision) ? revision : 0;
     notify();
   }
-  function captureBinding(patientId) {
+  const blockedDocumentation = Object.freeze({
+    blocked: true,
+    message: 'Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.',
+    isCurrent: () => false,
+    ensureRecorded: () => Promise.resolve(false)
+  });
+  function captureBinding(patientId, options = {}) {
     if (!active(patientId) || working.mode === 'browse' || loading || saving || trashChange) return null;
     const scope = working, visitId = scope.visitId, date = scope.date;
-    const isCurrent = () => !trashChange && working === scope && working.mode !== 'browse' && active(patientId) &&
-      working.visitId === visitId && working.date === date;
+    if (!date) return null;
+    const writer = options.sourceWindow && w.parent?.VildaShell?.captureHomeVisitWriter(options.sourceWindow);
+    if (options.sourceWindow && (!writer || writer.home !== w)) return null;
+    const isCurrent = () => canSave(patientId) && working === scope && scope.visitId === visitId &&
+      scope.date === date && (!writer || writer.isCurrent()) && (!options.isCurrent || options.isCurrent());
+    if (!isCurrent()) return null;
     return Object.freeze({
       visitContext: Object.freeze({version: 1, visitId, clinicalDateISO: date}), isCurrent,
-      ensureRecorded: () => isCurrent() ? ensureRecorded(patientId, visitId) : Promise.resolve(false)
+      ensureRecorded: async () => isCurrent() && await ensureRecorded(patientId, visitId, writer) && isCurrent()
     });
+  }
+  function captureDocumentationBinding(patientId, options) {
+    if (!patientId || selected() !== patientId) return null;
+    const item = state(patientId);
+    if (item.mode === 'browse' && !item.requiresLatest && !item.busy) return null;
+    return captureBinding(patientId, options) || blockedDocumentation;
   }
   function verified(scope, receipt) {
     return active(scope.patientId) && working === scope && receipt && receipt.saved === true &&
       receipt.referenceVerified === true && receipt.patientId === scope.patientId && !!receipt.snapshotId &&
       receipt.snapshotId === scope.snapshotId;
   }
-  async function ensureRecorded(patientId, visitId) {
+  async function ensureRecorded(patientId, visitId, writer) {
     if (!active(patientId) || working.mode === 'browse' || working.visitId !== visitId || loading || saving || trashChange) return false;
     const scope = working;
-    if (recording) return recording.scope === scope ? recording.promise : false;
+    const canRecord = () => active(patientId) && working === scope && (!writer || writer.isCurrent());
+    if (!canRecord()) return false;
+    if (recording) return recording.scope === scope && await recording.promise && canRecord();
     if (scope.snapshotId) {
       const rows = await scope.vault.getPatientVisits(patientId);
-      return active(patientId) && working === scope && rows.some(row => row.visitId === visitId &&
+      return canRecord() && rows.some(row => row.visitId === visitId &&
         row.snapshotId === scope.snapshotId && (scope.mode !== 'edit' || row.rev === scope.revision));
     }
     // A patient-level artifact may commit independently of the main form. Save
     // its encounter first, in the native encrypted store, only on submission.
-    const submitted = w.VildaSaveStatusIndicator.getCurrentDecision();
-    const promise = Promise.resolve().then(() => w.VildaDataImportExport.saveUserDataWithReceipt({})).then(receipt => {
-      if (!verified(scope, receipt)) return false;
+    const source = writer ? writer.win : w;
+    const submitted = source.VildaSaveStatusIndicator.getCurrentDecision();
+    const promise = Promise.resolve().then(() => canRecord() && source.VildaDataImportExport.saveUserDataWithReceipt({})).then(receipt => {
+      if (!canRecord() || !verified(scope, receipt)) return false;
       scope.artifactReceipt = receipt;
       scope.artifactSubmission = submitted.scope;
       return true;
@@ -458,7 +477,7 @@
     }
   });
   d.addEventListener('vilda:user-state-cleared', () => { working = null; notify(); });
-  w.VildaHomeEncounter = Object.freeze({load, start, state, save, canSave, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, ensureRecorded,
+  w.VildaHomeEncounter = Object.freeze({load, start, state, save, canSave, history, guardLeave, consumeChoice, optionalField, revisionTarget, saved, captureBinding, captureDocumentationBinding, ensureRecorded,
     captureVisitTrash, restoreTrashedVisit, isIdentityOnly, profileDraft});
 })(window, document);
 

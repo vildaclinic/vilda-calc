@@ -185,7 +185,13 @@
       return;
     }
     view.treatmentOptions = {
-      patientId: view.patientId, patientLabel: view.patientName, vault: view.vault, captureVisitBinding: view.inline?.captureVisitBinding, isCurrent: function () { return current(view); },
+      patientId: view.patientId, patientLabel: view.patientName, vault: view.vault,
+      captureVisitBinding: function (id) {
+        if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true) return view.inline?.captureVisitBinding?.(id) || null;
+        if (!current(view) || id !== view.patientId) return {blocked:true};
+        var host = w.VildaHomeGabinet || w.VildaHomeEncounter, capture = host?.captureDocumentationBinding;
+        return typeof capture === 'function' ? capture.call(host, id) : {blocked:true};
+      }, isCurrent: function () { return current(view); },
       titleNode: view.treatmentTitle,
       focusNoteId: view.treatmentFocus || null,
       legacyPanels: view.legacy, registerBack: view.registerBack,

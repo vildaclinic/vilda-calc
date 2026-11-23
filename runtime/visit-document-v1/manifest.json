@@ -1,0 +1,39 @@
+{
+  "namespace": "vilda-visit-document-vault",
+  "version": 1,
+  "baseVaultSHA256": "0499a9e445e5463d3a694cf5675684d333bbd4dd2b01a956a56ee918245869cd",
+  "source": "runtime/visit-document-v1/vault-fragment.js",
+  "sourceSHA256": "b3e62cd7eb8d0d90a12c79e9a133a4b7bc2846256768740a4c6bd8a19376d934",
+  "fragmentSHA256": "a01efc65157b9ac8e18639345726357d7cf84532b50bb2a0f527f147acc2d43f",
+  "integratedVaultSHA256": "08d04c0a173c78c11167680d3797adce3fad16271341fd4481c90532113f9372",
+  "hooks": [
+    {
+      "name": "patient-lock-before-note-lock",
+      "before": "return ProfileCreateLock(next, treatmentOptions, function () { return Ac(next.id, async function () {",
+      "after": "return VisitDocumentCreateLock(next, treatmentOptions, function () { return Ac(next.id, async function () {",
+      "beforeSHA256": "8a41c425a7ba96c3f69fddf10b1400fefb877c23c31127f5b9af684de3b6eac0",
+      "afterSHA256": "dc6027d006b29c70878e16e04fc9e0bc283d0a501e56c402c342ce6533f4024c"
+    },
+    {
+      "name": "canonical-visit-before-new-document",
+      "before": "    const saved = await Ad(next, { token: VildaExistingNoteUpdateToken, beforeCommit: assertSession, account, adapter });",
+      "after": "    if(VisitDocumentRequired(next,treatmentOptions)){await VisitDocumentCheckActive(next,treatmentOptions,assertSession);assertSession();}\n    const saved = await Ad(next, { token: VildaExistingNoteUpdateToken, beforeCommit: assertSession, account, adapter });",
+      "beforeSHA256": "160d8c4c99e1a0898fc2d408e97f94498d6bac20302fcebd172ae4c580adb0a2",
+      "afterSHA256": "8933b407ab36ea4aa960ddab5a1133c227a1c7d4efd9b2b2cd06194d59859450"
+    },
+    {
+      "name": "capture-options-before-native-queue",
+      "before": ";ProfileInstallPresentation($s);EncounterInstallCare($s)",
+      "after": ";ProfileInstallPresentation($s);VisitDocumentInstall($s);EncounterInstallCare($s)",
+      "beforeSHA256": "872de682cf989d11c52f8aeacd8e6f4921c0ea9304f46968d41c0e627e7a5542",
+      "afterSHA256": "c47090460fa09034d12c2fd105b66cb38a76c24359c7cc2d4c0d119763779627"
+    },
+    {
+      "name": "readable-source",
+      "before": "/* BEGIN VILDA PATIENT PROFILE V1 */\n",
+      "after": "/* BEGIN VILDA VISIT DOCUMENT V1 */\n/* Opt-in durability of newly authored visit documents. No origin is inferred,\n * reassigned or migrated. Existing receipts and historical documents retain\n * their original contracts. The native workspace fragment stays unchanged. */\nfunction VisitDocumentFailure(code, message) {\n  const error = new Error(message); error.code = 'VISIT_DOCUMENT_' + code; return error;\n}\nfunction VisitDocumentRequired(note, options) {\n  return !!(options && options.requireActiveVisit === true && !ProfileIsNote(note));\n}\nfunction VisitDocumentOrigin(note) {\n  let origin;\n  try { origin = EncounterNoteFields(note).visitContext; }\n  catch (_) { throw VisitDocumentFailure('INVALID', 'Nieprawidłowe powiązanie dokumentu z wizytą. Otwórz formularz ponownie.'); }\n  if (!origin) throw VisitDocumentFailure('INVALID', 'Dokument wymaga wskazania otwartej wizyty.');\n  return origin;\n}\nfunction VisitDocumentCreateLock(note, options, action) {\n  if (!VisitDocumentRequired(note, options)) return ProfileCreateLock(note, options, action);\n  VisitDocumentOrigin(note);\n  // Called inside the established native actor: workspace → patient → note.\n  // The same patient lock is held by whole-visit trash through its commit.\n  return Bzw_podBlokada(note.patientId, action, options);\n}\nasync function VisitDocumentCheckActive(note, options, assertCurrent) {\n  if (!VisitDocumentRequired(note, options)) return;\n  const origin = VisitDocumentOrigin(note), session = Bses_opcje(null);\n  assertCurrent(); Bpz_pilnuj(session);\n  const visits = await Bvisit_list(note.patientId);\n  assertCurrent(); Bpz_pilnuj(session);\n  if (!visits.some(function (visit) {\n    return visit.patientId === note.patientId && visit.visitId === origin.visitId\n      && visit.clinicalDateISO === origin.clinicalDateISO;\n  })) {\n    throw VisitDocumentFailure('STALE', 'Wybrana wizyta została usunięta lub zmieniła się. Otwórz ją ponownie przed zapisem dokumentu.');\n  }\n}\nfunction VisitDocumentInstall(api) {\n  const save = api.savePatientNoteOnce;\n  api.savePatientNoteOnce = function (payload, options) {\n    if (!options || options.requireActiveVisit !== true) return save.apply(this, arguments);\n    // Capture the opt-in synchronously before the existing native wrapper\n    // waits for its workspace lease. Later caller mutations cannot remove it.\n    const captured = Object.assign({}, options, { requireActiveVisit: true });\n    return save.call(this, payload, captured);\n  };\n}\n/* END VILDA VISIT DOCUMENT V1 */\n/* BEGIN VILDA PATIENT PROFILE V1 */\n",
+      "beforeSHA256": "76ba1c15f0277e7ca49c489411f011ac546c106983e68aa7a091da4ec3a2c2ce",
+      "afterSHA256": "7cbedbc327429767127c40b908f56ba811be18ad774be89151306e0ca95454b8"
+    }
+  ]
+}

@@ -23,7 +23,19 @@ const PAIRS = [
         }
         var result = await vault.savePatientNoteOnce({ reminderContext: { version: 1, kind: 'reminder' },
           ...(visit ? { visitContext: visit, clinicalDateISO: visit.clinicalDateISO } : {}), id: noteId,`],
-  ["+ body.value });\n        if (!alive()) return; if (!result.saved)", "+ body.value }, HomeRemindersContext ? { isCurrent: HomeRemindersCurrent } : undefined);\n        if (!alive()) return; if (!result.saved)"]
+  ["+ body.value });\n        if (!alive()) return; if (!result.saved)", "+ body.value }, HomeRemindersContext ? { isCurrent: HomeRemindersCurrent, requireActiveVisit: !!visit } : undefined);\n        if (!alive()) return; if (!result.saved)"],
+  ["eventTime: !eventFields.hidden && eventTime.value || null } });\n          if (!alive()) return;",
+    "eventTime: !eventFields.hidden && eventTime.value || null } }, HomeRemindersContext && HomeRemindersContext.source && (HomeRemindersContext.source.blocked || HomeRemindersContext.source.visitContext) ? HomeRemindersContext.source : undefined);\n          if (!alive()) return;"],
+  ["showCreateButton: false, remindersLayout: true,\n        isCurrent: alive,",
+    `showCreateButton: false, remindersLayout: true,
+        captureVisitBinding: HomeRemindersContext ? function (patientId) {
+          if (patientId !== HomeRemindersContext.patientId) return null;
+          if (!HomeRemindersCurrent()) return {blocked:true};
+          var source = HomeRemindersContext.source;
+          if (source && source.blocked) return source;
+          return source && source.visitContext ? source : source && source.encounter ? {blocked:true} : null;
+        } : undefined,
+        isCurrent: alive,`]
 ];
 
 function replaceOnce(source, before, after) {

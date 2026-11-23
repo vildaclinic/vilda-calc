@@ -61,6 +61,189 @@ const button = (host, label) => host.querySelectorAll('button').find(item => ite
 const settle = async () => { for (let index = 0; index < 10; index++) await Promise.resolve(); };
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 
+// Execute the real editor initialization, nested ownership helpers and button
+// callbacks. Controls and Vault I/O alone are doubles; no rendered DOM or
+// duplicated binding/save predicate is needed for these observation notes.
+function nativeNoteEditorPart(predicate) {
+  const matches = [];
+  function collect(node) {
+    if (!node || typeof node !== 'object') return;
+    if (predicate(node)) matches.push(node);
+    for (const value of Object.values(node)) if (Array.isArray(value)) value.forEach(collect); else collect(value);
+  }
+  collect(declarations.get('CareOpenLegacyNoteEditor').body);
+  if (matches.length !== 1) throw Error('Ambiguous native note editor fixture boundary: ' + matches.length);
+  return matches[0];
+}
+function nativeNoteButton(name) {
+  const node = nativeNoteEditorPart(item => item.type === 'VariableDeclarator' && item.id.name === name);
+  const callback = node.init.arguments[1].properties.find(item => item.key.name === 'onclick').value;
+  return source.slice(...callback.range);
+}
+function documentationEditor({ host = 'home', note = null, optIn = true, decision = 'visit' } = {}) {
+  const state = { current: true, callerCurrent: true };
+  const origin = Object.freeze({ version: 1, visitId: 'fictional-original-visit', clinicalDateISO: '2026-11-23' });
+  const binding = { visitContext: origin, isCurrent: vi.fn(() => state.current), ensureRecorded: vi.fn(async () => true) };
+  const capture = vi.fn(() => decision === 'visit' ? binding : decision === 'general' ? null : { blocked: true, message: 'Fikcyjna odmowa wizyty.' });
+  const alert = vi.fn(), saved = vi.fn(), cancelled = vi.fn();
+  const i = { __VILDA_HOME_GABINET_PREVIEW__: optIn, alert, crypto: globalThis.crypto, setTimeout: () => 0 };
+  i.parent = i;
+  if (host === 'home') i.VildaHomeGabinet = { captureDocumentationBinding: capture };
+  if (host === 'local') i.VildaHomeEncounter = { captureDocumentationBinding: capture };
+  if (host === 'shell') i.parent = { VildaShell: { captureDocumentationBinding: capture } };
+  const a = { savePatientNote: vi.fn(async () => ({ id: note?.id || 'fictional-general-note' })),
+    savePatientNoteOnce: vi.fn(async payload => ({ id: payload.id, saved: true })) };
+  const d = { isConnected: true, remove: vi.fn(() => { d.isConnected = false; }) };
+  const control = value => ({ value, style: {}, focus: vi.fn() });
+  const controls = { E: control('Fikcyjna obserwacja'), B: control('Fikcyjna treść.'), x: control('observation'),
+    at: control(''), It: control(''), Pt: control(''), ce: control(note?.clinicalDateISO || '2025-12-19'),
+    Dt: { checked: false }, Xt: { checked: true }, F: control('none'), Ie: { style: {}, textContent: '' }, la: {}, Ce: {} };
+  const t = { patientId, note, ...(!note ? { suggestLinkedAge: 78 } : {}),
+    onSaved: saved, onCancel: cancelled, isCurrent: () => state.callerCurrent };
+  const deps = { i, a, d, t, ...controls, Y: () => null, p: null, Qzap: () => true,
+    Qkonflikt: vi.fn(), Gd0: error => error.message, Ot: vi.fn() };
+  const body = declarations.get('CareOpenLegacyNoteEditor').body.body;
+  const variable = name => body.find(node => node.type === 'VariableDeclaration' && node.declarations.some(item => item.id.name === name));
+  const initialization = source.slice(variable('EncounterEditor').range[0], declarations.get('EncounterEditorCurrent').range[1]);
+  const ageStart = variable('Et').range[0], ageEnd = variable('Bt').range[0];
+  const code = 'const {' + Object.keys(deps).join(',') + '}=deps;\n'
+    + source.slice(...variable('n').range) + '\n' + initialization + '\n'
+    + source.slice(ageStart, ageEnd) + '\n'
+    + ['Qbase', 'QbaseU', 'QbaseN'].map(name => source.slice(...variable(name).range)).join('\n')
+    + '\nreturn {capture:EncounterCaptureDocumentation,current:EncounterEditorCurrent,binding:EncounterBinding,origin:EncounterOrigin,age:Et,'
+    + 'submit:(' + nativeNoteButton('la') + '),cancel:(' + nativeNoteButton('Ce') + ')};';
+  const api = new Function('deps', code)(deps);
+  return { api, state, origin, binding, capture, i, a, d, t, controls, alert, saved, cancelled, deps };
+}
+
+describe('native note editor captures one documentation visit', () => {
+  it.each(['home', 'local', 'shell'])('captures the %s producer without requiring the inline patient card', host => {
+    const f = documentationEditor({ host });
+    expect(f.api.binding).toBe(f.binding);
+    expect(f.capture).toHaveBeenCalledExactlyOnceWith(...(host === 'shell' ? [f.i, patientId] : [patientId]));
+    expect(f.api.origin).toBe(f.origin);
+    expect(f.api.age).toBeNull();
+    expect(f.binding.ensureRecorded).not.toHaveBeenCalled();
+    f.api.cancel();
+    expect(f.cancelled).toHaveBeenCalledOnce();
+    expect(f.binding.ensureRecorded).not.toHaveBeenCalled();
+    expect(f.a.savePatientNote).not.toHaveBeenCalled();
+    expect(f.a.savePatientNoteOnce).not.toHaveBeenCalled();
+  });
+
+  it('confirms only on Submit and saves against the original binding and independent event date', async () => {
+    const f = documentationEditor();
+    f.i.VildaHomeGabinet.captureDocumentationBinding = vi.fn(() => { throw Error('A replacement owner must not be adopted.'); });
+    await f.api.submit();
+    expect(f.binding.ensureRecorded).toHaveBeenCalledOnce();
+    expect(f.a.savePatientNoteOnce).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      patientId, title: 'Fikcyjna obserwacja', linkedAgeMonths: null, clinicalDateISO: '2025-12-19', visitContext: f.origin,
+    }), { isCurrent: f.api.current, requireActiveVisit: true });
+    expect(f.a.savePatientNoteOnce.mock.calls[0][0].visitContext).toBe(f.origin);
+    expect(f.i.VildaHomeGabinet.captureDocumentationBinding).not.toHaveBeenCalled();
+    expect(f.a.savePatientNote).not.toHaveBeenCalled();
+    expect(f.saved).toHaveBeenCalledOnce();
+  });
+
+  it('retains the generated note id when the same open form retries an unacknowledged write', async () => {
+    const f = documentationEditor();
+    f.a.savePatientNoteOnce.mockResolvedValueOnce({ saved: false });
+    await f.api.submit();
+    expect(f.d.isConnected).toBe(true); expect(f.saved).not.toHaveBeenCalled();
+    await f.api.submit();
+    const [first, second] = f.a.savePatientNoteOnce.mock.calls;
+    expect(first[0].id).toMatch(/^visit-note-[a-f0-9]{32}$/);
+    expect(second[0].id).toBe(first[0].id);
+    expect(second[0].visitContext).toBe(first[0].visitContext);
+    expect(f.capture).toHaveBeenCalledOnce();
+    expect(f.a.savePatientNote).not.toHaveBeenCalled();
+  });
+
+  it.each(['binding', 'caller', 'detached', 'throw'])('refuses a lost %s scope before confirming or writing', async reason => {
+    const f = documentationEditor();
+    if (reason === 'binding') f.state.current = false;
+    if (reason === 'caller') f.state.callerCurrent = false;
+    if (reason === 'detached') f.d.isConnected = false;
+    if (reason === 'throw') f.binding.isCurrent.mockImplementation(() => { throw Error('Fikcyjna utrata właściciela.'); });
+    expect(f.api.current()).toBe(false);
+    await f.api.submit();
+    expect(f.binding.ensureRecorded).not.toHaveBeenCalled();
+    expect(f.a.savePatientNoteOnce).not.toHaveBeenCalled();
+    expect(f.a.savePatientNote).not.toHaveBeenCalled();
+    expect(f.saved).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])('rechecks ownership after ensureRecorded resolves %s', async recorded => {
+    const f = documentationEditor(), pending = deferred();
+    f.binding.ensureRecorded.mockReturnValue(pending.promise);
+    const writing = f.api.submit();
+    expect(f.binding.ensureRecorded).toHaveBeenCalledOnce();
+    if (recorded) f.state.current = false;
+    pending.resolve(recorded); await writing;
+    expect(f.a.savePatientNoteOnce).not.toHaveBeenCalled();
+    expect(f.a.savePatientNote).not.toHaveBeenCalled();
+    expect(f.saved).not.toHaveBeenCalled();
+    expect(f.d.isConnected).toBe(true);
+  });
+
+  it('does not publish a completed write into a different context after its awaited receipt', async () => {
+    const f = documentationEditor(), pending = deferred(), audit = vi.fn();
+    f.i.VildaAuditLog = { log: audit };
+    f.a.savePatientNoteOnce.mockReturnValue(pending.promise);
+    const writing = f.api.submit();
+    await settle();
+    expect(f.a.savePatientNoteOnce).toHaveBeenCalledOnce();
+    expect(f.a.savePatientNoteOnce.mock.calls[0][1].isCurrent()).toBe(true);
+    f.state.current = false;
+    pending.resolve({ saved: true, id: 'fictional-committed-note' });
+    await writing;
+    expect(f.saved).not.toHaveBeenCalled(); expect(f.d.remove).not.toHaveBeenCalled();
+    expect(audit).not.toHaveBeenCalled(); expect(f.capture).toHaveBeenCalledOnce();
+  });
+
+  it.each(['blocked', 'missing'])('stops a new form with a visible %s producer decision', reason => {
+    const f = documentationEditor({ host: reason === 'missing' ? 'missing' : 'home', decision: 'blocked' });
+    expect(f.api).toBeUndefined(); expect(f.alert).toHaveBeenCalledOnce();
+    expect(f.a.savePatientNoteOnce).not.toHaveBeenCalled(); expect(f.a.savePatientNote).not.toHaveBeenCalled();
+  });
+
+  it('accepts an explicit general-document decision without manufacturing a visit or a manual age anchor', async () => {
+    const f = documentationEditor({ decision: 'general' });
+    f.controls.Xt.checked = false;
+    expect(f.api.binding).toBeNull(); expect(f.api.age).toBeNull();
+    await f.api.submit();
+    const payload = f.a.savePatientNote.mock.calls[0][0];
+    expect(payload).toMatchObject({ patientId, linkedAgeMonths: null, clinicalDateISO: null });
+    expect(payload).not.toHaveProperty('visitContext');
+    expect(f.a.savePatientNoteOnce).not.toHaveBeenCalled(); expect(f.binding.ensureRecorded).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])('preserves an existing note origin=%s without acquiring or ensuring the current visit', async hasOrigin => {
+    const original = { version: 1, visitId: 'fictional-historical-visit', clinicalDateISO: '2024-06-17' };
+    const note = { id: 'fictional-existing-note', patientId, linkedAgeMonths: 63, clinicalDateISO: hasOrigin ? '2024-06-16' : null,
+      rev: 4, updatedAtISO: '2024-06-18T12:00:00.000Z', ...(hasOrigin ? { visitContext: original } : {}) };
+    const f = documentationEditor({ note, decision: 'blocked' });
+    if (!hasOrigin) { f.controls.Dt.checked = true; f.controls.Xt.checked = false; }
+    expect(f.capture).not.toHaveBeenCalled(); expect(f.api.age).toBe(63);
+    await f.api.submit();
+    const payload = f.a.savePatientNote.mock.calls[0][0];
+    expect(payload).toMatchObject({ id: note.id, patientId, linkedAgeMonths: 63,
+      clinicalDateISO: note.clinicalDateISO, baseRev: note.rev, baseUpdatedAtISO: note.updatedAtISO, baseNote: note });
+    if (hasOrigin) expect(payload.visitContext).toBe(original);
+    else expect(payload).not.toHaveProperty('visitContext');
+    expect(f.binding.ensureRecorded).not.toHaveBeenCalled(); expect(f.a.savePatientNoteOnce).not.toHaveBeenCalled();
+  });
+
+  it('keeps the legacy manual age anchor outside the optional homepage', async () => {
+    const f = documentationEditor({ optIn: false });
+    f.controls.Dt.checked = true; f.controls.Xt.checked = false;
+    expect(f.api.age).toBe(78); expect(f.capture).not.toHaveBeenCalled();
+    await f.api.submit();
+    expect(f.a.savePatientNote).toHaveBeenCalledWith(expect.objectContaining({ linkedAgeMonths: 78, clinicalDateISO: null }));
+    expect(f.a.savePatientNoteOnce).not.toHaveBeenCalled();
+  });
+});
+
 describe('native notes and staged evidence respect the same document boundary', () => {
   it('preserves the entire legacy editor body byte for byte behind the new access gate', () => {
     const body = declarations.get('CareOpenLegacyNoteEditor').body;

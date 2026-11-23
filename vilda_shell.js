@@ -709,6 +709,30 @@ function Sm_actionSource(id){
   var owner=Dpd_source();
   return owner&&owner.doc.getElementById(id);
 }
+// A document keeps the originating pane, unlocked account and chosen visit.
+// A shared patient ID alone cannot give an inactive pane authority to write.
+var Sm_blockedDocumentation=Object.freeze({blocked:true,
+  message:"Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie."});
+function Sm_captureDocumentationBinding(win,patientId){
+  if(a.__VILDA_HOME_GABINET_PREVIEW__!==true||!patientId||patientId!==Ss_patientId()
+    ||!["start","docpro","lab"].includes(c))return null;
+  try{
+    var source=Sw_capture(win),entry=l.start,frame=entry?.frame,home=frame?.contentWindow,gabinet=home?.VildaHomeGabinet;
+    if(!source)return Sm_blockedDocumentation;
+    if(!entry)return null; // No Start pane has been opened in this shell.
+    if(!entry.loaded||entry.stale||!gabinet?.captureDocumentationBinding)return Sm_blockedDocumentation;
+    var hostOwner=Sp_account(a),sourceOwner=Sp_account(win),homeOwner=Sp_account(home);
+    if(!hostOwner||sourceOwner?.userId!==hostOwner.userId||homeOwner?.userId!==hostOwner.userId)return Sm_blockedDocumentation;
+    var startDoc=frame.contentDocument;
+    function isCurrent(){
+      return !!(Sw_current(source,win)&&entry===l.start&&entry.loaded&&!entry.stale&&
+        frame.isConnected&&frame.contentWindow===home&&frame.contentDocument===startDoc&&
+        home.VildaHomeGabinet===gabinet&&!Gp5_obcy(home)&&!Gp5_obcy(win)&&Ss_patientId()===patientId&&
+        Sp_sameAccount(a,hostOwner)&&Sp_sameAccount(home,homeOwner)&&Sp_sameAccount(win,sourceOwner));
+    }
+    return gabinet.captureDocumentationBinding(patientId,{isCurrent,sourceWindow:c==="docpro"?win:null});
+  }catch{return Sm_blockedDocumentation}
+}
 // Presentation only: the DocPro adapter independently asks the existing native
 // writer boundary about the visible document whenever encounter/pane state moves.
 function Sm_refreshDocproVisitAccess(){
@@ -1362,4 +1386,4 @@ function Ut(){
     b=null;Sn_homeReturn=null;Sn_forgetDirectory();
   }
   return b||null;
-}a.VildaShell={captureHomeVisitWriter:Sm_captureVisitWriter,getSidebarPresentation:Sp_presentation,canClearLockedSessionIdentity:Sw_identityCleanup,captureSessionWriter:Sw_capture,isSessionWriterCurrent:Sw_current,captureSessionWriterMessage:Sw_message,isSessionWriterMessageCurrent:Sw_messageCurrent,navigate:P,getCurrentRoute:function(){return c},returnFromSearchCalendar:Sn_returnFromSearchCalendar,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,removeUserWaiting:Bkr_czekanieUsuwania,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,claimHomeDirectory:Sn_claimHomeDirectory,hasHomePatientNavigation:Sn_hasHomeNavigation,openHomePatient:function(id,options){return Sn_homePatient("card",id,options)},openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);
+}a.VildaShell={captureHomeVisitWriter:Sm_captureVisitWriter,captureDocumentationBinding:Sm_captureDocumentationBinding,getSidebarPresentation:Sp_presentation,canClearLockedSessionIdentity:Sw_identityCleanup,captureSessionWriter:Sw_capture,isSessionWriterCurrent:Sw_current,captureSessionWriterMessage:Sw_message,isSessionWriterMessageCurrent:Sw_messageCurrent,navigate:P,getCurrentRoute:function(){return c},returnFromSearchCalendar:Sn_returnFromSearchCalendar,reloadForAppUpdate:Su_reloadForAppUpdate,isAppUpdateReloadPending:Su_isAppUpdateReloadPending,isPatientDocumentsSourceCurrent:Dpd_isSourceCurrent,protokolPanelu:1,removeUserWaiting:Bkr_czekanieUsuwania,cancelPendingPaneFocus:Sn_cancelPaneFocus,show:w,reload:B,routes:d,claimHomeDirectory:Sn_claimHomeDirectory,hasHomePatientNavigation:Sn_hasHomeNavigation,openHomePatient:function(id,options){return Sn_homePatient("card",id,options)},openPatientsInStart:xt,openPatientCardInStart:Ht,keyForHref:O,returnFromPatientCard:Ft,peekPatientReturnRoute:Ut,ensureAuthHistory:Sn_ensureAuthHistory,releaseAuthHistory:Sn_releaseAuthHistory,isAuthHistoryCurrent:Sn_isAuthHistoryCurrent}})(window);

@@ -1096,6 +1096,13 @@
       /* Ustawia wybrany pakiet i jego wiersze; true, gdy zmienił się pakiet albo jego skład. Pola przebudowują się
        * wtedy od nowa: wartości wpisane dla innego pakietu znikają, a przy tym samym pakiecie (skład zmieniony
        * w kreatorze albo na innym urządzeniu konta) zostają przy badaniach, które w nim zostały. */
+      var visitBinding = null;
+      function beginPackageVisit(pid) {
+        var opened = pid && w.VildaLabVisitBinding?.capture(pid, function () {
+          return visitBinding === opened && state.mode === 'package' && state.pid === pid;
+        });
+        visitBinding = opened || null;
+      }
       function selectPackage(key) {
         var m = model();
         var pkg = m.findPackage(state.packages, key) || state.packages[0] || null;
@@ -1119,6 +1126,10 @@
         if (state.busy) { drawPicker(); return; }
         state.pickerNote = '';
         state.picked = true;
+        if (state.pkg?.id !== id && visitBinding && !visitBinding.isCurrent()) {
+          clearValues(false);
+          beginPackageVisit(state.pid);
+        }
         selectPackage(id);
         if (state.pkg) model().rememberPackage(persistence(), state.pkg.id);
         refresh();
@@ -2067,6 +2078,7 @@
         if (ctx.pid !== state.pid) {
           if (state.pid !== null) clearValues(false);
           state.pid = ctx.pid;
+          beginPackageVisit(ctx.pid);
           state.stageOpen = false;
           state.previous = null;
           state.previousFor = null;
@@ -2212,7 +2224,11 @@
         var sample = syncSample();
         drawPuberty();
         var rows = evaluate();
-        var visitBinding = w.VildaLabVisitBinding?.capture(ctx.pid);
+        var origin = visitBinding;
+        if (origin && !origin.isCurrent()) {
+          state.error = 'Kontekst wizyty się zmienił. Otwórz pakiet ponownie dla wybranego pacjenta.';
+          refresh(); return;
+        }
         var plan = m.planSave({
           rows: rows, patientId: ctx.pid, dateISO: parts.date.value, todayISO: today(), comment: parts.comment.value,
           linkedAgeMonths: m.linkedAgeMonths(ctx.sessionPatient), snapshot: snapshot(), assessmentSnapshot: assessmentSnapshot(),
@@ -2234,7 +2250,7 @@
             if (patientId() !== ctx.pid) throw fail('W trakcie zapisu zmienił się pacjent — sprawdź wyniki i zapisz ponownie.');
             return plan.notes.reduce(function (chain, note, index) {
               return chain.then(function () {
-                if (visitBinding) return visitBinding.save(vault, note);
+                if (origin) return origin.save(vault, note);
                 return vault.savePatientNote(note);
               }).then(function () { saved.push(plan.rows[index]); });
             }, Promise.resolve());
@@ -2745,7 +2761,13 @@
         var entering = mode === 'package' && state.mode !== 'package';
         state.mode = mode === 'package' ? 'package' : 'single';
         // Wejście w pakiet czyta wyniki pacjenta od nowa — w trybie pojedynczym mógł dojść przypięty wynik.
-        if (entering) state.previousFor = null;
+        if (entering) {
+          state.previousFor = null;
+          // The retained panel may return under another visit of the same patient.
+          // Start the fresh form before obtaining its new origin.
+          if (visitBinding && !visitBinding.isCurrent()) clearValues(false);
+          if (state.pid) beginPackageVisit(state.pid);
+        }
         refresh();
         if (focus && state.mode === 'package' && !state.gate && state.view !== 'creator' && state.rows.length) {
           try { parts.inputs[state.rows[0].id].focus(); } catch (_) { /* fokus pomocniczy */ }

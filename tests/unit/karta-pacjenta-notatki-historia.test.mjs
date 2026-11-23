@@ -38,7 +38,7 @@ describe('P5 — edytor notatki pacjenta reaguje na wskrzeszenie', () => {
     expect(poprzedniEdytor).toContain('var Gc3=await a.savePatientNote(Vt)');
     expect(applyEncounterNoteAuthHooks(poprzedniEdytor)).toBe(source);
     // Zachowany wynik z obu ścieżek trafia do tego samego sprawdzenia konfliktu.
-    expect(kod).toContain('Gc3=await a.savePatientNoteOnce(Vt,{isCurrent:EncounterEditorCurrent})');
+    expect(kod).toContain('Gc3=await a.savePatientNoteOnce(Vt,{isCurrent:EncounterEditorCurrent,requireActiveVisit:true})');
     expect(kod).toContain('}else Gc3=await a.savePatientNote(Vt);if(Gc3&&Gc3.conflict===!0)');
     expect(kod, 'wskrzeszenie to isNew przy edycji istniejącej notatki')
       .toContain('var Gc4=!!(n&&Gc3&&Gc3.isNew===!0)');

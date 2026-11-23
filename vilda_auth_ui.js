@@ -1130,15 +1130,30 @@ function ga(options) {
   });
 }
 function CareOpenLegacyNoteEditor(t){if(t&&t.note&&t.note.category==="wynik-klirens"){ClcrOpenNoteResult(t.note,t.patientId||t.note.patientId,jt(),t.onSaved,i.document.activeElement).catch(function(){try{i.alert("Nie udało się otworzyć szczegółów pomiaru. Spróbuj ponownie.")}catch{}});return}const a=jt();if(!a||typeof a.savePatientNote!="function"){try{i.alert("Notatki pacjenta s\u0105 niedost\u0119pne. Spr\xF3buj od\u015Bwie\u017Cy\u0107 stron\u0119 (Ctrl+Shift+R) \u2014 mo\u017Ce by\u0107 stary cache.")}catch{}return}const n=!!(t&&t.note&&t.note.id),r=t&&t.note||{};
-const EncounterEditor = i.__VILDA_HOME_GABINET_PREVIEW__ === true && i.VildaHomePatient?.isInlineOpen?.();
-const EncounterBinding = EncounterEditor && !n && t?.patientId ? i.VildaHomeEncounter?.captureBinding(t.patientId) : null;
-if(EncounterEditor && !n && !EncounterBinding && i.VildaHomeEncounter?.state(t?.patientId).mode !== 'browse'){
-  i.alert("Poczekaj na zakończenie operacji wizyty i ponownie otwórz formularz.");return;
+const EncounterEditor = i.__VILDA_HOME_GABINET_PREVIEW__ === true;
+function EncounterCaptureDocumentation(patientId) {
+  try {
+    if (i.VildaHomeGabinet) {
+      if (typeof i.VildaHomeGabinet.captureDocumentationBinding === 'function')
+        return i.VildaHomeGabinet.captureDocumentationBinding(patientId);
+    } else if (typeof i.VildaHomeEncounter?.captureDocumentationBinding === 'function') {
+      return i.VildaHomeEncounter.captureDocumentationBinding(patientId);
+    } else {
+      const shell = i.parent !== i && i.parent?.VildaShell;
+      if (typeof shell?.captureDocumentationBinding === 'function') return shell.captureDocumentationBinding(i,patientId);
+    }
+  } catch (_) { /* An unavailable owner is not a general-document decision. */ }
+  return Object.freeze({blocked:true,message:'Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.'});
+}
+const EncounterBinding = EncounterEditor && !n && t?.patientId ? EncounterCaptureDocumentation(t.patientId) : null;
+if(EncounterBinding && (EncounterBinding.blocked === true || EncounterBinding.isCurrent?.() !== true)){
+  i.alert(EncounterBinding.message || "Nie można teraz potwierdzić otwartej wizyty. Otwórz formularz ponownie.");return;
 }
 const EncounterOrigin = EncounterEditor && (n ? r.visitContext : EncounterBinding?.visitContext);
 let EncounterNoteId = null;
 function EncounterEditorCurrent() {
-  return !!(EncounterBinding && EncounterBinding.isCurrent() && d.isConnected && (!t.isCurrent || t.isCurrent()));
+  try { return !!(EncounterBinding && EncounterBinding.blocked !== true && EncounterBinding.isCurrent() && d.isConnected && (!t.isCurrent || t.isCurrent())); }
+  catch (_) { return false; }
 }
 /* P-NOTATKI-3 (G21, D12): otwarcie kolejnego edytora zastepuje poprzednia nakladke - jesli byl
    w niej niezapisany tekst, pytamy i przy odmowie w ogole nie otwieramy nowego arkusza.
@@ -1181,12 +1196,12 @@ E.addEventListener("input",function(){U=!0,Qdm()}),B.addEventListener("input",fu
    i dlugosc wizyty nie zostana zapisane - a wlasnie tu laduje lekarz przychodzacy z Terminarza
    przyciskiem "Pelny edytor". Walidacja G24 z raty 2 zatrzymuje wtedy zapis; teraz widac to wczesniej. */text:"Najlepiej ustawi\u0107 dla kontroli \u2014 pojawi si\u0119 jako przypomnienie z kolorem zale\u017Cnym od pilno\u015Bci. Bez tej daty godzina i d\u0142ugo\u015B\u0107 wizyty nie zostan\u0105 zapisane."});J.appendChild(_t),c.appendChild(J);const It=e("input",{type:"time",class:"vilda-auth-input",style:"height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});It.value=r.dueTime&&/^([01]\d|2[0-3]):[0-5]\d$/.test(r.dueTime)?r.dueTime:"";const Pt=e("input",{type:"number",min:"5",max:"1440",step:"5",placeholder:"20",class:"vilda-auth-input",style:"width:80px;height:38px;padding:0 10px;font-size:0.92rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;"});Pt.value=typeof r.durationMin=="number"&&r.durationMin>=5?String(r.durationMin):"";const Mt=e("div",{style:"margin-top:10px;"},[e("label",{text:"Godzina i d\u0142ugo\u015B\u0107 wizyty (opcjonalnie)",style:"display:block;font-size:0.78rem;color:#5b6672;margin-bottom:4px;font-weight:500;"}),e("div",{style:"display:flex;gap:8px;align-items:center;flex-wrap:wrap;"},[It,e("div",{style:"display:inline-flex;align-items:center;gap:6px;"},[Pt,e("span",{text:"min",style:"font-size:0.85rem;color:#5b6672;"})])])]);c.appendChild(Mt);/* P-NOTATKI-2 (G9, decyzja wlasciciela D8): noworodek ma 0 mies. Do SW 1.0.985 edytor nie pokazywal
    opcji „Powiaz z wizyta" dla pomiaru w wieku 0 mies., bo wszedzie stalo `>0`. */
-var Et=null;t&&typeof t.suggestLinkedAge=="number"&&isFinite(t.suggestLinkedAge)&&t.suggestLinkedAge>=0?Et=Math.round(t.suggestLinkedAge):n&&typeof r.linkedAgeMonths=="number"&&r.linkedAgeMonths>=0&&(Et=Math.round(r.linkedAgeMonths));var Bt;n&&r.clinicalDateISO?Bt="date":n&&typeof r.linkedAgeMonths=="number"&&r.linkedAgeMonths>=0||Et!==null?Bt="visit":Bt="general";/* P-BADANIA-EDYTOR: anchor:"date" wybiera „Wpisz date zdarzenia” (data badania, K7) tylko zamiast notatki
+var Et=null;t&&typeof t.suggestLinkedAge=="number"&&isFinite(t.suggestLinkedAge)&&t.suggestLinkedAge>=0?Et=Math.round(t.suggestLinkedAge):n&&typeof r.linkedAgeMonths=="number"&&r.linkedAgeMonths>=0&&(Et=Math.round(r.linkedAgeMonths));if(EncounterEditor&&!n)Et=null;var Bt;n&&r.clinicalDateISO?Bt="date":n&&typeof r.linkedAgeMonths=="number"&&r.linkedAgeMonths>=0||Et!==null?Bt="visit":Bt="general";/* P-BADANIA-EDYTOR: anchor:"date" wybiera „Wpisz date zdarzenia” (data badania, K7) tylko zamiast notatki
    ogolnej; istniejace powiazanie z wizyta albo data zostaje. */t&&t.anchor==="date"&&Bt==="general"&&(Bt="date");var pt=e("div",{class:"b3-anchor-group",style:"display:flex;flex-direction:column;gap:8px;padding:12px;background:#f5fafb;border-radius:10px;border:0.5px solid #d7e9ec;"}),kt=e("div",{style:"font-size:0.78rem;color:#5b6672;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;",text:"Powi\u0105zanie z osi\u0105 czasu"});pt.appendChild(kt);var Ft=e("label",{class:"b3-anchor-option",style:"display:flex;align-items:flex-start;gap:8px;cursor:pointer;"}),Nt=e("input",{type:"radio",name:"b3-anchor",value:"general",style:"flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;"});Nt.checked=Bt==="general";var zt=e("div",{style:"flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;"},[e("div",{text:"Notatka og\xF3lna",style:"font-weight:500;"}),x._wbOpis=e("div",{text:"Pojawi si\u0119 w zak\u0142adce Notatki i w Historii \u2014 w sekcji \u201EBez przypisanego pomiaru\u201D.",style:"font-size:0.74rem;color:#9aa8aa;margin-top:2px;"})]);Ft.appendChild(Nt),Ft.appendChild(zt),pt.appendChild(Ft);
 /* P-WYNIKI-BADAN-EDYTOR: przy kategorii „Badanie” opis mowi, ze wynik trafi do Badan (nie do Notatek). */
 typeof WbOdswiezOpisOgolnej=="function"&&(WbOdswiezOpisOgolnej(x),x.addEventListener("change",function(){WbOdswiezOpisOgolnej(x)}));var At=e("div",{class:"b3-general-hint",style:"font-size:0.74rem;color:#7a5a1a;background:#fff8ee;border:0.5px solid #f0e0c8;border-radius:6px;padding:6px 8px;margin:-2px 0 0 24px;line-height:1.4;display:none;"});/* P-NOTATKI-2 (G10, decyzja wlasciciela D9): Historia POKAZUJE notatki ogolne w sekcji
    „Bez przypisanego pomiaru" (spec karta-pacjenta-notatki-historia). Edytor twierdzil inaczej. */
-At.innerHTML="\u{1F4A1} Notatka og\xF3lna trafi w Historii do sekcji \u201EBez przypisanego pomiaru\u201D. Aby wpasowa\u0142a si\u0119 chronologicznie w o\u015B czasu, wybierz <strong>wizyt\u0119</strong> lub <strong>dat\u0119 zdarzenia</strong>.",pt.appendChild(At);var Dt=null;if(Et!==null){var ne=e("label",{class:"b3-anchor-option",style:"display:flex;align-items:flex-start;gap:8px;cursor:pointer;"});Dt=e("input",{type:"radio",name:"b3-anchor",value:"visit",style:"flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;"}),Dt.checked=Bt==="visit";var Jt=e("div",{style:"flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;"}),re=e("div",{style:"font-weight:500;"});re.appendChild(i.document.createTextNode("Powi\u0105\u017C z wizyt\u0105 ")),re.appendChild(e("strong",{text:"(wiek: "+Le(Et)+")",style:"font-weight:600;color:#0F6E56;"})),Jt.appendChild(re),Jt.appendChild(e("div",{text:"Pojawi si\u0119 w Historii pod chipem Pomiar.",style:"font-size:0.74rem;color:#9aa8aa;margin-top:2px;"})),ne.appendChild(Dt),ne.appendChild(Jt),pt.appendChild(ne);/* P-NOTATKI-2 (G8, decyzja wlasciciela D7): ostrzegamy, nie blokujemy. Notatka moze wyprzedzic zapis
+At.innerHTML="\u{1F4A1} Notatka og\xF3lna trafi w Historii do sekcji \u201EBez przypisanego pomiaru\u201D. Aby wpasowa\u0142a si\u0119 chronologicznie w o\u015B czasu, wybierz <strong>wizyt\u0119</strong> lub <strong>dat\u0119 zdarzenia</strong>.",pt.appendChild(At);if(EncounterEditor&&!n)At.textContent="Notatka ogólna pozostaje w kartotece pacjenta. Możesz też podać niezależną datę zdarzenia.";var Dt=null;if(Et!==null){var ne=e("label",{class:"b3-anchor-option",style:"display:flex;align-items:flex-start;gap:8px;cursor:pointer;"});Dt=e("input",{type:"radio",name:"b3-anchor",value:"visit",style:"flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;"}),Dt.checked=Bt==="visit";var Jt=e("div",{style:"flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;"}),re=e("div",{style:"font-weight:500;"});re.appendChild(i.document.createTextNode("Powi\u0105\u017C z wizyt\u0105 ")),re.appendChild(e("strong",{text:"(wiek: "+Le(Et)+")",style:"font-weight:600;color:#0F6E56;"})),Jt.appendChild(re),Jt.appendChild(e("div",{text:"Pojawi si\u0119 w Historii pod chipem Pomiar.",style:"font-size:0.74rem;color:#9aa8aa;margin-top:2px;"})),ne.appendChild(Dt),ne.appendChild(Jt),pt.appendChild(ne);/* P-NOTATKI-2 (G8, decyzja wlasciciela D7): ostrzegamy, nie blokujemy. Notatka moze wyprzedzic zapis
    pomiaru, ale lekarz ma wiedziec, ze w Historii zawisnie pod wiekiem bez danych pomiarowych. */
 var Qw=e("div",{style:"font-size:0.74rem;color:#7a5a1a;background:#fff8ee;border:0.5px solid #f0e0c8;border-radius:6px;padding:6px 8px;margin:-2px 0 0 24px;line-height:1.4;display:none;",text:"Dla tego wieku nie ma jeszcze zapisanego pomiaru \u2014 notatka zawi\u015Bnie w Historii pod t\u0105 kotwic\u0105, ale bez danych pomiaru. Zapisz pomiar przyciskiem \u201EZapisz dane\u201D, \u017Ceby je po\u0142\u0105czy\u0107."});pt.appendChild(Qw);try{var Qpi=t&&t.patientId;if(Qpi&&typeof Qpi=="string"&&Qpi.indexOf("__vilda")!==0&&typeof a.listPatientTimelineEvents=="function")Promise.resolve(a.listPatientTimelineEvents(Qpi)).then(function(Qev){try{var Qhas=(Qev||[]).some(function(Qx){return Qx&&Qx.type==="measurement"&&Qx.ageMonths===Et});!Qhas&&Qw.isConnected&&(Qw.style.display="block")}catch{}}).catch(function(){})}catch{}}var Pe=e("label",{class:"b3-anchor-option",style:"display:flex;align-items:flex-start;gap:8px;cursor:pointer;"}),Xt=e("input",{type:"radio",name:"b3-anchor",value:"date",style:"flex:0 0 auto;margin-top:2px;cursor:pointer;width:16px;height:16px;accent-color:#00838d;"});Xt.checked=!!EncounterOrigin||Bt==="date";var de=e("div",{style:"flex:1;font-size:0.86rem;color:#0f2b33;line-height:1.4;"},[e("div",{text:"Wpisz dat\u0119 zdarzenia",style:"font-weight:500;"}),e("div",{text:"Notatka wpasuje si\u0119 chronologicznie w Historii.",style:"font-size:0.74rem;color:#9aa8aa;margin-top:2px;"})]),ce=e("input",{type:"date",class:"vilda-auth-input b3-clinical-date",style:"width:100%;height:34px;padding:0 10px;font-size:0.9rem;border:0.5px solid #d7e9ec;border-radius:8px;background:#fff;color:#0f2b33;margin-top:6px;display:none;"});ce.value=r.clinicalDateISO||"";try{var Qmx=new Date(Date.now()+365*24*3600*1e3);ce.max=Qmx.getUTCFullYear()+"-"+String(Qmx.getUTCMonth()+1).padStart(2,"0")+"-"+String(Qmx.getUTCDate()).padStart(2,"0")}catch{}de.appendChild(ce),Pe.appendChild(Xt),Pe.appendChild(de),pt.appendChild(Pe);function Ee(){ce.style.display=Xt.checked?"block":"none",At.style.display=Nt.checked?"block":"none"}Nt.addEventListener("change",Ee),Dt&&Dt.addEventListener("change",Ee),Xt.addEventListener("change",Ee),ce.addEventListener("focus",function(){Xt.checked||(Xt.checked=!0,Ee())}),Ee(),c.appendChild(pt);
 if(EncounterOrigin) {
@@ -1236,6 +1251,7 @@ Qbase!=null&&(Vt.baseRev=Qbase);QbaseU!=null&&(Vt.baseUpdatedAtISO=QbaseU);Qbase
 if(EncounterOrigin){
   Vt.linkedAgeMonths=n ? r.linkedAgeMonths : null;
   Vt.clinicalDateISO=ce.value||null;
+  Vt.visitContext=EncounterOrigin;
 }
 if(EncounterBinding){
   if(!EncounterEditorCurrent() || !await EncounterBinding.ensureRecorded() || !EncounterEditorCurrent()){
@@ -1243,8 +1259,9 @@ if(EncounterBinding){
   }
   EncounterNoteId ||= "visit-note-"+Array.from(i.crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,"0")).join("");
   Vt.id=EncounterNoteId;Vt.visitContext=EncounterBinding.visitContext;
-  Gc3=await a.savePatientNoteOnce(Vt,{isCurrent:EncounterEditorCurrent});
+  Gc3=await a.savePatientNoteOnce(Vt,{isCurrent:EncounterEditorCurrent,requireActiveVisit:true});
   if(!Gc3?.saved){Gd3("Nie zapisano wpisu do wizyty. Sprawdź stan kartoteki i spróbuj ponownie.");return;}
+  if(!EncounterEditorCurrent())return;
 }else Gc3=await a.savePatientNote(Vt);if(Gc3&&Gc3.conflict===!0){Qkonflikt(Gc3);return}/* P-NOTATKI-3 (G26): id notatki do dziennika bierzemy z WYNIKU sejfu. Vt.id ustawia tylko galaz
    edycji, wiec "Utworzenie notatki" szlo do dziennika z noteId:null i wiersz w Ustawieniach nie
    mial czym wskazac notatki. Sciezka edycji bez zmian: sejf przy podanym id go nie regeneruje. */
@@ -2322,6 +2339,13 @@ function remB22Create(host, full, options) {
       var module = i.VildaCarePlans;
       if (!module || typeof module.mount !== 'function') { clear(careHost); careHost.appendChild(make('p', 'vb22-empty', 'Plany opieki są niedostępne. Odśwież aplikację.')); return; }
       careView = module.mount(careHost, { full: full, vault: vault, patientId: HomeRemindersContext && HomeRemindersContext.patientId || null, planId: planId || null, noteId: recordId || null, showCreateButton: false, remindersLayout: true,
+        captureVisitBinding: HomeRemindersContext ? function (patientId) {
+          if (patientId !== HomeRemindersContext.patientId) return null;
+          if (!HomeRemindersCurrent()) return {blocked:true};
+          var source = HomeRemindersContext.source;
+          if (source && source.blocked) return source;
+          return source && source.visitContext ? source : source && source.encounter ? {blocked:true} : null;
+        } : undefined,
         isCurrent: alive,
         openTemplates: openCareTemplates,
         onDialog: function (dialog) {
@@ -2847,7 +2871,7 @@ function remB22Create(host, full, options) {
         if (chosenPlan) {
           var careResult = await vault.mutateCarePlan({ planId: chosenPlan.id, patientId: chosenPatient.patientId, baseRev: chosenPlan.rev, operationId: noteId.slice('reminder-'.length), action: 'addStep',
             step: { title: title.value.trim(), kind: category.value === 'wynik-badania' ? 'Oczekujący wynik' : category.value === 'reminder-exam' ? 'Badanie' : category.value === 'followup' ? 'Kontrola' : category.value === 'reminder-contact' ? 'Kontakt' : 'Przypomnienie',
-              state: category.value === 'wynik-badania' ? 'waiting' : 'pending', reminderDateISO: date.value, reminderTime: time.value || null, description: body.value.trim(), eventDateISO: !eventFields.hidden && eventDate.value || null, eventTime: !eventFields.hidden && eventTime.value || null } });
+              state: category.value === 'wynik-badania' ? 'waiting' : 'pending', reminderDateISO: date.value, reminderTime: time.value || null, description: body.value.trim(), eventDateISO: !eventFields.hidden && eventDate.value || null, eventTime: !eventFields.hidden && eventTime.value || null } }, HomeRemindersContext && HomeRemindersContext.source && (HomeRemindersContext.source.blocked || HomeRemindersContext.source.visitContext) ? HomeRemindersContext.source : undefined);
           if (!alive()) return;
           if (!careResult || !careResult.saved) throw new Error(careResult && careResult.conflict ? 'Plan zmienił się w międzyczasie. Zachowaj treść i otwórz formularz ponownie.' : 'Nie udało się dodać kroku do planu.');
           state.busy = false; editing(false); state.tab = 'plans'; render(); mountCare(chosenPlan.id); await refresh(); return;
@@ -2859,7 +2883,7 @@ function remB22Create(host, full, options) {
           if (!recorded) throw new Error('Nie udało się zapisać wizyty. Spróbuj ponownie.');
         }
         var result = await vault.savePatientNoteOnce({ reminderContext: { version: 1, kind: 'reminder' },
-          ...(visit ? { visitContext: visit, clinicalDateISO: visit.clinicalDateISO } : {}), id: noteId, patientId: chosenPatient.patientId, title: title.value, category: category.value, dueDateISO: date.value, dueTime: time.value || null, body: (!eventFields.hidden && eventDate.value ? 'Ustalony termin badania / wizyty: ' + remB22Date(eventDate.value) + (eventTime.value ? ' · ' + eventTime.value : '') + '\n\n' : '') + body.value }, HomeRemindersContext ? { isCurrent: HomeRemindersCurrent } : undefined);
+          ...(visit ? { visitContext: visit, clinicalDateISO: visit.clinicalDateISO } : {}), id: noteId, patientId: chosenPatient.patientId, title: title.value, category: category.value, dueDateISO: date.value, dueTime: time.value || null, body: (!eventFields.hidden && eventDate.value ? 'Ustalony termin badania / wizyty: ' + remB22Date(eventDate.value) + (eventTime.value ? ' · ' + eventTime.value : '') + '\n\n' : '') + body.value }, HomeRemindersContext ? { isCurrent: HomeRemindersCurrent, requireActiveVisit: !!visit } : undefined);
         if (!alive()) return; if (!result.saved) throw new Error('Nie zapisano przypomnienia. Otwórz aktualny zapis pacjenta.');
         var savedNote = await vault.getPatientNote(noteId); if (!alive()) return;
         state.detached = savedNote ? { n: savedNote, name: chosenPatient.name, act: false, g: { patientId: savedNote.patientId } } : null;
@@ -3894,7 +3918,19 @@ function CarePatientRender(){
   if(!module||typeof module.mount!=="function"){oe(CarePatientHost);CarePatientHost.appendChild(e("p",{class:"vilda-patient-empty-msg",text:"Plany opieki są niedostępne. Odśwież aplikację."}));return}
   if(CarePatientView){CarePatientView.refresh();return}
   if(carePatientMount)carePatientMount.destroy();
-  CarePatientView=module.mount(CarePatientHost,{full:true,patientId:t,vault:o,captureVisitBinding:HomeInline&&HomeInline.captureVisitBinding,onDialog:HomePatientRequested?HomePatientDialog:void 0,planId:r&&r.carePlanId||null,noteId:r&&r.careNoteId||null,detail:r&&r.careDetail,isCurrent:function(){return remReadCurrent(CarePatientOwner)&&CarePatientHost.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())},
+  CarePatientView=module.mount(CarePatientHost,{full:true,patientId:t,vault:o,captureVisitBinding:HomeInline&&HomeInline.captureVisitBinding||
+  (HomePatientRequested&&i.__VILDA_HOME_GABINET_PREVIEW__===true?function(patientId){
+    if(patientId!==t)return null;
+    if(!HomePatientIsCurrent())return{blocked:true};
+    try{
+      if(i.VildaHomeGabinet){
+        return typeof i.VildaHomeGabinet.captureDocumentationBinding==="function"
+          ?i.VildaHomeGabinet.captureDocumentationBinding(patientId):{blocked:true};
+      }
+      return typeof i.VildaHomeEncounter?.captureDocumentationBinding==="function"
+        ?i.VildaHomeEncounter.captureDocumentationBinding(patientId):{blocked:true};
+    }catch(_){return{blocked:true}}
+  }:void 0),onDialog:HomePatientRequested?HomePatientDialog:void 0,planId:r&&r.carePlanId||null,noteId:r&&r.careNoteId||null,detail:r&&r.careDetail,isCurrent:function(){return remReadCurrent(CarePatientOwner)&&CarePatientHost.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())},
     openPatient:function(patientId,noteId){se(patientId,a,n,{activeTab:noteId?"notes":"care",focusNoteId:noteId||null})},
     openRecordDetails:async function(record,onChanged,isCurrentRecord){
       var note=await o.getPatientNote(record.id);

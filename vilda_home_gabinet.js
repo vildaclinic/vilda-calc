@@ -753,6 +753,13 @@
     openReminders: () => screen !== 'start' && showOverview('reminders'),
     captureVisitBinding: patientId => screen !== 'start' && target === patientId && owns(patientId)
       ? w.VildaHomeEncounter.captureBinding(patientId) : null,
+    captureDocumentationBinding(patientId, options = {}) {
+      if (screen === 'start' || target !== patientId) return null;
+      const ticket = sequence;
+      return w.VildaHomeEncounter.captureDocumentationBinding(patientId, {...options,
+        isCurrent: () => sequence === ticket && screen !== 'start' && target === patientId && owns(patientId) &&
+          (!options.isCurrent || options.isCurrent())});
+    },
     refreshStart: () => { install(); render(); return picker?.refresh(); }
   });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', install, {once:true}); else install();

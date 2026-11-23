@@ -35,7 +35,21 @@ Przypisanie musi być stabilne pomiędzy urządzeniami i utrwalone przed scaleni
 
 „Historia wersji” pozostaje narzędziem szczegółowej historii i jawnego przywracania. Osobna makieta przestrzennej osi wizyt nie jest częścią tej implementacji.
 
-Notatki ogólne, plany opieki, wyniki badań i historia leczenia zachowują dotychczasowe zasady. Nie przypisujemy ich do wizyty wyłącznie na podstawie takiej samej daty. Nowy identyfikator daje podstawę do późniejszych jednoznacznych powiązań i prezentacji stanu leczenia na dzień wizyty.
+### Dokumentacja otwartej wizyty
+
+W nowym Gabinecie zapis nowego wpisu z rozpoczętej lub edytowanej wizyty
+trafia automatycznie do tej wizyty. Obejmuje to m.in. notatki z Karty pacjenta,
+wyniki z Jednostek lab. i przypomnienia dodawane do planu. Formularz zachowuje
+`visitId` przechwycony przy otwarciu. Wybór innej wizyty, pacjenta lub konta
+unieważnia ten formularz. Notatka z rozpoczętej wizyty może być pierwszym
+zapisem wizyty bez pomiarów. Wspólna blokada zapisu nowego dokumentu
+i przeniesienia wizyty do kosza rozstrzyga, która operacja nastąpiła wcześniej.
+
+Data pobrania próbki, data zdarzenia i termin przypomnienia zachowują odrębne
+znaczenie. Edycja istniejącego wpisu zachowuje jego pierwotne pochodzenie.
+Wpisy ogólne pozostają dostępne podczas przeglądania kartoteki. Dawne wpisy
+zachowują zapisane daty i kotwice wieku. Historia rozpoznaje dokumenty
+konkretnej wizyty po jej identyfikatorze.
 
 ### Dokumentacja po przeniesieniu wizyty do kosza
 

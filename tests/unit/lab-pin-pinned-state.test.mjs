@@ -85,17 +85,47 @@ it('łączy wynik z wizytą aktywnego lekarza, zachowując datę pobrania i piln
   const binding = {visitContext, isCurrent: vi.fn(() => true), ensureRecorded: vi.fn(async () => true)};
   const vault = {...sejf(), captureSyncOperationSession: () => ({}), assertSyncOperationSession: () => {},
     getCurrentUser: () => ({userId: 'doctor-a'}), savePatientNoteOnce: vi.fn(async () => ({saved: true}))};
-  const home = {VildaVault: vault, VildaHomeGabinet: {captureVisitBinding: () => binding}};
-  const labPane = {}, homePane = {contentWindow: home};
-  const shell = {document: {querySelector: s => s.includes('title=') ? homePane : labPane}};
+  const shell = {VildaShell: {captureSessionWriter: () => ({}), isSessionWriterCurrent: vi.fn(() => true),
+    captureDocumentationBinding: vi.fn(() => binding)}};
+  const labPane = {classList: {contains: value => value === 'app-pane'}};
   const {win} = strona({vault, gabinet: {__VILDA_HOME_GABINET_PREVIEW__: true, parent: shell, frameElement: labPane}});
+  win.crypto = {randomUUID: vi.fn(() => "fictional-generated-id")};
   const capture = win.VildaLabVisitBinding.capture(PID);
   const note = {id: 'lab-a', patientId: PID, clinicalDateISO: '2026-10-05'};
   await capture.save(vault, note);
-  expect(vault.savePatientNoteOnce).toHaveBeenCalledWith({...note, visitContext}, {isCurrent: expect.any(Function)});
+  expect(vault.savePatientNoteOnce).toHaveBeenCalledWith({...note, visitContext}, {isCurrent: expect.any(Function), requireActiveVisit: true});
   binding.isCurrent.mockReturnValue(false);
   await expect(capture.save(vault, note)).rejects.toThrow();
   expect(vault.savePatientNoteOnce).toHaveBeenCalledTimes(1);
+
+  // A blocked open never becomes a general write when readiness changes.
+  shell.VildaShell.captureDocumentationBinding.mockReturnValueOnce({blocked: true});
+  const blocked = win.VildaLabVisitBinding.capture(PID);
+  await expect(blocked.save(vault, note)).rejects.toThrow();
+  expect(vault.savePatientNoteOnce).toHaveBeenCalledTimes(1);
+
+  // A genuine general result is still valid without a visit. If the user
+  // starts a consultation with this form already open, it must be reopened.
+  shell.VildaShell.captureDocumentationBinding.mockReturnValue(null);
+  const general = win.VildaLabVisitBinding.capture(PID);
+  await general.save(vault, note);
+  expect(vault.savePatientNoteOnce).toHaveBeenLastCalledWith(note, {isCurrent: expect.any(Function)});
+  shell.VildaShell.captureDocumentationBinding.mockReturnValue(binding);
+  await expect(general.save(vault, note)).rejects.toThrow();
+  expect(vault.savePatientNoteOnce).toHaveBeenCalledTimes(2);
+  shell.VildaShell.captureDocumentationBinding.mockReturnValue(null);
+  shell.VildaShell.isSessionWriterCurrent.mockReturnValue(false);
+  await expect(general.save(vault, note)).rejects.toThrow();
+  expect(vault.savePatientNoteOnce).toHaveBeenCalledTimes(2);
+
+  shell.VildaShell.isSessionWriterCurrent.mockReturnValue(true);
+  const {id, ...result} = note;
+  vault.savePatientNoteOnce.mockRejectedValueOnce(new Error('przerwane potwierdzenie'));
+  await expect(general.save(vault, result)).rejects.toThrow('przerwane potwierdzenie');
+  await general.save(vault, {...result});
+  const last = vault.savePatientNoteOnce.mock.calls.slice(-2);
+  expect(last[0][0].id).toBe(last[1][0].id);
+  expect(win.crypto.randomUUID).toHaveBeenCalledTimes(1);
 });
 
 describe('VildaLabPinResult._internal.resolve: stan „przypięty” wyniku formularza', () => {

@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { applyPatientProfileDelta, restorePatientProfileBaseline } from '../../tools/patient-profile-vault-delta.mjs';
+import { restoreVisitDocumentBaseline } from '../../tools/visit-document-vault-delta.mjs';
 
-const source = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
+const source = restoreVisitDocumentBaseline(readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8'));
 const manifest = JSON.parse(readFileSync(new URL('../../runtime/patient-profile-v1/manifest.json', import.meta.url), 'utf8'));
 const digest = text => createHash('sha256').update(text).digest('hex');
 function nativeFragment(text) {
