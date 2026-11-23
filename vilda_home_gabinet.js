@@ -61,9 +61,12 @@
   }
   function visitMeasurementsReadOnly() {
     if (isRapidIntake()) return !!rapid.receipt || rapid.busy;
-    if (!root || !target || screen === 'start') return false;
-    const mode = w.VildaHomeEncounter.state(target).mode;
-    return !owns(target) || (mode !== 'new' && mode !== 'edit');
+    // Documents can use the selected patient after the patient screen has closed.
+    const id = target || selected();
+    if (!id) return false;
+    if (!owns(id)) return true;
+    const mode = w.VildaHomeEncounter.state(id).mode;
+    return mode !== 'new' && mode !== 'edit';
   }
   function headerState() {
     const status = w.VildaHomeEncounter.state(target);
