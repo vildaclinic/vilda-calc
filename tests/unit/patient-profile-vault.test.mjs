@@ -14,10 +14,11 @@ function storage() {
   return { getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, String(value)),
     removeItem: key => values.delete(key), key: index => [...values.keys()][index] ?? null, get length() { return values.size; } };
 }
-async function device({ seed = true, account = true } = {}) {
+async function device({ seed = true, account = true, preview = true } = {}) {
   const win = { crypto: globalThis.crypto, TextEncoder, TextDecoder, btoa, atob, localStorage: storage(), sessionStorage: storage(),
     setTimeout, clearTimeout, addEventListener() {}, removeEventListener() {}, document: { hidden: false, addEventListener() {}, removeEventListener() {} } };
   win.window = win; win.self = win; win.top = win;
+  win.__VILDA_HOME_GABINET_PREVIEW__ = preview;
   for (const file of ['vilda_crypto.js', 'vilda_vault.js']) loadBrowserScript(file, win);
   const vault = win.VildaVault, adapter = vault.createInMemoryAdapter();
   vault.setEphemeralMode(true); vault.setStorageAdapter(adapter); devices.push(vault);
@@ -34,6 +35,22 @@ async function save(d, changes, patientId = d.patientId) {
 }
 
 describe('immutable patient profiles through the real encrypted vault', () => {
+  it('keeps non-preview patient reads and explicit visit saves free of profile lookups', async () => {
+    const d = await device(), saved = await save(d, data => { data.user.lastName = 'Fikcyjny Profil Zmieniony'; });
+    const original = d.adapter.listPatientNotesForUser.bind(d.adapter); let reads = 0;
+    d.adapter.listPatientNotesForUser = function (...args) { reads += 1; return original(...args); };
+    d.win.__VILDA_HOME_GABINET_PREVIEW__ = false;
+    const legacy = await d.vault.getPatient(d.patientId);
+    expect(legacy).not.toHaveProperty('profile'); expect(legacy.header.name).toBe(PATIENT.name);
+    expect((await d.vault.listPatientDirectory())[0].header.name).toBe(PATIENT.name);
+    expect(reads).toBe(0);
+    await d.vault.savePatient(clone(PATIENT), { patientId: d.patientId, dedup: false });
+    expect(reads).toBe(0);
+    d.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    await d.vault.savePatient(clone(PATIENT), { patientId: d.patientId, dedup: false });
+    expect(reads).toBe(0);
+    expect((await profile(d)).revisionId).toBe(saved.revisionId);
+  });
   it('reads legacy facts without writing or copying visit assessments into the profile', async () => {
     const d = await device(), snapshots = clone(await d.adapter.listSnapshotsForUser(d.userId, d.patientId));
     const current = await profile(d);

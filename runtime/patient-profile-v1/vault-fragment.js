@@ -10,6 +10,8 @@ function ProfileModel() {
   if (!v.VildaPatientProfileModel) throw ProfileFailure('UNSUPPORTED', 'Brak modułu kartoteki. Odśwież aplikację.');
   return v.VildaPatientProfileModel;
 }
+function ProfileEnabled() { return v.__VILDA_HOME_GABINET_PREVIEW__ === true; }
+const ProfileRawHeaderToken = {};
 function ProfileIsNote(note) { return ProfileModel().isRevision(note); }
 function ProfileContextState(value) {
   return value && Object.prototype.hasOwnProperty.call(value, 'profileContext')
@@ -104,7 +106,10 @@ function ProfileCapture(options) {
   check(); return { account: account, api: api, check: check };
 }
 async function ProfileHeaderIndex(check) {
-  const stored = await I().listPatientNotesForUser(b); if (check) check();
+  if (check) check();
+  const account = b, key = ot, adapter = I();
+  const stored = await adapter.listPatientNotesForUser(account); if (check) check();
+  if (!T() || b !== account || ot !== key || I() !== adapter) throw Bses_blad();
   const index = new Map();
   for (const row of stored) {
     if (!row || typeof row.id !== 'string' || row.id.indexOf('prf-') !== 0) continue;
@@ -141,6 +146,7 @@ async function ProfileRead(patientId, options, suppliedRecord) {
   scope.check(); return result;
 }
 async function ProfileEffectiveHeader(patientId, header, index) {
+  if (!ProfileEnabled()) return header;
   const scope = ProfileCapture(), notes = await ProfileRawNotes(patientId, scope.check, index);
   if (!notes.length) return header;
   // A directory only needs the profile log, never clinical snapshot payloads.
@@ -156,6 +162,7 @@ async function ProfileEffectiveHeader(patientId, header, index) {
   return result;
 }
 async function ProfilePublicPatient(patientId) {
+  if (!ProfileEnabled()) return VisitTrashPublicPatient(patientId);
   const record = await VisitTrashPublicPatient(patientId);
   if (!record) return record;
   record.profile = await ProfileRead(patientId, null, record);
@@ -186,7 +193,10 @@ function ProfileSaveIntent(request, options, resolving) {
   // actor. The established save-once API copies this immutable intent again
   // before waiting for the native workspace queue.
   let input, scope;
-  try { input = ProfileModel().clone(request); scope = ProfileCapture(options); }
+  try {
+    if (!ProfileEnabled()) throw ProfileFailure('UNSUPPORTED', 'Edycja niezależnej kartoteki jest dostępna w podglądzie.');
+    input = ProfileModel().clone(request); scope = ProfileCapture(options);
+  }
   catch (error) { return Promise.reject(error); }
   return (async function () {
     if (!input || typeof input.patientId !== 'string' || !input.patientId
@@ -230,8 +240,14 @@ function ProfileSaveIntent(request, options, resolving) {
     return after.profile;
   })();
 }
-async function ProfileNotesForMerge(patientId) {
-  return (await Fn(patientId)).concat(await ProfileRawNotes(patientId));
+const ProfileMergeReadToken = {};
+function ProfileIncludesMerge(read) { return !!read && read.token === ProfileMergeReadToken; }
+function ProfileCheckMergeRead(read) { if (ProfileIncludesMerge(read)) Bpz_pilnuj(read.operation); }
+async function ProfileNotesForMerge(patientId, operation) {
+  Bpz_pilnuj(operation);
+  const notes = await Fn(patientId, { token: ProfileMergeReadToken, operation: operation });
+  Bpz_pilnuj(operation);
+  return notes;
 }
 function ProfileInstallPresentation(api) {
   const get = api.getPatientNote;

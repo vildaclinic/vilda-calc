@@ -61,12 +61,19 @@ function declaredHooks(base, fragment) {
   }
   literal('visible-context-comparison', "'treatmentContext', 'visitContext'];", "'treatmentContext', 'profileContext', 'visitContext'];");
   fn('Ft', [['TreatmentContextField(TreatmentContextState(e)),EncounterNoteFields(e)', 'TreatmentContextField(TreatmentContextState(e)),ProfileContextField(ProfileContextState(e)),EncounterNoteFields(e)']]);
-  fn('Fn', [['return r.sort(Fr),r}', 'return r.sort(Fr),r.filter(function(note){return !ProfileIsNote(note)})}']]);
+  fn('Fn', [
+    ['async function Fn(t){', 'async function Fn(t,profileRead){'],
+    ['const n=(await I().listPatientNotesForUser(b)).filter(function(o){return o&&o.patientId===t}),r=[];',
+      'ProfileCheckMergeRead(profileRead);const ProfileRows=await I().listPatientNotesForUser(b);ProfileCheckMergeRead(profileRead);const n=ProfileRows.filter(function(o){return o&&o.patientId===t}),r=[];'],
+    ['for(let o=0;o<n.length;o+=1)r.push(await Ft(n[o]));',
+      'for(let o=0;o<n.length;o+=1){ProfileCheckMergeRead(profileRead);r.push(await Ft(n[o]));ProfileCheckMergeRead(profileRead)}'],
+    ['return r.sort(Fr),r}', 'return r.sort(Fr),ProfileIncludesMerge(profileRead)?r:r.filter(function(note){return !ProfileIsNote(note)})}'],
+  ]);
   fn('ht', [['VaultStrictReadAssert(session); notes.sort(Fr); return notes;', 'VaultStrictReadAssert(session); notes.sort(Fr); return notes.filter(function (note) { return !ProfileIsNote(note); });']]);
   fn('VildaOnceClinicalPayload', [['TreatmentContextState(note),', 'TreatmentContextState(note),\n    ProfileContextState(note),']]);
   fn('VildaSavePatientNoteOnce', [
     ['return Ac(next.id, async function () {', 'return ProfileCreateLock(next, treatmentOptions, function () { return Ac(next.id, async function () {'],
-    ['const saved = await Ad(next, { token:', 'await ProfileBeforeCreate(next, assertSession); assertSession();\n    const saved = await Ad(next, { token:'],
+    ['const saved = await Ad(next, { token:', 'if(Object.prototype.hasOwnProperty.call(next,"profileContext")){await ProfileBeforeCreate(next, assertSession); assertSession();}\n    const saved = await Ad(next, { token:'],
     ['  });\n}', '  }); });\n}'],
   ]);
   fn('Ad', [
@@ -79,28 +86,31 @@ function declaredHooks(base, fragment) {
   ]);
   fn('Eb', [['await CareMvpGuardStoredRecord(CareMvpDeleteRaw,CareMvpDeleteAssert);', 'ProfileGuardDelete(CareMvpDeleteRaw,Qwp);await CareMvpGuardStoredRecord(CareMvpDeleteRaw,CareMvpDeleteAssert);']]);
   fn('Le', [
-    ['Bem_zChmury(t);', 't=await ProfilePreflightSync(t);Bses_pilnuj(e);Bem_zChmury(t);'],
+    ['CareMvpPreflightPayload(t);', 'CareMvpPreflightPayload(t);t=await ProfilePreflightSync(t);Bses_pilnuj(e);'],
     ['let TreatmentMergedContext={present:false};', 'let TreatmentMergedContext={present:false};let ProfileMergedContext={present:false};'],
     ['TreatmentMergedContext=TreatmentContextState(z);', 'TreatmentMergedContext=TreatmentContextState(z);ProfileMergedContext=ProfileContextState(z);'],
     ['Object.assign(ze,TreatmentContextField(TreatmentContextMerge(TreatmentMergedContext,g,CareMvpIncomingWins)));', 'Object.assign(ze,TreatmentContextField(TreatmentContextMerge(TreatmentMergedContext,g,CareMvpIncomingWins)),ProfileContextField(ProfileContextMerge(ProfileMergedContext,g)));'],
   ]);
   fn('VaultPatientHeaders', [
-    ['const identities = await VisitTrashIdentityCounts(session);', 'const identities = await VisitTrashIdentityCounts(session);\n  const profileIndex = await ProfileHeaderIndex(function () { VaultStrictReadAssert(session); });'],
-    ['const isExternal = !!(header && header.external);', 'header = await ProfileEffectiveHeader(patient.patientId, header, profileIndex);\n    VaultStrictReadAssert(session);\n    const isExternal = !!(header && header.external);'],
+    ['const identities = await VisitTrashIdentityCounts(session);', 'const identities = await VisitTrashIdentityCounts(session);\n  const profileIndex = ProfileEnabled()?await ProfileHeaderIndex(function () { VaultStrictReadAssert(session); }):null;'],
+    ['const isExternal = !!(header && header.external);', 'if(profileIndex){header = await ProfileEffectiveHeader(patient.patientId, header, profileIndex);VaultStrictReadAssert(session);}\n    const isExternal = !!(header && header.external);'],
   ]);
   fn('Bpz_zapisWSesji', [
-    ['o=await I().listPatientsForUser(b),a=[];', 'o=await I().listPatientsForUser(b),a=[],ProfileDedupIndex=await ProfileHeaderIndex(function(){Bpz_pilnuj(Bpz_s)});'],
-    ['_=await G(E.headerCipher.iv,E.headerCipher.data)', '_=await ProfileEffectiveHeader(E.patientId,await G(E.headerCipher.iv,E.headerCipher.data),ProfileDedupIndex)'],
+    ['o=await I().listPatientsForUser(b),a=[];', 'o=await I().listPatientsForUser(b),a=[],ProfileDedupIndex=ProfileEnabled()&&(n.rapidVisit||!n.patientId&&!Ha(t)&&n.dedup!==false&&!n.forceNew)?await ProfileHeaderIndex(function(){Bpz_pilnuj(Bpz_s)}):null;'],
+    ['const E=o[m];let _=null;', 'Bpz_pilnuj(Bpz_s);const E=o[m];let _=null;'],
+    ['_=await G(E.headerCipher.iv,E.headerCipher.data)', '_=await G(E.headerCipher.iv,E.headerCipher.data);Bpz_pilnuj(Bpz_s);if(ProfileDedupIndex){_=await ProfileEffectiveHeader(E.patientId,_,ProfileDedupIndex);Bpz_pilnuj(Bpz_s)}'],
+    ['a.push(Object.assign({},E,{headerPlain:_}))', 'Bpz_pilnuj(Bpz_s);a.push(Object.assign({},E,{headerPlain:_}))'],
   ]);
-  fn('ct', [['const n=await G(e.headerCipher.iv,e.headerCipher.data),r=', 'const n=await ProfileEffectiveHeader(t,await G(e.headerCipher.iv,e.headerCipher.data)),r=']]);
-  fn('Bzu_dokad', [['naglowek = await G(k.headerCipher.iv, k.headerCipher.data)', 'naglowek = await ProfileEffectiveHeader(k.patientId, await G(k.headerCipher.iv, k.headerCipher.data))']]);
-  fn('Bks_brakKarty', [['const naglowek = await G(cel.headerCipher.iv, cel.headerCipher.data);', 'const naglowek = await ProfileEffectiveHeader(cel.patientId, await G(cel.headerCipher.iv, cel.headerCipher.data));']]);
-  fn('CalendarReadContext', [['return { patientId: record.patientId, header: header };', 'const profileIndex = await once(\'profile-index\', function () { return ProfileHeaderIndex(assertCurrent); });\n        const effective = await ProfileEffectiveHeader(patientId, header, profileIndex); assertCurrent();\n        return { patientId: record.patientId, header: effective };']]);
-  fn('RemA8History', [['const header = await G(patient.headerCipher.iv, patient.headerCipher.data);', 'const header = await ProfileEffectiveHeader(patient.patientId, await G(patient.headerCipher.iv, patient.headerCipher.data));']]);
-  fn('Bsc_podBlokada', [['const Bs=await Fn(t);', 'const Bs=await ProfileNotesForMerge(t);']]);
-  fn('$a', [['const o=await Fn(t);', 'const o=await ProfileNotesForMerge(t);']]);
-  fn('ns', [['const C=await G(A[N].headerCipher.iv,A[N].headerCipher.data);', 'const C=await ProfileEffectiveHeader(A[N].patientId,await G(A[N].headerCipher.iv,A[N].headerCipher.data));']]);
-  fn('ts', [['a=await G(r.headerCipher.iv,r.headerCipher.data),s=[];', 'a=await ProfileEffectiveHeader(t,await G(r.headerCipher.iv,r.headerCipher.data)),s=[];']]);
+  fn('ct', [['const n=await G(e.headerCipher.iv,e.headerCipher.data),r=', 'const n=ProfileEnabled()&&arguments[1]!==ProfileRawHeaderToken?await ProfileEffectiveHeader(t,await G(e.headerCipher.iv,e.headerCipher.data)):await G(e.headerCipher.iv,e.headerCipher.data),r=']]);
+  fn('hr', [['await ct(t)', 'await ct(t,ProfileRawHeaderToken)']]);
+  fn('Bzu_dokad', [['naglowek = await G(k.headerCipher.iv, k.headerCipher.data)', 'naglowek = ProfileEnabled()?await ProfileEffectiveHeader(k.patientId, await G(k.headerCipher.iv, k.headerCipher.data)):await G(k.headerCipher.iv, k.headerCipher.data)']]);
+  fn('Bks_brakKarty', [['const naglowek = await G(cel.headerCipher.iv, cel.headerCipher.data);', 'const naglowek = ProfileEnabled()?await ProfileEffectiveHeader(cel.patientId, await G(cel.headerCipher.iv, cel.headerCipher.data)):await G(cel.headerCipher.iv, cel.headerCipher.data);']]);
+  fn('CalendarReadContext', [['return { patientId: record.patientId, header: header };', 'if(!ProfileEnabled())return { patientId: record.patientId, header: header };\n        const profileIndex = await once(\'profile-index\', function () { return ProfileHeaderIndex(assertCurrent); });\n        const effective = await ProfileEffectiveHeader(patientId, header, profileIndex); assertCurrent();\n        return { patientId: record.patientId, header: effective };']]);
+  fn('RemA8History', [['const header = await G(patient.headerCipher.iv, patient.headerCipher.data);', 'const header = ProfileEnabled()?await ProfileEffectiveHeader(patient.patientId, await G(patient.headerCipher.iv, patient.headerCipher.data)):await G(patient.headerCipher.iv, patient.headerCipher.data);']]);
+  fn('Bsc_podBlokada', [['const Bs=await Fn(t);', 'const Bs=await ProfileNotesForMerge(t,Bsc_s);']]);
+  fn('$a', [['const o=await Fn(t);', 'const o=await ProfileNotesForMerge(t,Bme_s);']]);
+  fn('ns', [['const C=await G(A[N].headerCipher.iv,A[N].headerCipher.data);', 'const C=ProfileEnabled()?await ProfileEffectiveHeader(A[N].patientId,await G(A[N].headerCipher.iv,A[N].headerCipher.data)):await G(A[N].headerCipher.iv,A[N].headerCipher.data);']]);
+  fn('ts', [['a=await G(r.headerCipher.iv,r.headerCipher.data),s=[];', 'a=ProfileEnabled()?await ProfileEffectiveHeader(t,await G(r.headerCipher.iv,r.headerCipher.data)):await G(r.headerCipher.iv,r.headerCipher.data),s=[];']]);
   fn('Po', [['const note = await Ft(notes[index]);', 'const note = await Ft(notes[index]);\n    if (ProfileIsNote(note)) continue;']]);
   fn('Ao', [['const s=n[a];if(!s', 'const s=n[a];if(ProfileIsNote(s))continue;if(!s']]);
   literal('public-profile-api', 'getPatient:VisitTrashPublicPatient,getPatientVisits:',
