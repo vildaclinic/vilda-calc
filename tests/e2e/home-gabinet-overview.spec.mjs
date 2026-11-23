@@ -111,6 +111,13 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     await checkScroll('Szybka ścieżka', width < 500, entryBack);
     await entryBack.click();
     await start.locator('[data-entry="office"]').click();
+    await expect(start.getByRole('heading', { name: 'Gabinet', exact: true })).toBeFocused();
+    const search = start.getByRole('searchbox');
+    await expect(search).not.toBeFocused();
+    await expect(start.locator('#vgs-results')).toBeHidden();
+    await expect(start.getByRole('button', { name: 'Lista pacjentów', exact: true })).toHaveAttribute('aria-expanded', 'false');
+    await search.click();
+    await expect(search).toBeFocused();
     await expect(start.locator('.vgs-office-grid')).toBeVisible();
     await checkScroll('Gabinet', width < 500);
     await choosePatient(frame, 'Antoni');
