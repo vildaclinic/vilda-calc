@@ -253,7 +253,7 @@ describe('P-GH-PROGRAM-BIEZACY — monitor DocPro: pole, wiersz programu, nowy p
   const S1 = [P('s1-w', 'start', 7, 0, INC, 'IGF-1'), P('s1-k1', 'continue', 7, 6, GEN, 'IGF-1'), P('s1-k2', 'continue', 8, 0, GEN, 'IGF-1')];
   const S3 = PRZYPADKI['luka B: Kontynuacje Genotropin bez programu'][0];
   it.each([['S1 Genotropin z programem IGF-1', S1, 'IGF-1'], ['S3 luka B (Genotropin bez programu)', S3, 'IGF-1']])(
-    '%s, karta na Genotropin 12 mg: pole %s, karta zostaje przy Genotropin (bez zdarzeń), Kontynuacja z karty jak dotąd', (_n, lista, program) => {
+    '%s, karta na Genotropin 12 mg: pole IGF-1, karta zostaje przy Genotropin (bez zdarzeń), Kontynuacja z karty jak dotąd', (_n, lista, program) => {
       const a = atrapa(lista);
       const b = dotad(lista);
       for (const m of [a, b]) {
