@@ -2707,6 +2707,41 @@ w „Siatkach”). Sejf, dane, obliczenia, progi, teksty kafelków panelu i DocP
 (`tests/unit/care-plan-auth-ui-boundary.test.mjs`) dostał nowy odcisk z opisem zmiany (etykieta i opcja otwarcia Karty).
 Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-GH-PREPARAT-BIEZACY — Karta: Increlex czy rhGH wg bieżącego preparatu (`vilda_auth_ui.js` 581 → 582, 2026-11-23, decyzja właściciela)
+
+Czytelne źródło reguły: `vilda_auth_ui.js` — nowy czytelny blok P-GH-PREPARAT-BIEZACY zaraz po `Gw_punktyProgramu`
+(koniec bloku P-GH-WZNOWIENIE, przed blokiem P-KARTA-LECZENIE, etap 1): `Gp_ostatni` (ostatnia niepusta wartość pola
+w punktach GH listy wg wieku, od końca), `Gp_program` (program bieżący kursu), `Gp_increlexPunktu` (punkt pojedynczy:
+lek decyduje, bez leku — program punktu `/^IGF/`, jak dotąd), `Gp_biezacy` (stan bieżący podsumowania: lek bieżący,
+program bieżący, Increlex czy rhGH; bez żadnego leku — program „IGF-1”, jak dotąd w `wl`). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-PREPARAT-BIEZACY. Zminifikowane miejsca zmienione kotwicami występującymi
+dokładnie raz; skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_auth.py` + `gp_blok.js`) odtwarza wynik
+z `origin/audyt` a7b2920b; bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — Gwl_isInc (punkt pojedynczy: wiersz trendu xl, legenda Gwl_all, odcinki w kl, Historia/edytor Gwl_hist)
+// 1. function Gwl_isInc(d,p){return/^Increlex/.test(String(d||""))||/^IGF/.test(String(p||""))}
+//    → function Gwl_isInc(d,p){/* P-GH-PREPARAT-BIEZACY … */return Gp_increlexPunktu(d,p)}
+// vilda_auth_ui.js — wl (podsumowanie GH)
+// 2. var d=n[n.length-1],c=r.program||d.program||"",s=c==="IGF-1"||/^Increlex/.test(String(d.drug||r.drug||"")),
+//    → var d=n[n.length-1];/* P-GH-PREPARAT-BIEZACY … */var Gp_s=Gp_biezacy(Gw_p,d,r),c=Gp_s.program,s=Gp_s.increlex,
+//    (Gw_p — punkty bieżącego kursu wg wieku; jeden kurs — wszystkie punkty wg wieku; c i s zasilają jak dotąd znacznik,
+//    pole/cichy tekst „Program”, dymek, Gwl_inc/Kg_dawkaCz, Kl_wy.odznaka/dawka/dawkaCz/program/programPelny)
+// 3. h("Preparat",d.drug||r.drug||"—") → h("Preparat",Gp_s.lek||"—")
+// 4. Kl_wy.preparat=d.drug||r.drug||"" → Kl_wy.preparat=Gp_s.lek   (podpis kafelka „Preparat i dawka”, linia „Analizy”)
+// vilda_auth_ui.js — Pl (Trend leczenia GH): program pasa „Pokaż typowy zakres dawki”
+// 5. var d="",Gw_pp=Gw_punktyProgramu(a);if(Array.isArray(Gw_pp))for(var c=0;c<Gw_pp.length;c+=1){var s=Gw_pp[c];
+//    if(s&&s.program&&(d=s.program,s.type==="start"))break}
+//    → /* P-GH-PREPARAT-BIEZACY … */var d=Gp_program(Gw_punktyProgramu(a));
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+Kurs jednym preparatem z jednym programem w każdym punkcie — rysunek Karty (DOM), pasek i trend identyczne z `origin/audyt`
+(porównanie drzew DOM 18 przypadków × 3 konfiguracje modułów, poza repozytorium). Różnica tylko przy zmianie preparatu
+Increlex ↔ rhGH, punkcie bez leku lub programu i zmianie programu w kursie. `gh_therapy_monitor.js`, `gh_igf_therapy.js`,
+`gh_therapy_segments.js`, `vilda_vault.js`, sejf, zapis punktów i wpisów — bez zmian. Wersje `?v=`, precache
+i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

@@ -72,7 +72,8 @@ function karta(opcje) {
   return new Function('i', 'jt', 'Ot', 'oe', `${KOD}\nreturn { Kl_leczenie, Kl_zakladka, Kl_kolejnosc, Kl_daneOb, Kl_daneGh, wl, kl, Pl,
     Gw_pasy: typeof Gw_pasy == 'function' ? Gw_pasy : null,
     Ko_pierwszeZdanie: typeof Ko_pierwszeZdanie == 'function' ? Ko_pierwszeZdanie : null, Ko_CZESTOSC: typeof Ko_CZESTOSC == 'object' ? Ko_CZESTOSC : null,
-    Kg: typeof Kg_karta == 'function' ? { Kg_punktyTrendu, Kg_maTrend, Kg_opcjeKarty, Kg_dawkaCz, Gwl_inc } : null };`)(
+    Kg: typeof Kg_karta == 'function' ? { Kg_punktyTrendu, Kg_maTrend, Kg_opcjeKarty, Kg_dawkaCz, Gwl_inc } : null,
+    Gp: typeof Gp_biezacy == 'function' ? { Gp_biezacy, Gp_program, Gwl_isInc, Gwl_all } : null };`)(
     okno(opcje), () => null, (gdzie, blad) => bledy.push(`${gdzie}: ${blad && blad.message}`),
     (t) => { if (!t) return; while (t.firstChild) t.removeChild(t.firstChild); });
 }
@@ -1441,5 +1442,153 @@ describe('P-KARTA-LECZENIE, etap 3 — trend rysowany po odczycie notatek (async
     expect(b.w.document.activeElement).toBeNull();
     expect(kartaGh(r2.tresc).wybrany).toBe('przeglad');
     expect(bledy).toEqual([]);
+  });
+});
+
+// ── P-GH-PREPARAT-BIEZACY (decyzja właściciela 2026-11-23: „popraw ten błąd”; docs/clinical/ALGORITHMS.md) ──────────
+// Stan bieżący leczenia GH w Karcie opisuje BIEŻĄCY preparat (ostatni punkt wg wieku bieżącego kursu), nie program punktu
+// Włączenia: po zmianie Increlex → rhGH znacznik, program, „Aktualna dawka” (bez dzielenia dawki rhGH na podanie), kafelek,
+// pasek, cichy tekst i linia „Analizy” idą za Genotropinem. Punkt pojedynczy: lek decyduje, bez leku — program punktu.
+// Dane wyłącznie FIKCYJNE; testy wołają prawdziwe wl/kl/Pl/Kl_leczenie i blok Gp_* z vilda_auth_ui.js.
+const GEN = { drug: 'Genotropin 12 mg', program: 'SNP' };
+// I→G (zgłoszenie z przeglądu etapu 3): Włączenie Increlex 40 mg (IGF-1, 0,04 mg/kg na podanie), dwie Kontynuacje Genotropin.
+const G_I_DO_G = [GHP('ig-w', 'start', 7, 0, 18, 110, 0.08, { ...INC, doseAbs: 1.44 }),
+  GHP('ig-k1', 'continue', 7, 6, 19.6, 114.6, 0.033, { ...GEN, doseAbs: 0.65 }), GHP('ig-k2', 'continue', 8, 0, 21.3, 118.7, 0.033, { ...GEN, doseAbs: 0.7 })];
+// G→I (odwrotnie): Włączenie Genotropin (SNP), Kontynuacja Increlex 40 mg (IGF-1).
+const G_G_DO_I = [GHP('gi2-w', 'start', 7, 0, 18, 110, 0.025, { ...GEN, doseAbs: 0.45 }),
+  GHP('gi2-k', 'continue', 7, 6, 19.6, 114.6, 0.08, { ...INC, doseAbs: 1.6 })];
+const bezLeku = (p) => ({ ...p, drug: null, program: null });
+// Ostatni punkt bez leku i programu (stary zapis) po Genotropinie.
+const G_I_DO_G_BEZ_LEKU = [G_I_DO_G[0], G_I_DO_G[1], bezLeku(G_I_DO_G[2])];
+const G_BEZ_LEKU_NA_KONCU = [G1[0], G1[1], bezLeku(G1[2])];
+// Niespójny zapis: Genotropin z programem IGF-1.
+const G_NIESPOJNY = G1.map((p) => ({ ...p, program: 'IGF-1' }));
+// Wznowienie: kurs 1 Increlex (W → Z), kurs 2 Genotropin (W → K).
+const G_WZNOWIENIE_I_G = [GHP('wi-w', 'start', 7, 0, 18, 110, 0.08, { ...INC, doseAbs: 1.44 }), GHP('wi-z', 'end', 8, 0, 21, 117, 0.16, { ...INC, doseAbs: 3.36 }),
+  GHP('wg-w', 'start', 9, 0, 24, 123, 0.03, GEN), GHP('wg-k', 'continue', 10, 0, 27, 130, 0.033, GEN)];
+const wierszeTrendu = (k) => k.gh.widok('trend').querySelectorAll('tr').map(tekst);
+const odznaka = (k) => tekst(k.gh.el.querySelector('.vilda-gh-summary-badge'));
+const etykietaPrzelacznika = (k) => k.gh.el.querySelector('.vilda-kg-seg').getAttribute('aria-label');
+/** Pas „typowego zakresu” trendu (po kliknięciu „Pokaż typowy zakres dawki”): prostokąt pasa albo null. */
+function pasZakresu(K, punkty) {
+  const el = K.Pl('pacjent-fikcyjny', punkty);
+  const przycisk = el.querySelectorAll('[role="button"]').find((b) => tekst(b) === 'Pokaż typowy zakres dawki');
+  if (!przycisk) return null;
+  przycisk.click();
+  const r = el.querySelector('rect[fill="#E1F5EE"]');
+  return r ? { y: r.getAttribute('y'), h: r.getAttribute('height') } : null;
+}
+
+describe('P-GH-PREPARAT-BIEZACY — Karta opisuje bieżący preparat (Increlex → rhGH i odwrotnie)', () => {
+  it('I→G: znacznik rhGH, „Program SNP · 3 punkty kontrolne”, kafelek „0,033 mg/kg/d” · Genotropin 12 mg, pasek bez „na podanie”; trend per punkt', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_I_DO_G });
+    expect(odznaka(k)).toBe('Leczony hormonem wzrostu (rhGH)'); // dotąd „Leczony IGF-1 (mekasermina)”
+    expect(etykietaPrzelacznika(k)).toBe('Leczony hormonem wzrostu (rhGH) — widok karty');
+    expect(k.gh.cichy).toBe('Program SNP · 3 punkty kontrolne'); // dotąd „Program IGF-1 · …”
+    expect(k.gh.dymek).toBe('SNP — somatotropinowa niedoczynność przysadki');
+    expect(k.gh.kafelki[0]).toEqual({ k: 'Preparat i dawka', v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg', kolor: null });
+    expect(k.paski[0]).toEqual(expect.objectContaining({ odznaka: 'Leczony hormonem wzrostu (rhGH)', stan: 'aktywne' }));
+    expect(k.paski[0].czesci[0]).toBe('0,033 mg/kg/d'); // dotąd „2 × 0,35 mg na dobę (0,017 mg/kg na podanie)”
+    expect(k.paski[0].czesci.join(' · ')).not.toContain('na podanie');
+    expect(k.gh.cicha).toBe('SNP — somatotropinowa niedoczynność przysadki · Genotropin 12 mg · ostatnia kontrola w wieku 8 l. 0 mies.');
+    // trend: wiersz Increlex na podanie, wiersze Genotropin w mg/kg/d (jak dotąd — per punkt); legenda „dawka (mg/kg/d)”
+    expect(wierszeTrendu(k)).toEqual(['WiekDawkaIGF-1', '7 l. 0 mies.2 × 0,72 mg na dobę (0,04 mg/kg na podanie)—',
+      '7 l. 6 mies.0,033 mg/kg/d—', '8 l. 0 mies.0,033 mg/kg/d—']);
+    expect(tekst(k.gh.widok('trend'))).toContain('dawka (mg/kg/d)');
+    expect(tekst(k.gh.widok('trend'))).not.toContain('dawka (mg/kg na podanie)');
+  });
+
+  it('I→G z odcinkami leków: „🔄 zmiana preparatu”, „Preparaty (historia)” Increlex → Genotropin, % dawki zalecanej, odcinki na podanie / mg/kg/d', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_I_DO_G }, [], { odcinki: true });
+    expect(k.gh.znaczniki).toEqual(['aktywne', '🔄 zmiana preparatu']);
+    expect(k.gh.nad[0]).toMatch(/^Preparaty \(historia\)Increlex 40 mg7 l\. 0 mies\. – .*→Genotropin 12 mg7 l\. 6 mies\. · aktualny$/);
+    expect(odznaka(k)).toBe('Leczony hormonem wzrostu (rhGH)');
+    expect(k.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg' }));
+    expect(tekst(k.gh.widok('trend'))).toContain('Increlex 40 mgGenotropin 12 mg· % dawki zalecanej');
+    const analiza = tekst(k.gh.widok('analiza'));
+    expect(analiza).toContain('0,04 mg/kg na podanie'); // odcinek Increlex — per odcinek, jak dotąd
+    expect(analiza).toContain('0,033 mg/kg/d');
+  });
+
+  it('G→I: znacznik IGF-1, „2 × 0,8 mg na dobę” · 0,04 mg/kg na podanie · Increlex 40 mg, „Program IGF-1” (dotąd program Włączenia SNP)', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_G_DO_I });
+    expect(odznaka(k)).toBe('Leczony IGF-1 (mekasermina)');
+    expect(k.gh.cichy).toBe('Program IGF-1 · 2 punkty kontrolne');
+    expect(k.gh.dymek).toBe('IGF-1 — pierwotny niedobór IGF-1');
+    expect(k.gh.kafelki[0]).toEqual({ k: 'Preparat i dawka', v: '2 × 0,8 mg na dobę', sub: '0,04 mg/kg na podanie · Increlex 40 mg', kolor: null });
+    expect(k.paski[0].czesci[0]).toBe('2 × 0,8 mg na dobę (0,04 mg/kg na podanie)');
+    expect(wierszeTrendu(k).slice(1)).toEqual(['7 l. 0 mies.0,025 mg/kg/d—', '7 l. 6 mies.2 × 0,8 mg na dobę (0,04 mg/kg na podanie)—']);
+  });
+
+  it('cały kurs Increlex i cały kurs rhGH — znacznik, program, kafelek i pasek jak dotąd', () => {
+    const inc = zbuduj({ plec: 'M', ghTherapyPoints: G_INCRELEX });
+    expect([odznaka(inc), inc.gh.cichy, inc.paski[0].czesci[0]]).toEqual(['Leczony IGF-1 (mekasermina)', 'Program IGF-1 · 2 punkty kontrolne',
+      '2 × 2,4 mg na dobę (0,12 mg/kg na podanie)']);
+    const g1 = zbuduj({ plec: 'M', ghTherapyPoints: G1 });
+    expect([odznaka(g1), g1.gh.cichy, g1.gh.kafelki[0].v, g1.gh.kafelki[0].sub]).toEqual(['Leczony hormonem wzrostu (rhGH)',
+      'Program SNP · 3 punkty kontrolne', '0,033 mg/kg/d', 'Genotropin 12 mg']);
+  });
+
+  it('ostatni punkt bez leku po Genotropinie → rhGH, lek i program z wcześniejszego punktu kursu (dotąd przy Włączeniu Increlex — IGF-1)', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_I_DO_G_BEZ_LEKU });
+    expect(odznaka(k)).toBe('Leczony hormonem wzrostu (rhGH)');
+    expect(k.gh.cichy).toBe('Program SNP · 3 punkty kontrolne');
+    expect(k.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg' })); // dotąd preparat Włączenia
+    expect(wierszeTrendu(k)[3]).toBe('8 l. 0 mies.0,033 mg/kg/d—');
+    // ten sam lek przez cały kurs, ostatni punkt bez leku — jak dotąd
+    const g = zbuduj({ plec: 'M', ghTherapyPoints: G_BEZ_LEKU_NA_KONCU });
+    expect([odznaka(g), g.gh.cichy, g.gh.kafelki[0].v, g.gh.kafelki[0].sub]).toEqual(['Leczony hormonem wzrostu (rhGH)',
+      'Program SNP · 3 punkty kontrolne', '0,033 mg/kg/d', 'Genotropin 12 mg']);
+  });
+
+  it('niespójny zapis: Genotropin z programem IGF-1 → rhGH (lek decyduje), dawka i tabela w mg/kg/d; program pokazany jak zapisany', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_NIESPOJNY });
+    expect(odznaka(k)).toBe('Leczony hormonem wzrostu (rhGH)'); // dotąd „Leczony IGF-1 (mekasermina)”
+    expect(k.gh.cichy).toBe('Program IGF-1 · 3 punkty kontrolne');
+    expect(k.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg' }));
+    expect(wierszeTrendu(k).slice(1)).toEqual(['7 l. 0 mies.0,025 mg/kg/d—', '8 l. 0 mies.0,028 mg/kg/d—', '10 l. 0 mies.0,033 mg/kg/d—']);
+    expect(tekst(k.gh.widok('trend'))).toContain('dawka (mg/kg/d)');
+  });
+
+  it('wznowienie: kurs 1 Increlex (W → Z), kurs 2 Genotropin → bieżący kurs rhGH, „Program SNP · 2 punkty kontrolne w kursie (4 łącznie)”', () => {
+    const k = zbuduj({ plec: 'M', ghTherapyPoints: G_WZNOWIENIE_I_G });
+    expect(k.gh.znaczniki).toEqual(['aktywne', 'kurs 2 z 2']);
+    expect(odznaka(k)).toBe('Leczony hormonem wzrostu (rhGH)');
+    expect(k.gh.cichy).toBe('Program SNP · 2 punkty kontrolne w kursie (4 łącznie)');
+    expect(k.gh.kafelki[0]).toEqual(expect.objectContaining({ v: '0,033 mg/kg/d', sub: 'Genotropin 12 mg' }));
+    expect(wierszeTrendu(k)[1]).toBe('7 l. 0 mies.2 × 0,72 mg na dobę (0,04 mg/kg na podanie)—');
+  });
+
+  it('trend: pas „typowego zakresu” z programu bieżącego (I→G — pas SNP, jak przy samym SNP; dotąd pas IGF-1)', () => {
+    const K = karta();
+    const igSnp = G_I_DO_G.map((p) => ({ ...p, program: 'SNP' }));
+    const pas = pasZakresu(K, G_I_DO_G);
+    expect(pas).not.toBeNull();
+    expect(pas).toEqual(pasZakresu(K, igSnp));
+    expect(pas).not.toEqual(pasZakresu(K, G_I_DO_G.map((p) => ({ ...p, program: 'IGF-1' }))));
+    // wiersze tabeli trendu nie zależą od programu punktu, gdy punkt ma lek
+    expect(K.Pl('pacjent-fikcyjny', G_I_DO_G).querySelectorAll('tr').map(tekst)).toEqual(K.Pl('pacjent-fikcyjny', igSnp).querySelectorAll('tr').map(tekst));
+  });
+
+  it('reguła w kodzie (blok Gp_*): lek bieżący, program bieżący i Increlex czy rhGH; punkt pojedynczy — lek decyduje, bez leku program', () => {
+    const { Gp } = karta();
+    expect(Gp).not.toBeNull();
+    const [w, k1, k2] = G_I_DO_G;
+    expect(Gp.Gp_biezacy(G_I_DO_G, k2, w)).toEqual({ lek: 'Genotropin 12 mg', program: 'SNP', increlex: false });
+    expect(Gp.Gp_biezacy(G_I_DO_G_BEZ_LEKU, G_I_DO_G_BEZ_LEKU[2], w)).toEqual({ lek: 'Genotropin 12 mg', program: 'SNP', increlex: false });
+    expect(Gp.Gp_biezacy(G_INCRELEX, G_INCRELEX[1], G_INCRELEX[0])).toEqual({ lek: 'Increlex 40 mg', program: 'IGF-1', increlex: true });
+    // bez żadnego leku — program bieżący „IGF-1” (jak dotąd)
+    const bez = G_INCRELEX.map(bezLeku).map((p) => ({ ...p, program: 'IGF-1' }));
+    expect(Gp.Gp_biezacy(bez, bez[1], bez[0])).toEqual({ lek: '', program: 'IGF-1', increlex: true });
+    expect(Gp.Gp_biezacy([bezLeku(k1)], bezLeku(k1), bezLeku(k1))).toEqual({ lek: '', program: '', increlex: false });
+    expect(Gp.Gp_program([w, k1, bezLeku(k2)])).toBe('SNP');
+    // punkt pojedynczy (Gwl_isInc: wiersz trendu, legenda, odcinki, Historia)
+    expect(Gp.Gwl_isInc('Increlex 40 mg', 'SNP')).toBe(true);
+    expect(Gp.Gwl_isInc('Genotropin 12 mg', 'IGF-1')).toBe(false); // dotąd true (program IGF*)
+    expect(Gp.Gwl_isInc(null, 'IGF-1')).toBe(true);
+    expect(Gp.Gwl_isInc('', 'IGF‑1 (niedobór IGF‑1 – mekasermina)')).toBe(true); // etykieta programu we wpisie Terminarza
+    expect(Gp.Gwl_isInc('Genotropin 12 mg', 'SNP')).toBe(false);
+    expect(Gp.Gwl_all([{ drug: 'Increlex 40 mg', program: 'IGF-1' }, { drug: null, program: 'IGF-1' }])).toBe(true);
+    expect(Gp.Gwl_all([{ drug: 'Increlex 40 mg', program: 'IGF-1' }, { drug: 'Genotropin 12 mg', program: 'IGF-1' }])).toBe(false);
   });
 });
