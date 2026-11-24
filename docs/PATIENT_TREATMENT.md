@@ -61,7 +61,8 @@ a brak pola — `none`. Brak rozpoznania lub leczenia nie jest oceną kliniczną
 przechwytuje bieżącą sesję sejfu i zwraca:
 
 - `read()` → `{ patientId, diagnoses, episodes, unsupported }`;
-- `createDiagnosis(values)` / `updateDiagnosis(dto, values)`;
+- `createDiagnosis(values, binding)` / `updateDiagnosis(dto, values, binding)`;
+- `removeDiagnosis(dto, binding)` → `{ id, removed: true }`;
 - `createEpisode(values)` / `updateEpisode(dto, values)`;
 - `addFollowup(dto, values)` / `updateFollowup(dto, id, values)`;
 - `dispose()`.
@@ -74,6 +75,26 @@ kolejnym krokiem. Opcjonalny zaufany drugi argument `{ isCurrent }` tych dwóch
 istniejących aktorów jest sprawdzany również w ich dotychczasowej kontroli
 `beforeCommit`, po szyfrowaniu i przed przekazaniem wiersza adapterowi. Callback
 nie jest częścią notatki i nie trafia do eksportu.
+
+Edycja i usunięcie istniejącego rozpoznania z `visitContext` wymagają bindingu
+otwartej tej samej wizyty. Porównujemy trwały `visitId`; poprawienie daty wizyty
+nie zmienia pierwotnego pochodzenia rozpoznania ani nie blokuje jego edycji.
+Brak właściwej otwartej wizyty lub przeniesienie jej równolegle do kosza daje
+`TREATMENT_VISIT_READONLY`. Ogólne rozpoznanie pozostaje ogólne i ignoruje binding
+innej otwartej wizyty. Istniejące operacje nie wywołują `ensureRecorded`.
+
+`removeDiagnosis` sprawdza przechwyconą rewizję przez natywnego aktora
+`removeExistingPatientNote` z opcjonalnym zaufanym `{ isCurrent }`. Zapis usuwa
+wyłącznie ten rekord oraz tworzy zwykły nagrobek notatki do synchronizacji.
+Scoped usunięcie i nagrobek mają jeden atomowy commit: transakcję IndexedDB,
+podmianę obu map pamięci albo istniejący etap chronionego workspace.
+Kontrola otwartej wizyty odbywa się pod tą samą blokadą pacjenta co kosz wizyt;
+chroniony workspace zachowuje własną natywną granicę zatwierdzania sesji.
+Konflikt rewizji daje `TREATMENT_CONFLICT`; utrata właściciela przed rozpoczęciem
+zatwierdzania zatrzymuje operację. Usunięcie nie zamyka terapii, nie kasuje jej
+`diagnosisIds`, nie zmienia pomiarów ani snapshotu wizyty. Dotychczasowe
+odwołanie do usuniętego rozpoznania pozostaje „Rozpoznanie niedostępne”. Nie ma
+osobnego przywracania rozpoznań z kosza wizyt.
 
 Odczyty i otwieranie zakładki niczego nie zapisują. Nieobsługiwany kontekst jest
 tylko do odczytu również w dawnych ścieżkach edycji notatek. Natywne przeniesienie
@@ -145,3 +166,9 @@ punktów włączenia. `tools/patient-treatment-vault-delta.mjs` sprawdza pełne
 odwrócenie warstwy i odtworzenie jej bajtów; nie formatuje pozostałego sejfu.
 Chroniony blok natywnego clinical workspace pozostaje bez zmian. Aktualną bazę
 tego prywatnego składacza opisuje jego własny manifest granicy.
+
+Opcjonalną granicę edycji i usuwania rozpoznań odtwarza odrębna warstwa
+`runtime/diagnosis-mutation-v1/vault-fragment.js` oraz
+`tools/diagnosis-mutation-vault-delta.mjs`. Przypina ona dokładny wcześniejszy
+obraz staged-documentation i odwraca wyłącznie zadeklarowane hooki. Historyczne
+źródła wcześniejszych warstw i chroniony blok natywny pozostają identyczne.

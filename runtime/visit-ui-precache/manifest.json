@@ -123,12 +123,12 @@
       "sha256": "1b40e199c72ad2fd841470e6988999fb97e5188f98e845668406fb499eb5b5e3"
     },
     {
-      "path": "vilda_patient_treatment_ui.js?v=4",
-      "sha256": "a38bb8ffc775199b116c7723855cc57b84ace19e35f3184b65d26ea2816d1188"
+      "path": "vilda_patient_treatment_ui.js?v=5",
+      "sha256": "9a10dca6550851005701af92aef7a429c85c631a3d7c9678177fdf95bb128765"
     },
     {
-      "path": "vilda_patient_treatment_ui.css?v=1",
-      "sha256": "190ab193df13c34e6d64d05523ebea26c9dc612c6ce00ba03ca1b960f5e6d90b"
+      "path": "vilda_patient_treatment_ui.css?v=2",
+      "sha256": "cde83b4036c94e3f98e220762a2646b41e593871069c1b7f84445862dd2bdfa7"
     },
     {
       "path": "vilda_home_patient_native_note.js?v=1",
@@ -183,8 +183,8 @@
       "sha256": "b682edb906d078b0e27c4ea759eec5e99d9f2d800d128fe30c2620893ee0e9df"
     },
     {
-      "path": "vilda_home_gabinet.js?v=16",
-      "sha256": "dce1a11613c047d770a20b189a9c900470923202723e48d18e5a29a0b66d7d91"
+      "path": "vilda_home_gabinet.js?v=17",
+      "sha256": "1ef1180eb887dd5deebb6aa327b72c7c4262641c25319e4cc9085dffc33e2732"
     },
     {
       "path": "vilda_home_visit_scene.css?v=2",
@@ -228,9 +228,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-64d7b4c26bdc.json",
-    "sha256": "64d7b4c26bdc752b50158339f54d8243232a094bff006f3e0d6feb7a5e408fc4",
-    "byteLength": 2083655
+    "path": "runtime/visit-ui-precache/precache-c76fef16d270.json",
+    "sha256": "c76fef16d270e5a1a9c0b323250378f814fac356c0d8eec27bc55d5f521d6b3e",
+    "byteLength": 2086871
   },
   "historicalPacks": [
     {
@@ -692,6 +692,11 @@
       "path": "runtime/visit-ui-precache/precache-c3406618be20.json",
       "sha256": "c3406618be20955433d6bac4de2c6cbef7d2c4ecdd43974942245bbe262d6ccb",
       "byteLength": 2079974
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-64d7b4c26bdc.json",
+      "sha256": "64d7b4c26bdc752b50158339f54d8243232a094bff006f3e0d6feb7a5e408fc4",
+      "byteLength": 2083655
     }
   ]
 }

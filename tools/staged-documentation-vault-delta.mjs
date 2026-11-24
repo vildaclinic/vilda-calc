@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
+import { restoreDiagnosisMutationBaseline } from './diagnosis-mutation-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = '1deef4e3ad53d4b3737adbb98688995f44c0c9675372a262a15d28fee35162de';
@@ -46,6 +47,7 @@ export function applyStagedDocumentationDelta(base, root = ROOT) {
   return built.source;
 }
 export function restoreStagedDocumentationBaseline(source, root = ROOT) {
+  source = restoreDiagnosisMutationBaseline(source, root);
   if (!source.includes(START)) return source;
   const restored = once(source, hook(root).installed, INSTALL);
   // The reviewed base plus the single exact hook uniquely determines the image.
@@ -62,7 +64,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     writeFileSync(resolve(ROOT, MANIFEST), JSON.stringify(built.manifest, null, 2) + '\n');
     writeFileSync(resolve(outputPath), built.source);
   } else if (command === undefined) {
-    const source = readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8');
+    const source = restoreDiagnosisMutationBaseline(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
     if (applyStagedDocumentationDelta(restoreStagedDocumentationBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Staged documentation: exact outer Vault layer verified.\n');
   } else fail('usage: node tools/staged-documentation-vault-delta.mjs [--build BASE_FILE OUTPUT_FILE]');

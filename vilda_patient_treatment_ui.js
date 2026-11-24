@@ -64,6 +64,7 @@
   }
   function message(error) {
     var code = String(error && error.code || '');
+    if (code === 'TREATMENT_VISIT_READONLY') return 'Wybierz „Edytuj wizytę” dla daty przypisanej do rozpoznania.';
     if (/CONFLICT|REVISION|CHANGED/.test(code)) return 'Zapis zmienił się w innym miejscu. Zachowaj wpisaną treść, anuluj formularz i otwórz aktualny zapis.';
     if (/STALE|SESSION|LOCK|OWNER/.test(code)) return 'Sesja lub pacjent uległy zmianie. Otwórz ponownie aktualną Kartę pacjenta.';
     if (/INVALID|VALIDATION/.test(code)) return error && error.forUser && error.message ? error.message : 'Sprawdź pola formularza i daty. Nie udało się zapisać wpisu.';
@@ -269,6 +270,7 @@
     view.dialog.setAttribute('aria-busy', String(value));
     if (!value) {
       view.dialog.querySelector('.vhome-dialog-apply').disabled = view.uncertain;
+      if (view.removeButton) view.removeButton.disabled = view.uncertain;
       syncEditor(view);
     }
   }
@@ -288,7 +290,7 @@
     view.dialog.removeAttribute('aria-busy'); view.dialog.removeAttribute('aria-modal');
     var ownerLabel = view.dialog.querySelector('.vpt-editor-owner'); ownerLabel.textContent = ''; ownerLabel.hidden = true;
     wipe(view.dialog.querySelector('.vhome-dialog-body')); view.dialog.remove();
-    view.submit = null; view.form = null; view.dto = null;
+    view.submit = null; view.form = null; view.dto = null; view.removeButton = null;
     if (focus && current(view.owner)) {
       if (view.opener && view.opener.isConnected) view.opener.focus({ preventScroll: true }); else focusHint(view.owner, view.hint);
     }
@@ -305,31 +307,46 @@
     var method = view.form.elements.namedItem('method').value;
     view.form.querySelector('[data-treatment-medication-fields]').hidden = method !== 'pharmacological';
   }
-  async function submitEditor() {
-    var view = activeEditor;
-    if (!editorCurrent(view) || view.saving || view.uncertain || !view.form.reportValidity()) return;
-    var values;
-    try { values = view.read(new w.FormData(view.form)); }
-    catch (_) { editorError(view, 'Sprawdź pola formularza.'); return; }
+  async function writeEditor(view, operation, removing) {
     view.error.hidden = true; view.error.textContent = ''; setWorking(view, true);
     try {
       if (!editorCurrent(view)) { if (activeEditor === view) closeEditor(view, true, false); return; }
-      var result = await view.submit(values, view.visitBinding);
+      var result = await operation();
       if (!editorCurrent(view)) { if (activeEditor === view) closeEditor(view, true, false); return; }
-      var owner = view.owner; owner.restoreHint = view.hint; owner.pendingRefresh = false;
+      var owner = view.owner;
+      owner.restoreHint = removing ? { action: 'new-diagnosis' } : view.hint;
+      owner.pendingRefresh = false;
       if (view.kind === 'therapy' || view.kind === 'followup') owner.selected = result.id;
       closeEditor(view, true, false);
       if (!current(owner)) return;
       await refresh(owner);
       if (!current(owner)) return;
-      status(owner, 'Zapisano dokumentację leczenia.'); changed(owner);
+      status(owner, removing ? 'Usunięto rozpoznanie.' : 'Zapisano dokumentację leczenia.'); changed(owner);
     } catch (error) {
       if (!editorCurrent(view)) { if (activeEditor === view) closeEditor(view, true, false); return; }
       // A failed post-write reread can leave an unknown outcome. Repeated
       // create would allocate a new note ID; require a fresh explicit editor.
-      view.uncertain = !/INVALID|VALIDATION/.test(String(error && error.code || ''));
+      view.uncertain = !/INVALID|VALIDATION|TREATMENT_VISIT_READONLY/.test(String(error && error.code || ''));
       setWorking(view, false); editorError(view, message(error));
     }
+  }
+  async function submitEditor() {
+    var view = activeEditor;
+    if (!editorCurrent(view) || view.readOnly || view.saving || view.uncertain || !view.form.reportValidity()) return;
+    var values;
+    try { values = view.read(new w.FormData(view.form)); }
+    catch (_) { editorError(view, 'Sprawdź pola formularza.'); return; }
+    await writeEditor(view, function () { return view.submit(values, view.visitBinding); }, false);
+  }
+  async function removeDiagnosis(view) {
+    if (!editorCurrent(view) || view.readOnly || view.saving || view.uncertain) return;
+    var question = view.dto.baseNote.visitContext ? 'Usunąć to rozpoznanie z dokumentacji wizyty?' : 'Usunąć to rozpoznanie z kartoteki pacjenta?';
+    if (view.owner.data.episodes.some(function (entry) { return entry.context.diagnosisIds.includes(view.dto.id); })) {
+      question += ' W powiązanym leczeniu pojawi się informacja „Rozpoznanie niedostępne”.';
+    }
+    if (view.dirty) question += ' Zmiany w formularzu zostaną odrzucone.';
+    if (!w.confirm(question) || !editorCurrent(view)) return;
+    await writeEditor(view, function () { return view.owner.scope.removeDiagnosis(view.dto, view.visitBinding); }, true);
   }
   function openEditor(owner, options) {
     if (!current(owner) || owner.phase !== 'ready') return false;
@@ -337,8 +354,10 @@
     if (visitBinding?.blocked) { status(owner, 'Poczekaj na zakończenie operacji wizyty i ponownie otwórz formularz.', true); return false; }
     if (activeEditor && !closeEditor(activeEditor, false, true)) return false;
     var dialog = ensureEditor(); if (!dialog) { status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
+    var diagnosisVisit = options.kind === 'diagnosis' ? options.dto?.baseNote.visitContext : null;
     var opener = d.activeElement, view = { owner: owner, dialog: dialog, kind: options.kind, dto: options.dto || null,
       opener: opener, hint: { action: opener && opener.dataset.treatmentAction, id: opener && opener.dataset.treatmentId },
+      readOnly: !!diagnosisVisit && diagnosisVisit.visitId !== visitBinding?.visitContext?.visitId,
       dirty: false, saving: false, uncertain: false, closed: false, beforeUnload: null, submit: options.submit, read: options.read, releaseBack: null, releaseDialog: null, history: null, picker: null };
     view.visitBinding = visitBinding;
     activeEditor = view;
@@ -347,11 +366,13 @@
     ownerLabel.textContent = typeof owner.options.patientLabel === 'string' ? owner.options.patientLabel : ''; ownerLabel.hidden = !ownerLabel.textContent;
     var saveButton = dialog.querySelector('.vhome-dialog-apply');
     saveButton.textContent = options.saveLabel || 'Zapisz'; saveButton.type = 'submit'; saveButton.setAttribute('form', 'vhomePatientTreatmentForm');
+    saveButton.hidden = view.readOnly;
     dialog.querySelectorAll('button').forEach(function (control) { control.disabled = false; });
     var form = node('form', 'vpt-form'); form.id = 'vhomePatientTreatmentForm'; form.dataset.treatmentForm = options.kind;
     view.form = form; view.error = node('p', 'vpt-error'); view.error.hidden = true; view.error.tabIndex = -1; view.error.setAttribute('role', 'alert'); form.appendChild(view.error);
     try { options.build(form, view); }
     catch (_) { closeEditor(view, true, false); status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
+    if (view.readOnly) form.querySelectorAll('input,select,textarea,button').forEach(function (control) { control.disabled = true; });
     dialog.querySelector('.vhome-dialog-body').replaceChildren(form);
     form.addEventListener('submit', function (event) { event.preventDefault(); submitEditor(); });
     if (!dialog.isConnected) d.body.appendChild(dialog);
@@ -379,7 +400,8 @@
           isOpen: function () { return editorCurrent(view) && dialog.open; }, requestClose: function () { return closeEditor(view, false, true); } }); view.history.enter();
       }
       syncEditor(view);
-      var first = form.querySelector('input,select,textarea'); if (first) first.focus({ preventScroll: true });
+      var first = form.querySelector('input:not(:disabled),select:not(:disabled),textarea:not(:disabled)') || dialog.querySelector('.vhome-dialog-cancel');
+      first?.focus({ preventScroll: true });
       return true;
     } catch (_) { closeEditor(view, true, false); status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
   }
@@ -400,15 +422,31 @@
     var context = dto && dto.context || {};
     openEditor(view, { kind: 'diagnosis', dto: dto, title: dto ? 'Edytuj rozpoznanie' : 'Dodaj rozpoznanie',
       build: function (form, editor) {
-        var grid = node('div', 'vpt-form-grid'), name = field('Nazwa rozpoznania', 'name', context.name, 'text', true, 200), code = node('div');
+        var visit = editor.visitBinding?.visitContext;
+        if (dto && (!dto.baseNote.visitContext || editor.readOnly)) visit = dto.baseNote.visitContext;
+        var destination = visit ? (editor.readOnly ? 'Powiązanie z wizytą z ' : 'Zapis z powiązaniem do wizyty z ') + dateLabel(visit.clinicalDateISO)
+          : 'Zapis w kartotece pacjenta';
+        form.appendChild(node('p', 'vpt-editor-context', destination));
+        if (editor.readOnly) form.appendChild(node('p', 'vpt-meta', 'Aby zmienić lub usunąć rozpoznanie, wybierz „Edytuj wizytę” dla tej daty.'));
+        var grid = node('div', 'vpt-form-grid'), name = field('Nazwa rozpoznania', 'name', context.name, 'text', true, 200);
+        var code = editor.readOnly ? field('Kod ICD-10', 'code', context.code, 'text') : node('div');
         grid.append(name, code,
           select('Status rozpoznania', 'status', [['active', 'Aktywne'], ['closed', 'Zamknięte']], context.status || 'active'), field('Data rozpoznania', 'dateISO', context.dateISO || today(), 'date', true));
-        form.append(grid, node('p', 'vpt-meta', 'Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10.'));
-        editor.picker = w.VildaICD10Picker.mount({ host: code, nameInput: name.querySelector('input'), code: context.code,
-          isCurrent: function () { return editorCurrent(editor) && !editor.saving && !editor.uncertain; },
-          onCommit: function () { if (editorCurrent(editor) && !editor.saving && !editor.uncertain) { editor.dirty = true; syncEditor(editor); } } });
+        form.appendChild(grid);
+        if (!editor.readOnly) {
+          form.appendChild(node('p', 'vpt-meta', 'Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10.'));
+          editor.picker = w.VildaICD10Picker.mount({ host: code, nameInput: name.querySelector('input'), code: context.code,
+            isCurrent: function () { return editorCurrent(editor) && !editor.saving && !editor.uncertain; },
+            onCommit: function () { if (editorCurrent(editor) && !editor.saving && !editor.uncertain) { editor.dirty = true; syncEditor(editor); } } });
+        }
+        if (dto) {
+          editor.removeButton = node('button', 'vpt-button vpt-remove', 'Usuń rozpoznanie');
+          editor.removeButton.type = 'button'; editor.removeButton.dataset.treatmentAction = 'remove-diagnosis';
+          editor.removeButton.addEventListener('click', function () { removeDiagnosis(editor); });
+          form.appendChild(editor.removeButton);
+        }
       }, read: function (data) { return { name: data.get('name').trim(), code: data.get('code').trim(), status: data.get('status'), dateISO: data.get('dateISO') }; },
-      submit: function (values, binding) { return dto ? view.scope.updateDiagnosis(dto, values) : view.scope.createDiagnosis(values, binding); } });
+      submit: function (values, binding) { return dto ? view.scope.updateDiagnosis(dto, values, binding) : view.scope.createDiagnosis(values, binding); } });
   }
   function episodeEditor(view, dto) {
     var context = dto && dto.context || {}, originalIds = context.diagnosisIds || [];
@@ -453,7 +491,7 @@
     var view = activeEditor;
     if (!view || !view.form || !view.form.contains(event.target)) return;
     event.stopImmediatePropagation();
-    if (!editorCurrent(view) || view.saving) return;
+    if (!editorCurrent(view) || view.readOnly || view.saving) return;
     if (view.picker && view.picker.handleInput(event)) return;
     view.dirty = true; syncEditor(view);
   }

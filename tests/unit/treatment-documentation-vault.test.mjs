@@ -83,6 +83,136 @@ function followupRequest(device, dto, origin, { entries, contextChanges = {} } =
 }
 
 describe('treatment documentation at the shared active-visit boundary', () => {
+  it('updates and removes a diagnosis only from its original open visit, keeping therapy references and native tombstones', async () => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v), scope = actor(device, row.patientId);
+    const binding = productionBinding(device, row), dto = await scope.createDiagnosis(diagnosis(), binding);
+    const episodeDto = await scope.createEpisode(episode({ diagnosisIds: [dto.id] }));
+    const therapy = await device.v.getPatientNote(episodeDto.id);
+    for (const incorrect of [undefined, { visitContext: { ...binding.visitContext, visitId: crypto.randomUUID() }, isCurrent: () => true }]) {
+      await expect(scope.updateDiagnosis(dto, { status: 'closed' }, incorrect)).rejects.toMatchObject({ code: 'TREATMENT_VISIT_READONLY' });
+      await expect(scope.removeDiagnosis(dto, incorrect)).rejects.toMatchObject({ code: 'TREATMENT_VISIT_READONLY' });
+    }
+    const updated = await scope.updateDiagnosis(dto, { status: 'closed' }, binding);
+    expect(updated.baseNote.visitContext).toEqual(dto.baseNote.visitContext);
+    await expect(scope.removeDiagnosis(dto, binding)).rejects.toMatchObject({ code: 'TREATMENT_CONFLICT' });
+    expect(await scope.removeDiagnosis(updated, binding)).toEqual({ id: dto.id, removed: true });
+    expect(await device.v.getPatientNote(dto.id)).toBeNull();
+    expect(await device.v.getPatientNote(therapy.id)).toEqual(therapy);
+    expect((await scope.read()).episodes[0].context.diagnosisIds).toEqual([dto.id]);
+    expect((await device.v.exportSyncPayload()).patientNoteTombstones).toContainEqual(expect.objectContaining({ id: dto.id, rev: updated.rev }));
+    await expect(scope.removeDiagnosis(updated, binding)).rejects.toMatchObject({ code: 'TREATMENT_CONFLICT' });
+    expect((await device.v.getPatientVisits(row.patientId))[0].payload).toEqual(row.payload);
+  });
+
+  it('keeps a general diagnosis general and ignores an unrelated binding during both mutations', async () => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v), scope = actor(device, row.patientId);
+    const dto = await scope.createDiagnosis(diagnosis()), forbidden = vi.fn(() => { throw new Error('Binding must not be read.'); });
+    const binding = { get visitContext() { return forbidden(); }, isCurrent: forbidden, ensureRecorded: forbidden };
+    const updated = await scope.updateDiagnosis(dto, { status: 'closed' }, binding);
+    expect(updated.baseNote).not.toHaveProperty('visitContext');
+    await expect(scope.removeDiagnosis(updated, binding)).resolves.toMatchObject({ removed: true });
+    expect(forbidden).not.toHaveBeenCalled();
+    expect((await device.v.getPatientVisits(row.patientId))[0].snapshotId).toBe(row.snapshotId);
+  });
+
+  it('uses permanent visit identity after its date is corrected without rewriting the original diagnosis origin', async () => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v), scope = actor(device, row.patientId);
+    const originalBinding = productionBinding(device, row), dto = await scope.createDiagnosis(diagnosis(), originalBinding);
+    const payload = JSON.parse(JSON.stringify(row.payload));
+    payload.visit.clinicalDateISO = CURRENT_DAY; payload.user.measuredAtISO = CURRENT_DAY;
+    await device.v.updateSnapshotPayload(row.patientId, row.snapshotId, payload);
+    const [corrected] = await device.v.getPatientVisits(row.patientId);
+    expect(corrected.clinicalDateISO).toBe(CURRENT_DAY);
+    const binding = productionBinding(device, corrected), updated = await scope.updateDiagnosis(dto, { status: 'closed' }, binding);
+    expect(updated.baseNote.visitContext).toEqual(dto.baseNote.visitContext);
+    expect(updated.baseNote.visitContext.clinicalDateISO).toBe(DAY);
+    await expect(scope.removeDiagnosis(updated, binding)).resolves.toMatchObject({ removed: true });
+  });
+
+  it.each(['update', 'remove'])('rejects diagnosis %s after another tab trashes the original visit although its local binding still looks current', async operation => {
+    const { first, second, row } = await twoTabs(), scope = actor(first, row.patientId), binding = productionBinding(first, row);
+    const dto = await scope.createDiagnosis(diagnosis(), binding), before = await first.v.getPatientNote(dto.id);
+    const [other] = await second.v.getPatientVisits(row.patientId); await trash(second.v, other);
+    expect(binding.isCurrent()).toBe(true);
+    await expect(operation === 'remove' ? scope.removeDiagnosis(dto, binding) : scope.updateDiagnosis(dto, { status: 'closed' }, binding))
+      .rejects.toMatchObject({ code: 'TREATMENT_VISIT_READONLY' });
+    expect(await first.v.getPatientNote(dto.id)).toEqual(before);
+    expect((await first.v.exportSyncPayload()).patientNoteTombstones).toEqual([]);
+  });
+
+  it.each(['owner', 'visit'])('does not delete a diagnosis after the %s changes while the native patient lock is queued', async changed => {
+    const device = await urzadzenie(), row = await recordedVisit(device.v); let currentOwner = true, currentVisit = true;
+    const scope = device.win.VildaPatientTreatmentStore.createScope({ vault: device.v, patientId: row.patientId, isCurrent: () => currentOwner });
+    const source = productionBinding(device, row), binding = { visitContext: source.visitContext,
+      isCurrent: () => currentVisit && source.isCurrent(), ensureRecorded: source.ensureRecorded };
+    const dto = await scope.createDiagnosis(diagnosis(), binding), before = await device.v.getPatientNote(dto.id);
+    const held = await device.locks.trzymaj('vilda-save-pat:' + row.patientId), start = device.locks.zadania.length;
+    const pending = scope.removeDiagnosis(dto, binding);
+    const rejected = expect(pending).rejects.toMatchObject({ code: changed === 'owner' ? 'TREATMENT_STALE' : 'TREATMENT_VISIT_READONLY' });
+    try {
+      await device.locks.czekajNaZadanie(entry => entry.wynik === 'w-kolejce', { od: start });
+      if (changed === 'owner') currentOwner = false; else currentVisit = false;
+    } finally { await held.zwolnij(); }
+    await rejected;
+    expect(await device.v.getPatientNote(dto.id)).toEqual(before);
+    expect((await device.v.exportSyncPayload()).patientNoteTombstones).toEqual([]);
+  });
+
+  it('rolls back the encrypted diagnosis and tombstone together when the native deletion transaction fails', async () => {
+    const { first, row } = await twoTabs(), scope = actor(first, row.patientId), dto = await scope.createDiagnosis(diagnosis());
+    const before = await first.v.getPatientNote(dto.id), events = [];
+    first.v.onPatientNoteChanged(event => events.push(event));
+    const failure = first.idb.__atrapa.usterka({ przy: 'commit', baza: 'vilda_user_' + first.A.userId,
+      sklep: 'patientNoteTombstones', tryb: 'readwrite', blad: 'QuotaExceededError' });
+    await expect(scope.removeDiagnosis(dto)).rejects.toThrow();
+    expect(failure.uzyta).toBe(1); expect(events).toEqual([]);
+    expect(await first.v.getPatientNote(dto.id)).toEqual(before);
+    expect((await first.v.exportSyncPayload()).patientNoteTombstones).toEqual([]);
+    await expect(scope.removeDiagnosis(dto)).resolves.toMatchObject({ removed: true });
+  });
+
+  it.each(['owner', 'visit'])('aborts the whole native delete transaction when the %s changes after the actor read', async changed => {
+    const { first, row } = await twoTabs(); let currentOwner = true, currentVisit = true;
+    const scope = first.win.VildaPatientTreatmentStore.createScope({ vault: first.win.VildaVault, patientId: row.patientId, isCurrent: () => currentOwner });
+    const source = productionBinding(first, row), binding = { visitContext: source.visitContext,
+      isCurrent: () => currentVisit && source.isCurrent(), ensureRecorded: source.ensureRecorded };
+    const dto = await scope.createDiagnosis(diagnosis(), binding), before = await first.v.getPatientNote(dto.id), events = [];
+    first.v.onPatientNoteChanged(event => events.push(event));
+    const gate = first.idb.__atrapa.wstrzymaj({ przy: 'success', baza: 'vilda_user_' + first.A.userId,
+      sklep: 'patientNotes', metoda: 'get', tryb: 'readwrite' });
+    const pending = scope.removeDiagnosis(dto, binding);
+    const rejected = expect(pending).rejects.toMatchObject({ code: changed === 'owner' ? 'TREATMENT_STALE' : 'TREATMENT_VISIT_READONLY' });
+    try {
+      await gate.czeka;
+      if (changed === 'owner') currentOwner = false; else currentVisit = false;
+    } finally { gate.zwolnij(); }
+    await rejected;
+    expect(await first.v.getPatientNote(dto.id)).toEqual(before);
+    expect((await first.v.exportSyncPayload()).patientNoteTombstones).toEqual([]);
+    expect(events).toEqual([]);
+  });
+
+  it('serializes a diagnosis removal with another tab moving its source visit to Trash', async () => {
+    const { first, second, row } = await twoTabs(), scope = actor(first, row.patientId), binding = productionBinding(first, row);
+    const dto = await scope.createDiagnosis(diagnosis(), binding), [other] = await second.v.getPatientVisits(row.patientId);
+    const gate = first.idb.__atrapa.wstrzymaj({ przy: 'success', baza: 'vilda_user_' + first.A.userId,
+      sklep: 'patientNotes', metoda: 'get', tryb: 'readwrite' });
+    const removed = scope.removeDiagnosis(dto, binding); let moved, trashFinished = false;
+    try {
+      await gate.czeka;
+      const start = first.locks.zadania.length;
+      moved = trash(second.v, other).then(value => { trashFinished = true; return value; });
+      const queued = await first.locks.czekajNaZadanie(entry => entry.wynik === 'w-kolejce', { od: start });
+      expect(queued.nazwa).toBe('vilda-save-pat:' + row.patientId); expect(trashFinished).toBe(false);
+    } finally { gate.zwolnij(); }
+    await expect(removed).resolves.toMatchObject({ removed: true });
+    await expect(moved).resolves.toMatchObject({ visitId: row.visitId });
+    for (const tab of [first,second]) {
+      expect(await tab.v.getPatientNote(dto.id)).toBeNull();
+      expect((await tab.v.exportSyncPayload()).patientNoteTombstones).toContainEqual(expect.objectContaining({ id: dto.id }));
+    }
+  });
+
   it.each(['diagnosis', 'episode', 'followup'])('rejects %s after other-tab Trash completes between confirmation and native write', async kind => {
     const { first, second, row } = await twoTabs(), scope = actor(first, row.patientId);
     const existing = kind === 'followup' ? await scope.createEpisode(episode()) : null;

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { applyStagedDocumentationDelta, restoreStagedDocumentationBaseline } from '../../tools/staged-documentation-vault-delta.mjs';
+import { restoreDiagnosisMutationBaseline } from '../../tools/diagnosis-mutation-vault-delta.mjs';
 
 const source = file => readFileSync(new URL('../../' + file, import.meta.url), 'utf8');
 const fragment = source('runtime/staged-documentation-v1/vault-fragment.js');
@@ -68,7 +69,7 @@ describe('staged visit document effects', () => {
     expect(canonical).toHaveBeenCalledTimes(1);
   });
   it('restores the exact predecessor and rejects changes outside the declared factory layer', () => {
-    const vault = source('vilda_vault.js'), base = restoreStagedDocumentationBaseline(vault);
+    const vault = restoreDiagnosisMutationBaseline(source('vilda_vault.js')), base = restoreStagedDocumentationBaseline(vault);
     expect(applyStagedDocumentationDelta(base)).toBe(vault);
     expect(() => restoreStagedDocumentationBaseline(vault + '\n')).toThrow(/integrated image/);
   });

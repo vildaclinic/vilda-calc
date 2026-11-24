@@ -96,7 +96,9 @@
     const context = header.querySelector('.gb-visit-context');
     const readOnly = !draft && !!status.visitId;
     context.hidden = !draft && !readOnly;
-    context.querySelector('[data-state-label]').textContent = readOnly ? 'Dane z wizyty' : stateLabel;
+    const contextLabel = context.querySelector('[data-state-label]');
+    contextLabel.textContent = readOnly ? '' : stateLabel;
+    contextLabel.hidden = readOnly;
     context.querySelector('.gb-readonly-badge').hidden = !readOnly;
     const date = status.dateCertain && status.date ? status.date : '';
     const formatted = date.split('-').reverse().join('.');
@@ -646,7 +648,7 @@
       '<span>Gabinet</span></button>' + icon('chevron') + '<span aria-current="page">Karta pacjenta</span></nav></div>' +
       '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div>' +
       '<div class="gb-visit-context" hidden><span class="gb-visit-source">' + icon('calendar') +
-      '<span data-state-label></span> <time></time></span><span class="gb-readonly-badge" hidden>' + icon('lock') + '<span>Tylko odczyt</span></span></div></div>' +
+      '<span data-state-label></span> <time></time></span><span class="gb-readonly-badge" hidden>' + icon('lock') + '<span>Dane wizyty · tylko odczyt</span></span></div></div>' +
       '<div class="gb-card-actions" role="group" aria-label="Działania wizyty"><div class="gb-visit-actions">' +
       '<button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Opcje ' + icon('down') + '</button>' +
       '<div id="gbVisitActions" role="group" aria-label="Opcje wizyty" hidden>' +

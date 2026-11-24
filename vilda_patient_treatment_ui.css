@@ -98,6 +98,12 @@ html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-bu
   overflow-wrap: anywhere;
 }
 html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-text { border-color: transparent !important; background: transparent !important; }
+html.vilda-home-workspace .vhome-treatment-editor .vpt-button.vpt-remove {
+  align-self: flex-start;
+  max-width: 100%;
+  border-color: var(--danger, #b43b45) !important;
+  color: var(--danger, #b43b45) !important;
+}
 html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-primary {
   border-color: var(--vpt-accent) !important;
   background: var(--vpt-accent) !important;
