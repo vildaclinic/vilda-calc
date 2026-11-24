@@ -47129,7 +47129,7 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
   zapisuje nową informację; poprawki i gwiazdki wizyt przeniesionych scaleniem zostają w karcie scalonej (D-4 A i PD-1
   dla nich zmienione decyzją 2 z 2026-11-23); wejścia: E4b, „Usuń pacjenta” duplikatu (światy 881–884), „tylko lista
   usuniętych pacjentów”, „miejsce wizyty po „Scal pacjentów”” w W1, ziarno 38 profilu pełnego; sprawdzić, czy znika
-  klasa „nagrobek karty opróżnionej” w zdarzeniach. *(2026-11-23: warunek — każde urządzenie ma SW 1.1.580 (wydanie
+  klasa „nagrobek karty opróżnionej” w zdarzeniach. *(2026-11-23: warunek — każde urządzenie ma SW 1.1.586 (wydanie
   E3-PR0e2a) albo wyższy; dalsze wejścia — wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku, „Wejście do kolejnych PR”.)*
 - **E3-PR0f:** wizyta nieznana urządzeniu scalającemu (E1/E1b, także w zwróconej starej karcie i w przypadku
   z „Do akceptacji”, punkt 5), ziarno 39 profilu pełnego razem z kolejnością klas wyroczni, świat 885 poza wyjątkiem,
@@ -47638,7 +47638,7 @@ pacjencie); `tests/unit/visits-vault-boundary.test.mjs` i narzędzia granic sejf
 **Wersje.** `vilda_patients_list.js` 10 → 11, `vilda_vault.js` 285 → 286, `vilda_chrome.js` 329 → 330
 i `vilda_session_bridge.js` 245 → 246, SW 1.1.584 → 1.1.585 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
 
-## Chwila przypisania wersji do karty — pierwsze wydanie nowego pola (P-SYNC-WLASCICIEL, E3-PR0e2a, SW 1.1.580, `vilda_vault.js` 286, 2026-11-23)
+## Chwila przypisania wersji do karty — pierwsze wydanie nowego pola (P-SYNC-WLASCICIEL, E3-PR0e2a, SW 1.1.586, `vilda_vault.js` 287, 2026-11-23)
 
 **Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Dziś dla lekarza nic
 się nie zmienia: rekord wersji wizyty może nieść jedno nowe, jawne pole opcjonalne `assignedAtISO` — chwilę, w której
@@ -47972,8 +47972,8 @@ sprawdzenie w fazie przeniesień i komentarze; w bloku P-DZIENNIK-ZDARZEN wyłą
 `Bev_wersja`) i reguła pola odsyłania (`Bev_ECHO_POMIJANE` w czterech porównaniach `Bev_echo`) z komentarzami.
 Fragment natywny i teksty 41 haków trwałych wizyt bajt w bajt (wstawki w eksportach stoją za końcem tekstów haków);
 zero nazw `Bem_`/`Bob_`/`Bev_` we fragmencie natywnym; bez nowych wywołań `Bem_`/`Bob_`. Przeliczone skróty: baza
-trwałych wizyt `8dc93f95…` i obraz `34270b17…` (`runtime/durable-visits-v1/manifest.json`, `tools/visits-vault-delta.mjs`,
-`tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `c3ccdcf2…`, `integratedVaultSHA256` `a77b7973…`
+trwałych wizyt `50063edf…` i obraz `3bebcc8e…` (`runtime/durable-visits-v1/manifest.json`, `tools/visits-vault-delta.mjs`,
+`tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `989fec00…`, `integratedVaultSHA256` `916382e1…`
 i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
 `tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0e2a w komentarzu); `fragmentSHA256` bez zmian.
 `node tools/visits-vault-delta.mjs` i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` bez
@@ -48046,12 +48046,12 @@ danych; dziś żadne z nich nie zmienia działania, bo pola nikt nie zapisuje). 
     kopię konta”); w tym PR nie, bo zmienia działanie importu dziś.
 12. **Ryzyko CI** — niestabilny, istniejący e2e („Ograniczenia”).
 13. **Warunek E3-PR0e2b:** potwierdzenie właściciela, że każde urządzenie (Ustawienia, linia „Wersja aplikacji”) ma
-    SW 1.1.580 albo wyższy.
+    SW 1.1.586 albo wyższy.
 
 **Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
 - **E3-PR0e3** — bez zmian zakresu: zmiana wizyty po Koszu na innym urządzeniu wraca do karty wpisu po „Scal
   pacjentów” (wpis pod żywą kartą) oraz wąski wyjątek wyroczni z decyzji 4 z 2026-11-23 (tylko w testach).
-- **E3-PR0e2b** — po E3-PR0e3 i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.580**
+- **E3-PR0e2b** — po E3-PR0e3 i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.586**
   (to wydanie) albo wyższy:
   - „Scal pacjentów” zapisuje pole w samej `Bsw_poScaleniu` (tekst haka trwałych wizyt bez zmian): chwila =
     późniejsza z „teraz” i poprzedniej chwili tej wersji + 1 ms; w gałęzi następcy w fazie przeniesień — tak, żeby
@@ -48076,24 +48076,27 @@ danych; dziś żadne z nich nie zmienia działania, bo pola nikt nie zapisuje). 
 rewert cofa też skróty kontroli granicy. Po E3-PR0e2b cofnięcie tego wydania wymaga najpierw cofnięcia E3-PR0e2b
 (urządzenie z cofniętym wydaniem gubiłoby pole jak starsza aplikacja).
 
-**Gdzie w kodzie.** `vilda_vault.js`, poza blokiem P-DZIENNIK-ZDARZEN (6810–10459) i fragmentem natywnym (13454–14828):
+**Gdzie w kodzie.** `vilda_vault.js`, poza blokiem P-DZIENNIK-ZDARZEN (6810–10459) i fragmentem natywnym (13470–14844):
 `Bsw_chwilaPrzypisania` i `Bsw_przypisanie` (3754–3774, nowe, z komentarzem), `Bsw_ladunekWygrywa` (3800–3814);
 łączenie — `Bsl_wersjaZLadunku` (3638–3646), `Bsw_rekordW3` (3925, 3932), `Bsw_rekord` (3966), `Bsw_odloz` (3984,
 3986), `Bgw_scal` (4042, 4053), `Bsl_scalPacjenta` (4142–4157: tutejszy rekord przyjmuje późniejsze pole i zapis samej
-chwili; 4165: zapis z ładunku), `Bkz_przywroc` (2669–2680), `Bzw_aktualizujWersje` (10460); sprawdzenie w fazie
-przeniesień — `Bsw_przenies` (4510–4514); eksporty i importy — 13141 (plik karty), 13155 (import karty, kopia konta,
-odtworzenie konta, „Scal kopię konta” ×2), 13168 (eksport pełny, delta karty); komentarze — nagłówek P-SYNC-WLASCICIEL
+chwili; 4165: zapis z ładunku), `Bkz_przywroc` (2669–2680), `Bzw_aktualizujWersje` (10476); sprawdzenie w fazie
+przeniesień — `Bsw_przenies` (4510–4514); eksporty i importy — 13157 (plik karty), 13171 (import karty, kopia konta,
+odtworzenie konta, „Scal kopię konta” ×2), 13184 (eksport pełny, delta karty); komentarze — nagłówek P-SYNC-WLASCICIEL
 (3682–3703), `Bsw_poScaleniu` (3708–3709), `Bsw_nowszyRekord` (3778–3780), `Bkz_nowszaWersja` (1460–1461), W3 między
 kartami (3878–3879), `Bgw_wskrzes` (2917–2918), `Bsw_rekordW3`, `Bsw_rekord`, `Bsw_odloz`, `Bgw_scal`, `Bsw_przenies`.
 W bloku P-DZIENNIK-ZDARZEN: `Bev_POLA_WERSJI` (6861–6863), komentarze `Bev_sprawdz` (6956–6957) i `Bev_karta`
 (7052–7053), `Bev_wersja` (7064), `Bev_ECHO_POMIJANE` (7617–7624), `Bev_echo` (komentarz 7713–7714; porównania 7740,
-7742, 7746, 7754). Strażnik natywny (14520) bez zmian — woła `Bsw_ladunekWygrywa`. Bez zmian: `Bsw_poScaleniu` (kod),
+7742, 7746, 7754). Strażnik natywny (14536) bez zmian — woła `Bsw_ladunekWygrywa`. Bez zmian: `Bsw_poScaleniu` (kod),
 `Bsc0`, `Bpz_zapisWSesji`, wpisy Kosza (`Bkz_doKosza`, półkrata `Bpk_*`, `Bkz_eksport`, `Bev_wpisKosza`,
 `Bev_POLA_KOSZA`), `Bgw_wskrzes` (kod), `Bev_kartaPoprawna`, fragment trwałych wizyt, `vilda_sync.js`,
 `vilda_sync_integration.js`.
 
-**Wersje.** `vilda_vault.js` 285 → 286, `vilda_chrome.js` 324 → 325 i `vilda_session_bridge.js` 240 → 241 (wstrzykują
-sejf), SW 1.1.579 → 1.1.580 — `npm run podbij-wersje`; baza `origin/audyt` `28dd9b3f` (po vildaclinic/vilda-calc#1049;
-sejf, `vilda_sync.js`, `vilda_sync_integration.js`, `runtime/`, `tools/`, `tests/support/` i `tests/unit/sync-*` bez zmian
-od `d6f133eb`, więc czerwone na bazie, piny granicy i przebiegi liczone na `d6f133eb` są ważne). SW 1.1.580 to numer,
-który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b. Bez nowego pliku w pamięci offline.
+**Wersje.** `vilda_vault.js` 286 → 287, `vilda_chrome.js` 330 → 331 i `vilda_session_bridge.js` 246 → 247 (wstrzykują
+sejf), SW 1.1.585 → 1.1.586 — `npm run podbij-wersje`; baza `origin/audyt` `ac0869f2` (po vildaclinic/vilda-calc#1058).
+Od `d6f133eb` sejf w `audyt` zmienił się tylko o dwie funkcje tylko do odczytu P-BAZA-SZYBKIE (`getNewestSnapshot`
+składa wersję z listy pól, więc pola nie pokazuje; bez nowych zapisów rekordu wersji), a `vilda_sync.js`,
+`vilda_sync_integration.js`, `tests/support/` i `tests/unit/sync-*` są bez zmian; przebiegi liczone na `d6f133eb` są więc
+ważne, czerwone na bazie powtórzone na `ac0869f2` (te same 51 + 2 + 1, wszystkie na asercji), a skróty kontroli granicy
+przeliczone dla sejfu po scaleniu. SW 1.1.586 to numer, który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b.
+Bez nowego pliku w pamięci offline.
