@@ -340,6 +340,9 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   const list = office.getByRole('button', { name: 'Lista pacjentów', exact: true });
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
+    // The shell updates the embedded document's host mode asynchronously.
+    if (width >= 992) await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
+    else await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
     await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await expect.poll(() => list.evaluate(node => {
       const button = node.getBoundingClientRect(), field = node.parentElement.querySelector('.vgs-search-field').getBoundingClientRect();
