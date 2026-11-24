@@ -251,3 +251,62 @@ describe('Kohorta leczonych z powodu otyłości (obesityCohort)', () => {
     expect(bezProgow.windows.m6.thresholds).toEqual([]);
   });
 });
+
+// P-BAZA-SZYBKIE (decyzja właściciela 2026-11-24): liczenie przyrostowe — które karty trzeba przeczytać ponownie.
+describe('Liczenie przyrostowe (journalIndex, cardsPlan, cardsResult)', () => {
+  const notatka = (id, patientId, updatedAtISO, category = 'leczenie-otylosci') => ({ id, patientId, category, createdAtISO: '2026-01-01T10:00:00.000Z', updatedAtISO });
+  const jestWpisem = (note) => note.category === 'leczenie-otylosci';
+  const karta = (patientId, lastSavedAtISO) => ({ patientId, lastSavedAtISO });
+  const wynik = (stamp, journal, extra = {}) => ({ stamp, journal, read: true, card: { measurements: true, parents: false, birthWeight: true }, gh: null, ob: null, partial: false, ...extra });
+
+  it('znacznik wpisów pacjenta zmienia się po dopisaniu, poprawce i usunięciu wpisu, a nie zależy od kolejności ani cudzych notatek', () => {
+    const { journalIndex } = srodowisko();
+    const a = journalIndex([notatka('n1', 'p1', 't1'), notatka('n2', 'p1', 't2'), notatka('n3', 'p2', 't3'), notatka('x', 'p1', 't9', 'followup')], jestWpisem);
+    expect(a.of('p1').map((note) => note.id)).toEqual(['n1', 'n2']);
+    expect(a.of('p3')).toEqual([]);
+    expect(a.mark('p1')).toBe('n1@t1|n2@t2');
+    expect(a.mark('p3')).toBe('');
+    expect(journalIndex([notatka('n2', 'p1', 't2'), notatka('n1', 'p1', 't1')], jestWpisem).mark('p1'), 'kolejność odczytu bez znaczenia').toBe(a.mark('p1'));
+    expect(journalIndex([notatka('n1', 'p1', 't1'), notatka('n2', 'p1', 't2'), notatka('n4', 'p1', 't4')], jestWpisem).mark('p1'), 'dopisany wpis').not.toBe(a.mark('p1'));
+    expect(journalIndex([notatka('n1', 'p1', 't1'), notatka('n2', 'p1', 't5')], jestWpisem).mark('p1'), 'poprawiony wpis').not.toBe(a.mark('p1'));
+    expect(journalIndex([notatka('n1', 'p1', 't1')], jestWpisem).mark('p1'), 'usunięty wpis').not.toBe(a.mark('p1'));
+    expect(journalIndex(null, jestWpisem).mark('p1')).toBe('');
+  });
+
+  it('czytane są tylko karty nowe, zmienione, z innymi wpisami albo wcześniej nieodczytane', () => {
+    const { cardsPlan } = srodowisko();
+    const baza = [karta('p1', 's1'), karta('p2', 's2'), karta('p3', 's3'), karta('p4', 's4'), karta('p5', 's5')];
+    const pamiec = {
+      p1: wynik('s1', ''),                       // bez zmian
+      p2: wynik('stara-chwila', ''),             // karta zapisana ponownie
+      p3: wynik('s3', 'n1@t1'),                  // dopisany wpis między wizytami
+      p4: wynik('s4', '', { read: false }),      // poprzednio nie udało się odczytać
+    };                                           // p5: nowa karta
+    const znacznik = (id) => (id === 'p3' ? 'n1@t1|n2@t2' : '');
+    const plan = cardsPlan(baza, pamiec, znacznik);
+    expect(Object.keys(plan.kept)).toEqual(['p1']);
+    expect(plan.kept.p1).toBe(pamiec.p1);
+    expect(plan.stale.map((record) => record.patientId)).toEqual(['p2', 'p3', 'p4', 'p5']);
+    // Bez pamięci (pierwsze liczenie albo „Policz ponownie”) czytane jest wszystko.
+    expect(cardsPlan(baza, null, znacznik).stale).toHaveLength(5);
+    // Pacjent usunięty z bazy znika z wyniku, choć jego wynik był w pamięci.
+    expect(Object.keys(cardsPlan([karta('p1', 's1')], { ...pamiec, p9: wynik('s9', '') }, znacznik).kept)).toEqual(['p1']);
+  });
+
+  it('wynik zbiorczy: braki danych, leczeni, karty nieodczytane i wpisy, których nie udało się odczytać', () => {
+    const { cardsResult } = srodowisko();
+    const gh = { program: 'SNP' }, ob = { drug: 'Wegovy' };
+    const zbior = cardsResult([karta('p1', 's1'), karta('p2', 's2'), karta('p3', 's3'), karta('p4', 's4')], {
+      p1: wynik('s1', '', { gh }),
+      p2: wynik('s2', '', { ob, partial: true, card: { measurements: false, parents: false, birthWeight: false } }),
+      p3: wynik('s3', '', { read: false, card: null }),
+    });
+    expect(zbior.total).toBe(4);
+    expect(zbior.failed, 'p3 nieodczytana, p4 bez wyniku').toBe(2);
+    expect(zbior.missing).toEqual({ measurements: ['p2'], parents: ['p1', 'p2'], birthWeight: ['p2'] });
+    expect(zbior.treated).toEqual([{ id: 'p1', gh }]);
+    expect(zbior.obese).toEqual([{ id: 'p2', ob }]);
+    expect(zbior.partial).toBe(1);
+    expect(zbior.details.map((item) => [item.id, Boolean(item.card)])).toEqual([['p1', true], ['p2', true], ['p3', false], ['p4', false]]);
+  });
+});
