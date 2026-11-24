@@ -246,7 +246,11 @@ test('home growth: reported patient measurements remain native read-only copies 
   await choices.locator('#vildaLcmRestore').click();
   await expect(choices).toHaveCount(0);
   await expect.poll(() => frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(ids.b);
-  const replacement = await show(frame);
+  await expect(frame.locator('#firstName')).toHaveValue('Beata');
+  await frame.locator('[data-growth-open="data"]').click();
+  const replacement = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true });
+  await expect(replacement).toBeVisible();
+  await expect(replacement.getByRole('tab', { name: 'Dane i pomiary', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(replacement.locator('[data-growth-reported-history]')).toBeHidden();
   await expect(replacement.locator('.adv-dz-row')).toHaveCount(0);
   await replacement.getByRole('button', { name: 'Anuluj', exact: true }).click();
