@@ -107,8 +107,11 @@ async function closeCard(frame) {
 async function geometry(frame, selector = DIALOG) {
   const measure = () => frame.locator(selector).evaluate(node => {
     const box = node.getBoundingClientRect();
+    // CSS viewport units exclude a reserved classic scrollbar gutter even
+    // when Chromium reports innerWidth/clientWidth including that gutter.
+    const viewportWidth = document.documentElement.getBoundingClientRect().width;
     return { width: box.width, height: box.height, x: box.x, y: box.y,
-      viewportWidth: innerWidth, viewportHeight: innerHeight, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
+      viewportWidth, viewportHeight: innerHeight, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
   });
   // Opening motion may still be running when the native sheet becomes visible.
   // Poll at CSS-pixel precision; the raw checks below retain their original
