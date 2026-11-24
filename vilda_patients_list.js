@@ -491,6 +491,106 @@
     });
     return { total: details.length, failed, missing, details, treated, obese, partial };
   }
+  /* ── P-ROZPOZNANIA, rata 2 (decyzja właściciela 2026-11-24): statystyki według rozpoznania ─────
+   * Rozpoznania to notatki kategorii „treatment” z kontekstem leczenia (kind „diagnosis”) — te same,
+   * które wpisuje Karta pacjenta (docs/PATIENT_TREATMENT.md). Jeden odczyt notatek tej kategorii daje
+   * rozpoznania całej bazy (diagnosisIndex). Liczenie (diagnosisCohort) niczego nie wnioskuje z BMI,
+   * leku ani programu — zlicza to, co wpisał lekarz:
+   *   - grupą jest kod ICD-10 po ujednoliceniu zapisu (bez kropki, spacji i znaczków †/*, wielkie litery):
+   *     „e660”, „E66.0” i „E66.0†” to ten sam kod; kody o tych samych trzech pierwszych znakach (litera
+   *     i dwie cyfry) tworzą kategorię z podkodami;
+   *   - rozpoznanie bez kodu grupuje się po nazwie (bez wielkości liter, polskich znaków i zbędnych spacji);
+   *   - pacjent liczy się w grupie raz, a z kilkoma rozpoznaniami jest w każdej ze swoich grup, więc liczby
+   *     grup nie sumują się do liczby pacjentów;
+   *   - pacjent jest wśród „aktywnych” grupy, gdy ma w niej choć jedno aktywne rozpoznanie; wśród
+   *     „zamkniętych” — gdy ma w niej wyłącznie zamknięte. */
+  const DIAGNOSIS_CATEGORY = 'treatment';
+  const DIAGNOSIS_NOTE = 'Liczone są rozpoznania aktywne. Pacjent z kilkoma rozpoznaniami jest w każdym z nich, więc liczby nie sumują się do liczby pacjentów.';
+  function diagnosisFold(value) {
+    return String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[łŁ]/g, 'l').toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+  function diagnosisCodeKey(value) { return String(value || '').replace(/[.\s†*+]/g, '').toUpperCase(); }
+  function diagnosisLabel(code, name) { return code && name ? code + ' — ' + name : code || name || ''; }
+  function diagnosisIndex(notes, decode) {
+    const byPatient = new Map();
+    (Array.isArray(notes) ? notes : []).forEach((note) => {
+      if (!note || typeof note.patientId !== 'string' || typeof decode !== 'function') return;
+      let decoded;
+      try { decoded = decode(note); } catch { decoded = null; }
+      const context = decoded && decoded.kind === 'diagnosis' ? decoded.context : null;
+      if (!context) return;
+      if (!byPatient.has(note.patientId)) byPatient.set(note.patientId, []);
+      byPatient.get(note.patientId).push({ id: String(note.id), name: String(context.name || '').trim(), code: String(context.code || '').trim(),
+        active: context.status === 'active', dateISO: context.dateISO || '', stamp: note.updatedAtISO || note.createdAtISO || '' });
+    });
+    return {
+      of: (patientId) => byPatient.get(patientId) || [],
+      // Znacznik całości: zmienia się po dodaniu, poprawce i usunięciu któregokolwiek rozpoznania.
+      mark: Array.from(byPatient.keys()).sort().map((id) => id + ':' + byPatient.get(id).map((item) => item.id + '@' + item.stamp).sort().join(',')).join('|')
+    };
+  }
+  function diagnosisCohort(base, index, options) {
+    const lookup = options && typeof options.lookup === 'function' ? options.lookup : () => null;
+    const records = Array.isArray(base) ? base : [];
+    const collator = (left, right) => left.localeCompare(right, 'pl');
+    const groups = new Map(), none = [], onlyClosed = [], withActive = [];
+    let activeRecords = 0, closedRecords = 0;
+    const bucket = (map, key) => {
+      if (!map.has(key)) map.set(key, { key, active: new Set(), any: new Set(), codes: new Map(), names: new Map(), items: new Map(), category: null });
+      return map.get(key);
+    };
+    const tally = (map, value) => { if (value) map.set(value, (map.get(value) || 0) + 1); };
+    const place = (target, patientId, item) => {
+      target.any.add(patientId);
+      if (item.active) target.active.add(patientId);
+      tally(target.codes, item.code); tally(target.names, item.name);
+    };
+    records.forEach((record) => {
+      const list = index && typeof index.of === 'function' ? index.of(record.patientId) : [];
+      if (!list.length) { none.push(record.patientId); return; }
+      if (list.some((item) => item.active)) withActive.push(record.patientId); else onlyClosed.push(record.patientId);
+      list.forEach((item) => {
+        if (item.active) activeRecords += 1; else closedRecords += 1;
+        const key = diagnosisCodeKey(item.code);
+        if (!key) { place(bucket(groups, 'n:' + diagnosisFold(item.name)), record.patientId, item); return; }
+        const category = /^[A-Z][0-9]{2}/.test(key) ? key.slice(0, 3) : key;
+        const group = bucket(groups, 'c:' + category);
+        group.category = category;
+        place(group, record.patientId, item);
+        place(bucket(group.items, key), record.patientId, item);
+      });
+    });
+    // Najczęstszy zapis (przy remisie pierwszy alfabetycznie) — żeby etykieta nie zależała od kolejności kart.
+    const top = (map) => Array.from(map.entries()).sort((x, y) => y[1] - x[1] || collator(x[0], y[0])).map((entry) => entry[0])[0] || '';
+    const found = (code) => { try { return code ? lookup(code) || null : null; } catch { return null; } };
+    const figures = (target) => {
+      const ids = Array.from(target.active), closedIds = Array.from(target.any).filter((id) => !target.active.has(id));
+      return { n: ids.length, ids, closed: closedIds.length, closedIds, allIds: Array.from(target.any) };
+    };
+    const order = (left, right) => right.n - left.n || right.closed - left.closed || collator(left.label, right.label);
+    const coded = (target) => {
+      const code = top(target.codes), entry = found(code), name = entry && entry.name ? entry.name : top(target.names);
+      return Object.assign({ key: 'c:' + target.key, code, name, label: diagnosisLabel(code, name), items: [] }, figures(target));
+    };
+    const result = Array.from(groups.values()).map((group) => {
+      if (!group.category) {
+        const name = top(group.names);
+        return Object.assign({ key: group.key, code: '', name, label: name, items: [] }, figures(group));
+      }
+      const items = Array.from(group.items.values()).map(coded).sort(order);
+      if (items.length === 1) return Object.assign({}, items[0], { key: group.key });
+      // Nazwa kategorii: z katalogu (sam kod kategorii albo kategoria nadrzędna podkodu), a bez katalogu — z rozpoznania o tym kodzie.
+      const own = found(group.category), viaChild = items.map((item) => found(item.code)).find((entry) => entry && entry.parentName && diagnosisCodeKey(entry.parentCode) === group.category);
+      const bare = items.find((item) => diagnosisCodeKey(item.code) === group.category);
+      const name = own && own.name ? own.name : viaChild ? viaChild.parentName : bare ? bare.name : '';
+      return Object.assign({ key: group.key, code: group.category, name, label: diagnosisLabel(group.category, name), items }, figures(group));
+    }).sort(order);
+    return {
+      total: records.length, withActive: withActive.length, activeIds: withActive,
+      onlyClosed: { n: onlyClosed.length, ids: onlyClosed }, none: { n: none.length, ids: none },
+      records: { active: activeRecords, closed: closedRecords }, groups: result
+    };
+  }
   /* ── P-BAZA-STATYSTYKI, etap 4 (decyzja właściciela 2026-11-24): raport PDF i plik dla Excela ──
    * Jeden model raportu (statsReport) z tych samych obiektów, które rysuje ekran: demographics,
    * ghCohort, obesityCohort i kompletność kart. Z niego powstają OBA pliki — dokument pdfmake
@@ -531,14 +631,16 @@
     if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return '';
     return two(date.getDate()) + '.' + two(date.getMonth() + 1) + '.' + date.getFullYear() + ', ' + two(date.getHours()) + ':' + two(date.getMinutes());
   }
-  function reportFileName(date, extension) {
+  function reportFileName(date, extension, group) {
     const day = date instanceof Date && Number.isFinite(date.getTime()) ? date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate()) : '';
-    return ['statystyki-bazy-pacjentow', day].filter(Boolean).join('-') + '.' + extension;
+    // Raport grupy ma własną nazwę — tego samego dnia nie nadpisuje raportu całej bazy.
+    return ['statystyki-bazy-pacjentow', group ? 'grupa' : '', day].filter(Boolean).join('-') + '.' + extension;
   }
   function statsReport(input) {
     const source = input || {};
     const model = source.model, cards = source.cards || null;
     const stamp = source.stamp instanceof Date && Number.isFinite(source.stamp.getTime()) ? source.stamp : null;
+    const scope = typeof source.scope === 'string' ? source.scope.trim() : '';
     const num = (value, digits) => finite(value) === null ? null : Number(value.toFixed(digits === undefined ? 2 : digits));
     const col = (title, kind, extra) => Object.assign({ title, kind: kind || 'text' }, extra || {});
     const rate = (title) => col(title, 'num', { digits: 1 });
@@ -547,7 +649,7 @@
 
     // 1. Pacjenci — z nagłówków kart.
     const patientFacts = [
-      { label: 'Pacjenci w bazie', value: model.total, unit: '', text: String(model.total), note: model.recent + ' z zapisem w ostatnich 12 mies.' },
+      { label: scope ? 'Pacjenci w grupie' : 'Pacjenci w bazie', value: model.total, unit: '', text: String(model.total), note: model.recent + ' z zapisem w ostatnich 12 mies.' },
       { label: 'Średni wiek', value: model.withAge ? num(model.meanMonths / 12, 1) : null, unit: model.withAge ? 'lata' : '', text: model.withAge ? formatAge(model.meanMonths) : '—',
         note: model.withAge ? 'mediana ' + formatAge(model.medianMonths) + ' · od ' + formatAge(model.minMonths) + ' do ' + formatAge(model.maxMonths) : 'brak dat urodzenia' }
     ];
@@ -568,6 +670,32 @@
       }],
       notes: ['Wiek na dziś, liczony z daty urodzenia.' + (model.missingDob.length ? ' Bez daty urodzenia: ' + model.missingDob.length + ' (poza wiekiem).' : '')]
     });
+
+    // 1a. Rozpoznania (P-ROZPOZNANIA, rata 2) — z notatek rozpoznań, w tym samym zakresie co reszta raportu.
+    const dx = source.diagnoses && Array.isArray(source.diagnoses.groups) ? source.diagnoses : null;
+    if (dx) {
+      const dxSection = { key: 'diagnoses', title: 'Rozpoznania', hint: '', facts: [], tables: [], notes: [], chart: null };
+      if (!dx.groups.length) dxSection.notes.push((scope ? 'W tej grupie' : 'W bazie') + ' nie ma rozpoznań.');
+      else {
+        dxSection.hint = 'z aktywnym rozpoznaniem: ' + dx.withActive + ' z ' + dx.total;
+        dxSection.facts.push(
+          { label: 'Pacjenci z aktywnym rozpoznaniem', value: dx.withActive, unit: '', text: String(dx.withActive), note: percent(dx.withActive, dx.total) + '% pacjentów' },
+          { label: 'Bez rozpoznania', value: dx.none.n, unit: '', text: String(dx.none.n), note: dx.onlyClosed.n ? 'tylko zamknięte: ' + dx.onlyClosed.n : '' },
+          { label: 'Rozpoznania aktywne', value: dx.records.active, unit: '', text: String(dx.records.active), note: 'zamknięte: ' + dx.records.closed });
+        const dxRows = [];
+        dx.groups.forEach((group) => {
+          dxRows.push([group.code, group.items.length ? (group.name ? group.name + ' — razem' : 'razem') : group.name, group.n, percent(group.n, dx.total), group.closed, [{ value: group.n, color: 'teal' }]]);
+          group.items.forEach((item) => dxRows.push([item.code, item.name, item.n, percent(item.n, dx.total), item.closed, [{ value: item.n, color: 'teal' }]]));
+        });
+        dxSection.tables.push({
+          key: 'diagnoses', title: 'Pacjenci według rozpoznania',
+          columns: [col('Kod ICD-10'), col('Rozpoznanie', 'text', { wide: true }), col('Pacjenci', 'int'), col('Odsetek (%)', 'int'), col('Tylko zamknięte', 'int'), col('', 'bar')],
+          rows: dxRows, barMax: Math.max.apply(null, dx.groups.map((group) => group.n).concat([1]))
+        });
+        dxSection.notes.push(DIAGNOSIS_NOTE + ' Odsetek liczony od wszystkich pacjentów ' + (scope ? 'grupy' : 'bazy') + '. Kod i nazwę rozpoznania wpisuje lekarz.');
+      }
+      sections.push(dxSection);
+    }
 
     if (cards) {
       // 2. Leczenie hormonem wzrostu.
@@ -703,8 +831,9 @@
       const ageOf = typeof source.ageMonths === 'function' ? source.ageMonths : () => null;
       const byId = new Map(cards.details.map((item) => [item.id, item]));
       const ghReasons = new Map(GH_REASONS.concat([['no-engine', 'moduł tempa niewczytany']]));
+      const dxOf = typeof source.diagnosesOf === 'function' ? source.diagnosesOf : null;
       const columns = [col('Lp.', 'int'), col('Płeć'), col('Wiek (lata)', 'num', { digits: 1 }), col('Przedział wieku')]
-        .concat(CARD_ITEMS.map(([, label]) => col(label)), [
+        .concat(dxOf ? [col('Rozpoznania aktywne'), col('Rozpoznania zamknięte')] : [], CARD_ITEMS.map(([, label]) => col(label)), [
           col('GH: program'), rate('GH: tempo przed leczeniem (cm/rok)'), rate('GH: tempo 1. rok (cm/rok)'), rate('GH: tempo 2. rok'), rate('GH: tempo 3. rok'), rate('GH: tempo 4. rok'),
           change('GH: zmiana hSDS w 1. roku', 2), col('GH: uwaga'), col('Otyłość: lek'), col('Otyłość: grupa')],
         OBESITY_WINDOWS.reduce((list, period) => list.concat([
@@ -716,8 +845,11 @@
         const months = typeof computed === 'number' && Number.isFinite(computed) && computed >= 0 ? computed : null;
         const band = months === null ? null : AGE_BANDS.find((item) => Math.floor(months / 12) >= item.from && (item.to === null || Math.floor(months / 12) <= item.to));
         const detail = byId.get(record.patientId) || null, card = detail && detail.card, gh = detail && detail.gh, ob = detail && detail.ob;
+        // Rozpoznania pacjenta: kod, a bez kodu — nazwa; w kolejności alfabetycznej, bez powtórzeń.
+        const dxList = (active) => Array.from(new Set((dxOf ? dxOf(record.patientId) || [] : []).filter((item) => item.active === active)
+          .map((item) => item.code || item.name).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pl')).join('; ');
         const cells = [sex === 'M' ? 'M' : sex === 'F' ? 'K' : '', months === null ? null : num(months / 12, 1), band ? band.label : '']
-          .concat(CARD_ITEMS.map(([key]) => card ? (card[key] ? 'tak' : 'nie') : ''), [
+          .concat(dxOf ? [dxList(true), dxList(false)] : [], CARD_ITEMS.map(([key]) => card ? (card[key] ? 'tak' : 'nie') : ''), [
             gh ? gh.program || 'bez programu' : '', gh ? num(gh.before) : null,
             gh && gh.years.length > 0 ? num(gh.years[0]) : null, gh && gh.years.length > 1 ? num(gh.years[1]) : null,
             gh && gh.years.length > 2 ? num(gh.years[2]) : null, gh && gh.years.length > 3 ? num(gh.years[3]) : null,
@@ -732,7 +864,7 @@
       }).sort((x, y) => (x.months === null ? Infinity : x.months) - (y.months === null ? Infinity : y.months) || x.sex.localeCompare(y.sex));
       people = { columns, rows: rows.map((row, index) => [index + 1].concat(row.cells)) };
     }
-    return { title: REPORT_TITLE, stamp, total: model.total, counted: Boolean(cards), sections, closing: footNote(model.total), people };
+    return { title: REPORT_TITLE, scope, stamp, total: model.total, counted: Boolean(cards), sections, closing: footNote(model.total), people };
   }
   /* Arkusze: „Podsumowanie” (te same sekcje, co raport) i „Pacjenci”. Wiersz to { bold, cells };
    * liczba zostaje liczbą (Excel policzy z niej dalej), brak wartości — pustą komórką. */
@@ -742,7 +874,8 @@
     const push = (cells, bold) => rows.push({ bold: Boolean(bold), cells: cells || [] });
     push([report.title], true);
     push(['Stan na', stampText(report.stamp)]);
-    push(['Pacjentów w bazie', report.total]);
+    if (report.scope) push(['Grupa pacjentów', report.scope]);
+    push([report.scope ? 'Pacjentów w grupie' : 'Pacjentów w bazie', report.total]);
     report.sections.forEach((section) => {
       push([]);
       push([section.title], true);
@@ -887,7 +1020,8 @@
     const small = (text, extra) => Object.assign({ text: pdfText(text), fontSize: 8.5, color: C.muted }, extra || {});
     content.push({ columns: [
       { width: '*', stack: [{ text: pdfText(report.title), fontSize: 16, bold: true, color: C.teal },
-        small('Zestawienie opisowe · ' + report.total + (report.total === 1 ? ' pacjent' : ' pacjentów') + ' z bazy', { fontSize: 9.5 })] },
+        small(report.scope ? 'Grupa pacjentów: ' + report.scope + ' · ' + report.total + (report.total === 1 ? ' pacjent' : ' pacjentów')
+          : 'Zestawienie opisowe · ' + report.total + (report.total === 1 ? ' pacjent' : ' pacjentów') + ' z bazy', { fontSize: 9.5 })] },
       { width: 'auto', stack: [{ text: pdfText(report.stamp ? 'Stan na ' + stampText(report.stamp) : ''), alignment: 'right' }, small('bez danych osobowych', { alignment: 'right' })] }
     ] });
     content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_WIDTH, y2: 0, lineWidth: 1.2, lineColor: C.teal }], margin: [0, 6, 0, 2] });
@@ -905,12 +1039,14 @@
     });
     const table = (item) => {
       const align = (column) => column.kind === 'text' || column.kind === 'bar' ? 'left' : 'right';
+      // Elastyczna jest pierwsza kolumna, chyba że tabela wskazuje inną (wide) — np. długą nazwę rozpoznania obok krótkiego kodu.
+      const wide = item.columns.some((column) => column.wide);
       const body = [item.columns.map((column) => ({ text: pdfText(column.title), bold: true, fontSize: 8, color: C.muted, alignment: align(column) }))];
       item.rows.forEach((row) => body.push(item.columns.map((column, index) => column.kind === 'bar'
         ? { svg: barSvg(row[index], item.barMax), width: PDF_BAR, margin: [0, 2, 0, 0] }
         : { text: pdfText(reportCell(row[index], column)), alignment: align(column) })));
       const stack = [{ text: pdfText(item.title), bold: true, fontSize: 10, margin: [0, 9, 0, 2] },
-        { table: { headerRows: 1, widths: item.columns.map((column, index) => column.kind === 'bar' ? PDF_BAR : index === 0 ? '*' : 'auto'), body }, layout: 'lightHorizontalLines', fontSize: 9 }];
+        { table: { headerRows: 1, widths: item.columns.map((column, index) => column.kind === 'bar' ? PDF_BAR : (wide ? column.wide : index === 0) ? '*' : 'auto'), body }, layout: 'lightHorizontalLines', fontSize: 9 }];
       if (item.note) stack.push(small(item.note, { fontSize: 8, margin: [0, 3, 0, 0] }));
       return { stack, unbreakable: item.rows.length <= 12 };
     };
@@ -967,7 +1103,9 @@
       view: initial.view === 'stats' ? 'stats' : 'list',
       group: initial.group && Array.isArray(initial.group.ids) ? { label: String(initial.group.label || ''), ids: initial.group.ids.slice() } : null,
       cards: initial.cards && typeof initial.cards === 'object' ? initial.cards : null,
-      cardCache: initial.cardCache && typeof initial.cardCache === 'object' ? initial.cardCache : null
+      cardCache: initial.cardCache && typeof initial.cardCache === 'object' ? initial.cardCache : null,
+      // P-ROZPOZNANIA, rata 2: statystyki zawężone do grupy pacjentów z wybranym rozpoznaniem (tylko pamięć widoku).
+      scope: initial.scope && Array.isArray(initial.scope.ids) ? { key: String(initial.scope.key || ''), label: String(initial.scope.label || ''), ids: initial.scope.ids.slice() } : null
     };
     // Earlier versions used the same input for names of lists and patients.
     if (state.filter === 'lists' && !state.listId && !Object.prototype.hasOwnProperty.call(initial, 'listQuery')) {
@@ -998,6 +1136,12 @@
     let exportNote = '';     // ostatni komunikat o pliku (pasek „z kart”)
     let zipLoading = null;   // jedna obietnica wczytania lokalnej biblioteki JSZip
     let statsCounted = false; // liczenie ruszyło samo przy tym wejściu w „Statystyki”
+    let dxHost = null;        // sekcja „Rozpoznania”
+    let dxHint = null;
+    const dxOpen = {};        // rozwinięte kategorie rozpoznań (klucz grupy)
+    let scopeCache = null;    // wynik kart policzony dla bieżącego zakresu
+    let catalogueLoading = null; // jedna obietnica wczytania katalogu ICD-10 (nazwy kategorii)
+    let catalogueLookup = null;
     let cardsProgress = null;
     const timeFormatter = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
     const rowHeights = new Map(Array.isArray(initial.rowHeights) ? initial.rowHeights : []);
@@ -1251,7 +1395,7 @@
       if (busy) return;
       if (key === 'lists' && !desktop) { openPicker(); return; }
       state.filter = key; state.listId = null; state.adding = false; state.selected = {};
-      state.sourceFilter = 'all'; state.group = null; memberCache = null; closeSort(); closePicker(false);
+      state.sourceFilter = 'all'; state.group = null; state.scope = null; memberCache = null; closeSort(); closePicker(false);
       render(); scroll.scrollTop = 0;
     }
     function chooseView(key) {
@@ -1262,6 +1406,16 @@
       render(); scroll.scrollTop = 0;
       const node = viewNodes[state.view];
       if (node && !root.contains(doc.activeElement)) node.focus();
+    }
+    // P-ROZPOZNANIA, rata 2: wybór rozpoznania zawęża CAŁE statystyki do pacjentów tej grupy; null — cała baza.
+    function chooseScope(scope) {
+      if (busy) return;
+      state.scope = scope && Array.isArray(scope.ids) && scope.ids.length ? { key: String(scope.key || ''), label: String(scope.label || ''), ids: scope.ids.slice() } : null;
+      scopeCache = null; exportNote = '';
+      state.view = 'stats';
+      render(); scroll.scrollTop = 0;
+      const target = root.querySelector(state.scope ? '.pt-scope-clear' : '.pt-dx-row');
+      if (target && !root.contains(doc.activeElement)) target.focus();
     }
     // Wybór słupka albo wiersza „brakuje” otwiera zwykłą listę zawężoną do tych pacjentów.
     function showGroup(label, ids) {
@@ -1295,6 +1449,7 @@
       if (destroyed || typeof opts.registerBack !== 'function') return;
       let handler = null;
       if (picker) handler = () => { closePicker(true); render(); };
+      else if (state.view === 'stats' && state.scope) handler = () => chooseScope(null);
       else if (state.view === 'stats') handler = () => chooseView('list');
       else if (state.group && ['all', 'base', 'ext'].includes(state.filter)) handler = () => { if (!busy) { state.group = null; chooseView('stats'); } };
       else if (state.adding) handler = () => { if (!busy) { state.adding = false; state.selected = {}; render(); } };
@@ -1560,6 +1715,15 @@
     }
     // ── P-BAZA-STATYSTYKI, etap 1 ───────────────────────────────────────────────
     function basePatients() { return patients.filter((patient) => !patient.__ext); }
+    // P-ROZPOZNANIA, rata 2: zakres statystyk. Bez zakresu — cała baza; z zakresem — pacjenci wybranej grupy,
+    // którzy nadal są w bazie. Liczenie z kart i jego pamięć zawsze obejmują całą bazę; zakres tylko wybiera z wyniku.
+    function scopeIds() {
+      if (!state.scope) return null;
+      const known = new Set(basePatients().map((patient) => patient.patientId));
+      return new Set(state.scope.ids.filter((id) => known.has(id)));
+    }
+    function shownPatients() { const ids = scopeIds(); return ids ? patients.filter((patient) => ids.has(patient.patientId)) : patients; }
+    function shownBase() { const ids = scopeIds(), base = basePatients(); return ids ? base.filter((patient) => ids.has(patient.patientId)) : base; }
     function ageFromVault(dobISO) {
       if (vault && typeof vault.calcAgeFromDOB === 'function') {
         const age = vault.calcAgeFromDOB(dobISO);
@@ -1621,6 +1785,51 @@
      * i leczenie GH. Pasek „z kart” (cardsBar) prowadzi przebieg; sekcje tylko pokazują wynik. */
     function savedCards() {
       return state.cards && state.cards.signature === cardsSignature(basePatients()) ? state.cards : null;
+    }
+    // Wynik kart dla bieżącego zakresu: te same funkcje (cardsResult, ghCohort, obesityCohort) na kartach grupy,
+    // z pamięci wyników — bez ponownego czytania sejfu.
+    function shownCards() {
+      const saved = savedCards();
+      if (!saved || !state.scope) return saved;
+      if (scopeCache && scopeCache.of === saved && scopeCache.key === state.scope.key) return scopeCache.value;
+      const base = shownBase(), result = cardsResult(base, state.cardCache && state.cardCache.items ? state.cardCache.items : {});
+      const value = Object.assign({}, saved, {
+        total: base.length, failed: result.failed, missing: result.missing, details: result.details,
+        gh: Object.assign(ghCohort(result.treated), { sdsReady: saved.gh.sdsReady, engineReady: saved.gh.engineReady }),
+        obesity: Object.assign(obesityCohort(result.obese, { thresholds: saved.thresholds || [] }),
+          { sdsReady: saved.obesity.sdsReady, engineReady: saved.obesity.engineReady, journalFailed: result.partial })
+      });
+      scopeCache = { of: saved, key: state.scope.key, value };
+      return value;
+    }
+    // Rozpoznania w bieżącym zakresie; null — nie policzono, niedostępne albo nieudany odczyt.
+    function shownDiagnoses(saved) {
+      const dx = saved && saved.dx;
+      if (!dx || dx.failed || !dx.index) return null;
+      return diagnosisCohort(shownBase(), dx.index, { lookup: catalogueLookup });
+    }
+    // Nazwy kategorii (np. „E66 — Otyłość”) daje katalog ICD-10 — te same dwa pliki, których używa formularz rozpoznania.
+    // Wczytuje się raz, dopiero gdy w bazie jest rozpoznanie z kodem; bez katalogu etykietą jest nazwa z rozpoznania.
+    function ensureCatalogue() {
+      if (catalogueLookup) return Promise.resolve(true);
+      if (catalogueLoading) return catalogueLoading;
+      const ready = () => {
+        if (!catalogueLookup && win.VildaICD10Search && win.VildaICD10PLData) catalogueLookup = win.VildaICD10Search.create(win.VildaICD10PLData).lookup;
+        return Boolean(catalogueLookup);
+      };
+      const load = (src, present) => new Promise((resolve, reject) => {
+        if (present()) { resolve(); return; }
+        const script = doc.createElement('script');
+        script.src = src; script.async = false;
+        script.onload = () => resolve();
+        script.onerror = () => { script.remove(); reject(new Error('brak pliku ' + src)); };
+        (doc.head || doc.body || doc.documentElement).appendChild(script);
+      });
+      catalogueLoading = load('vilda_icd10_pl_data.js?v=1', () => Boolean(win.VildaICD10PLData))
+        .then(() => load('vilda_icd10_search.js?v=1', () => Boolean(win.VildaICD10Search)))
+        .then(ready, () => false)
+        .then((ok) => { catalogueLoading = null; return ok; });
+      return catalogueLoading;
     }
     function ghDeps() {
       const tempo = win.VildaTempoWzrastania, trajectory = win.VildaTrajectoryAnalysis, engine = win.VildaSdsWzrostu;
@@ -1736,9 +1945,10 @@
       fillBar();
       let message;
       try {
-        const stamp = new Date(saved.at);
-        const report = statsReport({ model: demographics(patients, { ageMonths: ageFromVault }), cards: saved, patients: basePatients(), ageMonths: ageFromVault, stamp });
-        const name = reportFileName(stamp, kind);
+        const stamp = new Date(saved.at), shown = shownCards(), dx = saved.dx && saved.dx.index ? saved.dx.index : null;
+        const report = statsReport({ model: demographics(shownPatients(), { ageMonths: ageFromVault }), cards: shown, patients: shownBase(), ageMonths: ageFromVault, stamp,
+          scope: state.scope ? state.scope.label : '', diagnoses: shownDiagnoses(shown), diagnosesOf: dx ? dx.of : null });
+        const name = reportFileName(stamp, kind, Boolean(state.scope));
         const blob = kind === 'pdf' ? await pdfBlob(report) : await sheetBlob(report);
         const outcome = await saveFile(blob, name, kind === 'pdf' ? 'application/pdf' : XLSX_TYPE);
         message = outcome === 'cancelled' ? 'Udostępnianie przerwane.' : (outcome === 'shared' ? 'Udostępniono plik ' : 'Zapisano plik ') + name + '.';
@@ -1787,7 +1997,8 @@
     function fillCards() {
       if (!cardsBar) return;
       fillBar();
-      const saved = savedCards();
+      const saved = shownCards();
+      fillDiagnoses(saved);
       if (cardsHost) {
         clear(cardsHost);
         if (saved) CARD_ITEMS.forEach(([key, label]) => {
@@ -1807,6 +2018,92 @@
         obHint.textContent = cohort && cohort.treated
           ? 'leczonych: ' + cohort.treated + ' · ' + cohort.drugs.map((item) => item.drug + ' ' + item.treated).join(' · ') : '';
       }
+    }
+    /* ── P-ROZPOZNANIA, rata 2: sekcja „Rozpoznania” ──────────────────────────────────────────────
+     * Wiersz to rozpoznanie (kod — nazwa), słupek i liczba pacjentów z aktywnym rozpoznaniem. Wybór wiersza
+     * zawęża całe statystyki do tej grupy pacjentów (chooseScope); kategoria z kilkoma podkodami rozwija się. */
+    function fillDiagnoses(saved) {
+      if (!dxHost) return;
+      clear(dxHost);
+      if (dxHint) dxHint.textContent = '';
+      const card = dxHost.parentNode;
+      if (card) card.hidden = Boolean(saved && saved.dx === null);
+      if (!saved) {
+        dxHost.appendChild(el('p', 'pt-stat-note', cardsBusy ? 'Trwa liczenie z kart…' : 'Pojawią się po policzeniu z kart.'));
+        return;
+      }
+      if (!saved.dx) return;
+      if (saved.dx.failed) {
+        dxHost.appendChild(el('p', 'pt-stat-note', 'Nie udało się odczytać rozpoznań. Wybierz „Policz ponownie”.'));
+        return;
+      }
+      const cohort = shownDiagnoses(saved);
+      if (!cohort.groups.length) {
+        dxHost.appendChild(el('p', 'pt-stat-note', (state.scope ? 'W tej grupie' : 'W bazie') + ' nie ma jeszcze rozpoznań. Rozpoznanie wpisuje się w Karcie pacjenta, w zakładce „Leczenie”.'));
+        return;
+      }
+      if (dxHint) dxHint.textContent = 'z aktywnym rozpoznaniem: ' + cohort.withActive + ' z ' + cohort.total + ' (' + percent(cohort.withActive, cohort.total) + '%)';
+      const most = Math.max.apply(null, cohort.groups.map((group) => group.n).concat([1]));
+      const list = el('div', 'pt-dx-list');
+      const row = (item, child) => {
+        const describe = item.label + ': ' + peopleLabel(item.n) + ' z aktywnym rozpoznaniem (' + percent(item.n, cohort.total) + '%)' + (item.closed ? ', tylko zamknięte: ' + item.closed : '');
+        // Grupa bez aktywnych rozpoznań (same zamknięte) też jest grupą pacjentów — statystyki liczą wtedy wszystkich z tym rozpoznaniem.
+        const ids = item.n ? item.ids : item.closedIds;
+        const node = button('pt-dx-row' + (child ? ' pt-dx-row--sub' : ''), null, () => chooseScope({ key: item.key, label: item.label, ids }));
+        node.setAttribute('data-dx', item.key);
+        node.setAttribute('aria-label', describe + '. Pokaż statystyki tej grupy');
+        node.title = describe;
+        const name = el('span', 'pt-dx-name');
+        if (item.code) name.appendChild(el('span', 'pt-dx-code', item.code));
+        name.appendChild(el('span', 'pt-dx-title', item.name || (item.code ? '' : item.label)));
+        node.appendChild(name);
+        node.appendChild(statBar('pt-dx-bar', [{ className: 'pt-stat-fill', width: item.n / most * 1000 }]));
+        const figure = el('span', 'pt-dx-figure');
+        figure.appendChild(el('span', 'pt-dx-n', String(item.n)));
+        figure.appendChild(el('span', 'pt-dx-pct', percent(item.n, cohort.total) + '%'));
+        node.appendChild(figure);
+        if (item.closed) node.appendChild(el('span', 'pt-dx-closed', '+ ' + item.closed + ' zamkn.'));
+        return node;
+      };
+      cohort.groups.forEach((group) => {
+        const line = el('div', 'pt-dx-line');
+        if (group.items.length) {
+          const open = dxOpen[group.key] === true;
+          const toggle = button('pt-dx-toggle', open ? '−' : '+', () => { dxOpen[group.key] = !open; fillDiagnoses(shownCards()); const again = dxHost && dxHost.querySelector('[data-dx-toggle="' + group.key + '"]'); if (again) again.focus(); });
+          toggle.setAttribute('data-dx-toggle', group.key);
+          toggle.setAttribute('aria-expanded', String(open));
+          toggle.setAttribute('aria-label', (open ? 'Zwiń podkody: ' : 'Rozwiń podkody: ') + group.label);
+          line.appendChild(toggle);
+          line.appendChild(row(group, false));
+          list.appendChild(line);
+          if (open) group.items.forEach((item) => {
+            const sub = el('div', 'pt-dx-line pt-dx-line--sub');
+            sub.appendChild(row(item, true));
+            list.appendChild(sub);
+          });
+        } else {
+          line.appendChild(el('span', 'pt-dx-toggle pt-dx-toggle--none'));
+          line.appendChild(row(group, false));
+          list.appendChild(line);
+        }
+      });
+      dxHost.appendChild(list);
+      const foot = el('div', 'pt-dx-foot');
+      if (cohort.none.n) {
+        const none = button('pt-stat-missing', 'Bez rozpoznania: ' + cohort.none.n + ' ›', () => showGroup('Bez rozpoznania', cohort.none.ids));
+        none.setAttribute('aria-label', 'Bez rozpoznania: ' + peopleLabel(cohort.none.n) + '. Pokaż listę');
+        foot.appendChild(none);
+      }
+      if (cohort.onlyClosed.n) {
+        const closed = button('pt-stat-missing', 'Tylko zamknięte: ' + cohort.onlyClosed.n + ' ›', () => showGroup('Tylko zamknięte rozpoznania', cohort.onlyClosed.ids));
+        closed.setAttribute('aria-label', 'Tylko zamknięte rozpoznania: ' + peopleLabel(cohort.onlyClosed.n) + '. Pokaż listę');
+        foot.appendChild(closed);
+      }
+      if (foot.firstChild) dxHost.appendChild(foot);
+      dxHost.appendChild(el('p', 'pt-stat-note', DIAGNOSIS_NOTE + ' Wybierz rozpoznanie, aby zobaczyć statystyki tej grupy pacjentów.'));
+      // Nazwy kategorii z katalogu doczytują się raz; po wczytaniu sekcja rysuje się ponownie z pełnymi etykietami.
+      const coded = cohort.groups.some((group) => group.code);
+      if (coded && !catalogueLookup) ensureCatalogue().then((ok) => { if (ok && alive() && state.view === 'stats' && dxHost) { scopeCache = null; fillDiagnoses(shownCards()); } });
     }
     function updateCardsProgress() {
       if (!cardsProgress || !cardsBusy) return;
@@ -1828,6 +2125,13 @@
         || typeof vault.listPatientNotesByCategory !== 'function') return null;
       return journalIndex(await vault.listPatientNotesByCategory(journal.KATEGORIA, session), journal.jestWpisem);
     }
+    // P-ROZPOZNANIA, rata 2: rozpoznania całej bazy jednym odczytem notatek kategorii „treatment”.
+    // null — sejf albo strona bez zapisu rozpoznań (sekcja się nie pokazuje).
+    async function readDiagnoses(session) {
+      const model = win.VildaPatientTreatmentModel;
+      if (!model || typeof model.decode !== 'function' || typeof vault.listPatientNotesByCategory !== 'function') return null;
+      return diagnosisIndex(await vault.listPatientNotesByCategory(DIAGNOSIS_CATEGORY, session), model.decode);
+    }
     async function countCards(force) {
       if (cardsBusy || !alive() || state.view !== 'stats') return;
       const base = basePatients();
@@ -1844,6 +2148,11 @@
       if (before) fillBar(); else fillCards();
       let journal = null, journalBroken = false;
       try { journal = await readJournal(session); } catch { journalBroken = true; }
+      if (run !== cardsRun) return;
+      if (!alive()) { cardsBusy = null; return; }
+      let dx;
+      try { const index = await readDiagnoses(session); dx = index ? { index, mark: index.mark, failed: false } : null; }
+      catch { dx = { index: null, mark: '!', failed: true }; }
       if (run !== cardsRun) return;
       if (!alive()) { cardsBusy = null; return; }
       const markOf = (patientId) => journalBroken ? '!' : journal ? journal.mark(patientId) : '';
@@ -1894,13 +2203,18 @@
       if (!alive()) return;
       state.cardCache = { deps: depsKey, items };
       if (before && !plan.stale.length) {
-        // Nic się nie zmieniło: zostaje ten sam wynik, nowa jest tylko chwila sprawdzenia.
-        state.cards = Object.assign({}, before, { at: new Date().toISOString() });
-        fillBar();
+        // Nic się nie zmieniło w kartach: zostaje ten sam wynik, nowa jest tylko chwila sprawdzenia.
+        // Rozpoznania zmieniają się bez zapisu karty, więc ich sekcja ma własny znacznik.
+        const sameDx = (before.dx ? before.dx.mark : '') === (dx ? dx.mark : '');
+        state.cards = Object.assign({}, before, { at: new Date().toISOString(), dx });
+        scopeCache = null;
+        if (sameDx) fillBar(); else fillCards();
         return;
       }
       const result = cardsResult(base, items);
+      scopeCache = null;
       state.cards = { signature, at: new Date().toISOString(), total: base.length, failed: result.failed, missing: result.missing, details: result.details,
+        dx, thresholds: obDeps.thresholds,
         gh: Object.assign(ghCohort(result.treated), { sdsReady: deps.sdsReady, engineReady: Boolean(annualWindow(deps.tempo)) }),
         obesity: Object.assign(obesityCohort(result.obese, { thresholds: obDeps.thresholds }),
           { sdsReady: obDeps.sdsReady, engineReady: Boolean(obDeps.cykle && obDeps.tygodnie), journalFailed: result.partial }) };
@@ -2217,16 +2531,34 @@
       host.appendChild(el('p', 'pt-stat-note', obesityNote(cohort.journalFailed)));
     }
     function renderStats() {
-      cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; cardsProgress = null;
-      const model = demographics(patients, { ageMonths: ageFromVault });
+      cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; cardsProgress = null; dxHost = null; dxHint = null;
+      // Grupa, z której zniknęli wszyscy pacjenci (usunięci, przeniesieni poza bazę), wraca do całej bazy.
+      if (state.scope && !shownBase().length) { state.scope = null; scopeCache = null; }
+      const model = demographics(shownPatients(), { ageMonths: ageFromVault });
       if (!model.total) {
         empty(scroll, 'Brak pacjentów w bazie', 'Statystyki pojawią się po dodaniu pierwszego pacjenta.', '+ Dodaj pacjenta', () => { if (opts.onAddPatient) opts.onAddPatient(); });
         return;
       }
       const wrap = el('div', 'pt-stats');
 
+      if (state.scope) {
+        const scope = state.scope, members = shownBase().map((patient) => patient.patientId);
+        const banner = el('div', 'pt-scope');
+        banner.setAttribute('role', 'status');
+        const text = el('div', 'pt-scope-text');
+        text.appendChild(el('span', 'pt-scope-kicker', 'Statystyki grupy'));
+        text.appendChild(el('strong', 'pt-scope-name', scope.label));
+        text.appendChild(el('span', 'pt-scope-count', peopleLabel(members.length) + ' z tym rozpoznaniem'));
+        banner.appendChild(text);
+        const actions = el('div', 'pt-scope-actions');
+        actions.appendChild(button('pt-secondary pt-scope-list', 'Pokaż listę', () => showGroup(scope.label, members)));
+        actions.appendChild(button('pt-secondary pt-scope-clear', 'Cała baza', () => chooseScope(null)));
+        banner.appendChild(actions);
+        wrap.appendChild(banner);
+      }
+
       const tiles = el('div', 'pt-stat-tiles');
-      tiles.appendChild(statTile('Pacjenci w bazie', String(model.total), '', model.recent + ' z zapisem w ostatnich 12 mies.'));
+      tiles.appendChild(statTile(state.scope ? 'Pacjenci w grupie' : 'Pacjenci w bazie', String(model.total), '', model.recent + ' z zapisem w ostatnich 12 mies.'));
       if (model.withAge) {
         const meanAge = ageParts(model.meanMonths);
         tiles.appendChild(statTile('Średni wiek', meanAge[0], meanAge[1],
@@ -2276,6 +2608,16 @@
 
       cardsBar = el('div', 'pt-stat-cards-foot pt-stat-cardsbar');
       wrap.appendChild(cardsBar);
+
+      const dxCard = el('section', 'pt-stat-card pt-dx');
+      const dxHead = el('div', 'pt-stat-card-head');
+      dxHead.appendChild(el('h3', null, 'Rozpoznania'));
+      dxHint = el('span', 'pt-stat-card-hint');
+      dxHead.appendChild(dxHint);
+      dxCard.appendChild(dxHead);
+      dxHost = el('div', 'pt-dx-body');
+      dxCard.appendChild(dxHost);
+      wrap.appendChild(dxCard);
 
       const ghCard = el('section', 'pt-stat-card pt-gh');
       const ghHead = el('div', 'pt-stat-card-head');
@@ -2534,7 +2876,7 @@
       clear(scroll);
       if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
       if (state.view === 'stats') { count.textContent = ''; renderStats(); restorePosition(); return; }
-      ++cardsRun; cardsBusy = null; statsCounted = false; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
+      ++cardsRun; cardsBusy = null; statsCounted = false; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; dxHost = null; dxHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
         if (opts.duplicates && typeof opts.duplicates.render === 'function') opts.duplicates.render(scroll);
@@ -2705,5 +3047,5 @@
   function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
   win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
     statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName,
-    journalIndex, cardsPlan, cardsResult });
+    journalIndex, cardsPlan, cardsResult, diagnosisIndex, diagnosisCohort });
 })(typeof window !== 'undefined' ? window : null);

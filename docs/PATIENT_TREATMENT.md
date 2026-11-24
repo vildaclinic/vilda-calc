@@ -121,6 +121,12 @@ zmianie notatki pacjenta zgłoszonej przez sejf (`onPatientNoteChanged`).
 Formularz znika przy zablokowaniu sejfu i przy zmianie pacjenta lub sesji;
 niezapisane zmiany chroni pytanie przy zamknięciu i `beforeunload`.
 
+Statystyki Bazy pacjentów (P-ROZPOZNANIA rata 2) czytają rozpoznania całej bazy
+jednym odczytem `listPatientNotesByCategory('treatment')` i dekodują je tym
+samym modelem (`VildaPatientTreatmentModel.decode`); zliczanie według kodu
+i nazwy opisuje wpis „P-ROZPOZNANIA, rata 2” w `docs/clinical/ALGORITHMS.md`.
+Statystyki niczego nie zapisują i nie zmieniają rozpoznań.
+
 Bieżący formularz z niezapisanymi zmianami, trwającym zapisem lub niepewnym
 wynikiem zapisu korzysta z natywnej ochrony `beforeunload`. Odmowa odświeżenia
 zachowuje ten sam formularz. Zamknięcie, blokada i usunięcie widoku zwalniają

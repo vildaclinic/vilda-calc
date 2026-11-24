@@ -48179,3 +48179,78 @@ przy oknie 1100 px dwa rzędy, przy 1440 px jeden — jak dotąd u pacjentów le
 
 **Wersje.** `vilda_vault.js` 287 → 288, `vilda_auth_ui.js` 583 → 584, `vilda_auth_ui.css` 91 → 92, wstrzykujące `vilda_chrome.js` 331 → 332 i `vilda_session_bridge.js` 247 → 248, nowe `vilda_icd10_pl_data.js` 1, `vilda_icd10_search.js` 1, `vilda_icd10_picker.js` 1; SW 1.1.586 → 1.1.587 — `npm run podbij-wersje`. Pamięć offline: trzy pliki katalogu w paczce interfejsu wizyt (jedno
 żądanie instalacji, jak dotąd; paczka 30 kB → 971 kB), liczba żądań instalacji bez zmian (600).
+
+## P-ROZPOZNANIA, rata 2 — Baza pacjentów: statystyki według rozpoznania i statystyki grupy (SW 1.1.588, `vilda_patients_list.js` 12, `vilda_patients_list.css` 10, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu — nowe zliczenie tego, co wpisał lekarz.** Statystyki nie wyprowadzają rozpoznania z BMI,
+leku ani programu i nie nadają kodów. Wzory i definicje etapów 1–4 (wiek, płeć, leczenie GH, leczenie otyłości, kompletność)
+są bez zmian; nowe jest tylko to, że te same liczby można policzyć dla grupy pacjentów z wybranym rozpoznaniem.
+
+**Decyzja właściciela.** 2026-11-24, po opisie sposobu liczenia: „ok, rób teraz dwa PR-y”. Rata 1 dała zapis rozpoznań
+(ten sam, co w nowej Karcie pacjenta) i sekcję w Karcie; ta rata — statystyki.
+
+**Skąd dane.** Rozpoznanie to notatka pacjenta kategorii `treatment` z kontekstem leczenia (`kind: 'diagnosis'`; kontrakt:
+[PATIENT_TREATMENT.md](../PATIENT_TREATMENT.md)). Rozpoznania całej bazy daje **jeden** odczyt
+`listPatientNotesByCategory('treatment')` w tym samym przebiegu, który czyta karty; dekoduje je model wbudowany w sejf
+(`VildaPatientTreatmentModel.decode`). Epizody leczenia, zwykłe notatki tej kategorii i zapisy w nieobsługiwanej wersji są
+pomijane. Zmiana rozpoznania nie zmienia karty, więc sekcja ma własny znacznik świeżości (identyfikatory i chwile zmiany
+rozpoznań) — po ponownym wejściu w Statystyki widać nowe rozpoznania bez czytania kart.
+
+**Jak się liczy (`diagnosisCohort`).**
+1. **Grupa to kod ICD-10 po ujednoliceniu zapisu**: bez kropki, spacji i znaczków †/*, wielkimi literami. „e660”, „E66.0”
+   i „E66.0†” to ten sam kod. Etykietą grupy jest najczęstszy zapis kodu i nazwa z katalogu ICD-10 (a gdy katalogu nie ma —
+   najczęstsza nazwa wpisana przez lekarzy).
+2. **Kategoria i podkody.** Kody o tych samych trzech pierwszych znakach (litera i dwie cyfry) tworzą kategorię, np. E66
+   z podkodami E66.0 i E66.9. Kategoria z jednym kodem jest pokazana jako ten kod, bez osobnego wiersza kategorii. Kod, który
+   nie zaczyna się od litery i dwóch cyfr (własny kod lekarza), jest osobną grupą.
+3. **Rozpoznanie bez kodu** grupuje się po nazwie — bez wielkości liter, polskich znaków i zbędnych spacji.
+4. **Pacjent liczy się w grupie raz**, a z kilkoma rozpoznaniami jest w każdej ze swoich grup. Liczby grup nie sumują się
+   więc do liczby pacjentów; ekran i raport mówią to wprost.
+5. **Aktywne i zamknięte.** Pacjent jest wśród „aktywnych” grupy, gdy ma w niej choć jedno aktywne rozpoznanie; w „tylko
+   zamkniętych” — gdy ma w niej wyłącznie zamknięte. Słupek, liczba i odsetek dotyczą aktywnych; zamknięte są dopiskiem.
+6. **Odsetek** liczony jest od wszystkich pacjentów bazy (albo grupy, gdy statystyki są zawężone), zaokrąglony do całości.
+7. Osobno: pacjenci **bez rozpoznania** (żadnego zapisu) i **tylko z zamkniętymi**.
+8. Kolejność: najwięcej aktywnych, potem najwięcej zamkniętych, potem alfabet.
+
+**Statystyki grupy.** Wybór rozpoznania zawęża całe Statystyki do pacjentów tej grupy (pacjenci z aktywnym rozpoznaniem,
+a gdy grupa ma same zamknięte — wszyscy z tym rozpoznaniem): wiek i płeć z nagłówków kart, leczenie GH, leczenie otyłości,
+kompletność i rozpoznania współwystępujące liczą te same funkcje (`demographics`, `cardsResult`, `ghCohort`,
+`obesityCohort`, `diagnosisCohort`) na mniejszym zbiorze, z pamięci wyników — bez ponownego czytania sejfu. Baner nad
+kafelkami mówi, czyje to liczby („Statystyki grupy”), i ma „Pokaż listę” oraz „Cała baza”. Raport PDF i plik dla Excela
+pobrane w tym widoku dotyczą grupy: mają jej nazwę w nagłówku i własną nazwę pliku (`…-grupa-RRRR-MM-DD`). Przy małej grupie
+średnie są niestabilne — działa to samo ostrzeżenie o małej grupie, co dotąd.
+
+**Nazwy kategorii.** Zapis rozpoznania niesie nazwę wybranego kodu, nie nazwę kategorii. Nazwę kategorii (np. „E66 — Otyłość”)
+daje katalog ICD-10 PL (CeZ, stan na 31.03.2021 — [ICD10_CATALOGUE.md](ICD10_CATALOGUE.md)), doczytywany przez Statystyki
+tylko wtedy, gdy w bazie jest rozpoznanie z kodem. Gdy katalogu nie da się wczytać, kategoria pokazuje sam kod.
+
+**Przypadek syntetyczny (dane fikcyjne; osiem osób z bazy testowej a–h).** Rozpoznania: b „Fikcyjna niskorosłość idiopatyczna”
+(bez kodu); c E23.0; d Q96 i E66.0; e E66.0 oraz zamknięte E23.0; f E66.9; h zamknięte E66.0; a i g bez rozpoznania.
+Wynik: z aktywnym rozpoznaniem 5 z 8 (63%); bez rozpoznania 2; tylko zamknięte 1. Wiersze: „E66 Otyłość” 3 (38%), + 1 zamkn.
+[podkody: E66.0 — 2 (25%), + 1 zamkn.; E66.9 — 1 (13%)]; „E23.0 Niedoczynność przysadki” 1 (13%), + 1 zamkn.;
+„Fikcyjna niskorosłość idiopatyczna” 1 (13%); „Q96 Zespół Turnera” 1 (13%). Statystyki grupy E66 (d, e, f): 3 pacjentów,
+1 chłopiec i 2 dziewczęta; leczenie otyłości „leczonych: 3 · Wegovy 2 · Saxenda 1”, zmiana masy po 12 tyg. −4,4%
+(d −3,0 · e −4,2 · f −6,0), po 6 mies. −8,5% (d −5,0 · f −12,0); leczenie GH „leczonych: 2 · SNP 1 · ZT 1”.
+
+**Pliki.** Raport PDF i arkusz „Podsumowanie” dostają sekcję „Rozpoznania” (pacjenci z aktywnym rozpoznaniem, bez
+rozpoznania, tabela „Pacjenci według rozpoznania” z wierszem kategorii „razem” i podkodami). Arkusz „Pacjenci” dostaje kolumny
+„Rozpoznania aktywne” i „Rozpoznania zamknięte” (kod, a bez kodu — nazwa).
+
+**Prywatność i cykl życia danych.** Rozpoznania są daną medyczną. W widoku żyją tak jak pozostałe wyniki statystyk: w pamięci
+RAM widoku Bazy (`state.cards.dx`, zakres `state.scope`), przekazywane przy powrocie do Bazy w tej samej sesji i czyszczone
+z blokadą sejfu; nic nie trafia do `localStorage`, `sessionStorage`, IndexedDB, adresu strony ani poza urządzenie. Pliki nadal
+nie zawierają nazwisk, dat urodzenia ani identyfikatorów; kolumny rozpoznań zawierają kody, a przy rozpoznaniu bez kodu —
+nazwę wpisaną przez lekarza (wolny tekst lekarza może więc trafić do pliku, który lekarz sam pobiera). W grupie złożonej
+z bardzo niewielu osób liczby są bliskie danym pojedynczego pacjenta — plik grupy należy traktować jak dokumentację medyczną.
+
+**Zgodność wstecz.** Sejf albo strona bez zapisu rozpoznań: sekcja się nie pokazuje, raport nie ma sekcji ani kolumn
+rozpoznań, reszta statystyk działa jak dotąd. Nieudany odczyt rozpoznań nie zatrzymuje liczenia kart.
+
+**Strażnicy.** `tests/unit/baza-statystyki-rozpoznania.test.mjs` (13; plik produkcyjny, prawdziwy model zapisu leczenia
+i prawdziwy katalog ICD-10: indeks i znacznik, kategorie i podkody, ujednolicenie zapisu kodu, grupowanie po nazwie,
+aktywne/zamknięte, kolejność, błąd katalogu, sekcja raportu, raport grupy, kolumny arkusza, starszy sejf);
+`tests/e2e/baza-pacjentow-statystyki-rozpoznania.spec.mjs` (3: sekcja, podkody, jeden odczyt notatek rozpoznań, świeżość po
+zamknięciu rozpoznania bez czytania kart; statystyki grupy liczone bez odczytu sejfu, lista grupy, plik grupy; telefon);
+`tests/e2e/baza-pacjentow-statystyki.spec.mjs` — licznik odczytów osobno dla wpisów między wizytami i rozpoznań.
+
+**Wersje.** `vilda_patients_list.js` 11 → 12, `vilda_patients_list.css` 9 → 10, wstrzykujące `vilda_chrome.js` 332 → 333 i `vilda_session_bridge.js` 248 → 249; SW 1.1.587 → 1.1.588 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline (katalog ICD-10 jest w niej od raty 1).
