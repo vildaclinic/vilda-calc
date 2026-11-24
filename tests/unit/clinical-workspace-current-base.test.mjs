@@ -29,7 +29,7 @@ function withManifest(change) {
 describe('current public Vault base for the next private workspace build', () => {
   it('replays rapid intake on the exact published whole-visit trash image', () => {
     const prior = restoreRapidVisitBaseline(source);
-    expect(digest(prior)).toBe('628f569396f085f1676c46abc5ac22de280eb97dd68092efb8121feee6793e67');
+    expect(digest(prior)).toBe('45c7ce0c61f98baf9e93a498e2f1b7d972de65c0039d289193cb021b9f1f0f67');
     expect(applyRapidVisitDelta(prior)).toBe(restorePatientProfileBaseline(source));
     expect(() => restoreRapidVisitBaseline(source.replace('function RapidVisitDatabase(', 'function ChangedRapidVisitDatabase('))).toThrow();
   });
@@ -37,7 +37,7 @@ describe('current public Vault base for the next private workspace build', () =>
     const result = verifyClinicalWorkspaceCurrentBase(source);
     expect(digest(result.baseSource)).toBe(manifest.baseVaultSHA256);
     expect(result.publicVaultSHA256).toBe(digest(source));
-    expect(result.nativeIntegrationBaseVaultSHA256).toBe('8f8d3490c8b7178f07441a83f18d9a870f0dfeaa3f1d96977086b4027b57a6cc');
+    expect(result.nativeIntegrationBaseVaultSHA256).toBe('989fec00e7cbcb8478c972b666cb2a97479e5eb0decf9364bb2cae58b03143c6');
     expect(result.baseSource).toContain('/* BEGIN VILDA PATIENT TREATMENT V1 */');
     expect(result.baseSource).toContain('/* BEGIN VILDA DURABLE VISITS V1 */');
     expect(result.baseSource).toContain('/* BEGIN VILDA WHOLE VISIT TRASH V1 */');

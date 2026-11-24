@@ -8,7 +8,7 @@ import { parse } from 'acorn';
 import { restoreProfileTrashBaseline } from './profile-trash-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = 'c03c5e5ddb0e282d3e52f44445337a5321b5913140058493a5c2ec02f6952cba';
+const BASE = '7871ecb983d9e3fbb12c0c05cf969083e048381df51c42e41e290b6ed9aee98a';
 const SOURCE = 'runtime/visit-document-v1/vault-fragment.js';
 const MANIFEST = 'runtime/visit-document-v1/manifest.json';
 const START = '/* BEGIN VILDA VISIT DOCUMENT V1 */\n';

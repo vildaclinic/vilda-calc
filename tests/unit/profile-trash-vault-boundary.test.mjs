@@ -12,7 +12,7 @@ const native=value=>value.slice(value.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE
 describe('atomic profile retention outer Vault proof',()=>{
   it('replays over the exact reviewed document layer and restores its complete image',()=>{
     const base=restoreProfileTrashBaseline(source);
-    expect(hash(base)).toBe('8c258ae2118257af1929817b7b6c1c1a24f4b3325ad48c11ea022914eb3ed8ed');
+    expect(hash(base)).toBe('004a86e996b2e4aaf50f40bdb96e6396e815b37bdd7dde0449b517d301033ee9');
     expect(applyProfileTrashDelta(base)).toBe(source); expect(hash(source)).toBe(manifest.integratedVaultSHA256);
     expect(manifest.sources).toHaveLength(2); expect(manifest.hooks).toHaveLength(10);
   });

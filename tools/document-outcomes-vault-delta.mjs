@@ -8,7 +8,7 @@ import { parse } from 'acorn';
 import { restoreTreatmentDocumentationBaseline } from './treatment-documentation-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = '314dae8dc276946c610ed6d5d767a671a200d70d5f39a0f477ff179b9a8bc2eb';
+const BASE = '259c0804a7ac383383614adea0bf8a7b15bf682e3f5cdbcc05118a29858d3f36';
 const SOURCE = 'runtime/document-outcomes-v1/vault-fragment.js';
 const MANIFEST = 'runtime/document-outcomes-v1/manifest.json';
 const START = '/* BEGIN VILDA DOCUMENT OUTCOMES V1 */\n';
