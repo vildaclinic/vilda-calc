@@ -33,7 +33,7 @@ async function device({ account = true, seed = true } = {}) {
   const password = 'Fictional#TreatmentHydration!' + ++serial;
   if (account) await vault.createUser(password, { iterations: 1000, label: 'Fikcyjny sejf synchronizacji R4', deferServerContact: true });
   const patientId = account && seed ? (await vault.savePatient(PATIENT)).patientId : null;
-  return { win, vault, password, patientId };
+  return { win, vault, adapter, password, patientId, userId: vault.getCurrentUser()?.userId || null };
 }
 afterEach(() => devices.splice(0).forEach(vault => vault.lock('fictional-hydration-test-complete')));
 
@@ -48,6 +48,12 @@ const rows = async (dev, patientId) => (await dev.vault.listPatientNotesForPatie
   .map(note => ({ id: note.id, rev: note.rev, updatedAtISO: note.updatedAtISO, title: note.title, body: note.body,
     context: Object.hasOwn(note, 'treatmentContext') ? note.treatmentContext : null }))
   .sort((a, b) => a.id.localeCompare(b.id));
+// The record as the storage adapter keeps it, without the ciphertext: revision, write time, content-time and
+// state-time fields and every other piece of metadata.
+async function stored(dev, id) {
+  const { bodyCipher, ...metadata } = await dev.adapter.getPatientNoteForUser(dev.userId, id);
+  return { metadata, cipher: bodyCipher && bodyCipher.data };
+}
 function events(dev) {
   const seen = [];
   dev.vault.onPatientNoteChanged(event => seen.push(event.id + ':' + event.action));
@@ -71,10 +77,17 @@ describe('treatment documents stored without their context adopt it from the sam
     expect(before.map(row => row.context)).toEqual([null, null]);
     expect(before.map(({ context, ...row }) => row)).toEqual(source.map(({ context, ...row }) => row));
     expect((await scope(phone, patientId).read()).diagnoses).toEqual([]);
+    const recordBefore = await stored(phone, problem.id);
 
     const seen = events(phone);
     await phone.vault.mergeSyncPayload(full);
     expect(await rows(phone, patientId)).toEqual(source);
+    // Only the ciphertext changes. Revision, write time, content-time and state-time fields stay as they were,
+    // so the same document does not become "later" than the copy it was completed from.
+    const recordAfter = await stored(phone, problem.id);
+    expect(recordAfter.metadata).toEqual(recordBefore.metadata);
+    expect(recordAfter.cipher).not.toBe(recordBefore.cipher);
+    expect(Object.keys(recordAfter.metadata)).toEqual(expect.arrayContaining(['rev', 'updatedAtISO']));
     const read = await scope(phone, patientId).read();
     expect(read.diagnoses.map(entry => [entry.id, entry.context.code, entry.rev])).toEqual([[problem.id, 'E66.0', problem.rev]]);
     expect(read.episodes.map(entry => [entry.id, entry.context.diagnosisIds])).toEqual([[treatment.id, [problem.id]]]);
