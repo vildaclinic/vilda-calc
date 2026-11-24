@@ -47537,3 +47537,24 @@ telefon — przyciski w pasku z celem dotyku co najmniej 44 px).
 **Wersje.** `vilda_patients_list.js` 8 → 9, `vilda_patients_list.css` 7 → 8, `vilda_chrome.js` 327 → 328
 i `vilda_session_bridge.js` 243 → 244 (wstrzykują pliki z nowym `?v=`), SW 1.1.582 → 1.1.583 — `npm run podbij-wersje`.
 Bez nowego pliku w pamięci offline.
+
+## P-BAZA-NAGLOWEK-LINIA — Baza pacjentów: przełącznik Lista/Statystyki w jednej linii z „Dodaj pacjenta” (SW 1.1.584, `vilda_patients_list.js` 10, `vilda_patients_list.css` 9, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — układ nagłówka.** Zgłoszenie właściciela 2026-11-24: przełącznik Lista/Statystyki ma leżeć
+w jednym wierszu z „Dodaj pacjenta” i mieć tę samą wysokość.
+
+**Przyczyna.** Przełącznik miał własny górny margines 24 px (przycisk „Dodaj pacjenta” już nie) i wysokość 50 px wobec 46 px
+przycisku — stał 10 px niżej i był o 4 px wyższy.
+
+**Naprawa.** Przełącznik i przycisk są w jednej grupie `.pt-head-actions` (flex, `align-items: stretch`), więc stoją w jednej
+linii i mają wysokość wyższego z nich (46 px), niezależnie od reguł, które ustalają wysokość przycisku. Na telefonie grupa
+znika z układu (`display: contents`) i zostaje dotychczasowy układ: „Dodaj” obok tytułu, przełącznik na całą szerokość pod
+tytułem z celem dotyku 44 px.
+
+**Pomiar w aplikacji (1440 px):** przed — przycisk 76–122 px, przełącznik 86–136 px; po — oba 72,5–118,5 px.
+
+**Strażnik.** `tests/e2e/baza-pacjentow-statystyki.spec.mjs`, test „komputer…”: ta sama górna krawędź i wysokość przełącznika
+i przycisku (tolerancja 0,6 px); test telefonu bez zmian (przełącznik pod tytułem, cel dotyku ≥ 44 px).
+
+**Wersje.** `vilda_patients_list.js` 9 → 10, `vilda_patients_list.css` 8 → 9, `vilda_chrome.js` 328 → 329
+i `vilda_session_bridge.js` 244 → 245, SW 1.1.583 → 1.1.584 — `npm run podbij-wersje`.

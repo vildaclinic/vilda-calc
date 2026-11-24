@@ -19,6 +19,11 @@ test('komputer: wiek, płeć i przedziały z nagłówków kart; osoba spoza bazy
   await otworzStatystyki(database);
 
   await expect(database.locator('.pt-toolbar'), 'wyszukiwarka i zakładki listy znikają w statystykach').toBeHidden();
+  // Przełącznik Lista/Statystyki stoi w jednej linii z „Dodaj pacjenta” i ma tę samą wysokość (zgłoszenie właściciela 2026-11-24).
+  const przelacznik = await database.locator('.pt-viewseg').boundingBox(), dodaj = await database.locator('.pt-add').boundingBox();
+  expect(Math.abs(przelacznik.y - dodaj.y), 'ta sama linia').toBeLessThan(0.6);
+  expect(Math.abs(przelacznik.height - dodaj.height), 'ta sama wysokość').toBeLessThan(0.6);
+  expect(przelacznik.x + przelacznik.width, 'przełącznik na lewo od przycisku').toBeLessThan(dodaj.x);
   await expect(database.locator('.pt-viewseg [data-view="stats"]')).toHaveAttribute('aria-pressed', 'true');
 
   const pacjenci = kafel(frame, database, 'Pacjenci w bazie');
