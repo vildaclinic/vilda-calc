@@ -48096,7 +48096,8 @@ W bloku P-DZIENNIK-ZDARZEN: `Bev_POLA_WERSJI` (6861–6863), komentarze `Bev_spr
 sejf), SW 1.1.585 → 1.1.586 — `npm run podbij-wersje`; baza `origin/audyt` `ac0869f2` (po vildaclinic/vilda-calc#1058).
 Od `d6f133eb` sejf w `audyt` zmienił się tylko o dwie funkcje tylko do odczytu P-BAZA-SZYBKIE (`getNewestSnapshot`
 składa wersję z listy pól, więc pola nie pokazuje; bez nowych zapisów rekordu wersji), a `vilda_sync.js`,
-`vilda_sync_integration.js`, `tests/support/` i `tests/unit/sync-*` są bez zmian; przebiegi liczone na `d6f133eb` są więc
+`vilda_sync_integration.js`, istniejące pliki `tests/support/` i `tests/unit/sync-*` są bez zmian (nowy
+`tests/support/baza-pacjentow-statystyki.mjs` służy tylko e2e statystyk); przebiegi liczone na `d6f133eb` są więc
 ważne, czerwone na bazie powtórzone na `ac0869f2` (te same 51 + 2 + 1, wszystkie na asercji), a skróty kontroli granicy
 przeliczone dla sejfu po scaleniu. SW 1.1.586 to numer, który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b.
 Bez nowego pliku w pamięci offline.
