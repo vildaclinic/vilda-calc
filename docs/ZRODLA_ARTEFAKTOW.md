@@ -3061,6 +3061,38 @@ Strażnicy: `tests/unit/diagnosis-mutation-vault.test.mjs`, `tests/unit/diagnosi
 `tests/unit/patient-treatment-vault.test.mjs` (przypadek synchronizacji z tamtej gałęzi, bez zmian),
 `tests/e2e/karta-rozpoznania-usuwanie.spec.mjs`.
 
+## Łatka P-ROZPOZNANIA, rata 4 — synchronizacja: zapis leczenia bez kontekstu przejmuje go z tej samej wersji (`vilda_vault.js`, 2026-11-24, zgłoszenie właściciela: rozpoznania wpisane na komputerze niewidoczne na telefonie)
+
+Opis i przypadki: `docs/clinical/ALGORITHMS.md`, wpis P-ROZPOZNANIA rata 4; reguła: `docs/PATIENT_TREATMENT.md`,
+„Urządzenie, które dostało zapis leczenia na starszej wersji aplikacji”.
+
+**Sejf (`vilda_vault.js`) — warstwa `VILDA TREATMENT SYNC HYDRATION V1`.** Czytelne źródło
+`runtime/treatment-sync-hydration-v1/vault-fragment.js` (dwie funkcje: `TreatmentSyncHydrationCandidate`,
+`TreatmentHydrateSyncRecord`), manifest `runtime/treatment-sync-hydration-v1/manifest.json`, narzędzie
+`tools/treatment-sync-hydration-vault-delta.mjs`. Trzy nazwane podmiany (`before` → `after`, skróty w manifeście),
+wszystkie w scalaniu notatek pacjenta (`Le`), obok istniejącego uzupełniania planów opieki:
+
+1. `hydration-admit-pair` — filtr wstępny pary notatek: `&&!CareMvpMayMerge&&!CareMvpSyncHydrationCandidate(Ej,g)){`
+   dostaje `&&!TreatmentSyncHydrationCandidate(Ej,g)`, żeby para z tą samą wersją i kontekstem w ładunku doszła do
+   blokady notatki, mimo że ładunek nie jest „nowszy”.
+2. `hydration-under-lock` — pod blokadą notatki, na świeżo odczytanym rekordzie, tuż po bloku `CareMvpRecovered`: gdy
+   ładunek nie wygrywa, a para jest kandydatem, `TreatmentHydrateSyncRecord` zwraca tutejszy rekord z treścią
+   zaszyfrowaną ponownie z kontekstem z ładunku (reszta rekordu bez zmian) — zapis, wpis na listę zmian
+   (`action:"merge"`), licznik i koniec obsługi pary. Te same sprawdzenia sesji (`Bses_pilnuj`) co w bloku planów.
+3. `hydration-readable-source` — fragment po `/* END VILDA DIAGNOSIS MUTATION V1 */`.
+
+- Warstwa jest najbardziej zewnętrzna. Baza: obraz warstwy usuwania rozpoznania `46535d45…` (bez zmian od raty 3);
+  wynik: `d9efa2e5…`. `restoreDiagnosisMutationBaseline` zdejmuje ją jako pierwszą, więc skróty warstw pod nią i obraz
+  bazy dla repozytorium źródeł modułu **nie zmieniają się**; blok natywny bez zmian.
+- Odtworzenie: `node tools/treatment-sync-hydration-vault-delta.mjs --build USUWANIE.js vilda_vault.js`; kontrola:
+  `node tools/treatment-sync-hydration-vault-delta.mjs`.
+- Zmienione straże: `tools/diagnosis-mutation-vault-delta.mjs` (zdejmuje nową warstwę przed swoją),
+  `tests/unit/diagnosis-mutation-vault-boundary.test.mjs`, `tests/unit/klirens-existing-note-update-vault.test.mjs`.
+- Kotwice 1–3 istnieją też w sejfie gałęzi `agent/nowa-strona-glowna`; przeniesienie warstwy tam to zmiana stałej `BASE`.
+- Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
+
+Strażnicy: `tests/unit/treatment-sync-hydration-vault.test.mjs`, `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

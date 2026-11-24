@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { applyDiagnosisMutationDelta, restoreDiagnosisMutationBaseline } from '../../tools/diagnosis-mutation-vault-delta.mjs';
+import { restoreTreatmentSyncHydrationBaseline } from '../../tools/treatment-sync-hydration-vault-delta.mjs';
 
 const read = file => readFileSync(new URL('../../' + file, import.meta.url), 'utf8');
-const integrated = read('vilda_vault.js');
+// The treatment sync-hydration layer wraps this one; this file checks the layer below it.
+const integrated = restoreTreatmentSyncHydrationBaseline(read('vilda_vault.js'));
 const manifest = JSON.parse(read('runtime/diagnosis-mutation-v1/manifest.json'));
 const hash = value => createHash('sha256').update(value).digest('hex');
 const native = value => value.slice(value.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */'),
