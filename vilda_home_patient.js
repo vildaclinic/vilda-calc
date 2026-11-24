@@ -216,6 +216,7 @@
     waiting.setAttribute('role', 'status'); shell.appendChild(waiting); host.replaceChildren(shell);
     inline = { host: host, shell: shell, owner: active, patientId: id, snapshotId: statusSnapshotId(id),
       selected: options.activeTab || 'antro', needsRead: true, pending: false,
+      workspaceHeader: options.workspaceHeader === true,
       onClose: options.onClose, onAnalysis: options.onAnalysis, showError: function () { inlineIssue(this); } };
     var scope = inline;
     scope.captureVisitBinding = function (patientId) {

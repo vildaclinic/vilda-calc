@@ -12,6 +12,10 @@ html:not(.vilda-embedded):has(.main-content[data-vhome-screen]) > body > header 
   top: var(--vilda-safe-top) !important;
   inset-inline: var(--vilda-safe-left) var(--vilda-safe-right);
 }
+/* A solid masthead masks the scrolling patient record on standalone pages. */
+html:not(.vilda-embedded):has(.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"])) > body > header {
+  background: #fff !important;
+}
 @media (min-width: 992px) {
   html:not(.vilda-embedded,.vilda-phone):has(.main-content[data-vhome-screen]) body.vilda-header-menu .chrome-chips {
     right: var(--space-16px);
@@ -39,7 +43,7 @@ html:not(.vilda-embedded):has(.main-content[data-vhome-screen]) > body > header 
   box-sizing: border-box;
   padding-inline: var(--gb-inset-start) var(--gb-inset-end);
 }
-#gbWorkspaceHeader { display: flow-root; }
+#gbWorkspaceHeader { --gb-patient-header-surface: #f3f6f6; display: flow-root; }
 html.vilda-fixed-gabinet-header {
   --gb-workspace-top: calc(var(--gb-brand-bottom,0px) + var(--chrome-form-gap,12px));
   scroll-padding-top: calc(var(--gb-workspace-top) + var(--gb-workspace-header-height));
@@ -53,6 +57,9 @@ html.vilda-fixed-gabinet-header [data-vhome-screen] > #gbWorkspaceHeader {
   z-index: var(--z-dropdown);
   background: var(--vhome-workspace-background,var(--bg));
   box-shadow: 0 calc(-1 * var(--chrome-form-gap,12px)) var(--vhome-workspace-background,var(--bg));
+}
+html.vilda-fixed-gabinet-header [data-vhome-screen] > #gbWorkspaceHeader:has(> #vhomeGabinetHeader:not([hidden])) {
+  background: var(--gb-patient-header-surface);
 }
 /* Keep content in flow even though the navigation belongs to the viewport. */
 html.vilda-fixed-gabinet-header .main-content[data-vhome-screen]::before {
@@ -79,11 +86,12 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 }
 [data-vhome-screen] :is(#calcForm, #vhomeMainCards) { gap: var(--space-12px); }
 [data-vhome-screen] :is(#vhomeMainCards, #vhomeVisitComparison, #vhomeOtherTools) { margin-block: var(--space-12px); }
+/* The patient header has two native rows: navigation/actions, then identity/tabs. */
 :is(#vhomeGabinetHeader,#gbEntryHeader) { font: 1rem/1.52 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
 #vhomeGabinetHeader {
-  --gb-patient-header-end: 1.15rem;
+  --gb-patient-header-end: var(--space-0-75);
   --gb-visit-ink: #214a54;
-  --gb-visit-muted: #516b73;
+  --gb-visit-muted: #49636a;
   --gb-visit-teal: #007c84;
   --gb-visit-border: #c9dcdf;
   margin-bottom: var(--gb-patient-header-end);
@@ -93,6 +101,7 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) {
   justify-content: space-between; gap: var(--space-0-5); margin-bottom: var(--space-0-55);
 }
+#vhomeGabinetHeader .gb-header-top { margin-bottom: .12rem; }
 #gbEntryHeader { display: flex; align-items: center; min-height: var(--brand-logo-size); }
 #gbEntryHeader .gb-breadcrumb { width: 100%; min-height: var(--brand-logo-size); }
 :is(#gbEntryHeader,#vhomeGabinetHeader) .gb-breadcrumb { align-self: start; }
@@ -105,6 +114,7 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 }
 :is(#vhomeGabinetHeader,#gbEntryHeader) button svg { flex: 0 0 18px; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) button:is(:hover,:active,._pressed) { transform: none !important; }
+#vhomeGabinetHeader :is(.gb-primary,[data-visit-actions]):focus-visible { transform: none !important; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) :is(.gb-breadcrumb,.gb-patient-tabs) button {
   background: transparent !important; border: 0 !important; border-radius: 0 !important;
   box-shadow: none !important;
@@ -122,41 +132,47 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
   outline-offset: -2px;
 }
 
-#vhomeGabinetHeader .gb-person-line { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: var(--space-0-65) var(--space-1-25); }
+#vhomeGabinetHeader .gb-person-line {
+  display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center;
+  gap: var(--space-0-65) var(--space-1); border-bottom: var(--border-hairline) solid #cbdcde;
+}
 #vhomeGabinetHeader .gb-identity { min-width: 0; overflow-wrap: anywhere; }
 /* In an app pane, vw excludes the shell's rails. The title scales with the
  * full window, just as it does on the standalone patient workspace. */
 html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader { --gb-shell-width: calc(100vw + var(--chrome-sidebar-width)); }
 html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail] { --gb-shell-width: calc(100vw + var(--chrome-sidebar-width) + var(--decor-sidebar-width)); }
-#vhomeGabinetHeader h1 { margin: 0; color: #183f47; font-size: clamp(1.55rem,calc(var(--gb-shell-width,100vw) * .021),2.1rem); font-weight: 690; line-height: 1.15; letter-spacing: -.037em; text-align: start; }
-#vhomeGabinetHeader .gb-identity-meta { margin-top: var(--space-0-4); font-size: .95rem; color: #526b73; }
+#vhomeGabinetHeader h1 { margin: 0; color: #183f47; font-size: clamp(1.4rem,calc(var(--gb-shell-width,100vw) * .019),1.9rem); font-weight: 690; line-height: 1.15; letter-spacing: -.035em; text-align: start; }
+#vhomeGabinetHeader .gb-visit-summary {
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-0-65); row-gap: .24rem;
+  margin-block: .28rem .12rem; color: var(--gb-visit-muted); font-size: .9375rem; line-height: 1.35;
+}
+#vhomeGabinetHeader .gb-identity-meta { margin: 0; font-size: inherit; line-height: inherit; color: inherit; }
+#vhomeGabinetHeader .gb-identity-meta:empty { display: none; }
 #vhomeGabinetHeader .gb-visit-context {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-0-35) var(--space-0-6);
-  min-width: 0; margin-top: var(--space-0-55); color: var(--gb-visit-muted); font-size: .875rem; line-height: 1.3;
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-0-5); row-gap: var(--space-0-35);
+  min-width: 0; margin: 0; color: var(--gb-visit-muted); font-size: inherit; line-height: inherit;
 }
 #vhomeGabinetHeader :is(.gb-visit-source,.gb-readonly-badge) { display: inline-flex; align-items: center; gap: .36rem; }
-#vhomeGabinetHeader .gb-visit-source { min-height: 2rem; white-space: nowrap; }
+#vhomeGabinetHeader .gb-visit-source { min-height: 0; white-space: nowrap; }
 #vhomeGabinetHeader .gb-visit-source time { color: var(--gb-visit-ink); font-weight: 680; font-variant-numeric: tabular-nums; }
-#vhomeGabinetHeader .gb-visit-context svg { display: block; width: 1rem; height: 1rem; flex: 0 0 1rem; }
-#vhomeGabinetHeader .gb-visit-source svg { color: #3e737b; }
 #vhomeGabinetHeader .gb-readonly-badge {
-  padding: .22rem var(--space-0-45); border: var(--border-hairline) solid #e6ca94; border-radius: .35rem;
-  background: #fff3db; color: #754806; font-weight: 650; white-space: nowrap;
+  padding: .12rem var(--space-0-4); border: var(--border-hairline) solid #e6ca94; border-radius: .35rem;
+  background: #fff3db; color: #754806; font-size: .875rem; font-weight: 650; white-space: nowrap;
 }
 #userSection #vhomeVisitFields { display: contents; }
 #userSection #vhomeVisitFields:disabled :is(input, select) {
   opacity: 1; color: var(--text); -webkit-text-fill-color: var(--text); background-color: var(--card);
 }
-#vhomeGabinetHeader .gb-card-actions { display: flex; align-items: center; justify-self: end; gap: var(--space-0-5); width: auto; min-width: 0; }
+#vhomeGabinetHeader .gb-card-actions { display: flex; align-items: center; justify-self: end; flex: 0 0 auto; gap: var(--space-0-5); width: auto; min-width: 0; }
 #vhomeGabinetHeader .gb-card-actions button {
-  min-width: 0; min-height: 2.5rem; justify-content: center; padding: var(--space-0-45) .72rem; line-height: 1.25;
+  min-width: 0; height: 44px; min-height: 44px; justify-content: center; padding: var(--space-0-45) .72rem; line-height: 1.25;
   border: var(--border-hairline) solid var(--gb-visit-border) !important; border-radius: var(--radius-8) !important;
   background: var(--bg) !important; color: #116971 !important; box-shadow: none !important;
-  font-size: .875rem; font-weight: 650; text-align: center;
+  font-size: .875rem; font-weight: 650; text-align: center; white-space: nowrap;
 }
 #vhomeGabinetHeader .gb-card-actions button svg { width: 1.05rem; height: 1.05rem; flex: 0 0 1.05rem; }
 #vhomeGabinetHeader .gb-card-actions .gb-primary { display: grid; grid-template-columns: minmax(0,1fr); background: var(--gb-visit-teal) !important; color: #fff !important; border-color: var(--gb-visit-teal) !important; }
-/* Reserve the start label's intrinsic wrapped height in every encounter mode. */
+/* Reserve the widest label so switching between New and Save keeps the row stable. */
 #vhomeGabinetHeader .gb-action-copy { grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; min-width: 0; column-gap: inherit; }
 #vhomeGabinetHeader .gb-action-reserve { visibility: hidden; pointer-events: none; }
 #vhomeGabinetHeader .gb-action-reserve::before { content: ''; flex: 0 0 1.05rem; }
@@ -164,7 +180,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 #vhomeGabinetHeader .gb-card-actions button:hover:not(:disabled) { background: #edf5f5 !important; border-color: #a6c8cc !important; }
 #vhomeGabinetHeader .gb-card-actions .gb-primary:hover:not(:disabled) { background: #006a72 !important; border-color: #006a72 !important; }
 #vhomeGabinetHeader .gb-card-actions button:disabled { opacity: .58; cursor: default; }
-#vhomeGabinetHeader .gb-patient-nav { margin-top: .78rem; border-bottom: var(--border-hairline) solid #cbdcde; }
+#vhomeGabinetHeader .gb-patient-nav { align-self: end; min-width: 0; margin-top: 0; border-bottom: 0; }
 #vhomeGabinetHeader .gb-patient-tabs { min-width: 0; gap: var(--space-0-5); }
 #vhomeGabinetHeader .gb-visit-actions { position: relative; }
 #vhomeGabinetHeader #gbVisitActions {
@@ -173,10 +189,14 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   background: var(--bg); border: var(--border-hairline) solid var(--gb-visit-border); border-radius: .65rem;
   box-shadow: 0 10px 22px #163f4927;
 }
-#vhomeGabinetHeader #gbVisitActions button { width: 100%; justify-content: flex-start; border-color: transparent !important; text-align: start; }
+#vhomeGabinetHeader #gbVisitActions button { width: 100%; min-height: 44px; justify-content: flex-start; border-color: transparent !important; font-size: .9375rem; text-align: start; }
+#vhomeGabinetHeader #gbVisitActions .gb-patient-actions {
+  display: grid; gap: .15rem; margin-top: .2rem; padding-top: .28rem; border-top: var(--border-hairline) solid #dbe7e7;
+}
+#vhomeGabinetHeader #gbVisitActions .gb-action-group-label { padding: .2rem .72rem; color: #4a666e; font-size: .875rem; font-weight: 650; }
 #vhomeGabinetHeader #gbVisitActions [data-trash-visit] { color: var(--danger-strong) !important; }
 #vhomeGabinetHeader #gbVisitActions [data-trash-visit]:hover:not(:disabled) { background: var(--danger-bg) !important; }
-#vhomeGabinetHeader .gb-patient-tabs button { min-height: 46px; justify-content: center; color: #566f75 !important; border-bottom: var(--border-pro) solid transparent !important; }
+#vhomeGabinetHeader .gb-patient-tabs button { min-height: 44px; justify-content: center; color: #566f75 !important; border-bottom: var(--border-pro) solid transparent !important; }
 #vhomeGabinetHeader .gb-patient-tabs button[aria-selected="true"] { color: #006b72 !important; border-bottom-color: #00838b !important; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) button:focus-visible { outline: var(--border-pro) solid #00727b; outline-offset: 2px; }
 #vhomeGabinet .vhome-gabinet-message:empty { display: none; }
@@ -221,27 +241,26 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 @media (prefers-reduced-motion: reduce) {
   .vvisit-dialog.vvisit-gabinet .vvisit-list .vvisit-visit { transition: none !important; }
 }
-@media (max-width: 700px) {
-  #vhomeGabinetHeader .gb-person-line { grid-template-columns: minmax(0,1fr); }
-  #vhomeGabinetHeader .gb-card-actions { display: grid; grid-auto-columns: minmax(0,1fr); grid-auto-flow: column; width: 100%; gap: .42rem; }
-  #vhomeGabinetHeader .gb-card-actions button { min-height: 2.75rem; }
-  #vhomeGabinetHeader .gb-visit-actions > button { width: 100%; }
-  #vhomeGabinetHeader #gbVisitActions { inset-inline-start: 0; inset-inline-end: auto; }
-  #vhomeGabinetHeader .gb-patient-nav { margin-top: var(--space-0-5); }
+@media (max-width: 700px), (max-height: 500px) {
+  #vhomeGabinetHeader .gb-person-line { grid-template-columns: minmax(0,1fr); row-gap: var(--space-0-3); }
+  #vhomeGabinetHeader .gb-card-actions { justify-content: end; gap: .32rem; }
+  #vhomeGabinetHeader .gb-header-top .gb-breadcrumb { min-width: 0; }
+  #vhomeGabinetHeader .gb-header-top .gb-breadcrumb > :not(button) { display: none; }
+  #vhomeGabinetHeader .gb-card-actions .gb-visit-actions > button { padding-inline: .48rem; }
+  #vhomeGabinetHeader #gbVisitActions { inset-inline-start: auto; inset-inline-end: -5.6rem; max-width: min(16rem,calc(100vw - 1.6rem)); }
+  #vhomeGabinetHeader .gb-visit-summary { font-size: .875rem; column-gap: var(--space-0-55); }
+  #vhomeGabinetHeader .gb-visit-context { column-gap: var(--space-0-4); }
 }
 @media (max-width: 640px) {
-  #vhomeGabinetHeader { --gb-patient-header-end: var(--space-0-85); }
-  :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { margin-bottom: var(--space-0-35); }
-  #vhomeGabinetHeader .gb-identity-meta { font-size: .875rem; }
+  #gbEntryHeader { margin-bottom: var(--space-0-35); }
   #vhomeGabinetHeader .gb-patient-tabs { gap: 0; }
   #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; padding-inline: var(--space-0-35); }
 }
 @media (max-width: 420px) {
   #vhomeGabinetHeader .gb-card-actions button { gap: var(--space-0-3); padding-inline: .36rem; }
-  #vhomeGabinetHeader .gb-visit-context { column-gap: var(--space-0-4); }
 }
-/* Keep the breadcrumb and visit state visible in a compact pane while the
- * rest of the patient header uses the original order and scrolls normally. */
+/* Only the top row stays pinned on compact screens; identity and tabs scroll
+ * together in their native second row. */
 @media (max-width: 640px), (max-height: 500px) {
   [data-vhome-screen]:has(> #gbWorkspaceHeader > #vhomeGabinetHeader:not([hidden])) {
     --gb-compact-trail-gap: var(--space-0-55);
@@ -258,13 +277,13 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
     left: var(--gb-workspace-left);
     width: var(--gb-workspace-width);
     z-index: var(--z-dropdown);
-    background: var(--vhome-workspace-background,var(--bg));
+    background: var(--gb-patient-header-surface);
     box-shadow: 0 calc(-1 * var(--chrome-form-gap,12px)) var(--vhome-workspace-background,var(--bg));
   }
-  [data-vhome-screen] #vhomeGabinetHeader > :is(.gb-person-line,.gb-patient-nav) {
+  [data-vhome-screen] #vhomeGabinetHeader > .gb-person-line {
     margin-inline: var(--gb-inset-start) var(--gb-inset-end);
+    margin-bottom: var(--gb-patient-header-end);
   }
-  [data-vhome-screen] #vhomeGabinetHeader > .gb-patient-nav { margin-bottom: var(--gb-patient-header-end); }
 }
 @media (max-width: 640px) {
   [data-vhome-screen]:has(> #gbWorkspaceHeader > #vhomeGabinetHeader:not([hidden])) {

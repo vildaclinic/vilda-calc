@@ -17,6 +17,9 @@ html.vilda-shell-host.vilda-gabinet-shell > body > header {
   top: var(--vilda-safe-top)!important;
   inset-inline: var(--vilda-safe-left) var(--vilda-safe-right)
 }
+html.vilda-shell-host.vilda-gabinet-shell:has(.app-pane[data-vhome-patient]:not([hidden])) > body.liquid-ios26 > header {
+  background: #fff !important
+}
 @media(min-width:992px) {
   html.vilda-gabinet-shell:not(.vilda-phone) body.vilda-header-menu .chrome-chips {
     right: var(--space-16px)
