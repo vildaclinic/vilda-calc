@@ -153,7 +153,7 @@ function Il(t,a,n){` },
 const zs={__vildaAuthUI:!0,` },
 ]
 export function applyUiIntentAuthHooks(source) {
-  if (hasClinicalAuditAuth(source)) return applyClinicalAuditAuth(applyUiIntentAuthHooks(reverseClinicalAuditAuth(source)));
+  if (hasClinicalAuditAuth(source)) return applyClinicalAuditAuth(applyUiIntentAuthHooks(reverseClinicalAuditAuth(source)), source);
   for (const pair of UI_INTENT_AUTH_PAIRS) {
     if (source.includes(pair.after)) continue;
     if (source.split(pair.before).length !== 2) throw new Error('Ambiguous Auth security anchor: ' + pair.label);

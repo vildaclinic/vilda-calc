@@ -32,7 +32,7 @@ export function applyGabinetAuthHooks(source, inline = true) {
 export function gabinetAuthLayers(source) {
   if (hasClinicalAuditAuth(source)) {
     const previous = gabinetAuthLayers(reverseClinicalAuditAuth(source));
-    return { base: previous.base, replay: value => applyClinicalAuditAuth(previous.replay(value)) };
+    return { base: previous.base, replay: value => applyClinicalAuditAuth(previous.replay(value), source) };
   }
   const hasProfile = source.includes('/* BEGIN HOME PATIENT PROFILE EDIT */');
   const input = source;

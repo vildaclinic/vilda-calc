@@ -386,9 +386,22 @@ test('leczenie otyłości: zmiana masy po 12 tyg. i po 6 mies., progi redukcji, 
     await expect(lek(nazwa).locator('.pt-gh-n')).toHaveText(opis);
     await expect(lek(nazwa).locator('.pt-gh-figure')).toHaveText(liczby);
   }
-  const srodek = async (wiersz, klasa) => wiersz.locator(`line.${klasa}`).evaluate((node) => {
-    const box = node.getBoundingClientRect(); return box.left + box.width / 2;
-  });
+  // An asynchronous statistics refresh can replace an SVG after the locator
+  // resolves. Detached SVG nodes report a zero rectangle; measure its current
+  // rendered replacement rather than treating that transient node as a chart.
+  const srodek = async (wiersz, klasa) => {
+    let value;
+    await expect.poll(async () => {
+      value = await wiersz.locator(`line.${klasa}`).evaluate((node) => {
+        if (!node.isConnected) return null;
+        const plot = node.ownerSVGElement.getBoundingClientRect();
+        if (!plot.width || !plot.height) return null;
+        const box = node.getBoundingClientRect(); return box.left + box.width / 2;
+      });
+      return value;
+    }, { message: 'znacznik bieżącego, wyrenderowanego wykresu' }).not.toBeNull();
+    return value;
+  };
   const saxenda12 = await srodek(lek('Saxenda'), 'pt-gh-dot--before'), saxenda6 = await srodek(lek('Saxenda'), 'pt-gh-dot--first');
   const wegovy12 = await srodek(lek('Wegovy'), 'pt-gh-dot--before'), wegovy6 = await srodek(lek('Wegovy'), 'pt-gh-dot--first');
   expect(saxenda6).toBeGreaterThan(saxenda12);   // −1,0 za −0,5
@@ -398,18 +411,24 @@ test('leczenie otyłości: zmiana masy po 12 tyg. i po 6 mies., progi redukcji, 
 
   // Wykres „każdy pacjent”: h +3,0 (przyrost, nad zerem), d −5,0 i f −12,0 (pod zerem), od najmniejszej redukcji.
   await expect(ob.locator('.pt-ob-tick')).toHaveText(E.podzialka);
-  const wykres = await ob.locator('.pt-ob-fall').evaluate((fall) => {
-    const plot = fall.querySelector('.pt-ob-fall-plot');
-    const zero = plot.querySelector('.pt-ob-zero').getBoundingClientRect().top;
-    const etykieta = Array.from(fall.querySelectorAll('.pt-ob-tick')).find((node) => node.textContent === '0%').getBoundingClientRect();
-    return {
-      zero, zeroEtykieta: etykieta.top + etykieta.height / 2,
-      slupki: Array.from(plot.querySelectorAll('rect')).map((rect) => {
-        const box = rect.getBoundingClientRect();
-        return { przyrost: rect.classList.contains('pt-ob-bar--gain'), lewo: box.left, gora: box.top, dol: box.bottom, wysokosc: box.height };
-      }),
-    };
-  });
+  let wykres;
+  await expect.poll(async () => {
+    wykres = await ob.locator('.pt-ob-fall').evaluate((fall) => {
+      if (!fall.isConnected) return null;
+      const plot = fall.querySelector('.pt-ob-fall-plot'), box = plot.getBoundingClientRect();
+      if (!box.width || !box.height) return null;
+      const zero = plot.querySelector('.pt-ob-zero').getBoundingClientRect().top;
+      const etykieta = Array.from(fall.querySelectorAll('.pt-ob-tick')).find((node) => node.textContent === '0%').getBoundingClientRect();
+      return {
+        zero, zeroEtykieta: etykieta.top + etykieta.height / 2,
+        slupki: Array.from(plot.querySelectorAll('rect')).map((rect) => {
+          const rectBox = rect.getBoundingClientRect();
+          return { przyrost: rect.classList.contains('pt-ob-bar--gain'), lewo: rectBox.left, gora: rectBox.top, dol: rectBox.bottom, wysokosc: rectBox.height };
+        }),
+      };
+    });
+    return wykres;
+  }, { message: 'bieżący, wyrenderowany wykres zmian masy' }).not.toBeNull();
   expect(wykres.slupki.map((slupek) => slupek.przyrost)).toEqual([true, false, false]);
   expect(wykres.slupki[1].lewo).toBeGreaterThan(wykres.slupki[0].lewo);
   expect(wykres.slupki[2].lewo).toBeGreaterThan(wykres.slupki[1].lewo);

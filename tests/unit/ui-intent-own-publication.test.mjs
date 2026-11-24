@@ -337,8 +337,14 @@ async function heldActualAES() {
 
 const navigationCapability = unique(find(authAst, node => node.type === 'FunctionDeclaration'
   && node.id?.name === 'UiIntentCardNavigation'), 'private original-card navigation capability');
-const navigationFactory = unique(find(authAst, node => node.type === 'CallExpression'
-  && node.callee?.name === 'Ob_dz' && node.arguments.length === 9), 'native B1 ninth callback').arguments[8];
+const treatmentCardCall = unique(find(authAst, node => node.type === 'CallExpression'
+  && node.callee?.name === 'Kl_leczenie'), 'patient card treatment options');
+const navigationFactory = unique(treatmentCardCall.arguments[0].properties.filter(property =>
+  property.key.name === 'captureNavigation'), 'original patient card navigation callback').value;
+const treatmentCard = unique(find(authAst, node => node.type === 'FunctionDeclaration'
+  && node.id?.name === 'Kl_leczenie'), 'native treatment card');
+const obesityDiaryCall = unique(find(treatmentCard.body, node => node.type === 'CallExpression'
+  && node.callee?.name === 'Ob_dz'), 'treatment card obesity diary');
 const homeCurrent = unique(find(authAst, node => node.type === 'FunctionDeclaration'
   && node.id?.name === 'HomePatientIsCurrent'), 'native Home current callback');
 const cycleNavigation = ['aktualny', 'celSkoku', 'doDocPro'].map(name => {
@@ -373,6 +379,11 @@ async function obesityNavigation({ realAES = false, sameDocPro = true } = {}) {
 }
 
 describe('original native patient-card obesity navigation authority', () => {
+  it('passes the original card navigation callback through the treatment card to the obesity diary', () => {
+    expect(obesityDiaryCall.arguments[8]).toMatchObject({ type: 'MemberExpression', computed: false,
+      object: { type: 'Identifier', name: treatmentCard.params[0].name }, property: { type: 'Identifier', name: 'captureNavigation' } });
+  });
+
   it.each(['edytuj', 'ponownie', 'wlaczenie'])('encrypts the exact %s target before quietly closing only its own card', async mode => {
     const e = await obesityNavigation({ realAES: true });
     const entry = mode === 'wlaczenie' ? null : { entryId: 'fictional obesity point / Żółw' };

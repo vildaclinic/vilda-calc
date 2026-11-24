@@ -5080,6 +5080,12 @@ function BscObserve(event) {
   var nativeStorage;
   try { nativeStorage = scope.tab ? i.sessionStorage : i.localStorage; } catch (_) { return; }
   if (event && event.key !== null && event.key !== key || event && event.storageArea && event.storageArea !== nativeStorage) return;
+  // Focus can return during a statistics read or export. Refresh the directory
+  // only when this account's saved duplicate dismissals need another read.
+  if (!event && BscCache && BscCache.scope === scope && !BscCache.error) {
+    try { if (scope.storage.getItem(scope.key) === BscCache.raw) return; }
+    catch (_) { /* Discard the cache and retry through the normal refresh. */ }
+  }
   BscReadId += 1; BscCache = null; BscRefresh();
 }
 BscCleanupLegacy();

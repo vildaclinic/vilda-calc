@@ -133,6 +133,28 @@ describe('account duplicate dismissal ciphertext boundary', () => {
     local.map.set(legacy, '["fictional"]'); e.emit('focus'); expect(local.map.has(legacy)).toBe(false);
     await e.ctx.BscHydrate(() => true); expect(e.ctx.BscCache.groups).toEqual([]); expect(local.writes).toHaveLength(0);
   });
+  it('keeps the mounted directory on focus for unchanged preferences and refreshes after a changed ciphertext', async () => {
+    const e = await environment(), hidden = group('fictional-hidden');
+    await e.ctx.BscHydrate(() => true);
+    e.emit('focus'); expect(e.refresh).not.toHaveBeenCalled(); // verified empty preference
+    await e.seed(['fictional-hidden']); e.emit('focus');
+    expect(e.refresh).toHaveBeenCalledTimes(1); expect(e.ctx.BscReadFailed()).toBe(true);
+    await e.ctx.BscHydrate(() => true);
+    e.emit('focus');
+    expect(e.refresh).toHaveBeenCalledTimes(1); expect(e.ctx.Bsc4(hidden)).toBe(true);
+    await e.seed([]); e.emit('focus');
+    expect(e.refresh).toHaveBeenCalledTimes(2); expect(e.ctx.BscReadFailed()).toBe(true);
+    await e.ctx.BscHydrate(() => true); expect(e.ctx.Bsc4(hidden)).toBe(false);
+  });
+  it('invalidates a verified cache when focus cannot read the current preference or its account changed', async () => {
+    const e = await environment();
+    await e.seed(['fictional-hidden']); await e.ctx.BscHydrate(() => true);
+    e.local.denied = true; e.emit('focus');
+    expect(e.refresh).toHaveBeenCalledTimes(1); expect(e.ctx.BscReadFailed()).toBe(true);
+    e.local.denied = false; await e.ctx.BscHydrate(() => true);
+    e.boundary('fictional-account-B'); e.emit('focus');
+    expect(e.refresh).toHaveBeenCalledTimes(2); expect(e.ctx.Bsc4(group('fictional-hidden'))).toBe(false);
+  });
   it('merges concurrent decisions from the latest locked ciphertext, idempotently capped at200', async () => {
     const e = await environment(); await e.seed(Array.from({ length: 200 }, (_, n) => 'fictional-old-' + n)); await e.ctx.BscHydrate(() => true);
     await Promise.all([e.ctx.Bsc5(group('fictional-new-1'), () => true), e.ctx.Bsc5(group('fictional-new-2'), () => true), e.ctx.Bsc5(group('fictional-new-1'), () => true)]);

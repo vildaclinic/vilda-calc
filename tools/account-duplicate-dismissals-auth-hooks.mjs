@@ -1,5 +1,6 @@
 // Reproducible, bounded ciphertext-only UI preference delta over native Auth.
 import { createHash } from 'node:crypto';
+import { applyClinicalAuditAuth, hasClinicalAuditAuth, reverseClinicalAuditAuth } from './clinical-audit-auth-delta.mjs';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { gabinetAuthLayers } from './home-gabinet-auth-hooks.mjs';
@@ -41,6 +42,7 @@ function replaceOnce(source, before, after, label) {
   return source.replace(before, after);
 }
 export function applyBscAuthHooks(source) {
+  if (hasClinicalAuditAuth(source)) return applyClinicalAuditAuth(applyBscAuthHooks(reverseClinicalAuditAuth(source)), source);
   for (const pair of BSC_AUTH_PAIRS) {
     if (source.includes(pair.after)) continue;
     source = replaceOnce(source, pair.before, pair.after, pair.label);

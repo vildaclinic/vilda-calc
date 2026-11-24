@@ -8,6 +8,7 @@ const delta = JSON.parse(readFileSync(new URL('../tests/fixtures/clinical-audit-
 const hash = value => createHash('sha256').update(value).digest('hex');
 const BASE = 'ddb115c8990ae53af311a4b322fef41e25d9fb5d0a9567c70e76ed8145516a39';
 const INTEGRATED = '27609864105b4e3295d09814283ef8cb38726f0e0f52648191c6e1ce9144b116';
+const FOCUS_CHECK = '41a284fe95f22849d5fb553109eb9446d175dc44280edf9aa0643d429ca95bb4';
 if (delta.baseSHA256 !== BASE || delta.integratedSHA256 !== INTEGRATED) throw new Error('Unexpected clinical AuthUI checkpoint.');
 
 function transform(source, reverse) {
@@ -36,6 +37,28 @@ function transform(source, reverse) {
 export function hasClinicalAuditAuth(source) {
   return source.includes('legacySummary:i.VildaHomePatientNative.describeLegacy(KlL ? KlL.grupy : [])');
 }
-export function reverseClinicalAuditAuth(source) { return transform(source, true); }
-export function applyClinicalAuditAuth(source) { return transform(source, false); }
+const invalidate = '  BscReadId += 1; BscCache = null; BscRefresh();';
+const focusCheck = `  // Focus can return during a statistics read or export. Refresh the directory
+  // only when this account's saved duplicate dismissals need another read.
+  if (!event && BscCache && BscCache.scope === scope && !BscCache.error) {
+    try { if (scope.storage.getItem(scope.key) === BscCache.raw) return; }
+    catch (_) { /* Discard the cache and retry through the normal refresh. */ }
+  }
+` + invalidate;
+
+function transformFocusCheck(source, reverse) {
+  const from = reverse ? focusCheck : invalidate, to = reverse ? invalidate : focusCheck;
+  if (hash(source) !== (reverse ? FOCUS_CHECK : INTEGRATED) || source.split(from).length !== 2)
+    throw new Error('Unexpected duplicate-dismissal focus checkpoint.');
+  const result = source.replace(from, to);
+  if (hash(result) !== (reverse ? INTEGRATED : FOCUS_CHECK)) throw new Error('Incorrect duplicate-dismissal focus replay.');
+  return result;
+}
+export function reverseClinicalAuditAuth(source) {
+  return transform(hash(source) === INTEGRATED ? source : transformFocusCheck(source, true), true);
+}
+export function applyClinicalAuditAuth(source, original) {
+  const integrated = transform(source, false);
+  return original === integrated ? integrated : transformFocusCheck(integrated, false);
+}
 export function replayClinicalAuditIfBase(source) { return hash(source) === BASE ? applyClinicalAuditAuth(source) : source; }
