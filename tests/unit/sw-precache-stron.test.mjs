@@ -356,7 +356,11 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
     expect(pobrane.filter(adres => MODULY_WORKSPACE.has(adres))).toEqual([]);
     expect(pobrane.filter(adres => adres === PAKIET_WIZYT)).toHaveLength(1);
     expect(pobrane.filter(adres => ZASOBY_WIZYT.has(adres))).toEqual([]);
-    expect(ZASOBY_WIZYT.size).toBe(3);
+    // P-ROZPOZNANIA, rata 1: trzy pliki katalogu ICD-10 jadą w paczce interfejsu wizyt — bez nowego żądania instalacji.
+    expect(ZASOBY_WIZYT.size).toBe(6);
+    for (const plik of ['/vilda_icd10_pl_data.js?v=1', '/vilda_icd10_search.js?v=1', '/vilda_icd10_picker.js?v=1']) {
+      expect(ZASOBY_WIZYT.has(plik), plik).toBe(true);
+    }
     expect(MANIFEST_WORKSPACE.files).toHaveLength(51);
     // The visit-identity codec and the next release from the module source repository
     // (vilda-source) each add one immutable family. All previous module URLs remain

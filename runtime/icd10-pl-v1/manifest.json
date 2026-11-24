@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "id": "cez-icd10-pl-2021-03-31-v1",
+    "name": "ICD-10 — polska wersja językowa CeZ",
+    "editionDate": "2021-03-31",
+    "edition": "ICD-10-2008-PL; CeZ 31.03.2021",
+    "language": "pl",
+    "publisher": "Centrum e-Zdrowia",
+    "sourceUrl": "https://dane.gov.pl/pl/dataset/27/resource/55725",
+    "downloadUrl": "https://api.dane.gov.pl/media/resources/20240319/ICD10_PL_en_covid_2021_03_31_2.xml",
+    "retrievedDate": "2026-11-18",
+    "license": "CC-BY-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+    "noticeUrl": "runtime/icd10-pl-v1/NOTICE.txt",
+    "sourceSHA256": "88a0c4ed4e4987d3cdc57f0a534a6c80506d757f197c39c1c22fa3a1ebdba099",
+    "entryCount": 12010,
+    "maxNameLength": 180,
+    "historicalSnapshot": true
+  },
+  "sourceArchive": {
+    "path": "tools/icd10-pl-source/source.xml.gz",
+    "bytes": 606817,
+    "sha256": "39ecb2cb69d0a170972bf68485d516201c25610e8d5767de362e32e1cb293a3b",
+    "gzipMtime": 0,
+    "uncompressedBytes": 12713248,
+    "uncompressedSHA256": "88a0c4ed4e4987d3cdc57f0a534a6c80506d757f197c39c1c22fa3a1ebdba099"
+  },
+  "sourceRootAttributes": {
+    "hcd": "00CD10",
+    "visible": "true",
+    "closed": "2",
+    "version": "7",
+    "applicationdate": "2017-04-24",
+    "registrationdate": "2017-06-22",
+    "maxchars": "100"
+  },
+  "licenseEvidence": [
+    {
+      "path": "tools/icd10-pl-source/dataset27.json",
+      "bytes": 2477,
+      "sha256": "24b97263655e1892a2d182b0fcd5576a16d4262792b49751b64885409085e8aa"
+    },
+    {
+      "path": "tools/icd10-pl-source/resource55725.json",
+      "bytes": 2355,
+      "sha256": "69abe10eb4e72ac14218d73824711b294cf322a4fd3f5f2a20d415beac71a865"
+    },
+    {
+      "path": "tools/icd10-pl-source/licensing-evidence.json",
+      "bytes": 2979,
+      "sha256": "0ba7935c0eaad016c71219755e131675d7f4584a42c9bf07234e1e1666cd8c1f"
+    }
+  ],
+  "tupleFields": [
+    "resolvedMarkedCode",
+    "verbatimPolishSourceName",
+    "parentBaseCategoryOrNull"
+  ],
+  "counts": {
+    "treeNodes": 23975,
+    "rangeNodes": 290,
+    "uncodedNodes": 11104,
+    "absoluteCodeNodes": 11027,
+    "relativeCodeNodesResolved": 989,
+    "supplementalNodes": 565,
+    "categories": 2050,
+    "subcategories": 9960,
+    "daggerCodes": 79,
+    "asteriskCodes": 371
+  },
+  "removedDuplicateOuterBlocks": [
+    "B99",
+    "C50",
+    "C97",
+    "F99",
+    "N99",
+    "T79"
+  ],
+  "transformations": [
+    "Resolve 989 relative suffix tokens against their enclosing three-character category.",
+    "Use the deeper category for six duplicate outer block identifiers.",
+    "Retain dagger/asterisk in selected codes and source labels verbatim.",
+    "Keep optional subdivision tokens and uncoded text in the archived XML; do not create diagnosis entries from them.",
+    "Sort complete tuples by their resolved marked code; add no synonyms or exclusions index."
+  ],
+  "artifact": {
+    "path": "vilda_icd10_pl_data.js",
+    "bytes": 844795,
+    "sha256": "34d1a50e1b3c3cbf1272b6bff2b240ed640abb5778eb2ec4ffc8695beff8eb50"
+  }
+}

@@ -106,8 +106,10 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (tel
 
     const bez = await zapisz(page, BEZ);
     await karta(page, bez);
-    await expect(zakladki(page)).toHaveCount(6);
-    await expect(page.locator('.vilda-kl-pasek, [data-tab="leczenie"]')).toHaveCount(0);
+    // P-ROZPOZNANIA, rata 1: zakładka „Leczenie” (sekcja rozpoznań) jest u każdego pacjenta; pasek — tylko przy leczeniu.
+    await expect(zakladki(page)).toHaveCount(7);
+    await expect(page.locator('.vilda-kl-pasek')).toHaveCount(0);
+    await expect(page.locator('.vilda-patient-tab[data-tab="leczenie"]')).toHaveCount(1);
     expect(await bezPrzewijaniaWBok(page)).toBe(true);
   });
 

@@ -2941,6 +2941,69 @@ Nic istniejącego nie zostało zmienione. Opis i uzasadnienie: `docs/clinical/AL
 Strażnik: `tests/unit/sejf-odczyt-najnowszej.test.mjs` (prawdziwy sejf: ten sam wynik, co `getLatestSnapshot`, jedno
 odszyfrowanie zamiast sześciu; zgodność po poprawce, przypięciu i przywróceniu wersji; odczyt ścisły; blokada).
 
+## Łatka P-ROZPOZNANIA, rata 1 — zapis rozpoznań w sejfie i sekcja „Rozpoznania pacjenta” w Karcie (`vilda_vault.js`, `vilda_auth_ui.js`, `service-worker-kalorii.js`, 2026-11-24, decyzja właściciela „rób teraz dwa PR-y”)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, wpis P-ROZPOZNANIA rata 1; kontrakt zapisu:
+`docs/PATIENT_TREATMENT.md`; katalog: `docs/clinical/ICD10_CATALOGUE.md`. Zapis rozpoznań, katalog ICD-10 i ich testy
+pochodzą z gałęzi `agent/nowa-strona-glowna` (PR-y vildaclinic/vilda-calc#992, #993, #999) i są z nią zgodne bajt
+w bajt tam, gdzie to możliwe — po to, żeby rozpoznanie wpisane w dotychczasowej Karcie było tym samym zapisem, którego
+używa nowa Karta pacjenta.
+
+**1. Sejf (`vilda_vault.js`) — warstwa `VILDA PATIENT TREATMENT V1`.** Czytelne źródła:
+`runtime/patient-treatment-v1/model.js`, `store.js`, `vault-fragment.js` (stan z commita `20a9b1b7`, czyli sama
+warstwa leczenia, bez późniejszych haków dokumentacji wizyt). `runtime/patient-treatment-v1/manifest.json` przypina
+skróty źródeł, skrót złożonego fragmentu (`83656ce1…`, ten sam co na tamtej gałęzi) i osiemnaście nazwanych podmian
+(`before` → `after`) ze skrótami. Względem tamtej gałęzi w manifeście różnią się tylko dwie wartości —
+`baseVaultSHA256` i `integratedVaultSHA256` — bo baza w `audyt` jest inna (P-BAZA-SZYBKIE, E3-PR0e2a). W narzędziu
+`tools/patient-treatment-vault-delta.mjs` różni się stała `BASE`.
+
+- Warstwa jest zewnętrzna: jej bazą jest cały sejf sprzed warstwy (`3bebcc8e…`, `audyt` po E3-PR0e2a), wynikiem — `4f625ec4…`.
+  `reduceClinicalWorkspaceVault` zdejmuje ją jako pierwszą, przed trwałymi wizytami i KtV, więc siedem dotychczas
+  przypiętych skrótów (wizyty trwałe, blok natywny) **nie zmienia się** i obraz bazy dla repozytorium źródeł modułu
+  zostaje ten sam. `node tools/visits-vault-delta.mjs` (wywołanie bez argumentów) też zdejmuje ją przed swoją kontrolą.
+- Odtworzenie: `node tools/patient-treatment-vault-delta.mjs --rebuild BAZA.js WYNIK.js`; kontrola bieżącego pliku:
+  `node tools/patient-treatment-vault-delta.mjs`. Po każdej zmianie sejfu pod warstwą (także po nowym bloku natywnym)
+  warstwę nakłada się ponownie i przypina nową parę skrótów w manifeście oraz `BASE` w narzędziu.
+- Trzy dotychczasowe testy granic czytają teraz sejf po zdjęciu warstwy (`visits-vault-boundary`,
+  `klirens-ktv-vault-boundary`, `klirens-existing-note-update-vault`) i dodatkowo sprawdzają, że pełny plik redukuje
+  się do tej samej bazy.
+- Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
+
+**2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i trzy podmiany.** Plik jest zminifikowany; zmiany po unikalnych
+kotwicach, bez ponownej minifikacji:
+
+```js
+// a) przed `function Kl_leczenie(o) {` — czytelny blok: Kr_KATALOG, Kr_data, Kr_dzis, Kr_etykieta, Kr_komunikat,
+//    Kr_katalog (doczytanie trzech plików katalogu), Kr_obserwuj (onPatientNoteChanged), Kr_formularz, Kr_sekcja,
+//    Kr_zNotatki.
+// b) Kl_leczenie — zakładka „Leczenie” istnieje także bez leczenia GH/otyłości:
+//    było:  if (!lista.length) return null;
+//    jest:  var rozp = null; try { rozp = Kr_sekcja({ patientId: o.patientId, nazwa: (s && s.name) || "", notatki: o.notatki }); } catch (x) { … }
+//           if (!lista.length && !rozp) return null;   // …i zaraz po utworzeniu `tresc`: if (rozp) tresc.appendChild(rozp.el);
+// c) Kl_leczenie → uloz(): sekcja rozpoznań nie bierze udziału w porządkowaniu bloków leczenia
+//    było:  var jest = Array.prototype.slice.call(tresc.children);
+//    jest:  var jest = Array.prototype.slice.call(tresc.children).filter(function (x) { return !rozp || x !== rozp.el; });
+// d) ga(options) — pierwsza instrukcja funkcji: zapis leczenia nie trafia do zwykłego edytora notatki
+//    if (options && options.note && options.note.id && Object.prototype.hasOwnProperty.call(options.note, "treatmentContext")) return Kr_zNotatki(options);
+```
+
+Style sekcji i formularza są w czytelnym `vilda_auth_ui.css` (sekcja „P-ROZPOZNANIA, rata 1”); klasy `vpt-icd10*`
+nadaje `vilda_icd10_picker.js`, dlatego ich reguły są zawężone do arkusza `.vilda-kr-arkusz`. Arkusz jest dzieckiem
+`<body>`, więc przyciski mają własności skórki szkła nadpisane z `!important` (jak `.vilda-kl-pasek`).
+
+**3. Katalog ICD-10 w PWA.** `vilda_icd10_pl_data.js`, `vilda_icd10_search.js`, `vilda_icd10_picker.js` są czytelnymi
+plikami (generator: `python3 tools/build-icd10-pl.py`, kontrola: `--check`). Nie mają znacznika `<script>` na żadnej
+stronie — Karta wstawia je przy pierwszym otwarciu formularza (`Kr_katalog`). Limit żądań instalacji service workera
+był wyczerpany (600 z 600), dlatego trzy pliki weszły do paczki interfejsu wizyt, która idzie jednym żądaniem:
+
+- `tools/build-visit-ui-precache.mjs` — `FILES` z trzema nowymi plikami; po zmianie wersji któregokolwiek pliku
+  paczki: `node tools/build-visit-ui-precache.mjs --write` (nowe archiwum, poprzednie zostaje jako historyczne);
+- `service-worker-kalorii.js` — trzy adresy `?v=1` w `CORE_SHELL_URLS` i trzy wpisy mapy typów w
+  `createVisitUIPrecacheState`; blok `VISIT_UI_PRECACHE_PACK` zapisuje narzędzie;
+- `tests/support/static-server.mjs` — testowy service worker oczekuje sześciu zasobów paczki.
+
+Arkusz `vilda_icd10_picker.css` z tamtej gałęzi nie wszedł do `audyt`: jego reguły są zawężone do nowej strony głównej.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

@@ -65,7 +65,10 @@ export function restoreDurableVisitsBaseline(source, repository = ROOT) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   if (!args.length) {
-    const source = readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8');
+    // The patient-treatment layer wraps this one. Its exact, hash-pinned delta is
+    // reduced first, so this round trip still compares the durable-visits layer only.
+    const { restorePatientTreatmentBaseline } = await import('./patient-treatment-vault-delta.mjs');
+    const source = restorePatientTreatmentBaseline(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
     if (applyDurableVisitsDelta(restoreDurableVisitsBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Durable visits: exact vault delta and readable source verified.\n');
   } else if (args.length === 3 && args[0] === '--rebuild') {

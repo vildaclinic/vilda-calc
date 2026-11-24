@@ -4,6 +4,8 @@ import { otworzBadania, otworzSejf, sekcjaBadan, zapiszHistorie } from '../suppo
 // LAB-HISTORIA PR2: zakładka „Badania” na telefonie (projekt mobile-chromium, iPhone) i na najwęższym ekranie 320 px.
 // Po dodaniu Planów opieki: sześć zakładek w siatce 2 + 2 + 2, domyślny widok „Tabela”; strona nie przewija
 // się w poziomie; czytelny wynik i norma mieszczą się w wierszu. Dane wyłącznie fikcyjne.
+// P-ROZPOZNANIA, rata 1 (decyzja właściciela 2026-11-24): zakładka „Leczenie” (sekcja rozpoznań) jest u każdego
+// pacjenta, więc zakładek jest siedem — w siatce 2 + 2 + 2 + 1, jak dotąd u pacjentów leczonych (P-KARTA-LECZENIE).
 test.use({ serviceWorkers: 'block' });
 
 async function sprawdzUklad(page) {
@@ -19,8 +21,8 @@ async function sprawdzUklad(page) {
   await expect(tsh.locator('.vilda-lab-hist-result-norm')).toHaveText(/0,27.*4,2.*mIU\/L/);
   await expect(tsh.locator('.vilda-lab-hist-cell-value.tone-below')).toHaveCSS('color', 'rgb(207, 34, 46)');
   const zakladki = page.locator('.vilda-patient-tabs > .vilda-patient-tab');
-  await expect(zakladki).toHaveCount(6);
-  await expect(zakladki.locator('.vilda-patient-tab-lbl')).toHaveCount(6);
+  await expect(zakladki).toHaveCount(7);
+  await expect(zakladki.locator('.vilda-patient-tab-lbl')).toHaveCount(7);
 
   const uklad = await page.evaluate(() => {
     const tabs = [...document.querySelectorAll('.vilda-patient-tabs > .vilda-patient-tab')];
@@ -43,7 +45,7 @@ async function sprawdzUklad(page) {
         .map((el) => el.getBoundingClientRect().height)),
     };
   });
-  expect(uklad).toMatchObject({ wiersze: [2, 2, 2], kolumnyWyrownane: true, ostatniaParaTejSamejSzerokosci: true, stronaBezPoziomego: true, wynikiBezPoziomego: true, wynikiWypelniajaGrupe: true });
+  expect(uklad).toMatchObject({ wiersze: [2, 2, 2, 1], kolumnyWyrownane: true, ostatniaParaTejSamejSzerokosci: true, stronaBezPoziomego: true, wynikiBezPoziomego: true, wynikiWypelniajaGrupe: true });
   expect(uklad.najmniejszyCelDotyku).toBeGreaterThanOrEqual(44);
 
   // Wykresy dalej są do wyboru; strona nadal bez przewijania w poziomie.
@@ -66,7 +68,7 @@ async function sprawdzUklad(page) {
   await expect(details).toHaveCount(0);
 }
 
-test('telefon: zakładki 2 + 2 + 2, tabela i wykresy z normami bez przewijania w bok', async ({ page }) => {
+test('telefon: zakładki 2 + 2 + 2 + 1, tabela i wykresy z normami bez przewijania w bok', async ({ page }) => {
   await sprawdzUklad(page);
 });
 

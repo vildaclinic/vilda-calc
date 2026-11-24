@@ -759,6 +759,21 @@ własną ścieżkę usuwania. Kontrakt referencji rzeczywiście zapisanej wersji
 i reguły obliczeń pozostają niezmienione. Strony samodzielne zachowują swoje zapisy; mieszana starsza powłoka
 bez protokołu autora korzysta z dotychczasowej ochrony właściciela pacjenta.
 
+### Rozpoznania pacjenta i lokalny katalog ICD-10 (P-ROZPOZNANIA rata 1, 2026-11-24)
+
+Rozpoznanie jest osobną notatką pacjenta kategorii `treatment` z zaszyfrowanym `treatmentContext`
+(`schemaVersion: 1`, `kind: 'diagnosis'`; kontrakt: [PATIENT_TREATMENT.md](PATIENT_TREATMENT.md)). Model
+(`VildaPatientTreatmentModel`) i magazyn (`VildaPatientTreatmentStore`) są wbudowane w `vilda_vault.js` jako
+odwracalna warstwa z czytelnych źródeł `runtime/patient-treatment-v1/`. Ten sam zapis czyta i pisze nowa Karta
+pacjenta na gałęzi strony głównej.
+
+W dotychczasowej Karcie sekcję „Rozpoznania pacjenta” i jej formularz buduje blok `Kr_` w `vilda_auth_ui.js`;
+zapis idzie wyłącznie przez magazyn (rewizja, właściciel, sesja sejfu). Wyszukiwanie kodu ma odrębne warstwy:
+`vilda_icd10_pl_data.js` (przypięte źródło CeZ i metadane), `vilda_icd10_search.js` (czysty indeks przyjmujący
+katalog jako argument) i `vilda_icd10_picker.js` (kontrolka wyboru związana z formularzem). Karta doczytuje te trzy
+pliki przy pierwszym otwarciu formularza; tekst wyszukiwania nie jest zapisywany i nie opuszcza urządzenia.
+Rozpoznania wszystkich pacjentów odczytuje jeden przebieg `listPatientNotesByCategory('treatment')`.
+
 ### 5. Synchronizacja
 
 Publiczne moduły `vilda_sync.js`, `vilda_sync_integration.js` i `vilda_realtime.js` integrują aplikację z opcjonalną usługą synchronizacji. Szczegóły infrastruktury i kod usługi nie powinny być kopiowane do publicznych zgłoszeń.

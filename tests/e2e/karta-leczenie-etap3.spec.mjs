@@ -168,7 +168,8 @@ test.describe('Karta pacjenta — karta leczenia GH z przełącznikiem (komputer
     await expect(paski(page).locator('.vilda-kl-pasek-odznaka')).toHaveText(['Leczenie otyłości — Wegovy', 'Leczony hormonem wzrostu (rhGH)']);
     await leczenie(page);
     const bloki = await tresc(page, 'leczenie').evaluate((t) => [...t.children].map((c) => c.firstElementChild && c.firstElementChild.className));
-    expect(bloki).toEqual(['vilda-gh-summary vilda-ko-karta', 'vilda-gh-summary vilda-kg-karta']);
+    // P-ROZPOZNANIA, rata 1: pierwszym blokiem zakładki jest sekcja rozpoznań (jej pierwsze dziecko to nagłówek sekcji).
+    expect(bloki).toEqual(['vilda-kr-naglowek', 'vilda-gh-summary vilda-ko-karta', 'vilda-gh-summary vilda-kg-karta']);
     const k = kartaGh(page);
     await expect(k.locator('.vilda-gh-summary-chip')).toHaveText('leczenie zakończone');
     const opis = await opisKartyGh(page);
