@@ -18,7 +18,7 @@ function withManifest(change) {
   for (const name of [
     'patient-treatment-v1', 'durable-visits-v1', 'visit-trash-v1', 'rapid-visit-v1',
     'patient-profile-v1', 'visit-document-v1', 'profile-trash-v1', 'document-outcomes-v1',
-    'treatment-documentation-v1', 'staged-documentation-v1', 'diagnosis-mutation-v1',
+    'treatment-documentation-v1', 'staged-documentation-v1', 'diagnosis-mutation-v1', 'treatment-sync-hydration-v1',
   ]) {
     cpSync(new URL('runtime/' + name, root), join(temporary, 'runtime', name), { recursive: true });
   }
@@ -49,6 +49,7 @@ describe('current public Vault base for the next private workspace build', () =>
     expect(result.baseSource).toContain('/* BEGIN VILDA TREATMENT DOCUMENTATION V1 */');
     expect(result.baseSource).toContain('/* BEGIN VILDA STAGED DOCUMENTATION V1 */');
     expect(result.baseSource).toContain('/* BEGIN VILDA DIAGNOSIS MUTATION V1 */');
+    expect(result.baseSource).toContain('/* BEGIN VILDA TREATMENT SYNC HYDRATION V1 */');
     expect(result.baseSource).not.toContain('/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */');
   });
   it('rejects a stale current base even when the historical native proof still matches', () => {

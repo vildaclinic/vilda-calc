@@ -3819,3 +3819,17 @@ obrazu sejfu poprzedzającego tę zmianę. Skrót obrazu podaje
 Warstwa `runtime/profile-trash-v1/` zachowuje kartotekę opartą na starszych
 danych, gdy jej źródłowa wizyta trafia do kosza. `node tools/profile-trash-vault-delta.mjs`
 sprawdza odtwarzalność bieżącego sejfu z bazy wskazanej w manifeście warstwy.
+
+## Uzupełnianie kontekstu leczenia po synchronizacji
+
+Poprawkę z PR [#1065](https://github.com/vildaclinic/vilda-calc/pull/1065)
+nakładają `tools/treatment-sync-hydration-vault-delta.mjs` i źródło z
+`runtime/treatment-sync-hydration-v1/`. Bazą jest obraz po warstwie
+`diagnosis-mutation-v1`. Trzy przypięte punkty włączają sprawdzenie tej
+samej wersji notatki przed jej blokadą, uzupełnienie po ponownym odczycie
+pod blokadą oraz czytelny fragment na końcu łańcucha.
+
+Przy odwracaniu straż usuwania rozpoznania najpierw zdejmuje tę warstwę.
+Manifest warstwy przypina bazę, fragment i pełny wynik. Zmiana publicznej
+bazy ma też przypięcie w `runtime/clinical-workspace-v1/manifest.json`.
+Zakres wersji z wizytami opisuje [dokumentacja leczenia](PATIENT_TREATMENT.md).
