@@ -741,9 +741,10 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 /* P-BAZA-GRUPY (makieta statystyk; decyzja właściciela 2026-11-24: „praca nad grupami pacjentów z makiety”).
    Pasek filtrów zakresu nad statystykami (zwykłe pola wyboru) oraz praca z grupą na liście: formularz
    „Zapisz jako listę” i komunikat w pasku grupy. */
+/* P-BAZA-ZAKRES: „Zakres” (pierwsze pole) ma najdłuższe pozycje, więc dostaje szerszą kolumnę. */
 .pt-filters {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
   gap: var(--space-10px) var(--space-12px);
 }
 
@@ -841,9 +842,18 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   color: var(--danger-strong);
 }
 
-@media (max-width: 900px) {
+/* P-BAZA-ZAKRES: najdłuższa pozycja „Zakresu” z licznikiem ma mieścić się w polu bez ucinania. Poniżej 1180 px
+   pola stoją po dwa; poniżej 760 px pola z długimi pozycjami („Zakres”, „Lista pacjentów”) zajmują cały wiersz,
+   a „Płeć” i „Wiek” zostają obok siebie. */
+@media (max-width: 1180px) {
   .pt-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .pt-filter--wide {
+    grid-column: 1 / -1;
   }
 }
 

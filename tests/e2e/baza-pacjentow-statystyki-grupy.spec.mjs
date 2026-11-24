@@ -44,7 +44,7 @@ test('filtry zakresu: płeć, wiek, lista pacjentów i rozpoznanie łączą się
 
   // Pasek filtrów: cztery pola wyboru z podpisami; lista pacjentów zna zapisaną listę.
   await expect(database.locator('.pt-filters .pt-filter-label')).toHaveText(['Zakres', 'Lista pacjentów', 'Płeć', 'Wiek']);
-  await expect(filtr(database, 'recent').locator('option')).toHaveText(['cała baza (8)', 'z zapisem w ostatnich 12 mies. (8)']);
+  await expect(filtr(database, 'range').locator('option').first()).toHaveText('cała baza (8)');
   await expect(filtr(database, 'list').locator('option')).toHaveText(['wszystkie', LISTA]);
   await expect(filtr(database, 'sex').locator('option')).toHaveText(['wszyscy', 'chłopcy', 'dziewczęta']);
   await expect(filtr(database, 'band').locator('option')).toHaveText(['wszystkie', '0–2 lata', '3–5 lat', '6–9 lat', '10–13 lat', '14–17 lat', '18+ lat']);
@@ -124,7 +124,7 @@ test('filtry zakresu: płeć, wiek, lista pacjentów i rozpoznanie łączą się
   await database.locator('.pt-stats .pt-empty').getByRole('button', { name: 'Cała baza' }).click();
   await expect(database.locator('.pt-scope')).toHaveCount(0);
   await expect(kafel(frame, database, 'Pacjenci w bazie').locator('.pt-stat-value')).toHaveText('8');
-  for (const klucz of ['recent', 'list', 'sex', 'band']) await expect(filtr(database, klucz)).toHaveValue('');
+  for (const klucz of ['range', 'list', 'sex', 'band']) await expect(filtr(database, klucz)).toHaveValue('');
   await expect(database.locator('.pt-ob .pt-stat-card-hint')).toHaveText('leczonych: 5 · Saxenda 3 · Wegovy 2');
 });
 
@@ -257,9 +257,14 @@ test.describe('telefon', () => {
     expect(pola).toHaveLength(4);
     expect(Math.min(...pola.map((pole) => pole.wysokosc))).toBeGreaterThanOrEqual(44);
     expect(Math.min(...pola.map((pole) => pole.pismo)), 'pismo < 16 px powiększa widok na iPhonie przy wejściu w pole').toBeGreaterThanOrEqual(16);
-    // Dwa pola w wierszu.
-    expect(Math.round(pola[0].lewa)).toBe(Math.round(pola[2].lewa));
-    expect(pola[1].lewa).toBeGreaterThan(pola[0].prawa);
+    // P-BAZA-ZAKRES: „Zakres” i „Lista pacjentów” mają cały wiersz (długa pozycja nie jest ucinana), „Płeć” i „Wiek” stoją obok siebie.
+    const szerokosc = (pole) => pole.prawa - pole.lewa;
+    expect(Math.round(pola[1].lewa)).toBe(Math.round(pola[0].lewa));
+    expect(Math.round(pola[1].prawa)).toBe(Math.round(pola[0].prawa));
+    expect(szerokosc(pola[0])).toBeGreaterThan(szerokosc(pola[2]) * 1.8);
+    expect(Math.round(pola[2].lewa)).toBe(Math.round(pola[0].lewa));
+    expect(pola[3].lewa).toBeGreaterThan(pola[2].prawa);
+    expect(Math.round(pola[3].prawa)).toBe(Math.round(pola[0].prawa));
 
     await filtr(database, 'band').selectOption('6-9');
     await expect(database.locator('.pt-scope-name')).toHaveText('6–9 lat');

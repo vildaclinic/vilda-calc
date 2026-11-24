@@ -48384,6 +48384,8 @@ grupami pacjentów z makiety”.
 **Filtry zakresu (`scopeFilters`, `scopeMembers`).** Cztery pola wyboru nad kafelkami Statystyk:
 1. **Zakres** — „cała baza (N)” albo „z zapisem w ostatnich 12 mies. (M)”. Reguła jest ta sama, co w kafelku „Z zapisem
    w ostatnich 12 mies.” z etapu 1: data ostatniego zapisu karty (`lastSavedAtISO`) nie starsza niż rok od dziś.
+   *(2026-11-24, P-BAZA-ZAKRES: pole ma więcej pozycji — okna ostatniego zapisu i zakresy leczenia; opis niżej,
+   w sekcji „P-BAZA-ZAKRES”.)*
 2. **Lista pacjentów** — „wszystkie” albo jedna z zapisanych list. Członków daje ten sam odczyt, którym lista jest
    otwierana w Bazie (`getPatientListMembers`: ręczni członkowie i pacjenci spełniający regułę listy, bez wykluczonych).
    Pole jest widoczne tylko przy dostępie do list pacjentów (ten sam warunek, co listy w Bazie); bez dostępu filtr listy
@@ -48454,3 +48456,86 @@ pusty zakres i „Cała baza”; zapis grupy jako listy i plik grupy bez danych 
 390 px — bez przewijania w poziomie, pola 44 px i 16 px pisma).
 
 **Wersje.** `vilda_patients_list.js` 12 → 13, `vilda_patients_list.css` 10 → 11, wstrzykujące `vilda_chrome.js` 335 → 336 i `vilda_session_bridge.js` 251 → 252; SW 1.1.590 → 1.1.591 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## P-BAZA-ZAKRES — Baza pacjentów: więcej pozycji w polu „Zakres” Statystyk (ostatni zapis karty, leczenie) (SW 1.1.592, `vilda_patients_list.js` 14, `vilda_patients_list.css` 12, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Żaden wzór, próg ani definicja statystyk się nie zmienia. Pole „Zakres” (P-BAZA-GRUPY)
+dostaje nowe pozycje wyboru pacjentów; statystyki zakresu liczą te same funkcje co dotąd na mniejszym zbiorze.
+
+**Decyzja właściciela.** 2026-11-24, po scaleniu P-BAZA-GRUPY: „ok, nieźle, popracuj na selektorem Zakres bo tam jest mały
+wybór”. Dobór pozycji jest propozycją wykonawcy do potwierdzenia przy przeglądzie PR.
+
+**Pozycje pola (`scopeRanges`).** Jedna pozycja naraz; każda pokazuje w nawiasie, ilu pacjentów całej bazy obejmuje.
+
+| Rodzina | Pozycja | Kto wchodzi |
+|---|---|---|
+| — | cała baza | wszyscy pacjenci z bazy (jak dotąd) |
+| Ostatni zapis karty | z zapisem w ostatnich 3 mies. | ostatni zapis karty nie starszy niż 3 miesiące od dziś |
+| Ostatni zapis karty | z zapisem w ostatnich 6 mies. | …nie starszy niż 6 miesięcy |
+| Ostatni zapis karty | z zapisem w ostatnich 12 mies. | …nie starszy niż 12 miesięcy (pozycja dotychczasowa; reguła kafelka z etapu 1) |
+| Ostatni zapis karty | bez zapisu od ponad 12 mies. | każdy, kto **nie** ma zapisu w ostatnich 12 miesiącach |
+| Ostatni zapis karty | bez zapisu od ponad 24 mies. | każdy, kto nie ma zapisu w ostatnich 24 miesiącach |
+| Leczenie | leczeni hormonem wzrostu | pacjenci liczeni jako „leczonych” w sekcji „Leczenie hormonem wzrostu” (etap 2) |
+| Leczenie | leczeni z powodu otyłości | pacjenci liczeni jako „leczonych” w sekcji „Leczenie otyłości” (etap 3) |
+
+**Ostatni zapis karty — jak się liczy (`scopeMembers`).**
+1. Datą jest chwila ostatniego zapisu karty pacjenta (`lastSavedAtISO` z nagłówka karty) — ta sama, którą pokazuje kolumna
+   „Ostatni zapis” na liście i którą liczy kafelek „z zapisem w ostatnich 12 mies.”. To data zapisu w aplikacji, nie data
+   wizyty wpisana w pomiarze.
+2. Granicą okna jest ta sama chwila N miesięcy wcześniej (arytmetyka kalendarzowa zegara urządzenia: 17.06 → 17.03 dla
+   3 mies.). Zapis dokładnie na granicy jeszcze się liczy. Gdy w miesiącu docelowym nie ma takiego dnia, granica przesuwa
+   się o brakujące dni na początek następnego miesiąca (31.05 − 3 mies. = 3.03) — tak samo, jak od etapu 1 działa reguła
+   12 miesięcy (29.02 → 1.03 poprzedniego roku), więc pozycja „12 mies.” i kafelek dają zawsze tę samą liczbę.
+3. „Bez zapisu od ponad N mies.” jest **dopełnieniem** okna: obejmuje także pacjenta bez daty zapisu albo z datą nie do
+   odczytania. „W ostatnich 12 mies.” i „bez zapisu od ponad 12 mies.” dzielą więc bazę bez reszty.
+
+**Leczenie — jak się liczy.** Pacjent jest „leczony hormonem wzrostu”, gdy jego karta ma co najmniej jeden punkt leczenia
+GH (Włączenie, Kontynuacja albo Zakończenie; `ghPatient` dał wynik), a „leczony z powodu otyłości” — gdy ma co najmniej
+jeden punkt leczenia otyłości w karcie albo we wpisach między wizytami (`obesityPatient` dał wynik). To dokładnie definicje
+liczb „leczonych” z etapów 2 i 3 — bez nowej reguły: zakres obejmuje pacjentów leczonych **kiedykolwiek** (także po
+zakończeniu leczenia), tak jak te sekcje. Skład pochodzi z policzonego wyniku kart (`details` z `cardsResult`), bez
+czytania sejfu przy zmianie zakresu.
+- Dopóki karty nie są policzone (pierwsze wejście, zmiana w bazie), zakresu leczenia nie da się ustalić: ekran pokazuje
+  „Liczenie kart…”, a nie zero pacjentów; po liczeniu statystyki rysują się dla właściwego składu. Liczniki przy
+  pozycjach leczenia pojawiają się po policzeniu kart.
+- Karta, której nie udało się odczytać, nie mówi nic o leczeniu: jej pacjent nie wchodzi do zakresu, a pod filtrami jest
+  o tym zdanie („Nie udało się odczytać kart: N. Ci pacjenci nie są liczeni w zakresie…”).
+
+**Łączenie.** Jak dotąd: pozycja „Zakresu” łączy się spójnikiem „i” z listą pacjentów, płcią, wiekiem i rozpoznaniem
+wybranym w sekcji „Rozpoznania”. Opis zakresu (`scopeLabel`) zaczyna się od pozycji „Zakresu”, np. `leczeni hormonem
+wzrostu · dziewczęta`; ten sam opis trafia do banera, nazwy grupy na liście, nagłówka raportu i podpowiadanej nazwy listy.
+
+**Wygląd.** Pozycje są w dwóch grupach opcji zwykłego pola wyboru („Ostatni zapis karty”, „Leczenie”). Pole „Zakres” ma
+szerszą kolumnę; poniżej 1180 px pola filtrów stoją po dwa, a poniżej 760 px „Zakres” i „Lista pacjentów” zajmują cały
+wiersz („Płeć” i „Wiek” obok siebie), tak żeby wybrana pozycja z licznikiem nie była ucinana (progi z istniejącej listy).
+
+**Przypadek syntetyczny (dane fikcyjne; osiem osób a–h z bazy testowej, zegar testu 17.06.2026, oraz dwie osoby z dawnym
+zapisem: i — dziewczynka leczona GH (SNP), ostatni zapis 15.01.2025; j — chłopiec bez leczenia, ostatni zapis 10.01.2024).**
+- Liczniki pozycji: cała baza 10; zapis w ostatnich 3 / 6 / 12 mies.: 8 / 8 / 8; bez zapisu od ponad 12 mies.: 2 (i, j);
+  od ponad 24 mies.: 1 (j); leczeni hormonem wzrostu: 5 (b, c, d, e, i); leczeni z powodu otyłości: 5 (d, e, f, g, h).
+- „bez zapisu od ponad 12 mies.” → 2 osoby; kafelek „Pacjenci w grupie” 2, „0 z zapisem w ostatnich 12 mies.”; GH
+  „leczonych: 1 · SNP 1”.
+- „leczeni hormonem wzrostu” → 5 osób; „leczonych: 5 · SNP 3 · bez programu 1 · ZT 1”; z płcią „dziewczęta” → d, i.
+- „leczeni z powodu otyłości” → 5 osób; „leczonych: 5 · Saxenda 3 · Wegovy 2”; z płcią „dziewczęta” → d, f („leczonych: 2 ·
+  Saxenda 1 · Wegovy 1”).
+- Po zapisaniu w tle nowej osoby leczonej GH i odświeżeniu widoku wybrany zakres zostaje, karty liczą się od nowa i zakres
+  obejmuje 6 osób.
+- Granice okien (test jednostkowy, „dziś” 17.06.2026 13:00): zapis 17.03.2026 13:00 jest w oknie 3 mies., zapis 12:59 już
+  nie; analogicznie 17.12.2025 (6 mies.), 17.06.2025 (12 mies.) i 17.06.2024 (24 mies.).
+
+**Prywatność i cykl życia danych.** Bez nowych danych, miejsc zapisu i kontaktu z siecią: wybrana pozycja żyje w pamięci
+widoku Bazy (`state.filters.range`) razem z pozostałymi filtrami; skład zakresów leczenia pochodzi z wyniku kart, który
+widok już trzyma w pamięci.
+
+**Zgodność wstecz.** Pozycja „z zapisem w ostatnich 12 mies.” działa jak dotąd. Model filtrów ma pole `range` (klucz
+pozycji) zamiast flagi `recent`; stan filtrów nie jest nigdzie utrwalany, więc nie ma czego migrować.
+
+**Strażnicy.** `tests/unit/baza-statystyki-zakres.test.mjs` (11; plik produkcyjny: lista pozycji, granice okien co do
+minuty, dopełnienia, zgodność z kafelkiem także 29 lutego, koniec miesiąca, zakresy leczenia z `cardsResult`, karta
+nieodczytana, brak wyniku kart, łączenie z innymi filtrami); `tests/e2e/baza-pacjentow-statystyki-zakres.spec.mjs` (3;
+prawdziwy szyfrowany sejf, fikcyjne osoby z dawnym zapisem: liczniki i grupy opcji, każdy rodzaj zakresu, łączenie z płcią,
+brak odczytów sejfu przy zmianie zakresu, lista grupy, ponowne liczenie po zmianie w bazie, telefon — wybrana pozycja
+mieści się w polu); `tests/unit/baza-statystyki-grupy.test.mjs` i `tests/e2e/baza-pacjentow-statystyki-grupy.spec.mjs` —
+dostosowane do pola `range` i nowego układu filtrów na telefonie.
+
+**Wersje.** `vilda_patients_list.js` 13 → 14, `vilda_patients_list.css` 11 → 12, wstrzykujące `vilda_chrome.js` 336 → 337 i `vilda_session_bridge.js` 252 → 253; SW 1.1.591 → 1.1.592 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.

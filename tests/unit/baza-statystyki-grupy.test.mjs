@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // P-BAZA-GRUPY (makieta statystyk; decyzja właściciela 2026-11-24: „praca nad grupami pacjentów z makiety”):
-// zakres statystyk z filtrów — lista pacjentów, płeć, przedział wieku, zapis w ostatnich 12 miesiącach — razem
-// z rozpoznaniem wybranym w sekcji „Rozpoznania”. Model ładowany z PLIKU PRODUKCYJNEGO (vilda_patients_list.js);
-// wszystkie osoby są fikcyjne.
+// zakres statystyk z filtrów — pole „Zakres”, lista pacjentów, płeć, przedział wieku — razem z rozpoznaniem
+// wybranym w sekcji „Rozpoznania”. Model ładowany z PLIKU PRODUKCYJNEGO (vilda_patients_list.js); wszystkie
+// osoby są fikcyjne. Pozycje pola „Zakres” (P-BAZA-ZAKRES) mają własny plik: baza-statystyki-zakres.test.mjs.
 function modul() {
   const win = {};
   loadBrowserScript('vilda_patients_list.js', win);
@@ -27,24 +27,24 @@ const opcje = (extra = {}) => ({ now: DZIS, ...extra });
 describe('Filtry zakresu (scopeFilters, scopeActive, scopeKey, scopeLabel)', () => {
   it('przyjmuje tylko znane wartości; reszta to „bez filtra”', () => {
     const { scopeFilters, scopeActive } = modul();
-    expect(scopeFilters(null)).toEqual({ recent: false, listId: null, listName: '', sex: null, band: null });
-    expect(scopeFilters({ recent: 'tak', listId: 7, sex: 'K', band: '5-7', listName: 3 })).toEqual({ recent: false, listId: null, listName: '', sex: null, band: null });
-    expect(scopeFilters({ recent: true, listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' }))
-      .toEqual({ recent: true, listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' });
+    expect(scopeFilters(null)).toEqual({ range: null, listId: null, listName: '', sex: null, band: null });
+    expect(scopeFilters({ range: 'zawsze', listId: 7, sex: 'K', band: '5-7', listName: 3 })).toEqual({ range: null, listId: null, listName: '', sex: null, band: null });
+    expect(scopeFilters({ range: 'm12', listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' }))
+      .toEqual({ range: 'm12', listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' });
     expect(scopeActive(scopeFilters(null))).toBe(false);
-    for (const jeden of [{ recent: true }, { listId: 'l1' }, { sex: 'M' }, { band: '18+' }]) expect(scopeActive(scopeFilters(jeden))).toBe(true);
+    for (const jeden of [{ range: 'm12' }, { listId: 'l1' }, { sex: 'M' }, { band: '18+' }]) expect(scopeActive(scopeFilters(jeden))).toBe(true);
   });
 
   it('opis w kolejności filtrów na ekranie, rozpoznanie na końcu; klucz rozróżnia każdy filtr i rozpoznanie', () => {
     const { scopeLabel, scopeKey } = modul();
-    const wszystko = { recent: true, listId: 'l1', listName: 'Fikcyjna lista kontrolna', sex: 'F', band: '10-13' };
+    const wszystko = { range: 'm12', listId: 'l1', listName: 'Fikcyjna lista kontrolna', sex: 'F', band: '10-13' };
     const rozpoznanie = { key: 'c:E66', label: 'E66 — Otyłość' };
     expect(scopeLabel(wszystko, rozpoznanie)).toBe('z zapisem w ostatnich 12 mies. · lista „Fikcyjna lista kontrolna” · dziewczęta · 10–13 lat · E66 — Otyłość');
     expect(scopeLabel({ sex: 'M' }, null)).toBe('chłopcy');
     expect(scopeLabel(null, rozpoznanie)).toBe('E66 — Otyłość');
     expect(scopeLabel({ listId: 'l2' }, null)).toBe('lista „bez nazwy”');
     expect(scopeLabel(null, null)).toBe('');
-    const klucze = [null, { recent: true }, { listId: 'l1' }, { listId: 'l2' }, { sex: 'M' }, { sex: 'F' }, { band: '0-2' }, { band: '3-5' }, wszystko]
+    const klucze = [null, { range: 'm12' }, { listId: 'l1' }, { listId: 'l2' }, { sex: 'M' }, { sex: 'F' }, { band: '0-2' }, { band: '3-5' }, wszystko]
       .flatMap((filtry) => [scopeKey(filtry, null), scopeKey(filtry, rozpoznanie), scopeKey(filtry, { key: 'c:Q96' })]);
     expect(new Set(klucze).size).toBe(klucze.length);
     expect(scopeKey(null, null)).toBe('');
@@ -80,7 +80,7 @@ describe('Pacjenci w zakresie (scopeMembers)', () => {
   it('zapis w ostatnich 12 miesiącach: starszy zapis i brak zapisu wypadają', () => {
     const { scopeMembers } = modul();
     const baza = BAZA.concat([osoba('i', '2015-01-01', 'F', ''), osoba('j', '2015-01-01', 'F', '2025-06-17T12:00:00.000Z'), osoba('k', '2015-01-01', 'F', 'nie-data')]);
-    expect(scopeMembers(baza, { recent: true }, opcje())).toEqual(['a', 'b', 'c', 'd', 'f', 'g', 'h', 'j']);
+    expect(scopeMembers(baza, { range: 'm12' }, opcje())).toEqual(['a', 'b', 'c', 'd', 'f', 'g', 'h', 'j']);
   });
 
   it('te same reguły co demographics: przedziały, płeć i „z zapisem w ostatnich 12 mies.” dają tych samych pacjentów', () => {
@@ -89,7 +89,7 @@ describe('Pacjenci w zakresie (scopeMembers)', () => {
     model.bands.forEach((przedzial) => expect(scopeMembers(BAZA, { band: przedzial.key }, opcje()), przedzial.label).toEqual(przedzial.ids));
     expect(scopeMembers(BAZA, { sex: 'M' }, opcje())).toEqual(model.sexIds.M);
     expect(scopeMembers(BAZA, { sex: 'F' }, opcje())).toEqual(model.sexIds.F);
-    expect(scopeMembers(BAZA, { recent: true }, opcje())).toHaveLength(model.recent);
+    expect(scopeMembers(BAZA, { range: 'm12' }, opcje())).toHaveLength(model.recent);
     // Statystyki zawężone filtrem liczą dokładnie tych pacjentów.
     const chlopcy = new Set(scopeMembers(BAZA, { sex: 'M' }, opcje()));
     expect(demographics(BAZA.filter((p) => chlopcy.has(p.patientId)), opcje())).toMatchObject({ total: 4, sex: { M: 4, F: 0, unknown: 0 } });
@@ -114,7 +114,7 @@ describe('Pacjenci w zakresie (scopeMembers)', () => {
   it('filtry łączą się spójnikiem „i” — także z grupą rozpoznania', () => {
     const { scopeMembers } = modul();
     expect(scopeMembers(BAZA, { sex: 'M', band: '6-9' }, opcje())).toEqual(['c']);
-    expect(scopeMembers(BAZA, { sex: 'M', recent: true }, opcje())).toEqual(['b', 'c', 'g']);
+    expect(scopeMembers(BAZA, { sex: 'M', range: 'm12' }, opcje())).toEqual(['b', 'c', 'g']);
     expect(scopeMembers(BAZA, { listId: 'l1', sex: 'F' }, opcje({ listIds: ['c', 'd', 'e', 'f'] }))).toEqual(['d', 'f']);
     expect(scopeMembers(BAZA, { listId: 'l1', sex: 'F', band: '18+' }, opcje({ listIds: ['c', 'd', 'e', 'f'], ids: ['d', 'e', 'f'] }))).toEqual(['f']);
     expect(scopeMembers(BAZA, null, opcje({ ids: ['e', 'a', 'nie-ma'] }))).toEqual(['a', 'e']);
