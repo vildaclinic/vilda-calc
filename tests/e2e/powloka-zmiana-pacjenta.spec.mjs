@@ -61,7 +61,7 @@ const zalozPacjenta = (ctx, d) => ctx.evaluate(async (dane) => {
   return w.patientId;
 }, d);
 
-// Notatka, która renderuje przycisk „↗ Siatki / punkt GH" (wzorzec z skok-gh-rozgloszenie.spec.mjs).
+// Notatka, która renderuje przycisk „↗ Trend dawki / punkt GH" (wzorzec z skok-gh-rozgloszenie.spec.mjs).
 const zalozNotatkeGH = (ctx, patientId, ghPointId) => ctx.evaluate(async (d) => {
   const w = await window.VildaVault.savePatientNote({
     patientId: d.patientId, title: 'Somatropina', body: 'Dawka kontrolna.',

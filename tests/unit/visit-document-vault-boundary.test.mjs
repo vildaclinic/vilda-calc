@@ -16,7 +16,7 @@ function native(source) {
 describe('exact active-visit document guard layer', () => {
   it('replays the declared narrow guard over the reviewed patient-profile image', () => {
     const base = restoreVisitDocumentBaseline(source);
-    expect(digest(base)).toBe('0499a9e445e5463d3a694cf5675684d333bbd4dd2b01a956a56ee918245869cd');
+    expect(digest(base)).toBe('c03c5e5ddb0e282d3e52f44445337a5321b5913140058493a5c2ec02f6952cba');
     expect(applyVisitDocumentDelta(base)).toBe(source);
     expect(digest(source)).toBe(manifest.integratedVaultSHA256);
   });

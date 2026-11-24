@@ -2,7 +2,8 @@ import { expect, test } from '../support/test-czas.mjs';
 
 // P-GH-PUNKTY-TESTY (T2): punkty terapii GH na prawdziwym DocPro — edycja i usuwanie po id, sygnały zapisu
 // (zdarzenie `vilda:therapy-points-changed`, pamięć modułu, kanał `gh-therapy-sync` z tabId karty, echo
-// odbiornika app.js) oraz powiązanie wizyty kontrolnej z ostatnim punktem. Test charakteryzujący: opisuje
+// odbiornika app.js) oraz powiązanie wizyty kontrolnej z ostatnim punktem (od P-GH-WZNOWIENIE, część 2 — wg wieku).
+// Test charakteryzujący: opisuje
 // DZISIEJSZE zachowanie monitora, zanim zapis punktów przejdzie do wspólnego API, także tam, gdzie zachowanie
 // czeka na decyzję właściciela (w nazwie „stan obecny — do decyzji”). Punkty zmieniamy przyciskami monitora;
 // listę startową zasiewamy w pamięci modułu, jak inne testy GH.
@@ -360,7 +361,10 @@ test('F: wizyta kontrolna przy zgodnym ostatnim punkcie niesie jego ghPointId i 
   expect(wpis.medication.action).toBe('change');
 });
 
-test('G: wizyta kontrolna wiąże się z OSTATNIM ELEMENTEM listy, nie z ostatnim punktem po wieku — stan obecny — do decyzji (pytanie 21)', async ({ page }) => {
+// P-GH-WZNOWIENIE, część 2 (decyzja właściciela 2026-11-20; pytanie 21): wizyta kontrolna wiąże się z OSTATNIM PUNKTEM
+// WG WIEKU (reguła kursów GH), nie z ostatnim elementem listy — dotąd punkt wsteczny dopisany na koniec listy (8 l. 6 mies.)
+// przejmował powiązanie od Włączenia 9 l. 0 mies.
+test('G: wizyta kontrolna wiąże się z ostatnim punktem wg wieku (reguła kursów), nie z ostatnim elementem listy (P-GH-WZNOWIENIE, część 2)', async ({ page }) => {
   test.setTimeout(120_000);
   await otworzDocPro(page);
   await ustaw(page, 38);
@@ -383,7 +387,7 @@ test('G: wizyta kontrolna wiąże się z OSTATNIM ELEMENTEM listy, nie z ostatni
   expect(lista[1].dose).toBe(lista[0].dose); // oba punkty zgodne z kartą
 
   const wpis = await wizytaKontrolna(page);
-  expect(wpis.ghPointId).toBe(String(lista[1].id));
-  expect(wpis.linkedAgeMonths).toBe(102);
-  expect(wpis.medication.action).toBe('change');
+  expect(wpis.ghPointId).toBe(String(lista[0].id));
+  expect(wpis.linkedAgeMonths).toBe(108);
+  expect(wpis.medication.action).toBe('start');
 });

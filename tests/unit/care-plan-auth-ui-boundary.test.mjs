@@ -262,10 +262,14 @@ describe('native notes and staged evidence respect the same document boundary', 
     // o zmianie z innego urządzenia pokazuje się tylko, gdy wersja w sejfie różni się od otwartej (Qshow czyta ją
     // i porównuje polami odczytu, Qpokaz — dawna treść banera). Jedyna zmiana w treści edytora: te instrukcje, trzy małe
     // funkcje przy banerze i komentarz; bramka dostępu i zapis bez zmian. Działanie: tests/unit/notatka-pozniejsza-zapis.test.mjs.
+    // Odświeżony świadomie 2026-11-21 (P-KARTA-LECZENIE, etap 3 — trend GH przeniesiony do karty GH): przycisk notatki GH
+    // „↗ Siatki / punkt GH” → „↗ Trend dawki / punkt GH”, a bez ghPointId otwiera Kartę opcją { activeTab: "leczenie",
+    // widokGh: "trend" } (dotąd { activeTab: "traj" }). Jedyna zmiana w treści edytora: etykieta i opcja otwarcia Karty;
+    // skok z ghPointId do DocPro (Gr), bramka dostępu i zapis bez zmian. Działanie: tests/e2e/karta-leczenie-etap3.spec.mjs.
     const currentEditor = source.slice(...body.range);
     const legacyEditor = reverseEncounterNoteEditorHooks(currentEditor);
     expect(applyEncounterNoteEditorHooks(legacyEditor)).toBe(currentEditor);
-    expect(createHash('sha256').update(legacyEditor).digest('hex')).toBe('60dd540af147f7b4c2fec361bdf6758e899c66b4e20a6b87714061ac2399183d');
+    expect(createHash('sha256').update(legacyEditor).digest('hex')).toBe('8a8ca474f7fda33a9ab7613fe19ff86beaa2733bca44c5050a4df33861b5b587');
   });
 
   it('opens a genuinely new note synchronously without a needless patient-plan read', () => {

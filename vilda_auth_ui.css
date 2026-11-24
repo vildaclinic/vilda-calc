@@ -13,6 +13,24 @@
   -moz-osx-font-smoothing: grayscale
 }
 
+.vilda-auth-root:has(.vilda-auth-patient-card) {
+  scrollbar-gutter: stable;
+  overflow-anchor: none
+}
+
+.vilda-patient-tabs-scroll-spacer {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 0;
+  pointer-events: none
+}
+
+@media(min-width:992px) {
+  .vilda-auth-root:has(.vilda-auth-patient-card) {
+    scrollbar-gutter: stable both-edges
+  }
+}
+
 /* Only the patient database shares the application's global navigation.
    Login, unlock and the patient card retain their full-screen auth boundary. */
 html:not(.vilda-embedded) .vilda-auth-root.vilda-auth-database {
@@ -783,10 +801,20 @@ select.vilda-auth-input {
   box-shadow: 0 8px 24px var(--focus-ring)
 }
 
+/* P-STATUS-KAFLE-ROWNE (decyzja wlasciciela 2026-11-23): kafelki w zakladce „Status" maja
+   jeden rozmiar w kazdej sekcji. Cztery kolumny (karta 675 i 880 px), mniej dopiero, gdy
+   kafelek bylby wezszy niz 160 px. auto-fill (nie auto-fit) zostawia puste kolumny, wiec sekcja
+   z czterema kafelkami nie rozciaga ich szerzej niz sekcja z szescioma; rzedy maja wspolna
+   wysokosc, a minimalna wysokosc kafelka wyrownuje sekcje miedzy soba. */
 .vilda-patient-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+  grid-template-columns: repeat(auto-fill,minmax(max(160px,calc((100% - 3 * var(--space-10px)) / 4)),1fr));
+  grid-auto-rows: 1fr;
   gap: var(--space-10px)
+}
+
+.vilda-patient-stats-grid>.vilda-patient-stat {
+  min-height: 124px
 }
 
 .vilda-patient-stat {
@@ -2601,8 +2629,10 @@ body.vilda-modal-alert-open #scrollTopBtn {
 }
 
 /* Motyw szklany (.liquid-ios26 button {…!important}) i Karta (.vilda-auth-root) nadpisują przyciski z !important;
-   tu ta sama broń co w przyciskach Karty: !important przy wyższej szczegółowości (.vdo .vdo-btn, 0-2-0 > 0-1-1). */
-.vdo .vdo-btn {
+   tu ta sama broń co w przyciskach Karty: !important przy wyższej szczegółowości (.vdo .vdo-btn, 0-2-0 > 0-1-1).
+   P-KARTA-LECZENIE, etap 2: .vdo-zewn — akcje nagłówka sekcji oddane karcie leczenia (poza .vdo), te same przyciski. */
+.vdo .vdo-btn,
+.vdo-zewn .vdo-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2625,21 +2655,25 @@ body.vilda-modal-alert-open #scrollTopBtn {
   transition: border-color .15s ease, background-color .15s ease !important;
 }
 
-.vdo .vdo-btn:hover {
+.vdo .vdo-btn:hover,
+.vdo-zewn .vdo-btn:hover {
   border-color: var(--primary) !important;
   background: #f5fafb !important;
 }
 
-.vdo .vdo-btn:focus-visible {
+.vdo .vdo-btn:focus-visible,
+.vdo-zewn .vdo-btn:focus-visible {
   outline: var(--border-emphasis) solid var(--primary);
   outline-offset: 2px;
 }
 
-.vdo .vdo-btn-docpro {
+.vdo .vdo-btn-docpro,
+.vdo-zewn .vdo-btn-docpro {
   border-color: var(--primary) !important;
 }
 
-.vdo .vdo-btn-add {
+.vdo .vdo-btn-add,
+.vdo-zewn .vdo-btn-add {
   min-height: 34px;
   font-size: 13px;
   background: var(--primary) !important;
@@ -2647,7 +2681,8 @@ body.vilda-modal-alert-open #scrollTopBtn {
   color: #fff !important;
 }
 
-.vdo .vdo-btn-add:hover {
+.vdo .vdo-btn-add:hover,
+.vdo-zewn .vdo-btn-add:hover {
   background: #006d75 !important;
   border-color: #006d75 !important;
 }
@@ -3071,7 +3106,8 @@ textarea.vdo-input {
   }
 
   /* telefon: cel dotyku 44 px (standard aplikacji, pilnuje go otylosc-dziennik-karta-mobile) */
-  .vdo .vdo-btn {
+  .vdo .vdo-btn,
+  .vdo-zewn .vdo-btn {
     min-height: 44px;
     padding: 0 var(--space-14px);
     font-size: 13px;
@@ -3095,5 +3131,639 @@ textarea.vdo-input {
 
   .vdo-chips {
     max-width: none;
+  }
+}
+
+/* ── P-KARTA-LECZENIE, etap 1 — zakładka „Leczenie” i pasek leczenia nad zakładkami ─────────────────
+   Kl_* w vilda_auth_ui.js (decyzje właściciela 2026-11-19, docs/KARTA_LECZENIE_PLAN.md). Wygląd paska jak na
+   zaakceptowanej makiecie: miętowa karta (kolory podsumowania leczenia), znacznik i stan jak w podsumowaniu,
+   wartości, pigułka oceny w kolorach pola oceny i „Leczenie →” jak mały przycisk „w DocPro”. Komputer — jedna
+   linia; telefon (≤ 560 px) albo za wąsko — dwie linie i „›” (klasa vilda-kl-pasek--dwie ustawiana w JS). */
+
+/* Siedem zakładek: w wierszu (okno > 1024 px, kolumna Karty 675 albo 880 px) zakładki, które się nie mieszczą, schodzą
+   do drugiego rzędu zamiast ucinać etykiety; do 1024 px działa siatka 2 + 2 + 2 + 1 (reguła wyżej, bez zmian). */
+.vilda-patient-tabs:has(>.vilda-patient-tab[data-tab=leczenie]) {
+  flex-wrap: wrap;
+}
+
+/* Paski są dziećmi Karty (odstępy jak bloki, które stały tu wcześniej); zawartość zakładki układa bloki jak Karta. */
+.vilda-kl-paski,
+.vilda-kl-gh {
+  display: contents;
+}
+
+.vilda-kl-tresc:not(.vilda-patient-tab-content--hidden) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-18px);
+}
+
+/* Przycisk Karty dostaje !important ze skórki szkła i z .vilda-auth-root button (szerokość auto);
+   ta sama broń co w .vilda-gha-btn: !important przy szczegółowości 0-2-0. */
+.vilda-auth-root .vilda-kl-pasek {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: var(--space-8px) !important;
+  width: 100% !important;
+  min-width: 0;
+  min-height: 0 !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+  margin: var(--space-10px) 0 2px !important;
+  padding: 9px var(--space-14px) !important;
+  border: var(--border-hairline) solid #9fe1cb !important;
+  border-radius: var(--radius-14) !important;
+  background: #e1f5ee !important;
+  color: #08202c !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  font: inherit;
+  font-size: 1rem !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+  letter-spacing: normal !important;
+  text-align: left !important;
+  text-transform: none !important;
+  cursor: pointer !important;
+  transform: none !important;
+  transition: background-color .15s ease, border-color .15s ease !important;
+}
+
+.vilda-auth-root .vilda-kl-pasek:hover {
+  background: #d9f2e9 !important;
+  border-color: #7fd3b8 !important;
+}
+
+.vilda-auth-root .vilda-kl-pasek:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+.vilda-kl-pasek-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8px);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.vilda-kl-pasek-l1,
+.vilda-kl-pasek-l2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8px);
+  flex: 0 0 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* znacznik leczenia i znacznik stanu — wartości .vilda-gh-summary-badge / -chip z podsumowania */
+.vilda-kl-pasek-odznaka {
+  display: inline-flex;
+  align-items: center;
+  background: #0f6e56;
+  color: #fff;
+  border-radius: var(--radius-20);
+  padding: var(--space-4px) var(--space-12px);
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek-stan {
+  font-size: .74rem;
+  color: #0f6e56;
+  background: #9fe1cb;
+  border-radius: var(--radius-20);
+  padding: 3px var(--space-10px);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek-t {
+  margin-left: var(--space-4px);
+  font-size: .92rem;
+  font-weight: 600;
+  color: #04342c;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek--r1 .vilda-kl-pasek-t {
+  font-size: .88rem;
+}
+
+.vilda-kl-pasek--r2 .vilda-kl-pasek-t {
+  font-size: .84rem;
+}
+
+.vilda-kl-pasek--r3 .vilda-kl-pasek-t {
+  font-size: .8rem;
+}
+
+/* pigułka oceny wg ChPL (D1) — kolory wariantów pola oceny (.vilda-oba-verdict) */
+.vilda-kl-pigulka {
+  flex: 0 0 auto;
+  border-radius: var(--radius-pill);
+  padding: 3px var(--space-10px);
+  font-size: .74rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.vilda-kl-pigulka--wait {
+  background: #fff7ed;
+  border: var(--border-hairline) dashed #f0c68a;
+  color: #b5731a;
+}
+
+.vilda-kl-pigulka--good {
+  background: rgba(26, 143, 92, .08);
+  border: var(--border-hairline) solid rgba(26, 143, 92, .35);
+  color: #1a8f5c;
+}
+
+.vilda-kl-pigulka--bad {
+  background: rgba(192, 69, 59, .07);
+  border: var(--border-hairline) solid rgba(192, 69, 59, .34);
+  color: #c0453b;
+}
+
+/* „Leczenie →” — wygląd małego przycisku „Edytuj w DocPro →” (.vdo .vdo-btn-docpro), bez własnej akcji */
+.vilda-kl-pasek-idz {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  box-sizing: border-box;
+  padding: 0 var(--space-12px);
+  background: var(--bg);
+  color: var(--primary);
+  border: var(--border-hairline) solid var(--primary);
+  border-radius: var(--radius-8);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.vilda-kl-pasek-chev {
+  display: none;
+  flex: 0 0 auto;
+  padding-bottom: 3px;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: #0f6e56;
+}
+
+/* dwie linie: 1) znacznik + stan, 2) wartości + pigułka; strzałka „›” wyśrodkowana w pionie */
+.vilda-auth-root .vilda-kl-pasek--dwie {
+  gap: var(--space-6px) !important;
+  padding: var(--space-10px) !important;
+  border-radius: var(--radius-12) !important;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-main {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6px);
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-l1 {
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: var(--space-6px) var(--space-8px);
+  white-space: normal;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-l2 {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* jak podsumowanie na telefonie (.vilda-gh-summary-badge ≤ 480 px: 0,78 rem) i ciaśniej, żeby znacznik i stan
+   mieściły się w jednej linii */
+.vilda-kl-pasek--dwie .vilda-kl-pasek-odznaka {
+  padding: var(--space-4px) var(--space-10px);
+  font-size: .78rem;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-stan {
+  padding: 3px var(--space-8px);
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-t {
+  margin-left: 0;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-idz {
+  display: none;
+}
+
+.vilda-kl-pasek--dwie .vilda-kl-pasek-chev {
+  display: inline;
+}
+
+/* ── P-KARTA-LECZENIE, etap 2 — karta leczenia otyłości z przełącznikiem ─────────────────────────────────────────
+   Ko_* w vilda_auth_ui.js i sekcja „Wpisy leczenia” w układzie „karta” (vilda_cykle_leczenia.js); makieta hybrydy
+   zaakceptowana 2026-11-19 (docs/KARTA_LECZENIE_PLAN.md). Kontener podsumowania leczenia (.vilda-gh-summary) jest
+   kartą: nagłówek z „+ Kontynuacja”, przełącznik „Przegląd | Wpisy (N) | Analiza” (wygląd .vilda-oba-seg) i widoki.
+   Kafelki „Przeglądu” mają wartości stylu kafelków panelu (.vilda-gha-tile), ale własne klasy. Telefon (≤ 560 px):
+   „+ Kontynuacja” po prawej (znacznik i stan po lewej, stan pod znacznikiem), kafelki 2 × 2, linia oceny w kolumnie. */
+
+/* nagłówek karty: akcje sekcji („+ Kontynuacja”; bez aktywnego cyklu także „Włączenie w DocPro →” i wyjaśnienie) po prawej */
+.vilda-ko-karta > .vilda-gh-summary-head > .vdo-head-actions {
+  margin-left: auto;
+}
+
+.vilda-ko-karta > .vdo-msg {
+  margin-bottom: var(--space-10px);
+}
+
+.vilda-ko-karta > .vilda-ko-seg {
+  margin: var(--space-10px) 0 var(--space-10px);
+}
+
+.vilda-ko-karta > .vilda-gh-summary-head + .vilda-ko-seg,
+.vilda-ko-karta > .vilda-gh-summary-head + .vdo-msg[hidden] + .vilda-ko-seg {
+  margin-top: 0;
+}
+
+/* Przegląd: cztery kafelki (komputer 1 × 4) */
+.vilda-ko-kafelki {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.vilda-ko-kafel {
+  min-width: 0;
+  border-radius: var(--radius-12);
+  padding: 11px var(--space-12px);
+  background: #fff;
+  border: var(--border-hairline) solid #e1f0eb;
+}
+
+.vilda-ko-k {
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: #5f8f81;
+  line-height: 1.2;
+}
+
+.vilda-ko-v {
+  margin-top: var(--space-4px);
+  font-size: 1.32rem;
+  font-weight: 900;
+  line-height: 1.05;
+  color: #0e2a30;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+
+.vilda-ko-v small {
+  font-size: .66rem;
+  font-weight: 800;
+  color: #56727b;
+}
+
+.vilda-ko-sub {
+  margin-top: 3px;
+  font-size: .72rem;
+  line-height: 1.25;
+  color: #56727b;
+}
+
+/* części podpisu: w jednej linii; gdy nie mieszczą się — każda w osobnej, bez separatora (klasa z Ko_podpisy) */
+.vilda-ko-cz {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.vilda-ko-sub--stos .vilda-ko-cz {
+  display: block;
+}
+
+.vilda-ko-sub--stos .vilda-ko-sep {
+  display: none;
+}
+
+/* „−X kg (−Y%)” w kolorze kafelka „Redukcja masy” */
+.vilda-ko-cz--good {
+  color: #1a8f5c;
+  font-weight: 800;
+}
+
+.vilda-ko-cz--bad {
+  color: #c0453b;
+  font-weight: 800;
+}
+
+/* linia oceny wg ChPL — kolory wariantów pola oceny (.vilda-oba-verdict) */
+.vilda-ko-werdykt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8px) var(--space-10px);
+  margin-top: 9px;
+  padding: var(--space-8px) var(--space-12px);
+  border-radius: var(--radius-12);
+}
+
+.vilda-ko-werdykt--wait {
+  background: #fff7ed;
+  border: var(--border-hairline) dashed #f0c68a;
+}
+
+.vilda-ko-werdykt--good {
+  background: rgba(26, 143, 92, .08);
+  border: var(--border-hairline) solid rgba(26, 143, 92, .35);
+}
+
+.vilda-ko-werdykt--bad {
+  background: rgba(192, 69, 59, .07);
+  border: var(--border-hairline) solid rgba(192, 69, 59, .34);
+}
+
+.vilda-ko-werdykt-ic {
+  flex: 0 0 auto;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.vilda-ko-werdykt-txt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-10px);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.vilda-ko-werdykt-t {
+  font-size: .86rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.vilda-ko-werdykt--wait .vilda-ko-werdykt-t {
+  color: #b5731a;
+}
+
+.vilda-ko-werdykt--good .vilda-ko-werdykt-t {
+  color: #1a8f5c;
+}
+
+.vilda-ko-werdykt--bad .vilda-ko-werdykt-t {
+  color: #c0453b;
+}
+
+.vilda-ko-werdykt-d {
+  font-size: .75rem;
+  line-height: 1.35;
+  color: #56727b;
+}
+
+/* „Szczegóły oceny” i „Jak działa dziennik leczenia ⌄” — przyciski w wyglądzie łącza; przyciski Karty dostają
+   !important ze skórki szkła i z .vilda-auth-root button — ta sama broń przy szczegółowości 0-2-0 */
+.vilda-auth-root .vilda-ko-link,
+.vilda-auth-root .vdo-jak {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: var(--space-4px) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: var(--radius-4) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--primary) !important;
+  font: inherit;
+  font-size: .82rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  white-space: nowrap;
+  cursor: pointer !important;
+  transform: none !important;
+}
+
+.vilda-auth-root .vilda-ko-link:hover,
+.vilda-auth-root .vdo-jak:hover {
+  text-decoration: underline;
+}
+
+.vilda-auth-root .vilda-ko-link:focus-visible,
+.vilda-auth-root .vdo-jak:focus-visible {
+  outline: var(--border-emphasis) solid var(--primary) !important;
+  outline-offset: 2px !important;
+}
+
+.vilda-auth-root .vilda-ko-werdykt-link {
+  flex: 0 0 auto;
+  margin-left: auto !important;
+}
+
+/* Wpisy: sekcja bez własnego pudełka (wpisy na tle karty); objaśnienia pod „Jak działa dziennik leczenia ⌄” */
+.vdo.vdo-karta {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.vdo-jak-blok {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-6px);
+}
+
+.vdo-jak-chev {
+  display: inline-block;
+  font-size: .8em;
+  transition: transform .2s;
+}
+
+.vdo-jak[aria-expanded="true"] .vdo-jak-chev {
+  transform: rotate(180deg);
+}
+
+.vdo-jak-tresc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4px);
+  padding: var(--space-8px) var(--space-10px);
+  border-radius: var(--radius-10);
+  background: var(--card);
+}
+
+.vdo-jak-tresc[hidden] {
+  display: none;
+}
+
+.vdo-jak-tresc > p {
+  margin: 0;
+}
+
+/* Analiza: panel „Dane analityczne — otyłość” bez belki i bez własnego pudełka; cicha linia leku nad nim */
+.vilda-ko-cicha {
+  margin: 0 2px var(--space-10px);
+  font-size: .78rem;
+  line-height: 1.4;
+  color: #56727b;
+}
+
+.vilda-ko-widok--analiza .vilda-gha-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 560px) {
+  /* nagłówek: znacznik i stan po lewej (stan pod znacznikiem), „+ Kontynuacja” (44 px) po prawej */
+  .vilda-ko-karta > .vilda-gh-summary-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-6px) var(--space-8px);
+  }
+
+  .vilda-ko-karta > .vilda-gh-summary-head > .vilda-gh-summary-badge,
+  .vilda-ko-karta > .vilda-gh-summary-head > .vilda-gh-summary-chip {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .vilda-ko-karta > .vilda-gh-summary-head > .vdo-head-actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    width: auto;
+    margin-left: 0;
+    align-items: flex-end;
+  }
+
+  /* bez aktywnego cyklu (dwa przyciski i wyjaśnienie) — akcje pod znacznikiem, na całą szerokość */
+  .vilda-ko-karta > .vilda-gh-summary-head:has(.vdo-btn-docpro) {
+    display: flex;
+  }
+
+  .vilda-ko-karta > .vilda-gh-summary-head:has(.vdo-btn-docpro) > .vdo-head-actions {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .vilda-ko-kafelki {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* linia oceny w kolumnie: „Szczegóły oceny” pod tekstem */
+  .vilda-ko-werdykt {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 2px var(--space-10px);
+  }
+
+  .vilda-ko-werdykt-txt {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* cel dotyku 44 px (standard aplikacji); ujemny margines — tekst łącza blisko tekstu nad nim, jak na makiecie */
+  .vilda-auth-root .vilda-ko-link,
+  .vilda-auth-root .vdo-jak {
+    min-height: 44px !important;
+    margin: -10px 0 !important;
+    white-space: normal;
+  }
+
+  .vilda-auth-root .vilda-ko-werdykt-link {
+    grid-column: 2;
+    justify-self: start;
+    margin: -8px 0 -12px !important;
+  }
+}
+
+/* jak kafelki panelu (.vilda-gha-v ≤ 480 px) */
+@media (max-width: 480px) {
+  .vilda-ko-v {
+    font-size: 1.18rem;
+  }
+}
+
+/* ── P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem ──────────────────────────────────────────────
+   Kg_* w vilda_auth_ui.js; makieta hybrydy zaakceptowana 2026-11-19 (docs/KARTA_LECZENIE_PLAN.md). Kontener
+   podsumowania GH (.vilda-gh-summary) jest kartą: nagłówek z cichym tekstem „Program … · N punktów kontrolnych”
+   po prawej (telefon ≤ 560 px — pod znacznikiem), przełącznik „Przegląd | Trend dawki | Analiza” (wygląd
+   .vilda-oba-seg, własna klasa .vilda-kg-seg) i widoki. Kafelki „Przeglądu” — kafelki etapu 2 (.vilda-ko-kafel*,
+   komputer 1 × 4, telefon 2 × 2); trend dawki w białej ramce wykresu (wartości .vilda-oba-chartbox). */
+
+/* nagłówek: cichy tekst programu i punktów kontrolnych po prawej (kolor etykiet pól podsumowania) */
+.vilda-kg-cichy {
+  margin-left: auto;
+  font-size: .78rem;
+  line-height: 1.3;
+  color: #0f6e56;
+  text-align: right;
+}
+
+.vilda-kg-karta > .vilda-kg-seg {
+  margin: var(--space-10px) 0 var(--space-10px);
+}
+
+.vilda-kg-karta > .vilda-gh-summary-head + .vilda-kg-seg {
+  margin-top: 0;
+}
+
+/* Przegląd: kolor wartości jak kafelki panelu (.vilda-gha-tile.good / .bad); jednostka i podpis szare */
+.vilda-kg-kafel--good .vilda-ko-v {
+  color: #1a8f5c;
+}
+
+.vilda-kg-kafel--bad .vilda-ko-v {
+  color: #c0453b;
+}
+
+/* Trend dawki: blok „Trend leczenia GH” (Pl w trybie karty) w białej ramce wykresu */
+.vilda-kg-ramka {
+  min-width: 0;
+  border: var(--border-hairline) solid #d5e7e8;
+  border-radius: var(--radius-12);
+  padding: var(--space-10px) var(--space-10px) var(--space-6px);
+  background: linear-gradient(180deg, #ffffff, #f2faf9);
+}
+
+/* nagłówek tabeli Wiek | Dawka | IGF-1: motyw strony daje th turkusowe tło (th { background: var(--secondary) }),
+   a Pl — szary tekst w atrybucie; w karcie ciemny tekst na jasnym tle (makieta). !important — przeciw stylowi
+   wpisanemu w element przez Pl (bez zmiany Pl i tabeli w „Siatkach centylowych”). */
+.vilda-kg-ramka th {
+  background: transparent;
+  color: var(--text-strong) !important;
+}
+
+/* Analiza: panel „Dane analityczne” bez belki i bez własnego pudełka; cicha linia (.vilda-ko-cicha) nad nim */
+.vilda-kg-widok--analiza .vilda-gha-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 560px) {
+  /* nagłówek: znacznik i stan (stan może zejść pod znacznik), cichy tekst w osobnej linii pod nimi */
+  .vilda-kg-cichy {
+    flex-basis: 100%;
+    margin-left: 0;
+    text-align: left;
   }
 }

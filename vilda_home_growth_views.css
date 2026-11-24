@@ -23,6 +23,18 @@ html.vilda-home-workspace #vhomeGrowthDialog .vhome-growth-tabs button[aria-sele
 #vhomeGrowthDialog .vhome-growth-history-symbol { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border: var(--border-hairline) solid #d4e7e8; border-radius: var(--radius-10); background: #eaf6f5; color: var(--primary); }
 #vhomeGrowthDialog .vhome-growth-history-symbol svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; }
 #vhomeGrowthDialog .vhome-growth-history-count { margin: var(--space-4px) 0 0; font-size: 14px; color: var(--vhome-growth-muted); }
+#vhomeGrowthDialog [data-growth-reported-history][hidden] { display: none !important; }
+#vhomeGrowthDialog .vhome-growth-reported-history { padding: var(--space-16px) var(--space-20px); border-top: var(--border-hairline) solid var(--vhome-growth-line); }
+#vhomeGrowthDialog .vhome-growth-reported-history h4 { margin: 0; font-size: 15px; font-weight: 600; }
+#vhomeGrowthDialog .vhome-growth-reported-history > p { margin: var(--space-4px) 0 var(--space-12px); }
+#vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-row { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: var(--space-8px) var(--space-12px); min-width: 0; }
+#vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-row + .adv-dz-row { margin-top: var(--space-14px); padding-top: var(--space-14px); border-top: var(--border-hairline) solid var(--vhome-growth-line); }
+#vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-badge { grid-column: 1 / -1; justify-self: start; margin: 0; font-size: 13px; }
+#vhomeGrowthDialog .vhome-growth-reported-history :is(.adv-dz-top,.adv-dz-bot) { display: contents; }
+#vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-sep,
+#vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-field:has(> .adv-dz-value:empty) { display: none; }
+#vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-field { font-size: 14px; }
+#vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-value { min-height: 36px; padding-inline: var(--space-8px); }
 html.vilda-home-workspace #vhomeGrowthDialog .vhome-growth-add { background: var(--primary) !important; color: #fff !important; border-color: var(--primary) !important; }
 #vhomeGrowthDialog .vhome-growth-add { width: auto; margin: 0; flex-shrink: 0; }
 #vhomeGrowthDialog .vhome-growth-current-measurement { color: var(--vhome-growth-muted); font-size: 14px; margin: 0; padding: var(--space-12px) var(--space-20px); line-height: 1.6; border-bottom: var(--border-hairline) solid var(--vhome-growth-line); }
@@ -134,6 +146,8 @@ html.vilda-home-workspace #vhomeGrowthDialog .vhome-growth-remove { border: 0 !i
 
 }
 @media (max-width: 600px) {
+  #vhomeGrowthDialog .vhome-growth-reported-history { padding: var(--space-14px); }
+  #vhomeGrowthDialog .vhome-growth-reported-history .adv-dz-row { grid-template-columns: repeat(2,minmax(0,1fr)); }
   #vhomeGrowthDialog .vhome-growth-family-fields, #vhomeGrowthDialog .vhome-a2-forecast-top, #vhomeGrowthDialog .vhome-a2-context-slots, #vhomeGrowthDialog .vhome-a2 .vhome-a2-metrics { grid-template-columns: minmax(0, 1fr); }
   #vhomeGrowthDialog .vhome-growth-family-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-14px) var(--space-10px); }
   #vhomeGrowthDialog .vhome-growth-family-fields > label:last-child { grid-column: 1 / -1; }

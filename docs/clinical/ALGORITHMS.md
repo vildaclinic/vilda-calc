@@ -12753,6 +12753,7 @@ Monitor terapii GH pokazywał tempo wzrastania w cm/rok **bez żadnego odniesien
 - *Wpięcie:* monitor zapamiętuje teraz przy każdym punkcie długość okna, z którego policzono tempo (`gvOknoLat`), a `Bg1` renderuje notę do `#ghTherapyMetricsSection`. Nota **znika razem z danymi** i **nie wypuszcza wyjątku silnika na renderowanie tabeli**.
 - *Strażnicy:* `tests/unit/gh-odpowiedz-b64.test.mjs` (12) — próg co do liczby, granica 2,0 vs 1,99, tempo ujemne, okno krótsze niż 180 dni (nazwane, ale nieoceniające), kontrola pozytywna na równo pół roku, ton w obu kierunkach i brak zdania przy braku tempa. Plus `tests/unit/gh-odpowiedz-b64-wpiecie.test.mjs` (5) — **prawdziwa funkcja `Bg1` wycięta z pliku produkcyjnego** i uruchomiona na atrapie DOM: nota powstaje, oznacza stronę progu, znika po wyczyszczeniu monitora, przeżywa brak silnika i brak sekcji, a wyjątek silnika jest zgłaszany i połykany. **Zmierzone czerwone:** przeciwko naiwnemu silnikowi z czterema pomyłkami (`<=` zamiast `<`, brak zastrzeżenia, brak flagi krótkiego okna, ostatni punkt bez sprawdzenia tempa) — **4 z 12**; przeciwko naiwnemu wpięciu z trzema (nota nie znika, wyjątek przepuszczony, brak oznaczenia strony progu) — **3 z 5**.
 - *Świadoma luka:* nie ma strażnika w przeglądarce dla samej noty. Monitor terapii GH wymaga punktów terapii i chromu modułu lekarskiego, a ta ścieżka pochłonęła już jedną ratę przy przycisku ściągi; wpięcie pokrywa test na wyciętej funkcji z atrapą DOM. Do dopisania, gdyby nota kiedyś przestała się pokazywać w praktyce.
+- **Dopisek P-GH-WZNOWIENIE, część 2 (2026-11-20):** przy leczeniu wznowionym po Zakończeniu `ocenOstatni` dostaje tylko wiersze metryk BIEŻĄCEGO kursu (`ghKursy`), a pierwszy wiersz kursu nie ma tempa pary — przerwa Zakończenie → Włączenie nigdy nie jest oceniana jako „tempo w trakcie leczenia”, a tempo poprzedniego kursu nie jest oceniane jako bieżące. Próg, okno 180 dni i teksty bez zmian; przy jednym kursie — jak dotąd. Nota pojawia się w przeglądarce w e2e `gh-wznowienie-docpro.spec.mjs` (GW-E1). Wpis na końcu pliku.
 
 ### GROWTH-SGA-CU — utrwalona niskorosłość po urodzeniu jako SGA, etap 4b (SW 1.0.863, 2026-09-08, wariant A wybrany przez właściciela)
 
@@ -12905,7 +12906,7 @@ Zostaje to zapisane tutaj, żeby podpunkt nie wracał co ratę jako „znane, ni
 
 ### P-NOTATKI rata 3d — skok z monitora GH dociera tam, gdzie miał, i zabiera ze sobą pacjenta (SW 1.0.991, 2026-09-18)
 
-**G27c — skok trafiał do celu przez przypadek (nowe znalezisko z rozpoznania G27b).** Przycisk „↗ Siatki / punkt GH" w arkuszu notatki woła `Gr(patientId, ghPointId)`, które zapisuje zamiar w `sessionStorage` pod kluczem `vilda:gh-jump` i ustawia `location.hash = "#/docpro"`. Konsumentem jest `N()` w `gh_therapy_monitor.js`, odpalane z trzech miejsc: start dokumentu (+700 ms), `hashchange` z „docpro" w hashu (+700 ms) i `vilda:patient-loaded` (+350 ms). Zmierzone i rozstrzygające:
+**G27c — skok trafiał do celu przez przypadek (nowe znalezisko z rozpoznania G27b).** Przycisk „↗ Siatki / punkt GH" [od P-KARTA-LECZENIE, etap 3 (2026-11-21): „↗ Trend dawki / punkt GH”; skok z punktem bez zmian] w arkuszu notatki woła `Gr(patientId, ghPointId)`, które zapisuje zamiar w `sessionStorage` pod kluczem `vilda:gh-jump` i ustawia `location.hash = "#/docpro"`. Konsumentem jest `N()` w `gh_therapy_monitor.js`, odpalane z trzech miejsc: start dokumentu (+700 ms), `hashchange` z „docpro" w hashu (+700 ms) i `vilda:patient-loaded` (+350 ms). Zmierzone i rozstrzygające:
 
 - **`gh_therapy_monitor.js` jest wpięty wyłącznie na `docpro.html`** — żadna inna strona go nie ładuje.
 - **Powłoka trzyma własny hash i montuje zakładki jako ramki:** `app.html` ma hash `#/start` i ramki `index.html?embedded=1`, `terminarz.html?embedded=1`, `przelicznik-jednostek.html?embedded=1`; `app.html` nie ładuje monitora w ogóle. `Gr` ustawiało hash **własnego okna**, czyli dokumentu w ramce, a nasłuch `hashchange` powłoki siedzi na oknie powłoki. Skok wywołany z ramki Terminarza (arkusz notatki otwiera się także stamtąd) ustawiał więc hash dokumentu terminarza i **nie robił nic** — zamiar leżał w `sessionStorage` do wygaśnięcia po 60 s.
@@ -22143,7 +22144,8 @@ sejfu, te same kroki co w teście e2e).** Punkt Increlex 20 kg (`dose` 0,24 mg/k
 „Aktualna dawka 0,24 mg/kg/d”; stary punkt 13 kg bez `doseAbs` (`dose` 0,08): „Aktualna dawka 0,08 mg/kg/d”.
 
 **Reguła.** Karta „Leczony IGF-1 (mekasermina)” (program IGF-1 albo preparat Increlex, jednostka punktu nie
-tygodniowa), ostatni punkt terapii:
+tygodniowa) [od P-GH-PREPARAT-BIEZACY (2026-11-23): Increlex czy rhGH wg bieżącego preparatu — leku ostatniego punktu
+kursu, bez leku — programu; nie wg programu Włączenia], ostatni punkt terapii:
 - „Aktualna dawka” = „2 × {mg na podanie} mg na dobę ({dose / 2} mg/kg na podanie)”;
 - mg na podanie = `doseAbs` / 2 (mg/d — P-GH-INCRELEX-PODANIE); bez `doseAbs` — `dose` × masa punktu / 2; bez masy —
   tylko „… mg/kg na podanie”;
@@ -22197,7 +22199,8 @@ te same kroki co w teście e2e).**
 - Wykres trendu z punktów pokazywał już % dawki zalecanej (bez mg/kg; 100% = 0,12 mg/kg na podanie od
   P-GH-INCRELEX-PODANIE) — bez zmian.
 
-**Reguła.** Increlex = preparat „Increlex…” albo program IGF-1, jednostka nie tygodniowa. Tekst dawki jak w
+**Reguła.** Increlex = preparat „Increlex…” albo program IGF-1, jednostka nie tygodniowa [od P-GH-PREPARAT-BIEZACY
+(2026-11-23): gdy punkt ma lek — decyduje lek, bez leku — program punktu]. Tekst dawki jak w
 P-GH-INCRELEX-KARTA: „2 × {mg na podanie} mg na dobę ({mg/kg/d / 2} mg/kg na podanie)”; bez dawki w mg — tylko
 „… mg/kg na podanie”.
 - Tabela „Trend leczenia GH”: wiersz Increlex z punktu — mg z `doseAbs` / 2 (bez `doseAbs` — `dose` × masa / 2); wiersz
@@ -22536,7 +22539,9 @@ racie **nikt go nie woła** — monitor działa jak dotąd. Kolejne raty przenio
   doseUnit, drug, program, igf1, igf1Unit, igf1DaysSinceDose, doseAbs`), `RODZAJE`, `KOMUNIKATY` (5 tekstów odmów
   dosłownie z monitora);
 - funkcje czyste (bez DOM, magazynu i zdarzeń; `VildaGhDawka` tylko do odczytu): `normalizujWiek` (10 l. 14 mies. →
-  11 l. 2 mies.), `wiekLacznieMies`, `sprawdzRodzaj` (najwyżej jedno Włączenie i jedno Zakończenie; `pomin` jak edycja),
+  11 l. 2 mies.), `wiekLacznieMies`, `sprawdzRodzaj` (najwyżej jedno Włączenie i jedno Zakończenie; `pomin` jak edycja —
+  **ZASTĄPIONE** przez P-GH-WZNOWIENIE, część 2, 2026-11-20, wersja 4: reguła kursów z wiekiem punktu, wpis na końcu
+  pliku),
   `dostepneRodzaje` (formularz wsteczny), `sprawdzWartosci` (warunki i kolejność odmów jak w monitorze, formularz
   „karta” albo „wsteczny”), `jednostkaDawki`, `dniIgf`, `polaZPodawanej`, `noweId`, `punkt`, `zmienWMiejscu`;
 - funkcje z efektami: `wczytaj` (pamięć modułu `GH_THERAPY_POINTS`), `zapisz` (= `L()` monitora: `window.ghTherapyPoints`
@@ -25466,6 +25471,8 @@ bazie (model jest w teście, haki sejfu te same).
   urządzeniach); R4n. *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt zapisane przez scalanie inaczej, niż przyszły (także
   przypięta wizyta po retencji na drugim urządzeniu) — odsyłanie poprawionych wizyt, uśpione, wpis na końcu pliku;
   wersje przeniesione pod kartę scaloną — E3-PR0f; R4n bez odsyłania — decyzja 2a z 2026-11-15.)*
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wpisy Kosza zapisane przez scalanie inaczej, niż były i niż przyszły — odsyłanie wpisów
+  Kosza, uśpione, wpis na końcu pliku; R4n i D7 nadal bez odsyłania.)*
 - **Etap 3.** Koniec pełnej wysyłki (decyzja 7) wymaga, żeby zdarzenie `ptomb` bez znanego celu albo wiersz `oversize`
   miały inny nośnik karty scalonej (punkt kontrolny).
 
@@ -25674,7 +25681,8 @@ Po scaleniu E2-PR3b warunek decyzji 10 („test właściciela po PR ze zmianami 
   wykonane w E2-PR3c3 (wpis wyżej).
 - **E3-PR0.** Echo zmian pochodnych scalania (pamięć par jako punkt wyjścia). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wersje wizyt —
   bez pamięci par: sejf porównuje stan wersji z ładunku przed scaleniem i po nim; czwarta droga ze scalania do kolejki,
-  uśpiona; wpis na końcu pliku. Wpisy Kosza — E3-PR0d.)*
+  uśpiona; wpis na końcu pliku. Wpisy Kosza — E3-PR0d.)* *(2026-11-19, E3-PR0d: wpisy Kosza — tak samo bez pamięci
+  par, porównanie surowych wpisów przed scaleniem i po nim; wpis na końcu pliku.)*
 - **Etap 3.** `partialSince` (odbiorca, znak w UI, lista w Ustawieniach, `pfull` ze scalania karty z `partialSince`).
 - Kolejne PR: nowe miejsce zapisu w scalaniu — emisja albo reguła „świadomie bez haka” (tabela wyżej) i przypadek
   w `sync-wskrzeszenie-calej-karty`; zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli
@@ -27983,7 +27991,8 @@ przypadkach zastosowanie kończy się bez dalszych zapisów i bez klasyfikowania
 - **Scalanie z chmury nie dopisuje do kolejki.** Kolejki jeszcze nie ma. Dwa wyjątki z decyzji 9 to haki E2-PR3b
   (niżej; w kodzie od E2-PR3b, wpis wyżej). *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: czwarta droga — odsyłanie poprawionych wizyt po
   zastosowaniu koperty zdarzenia (`applyEncryptedEvent` = `Bem_zastosuj`), uśpione przełącznikiem odsyłania; wpis na
-  końcu pliku.)*
+  końcu pliku.)* *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: tą samą drogą i za tym samym przełącznikiem — odsyłanie wpisów
+  Kosza, `stomb` po `snap`; wpis na końcu pliku.)*
 
 **Zgodność ze starszą aplikacją.** Każda z 14 kopert przechodzi przez `mergeSyncPayload` starszego sejfu (wersja 221,
 fikstura testów) bez wyjątku. Stan jest taki jak po pełnym blobie dla tej encji (B13). Urządzenie bez aktualizacji
@@ -28056,6 +28065,14 @@ Różnica bez klasy, nowa różnica i zniknięcie znanej różnicy w W1 albo W2r
   | R4n | inna postać gwiazdki w treści wpisu Kosza; Kosz i „Przywróć” dają to samo, wymiana tego nie uzgadnia (scalanie świadomie nie uzgadnia tej postaci, jak przy samych blobach — D7) |
   | R5 | wpis Kosza karty usuniętej tylko na jednym urządzeniu; Kosz takich wpisów nie pokazuje |
 
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: w tabeli brak wiersza R4a′ — inna treść wizyty we wpisie Kosza żywej karty, klasa testu
+  A ≡ B, p. 6 „R4-a′”. R4a, R4a′ i R5 z zapisem odsyła E3-PR0d (uśpione, wpis na końcu pliku); wpis karty usuniętej,
+  który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła — E3-PR0d2. Klasyfikator testu nazywa R4a
+  także sam opis wpisu żywej karty, który decyzja 2a nazywa D7 — w pomiarze takich różnic nie było; poprawka testu
+  w E3-PR0h.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: wpis karty usuniętej, który zostaje tylko na jednym urządzeniu, gdy
+  późniejsza wersja nie weszła — odsyła E3-PR0d2 po udanym scaleniu (uśpione, wpis na końcu pliku).)*
+
 - **W2s** (odbiorca po zdarzeniach wobec odbiorcy po blobie). „Inne” = 0, kategorie:
   - 40 ziaren: K1 „karta częściowa do pełnej karty” 65, R2 21, K2 „ratunek D-21” 18, R4a 14, K1k 10, R3 8, R5 8, R4n 1;
   - ziarna domyślne: K1 34, R2 21, K2 8, K1k 3, R3 1.
@@ -28116,6 +28133,13 @@ literał na wynik zgodny.
   pełnej wysyłki — „ZNANA RÓŻNICA (zdarzenia; naprawa: E2-PR3c2)”; od E2-PR3c2 bez różnicy także po samych zdarzeniach.
 - **„ZNANA RÓŻNICA” R5-E1:** przy trzech urządzeniach wizyta jest w karcie na jednym, a w Koszu na drugim, do pełnej
   wysyłki; po niej jest w Koszu na wszystkich. Naprawa: E3-PR0.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: z włączonym przełącznikiem odsyłania różnica zostaje — wpis Kosza zostaje tylko na jednym
+  urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta; naprawa w E3-PR0d2, decyzja 1
+  z 2026-11-19.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: z włączonym przełącznikiem po samych zdarzeniach bez różnicy — wizyta
+  w Koszu na wszystkich urządzeniach, jak po pełnej synchronizacji (wpis na końcu pliku). Nie jest to naprawa w sensie
+  „wizyta w karcie”: wyrocznia dalej zgłasza klasę R5-E1, która jest jawnym wyjątkiem „wynik taki jak po pełnej
+  synchronizacji” (decyzja 1 z 2026-11-19 i decyzja z 2026-11-20). Przy wyłączonym przełączniku bez zmian.)*
 - **„ZNANA UTRATA” R3-E1:** po dwóch wskrzeszeniach tej samej notatki na dwóch urządzeniach późniejszy tekst ginie na
   obu; pełna wysyłka tego nie odwraca. Naprawa: E2-PR3c (od 2026-11-10: E2-PR3c3) — wykonane w E2-PR3c3 (wpis
   P-NOTATKI-1, E2-PR3c3, wyżej): bez utraty.
@@ -29272,7 +29296,11 @@ wobec 320 na 230); bez wpisu przycięcia — 0; 0 zapisów w stanie zbieżnym.
 - **Stary duplikat opróżniony przez fazę przeniesień** (P-SYNC-WLASCICIEL: ładunek przenosi każdą jego wersję do karty
   docelowej): urządzenie, z którego zniknął w ten sposób, wysyła do następnej wymiany ładunek bez nagrobka starej karty
   (dostaje go z kolejnym ładunkiem) — bez wpływu na wynik, jak dotąd. Gdy duplikat znika przez zdjęty wyjątek ostatniej
-  wersji (E4b, P←K), nagrobek „Scal pacjentów” zostaje na urządzeniu od razu.
+  wersji (E4b, P←K), nagrobek „Scal pacjentów” zostaje na urządzeniu od razu. *(2026-11-23, E3-PR0e1, P-SYNC-WLASCICIEL: „bez wpływu na wynik” nie było pełne: urządzenie bez
+  nagrobka zapisywało z formularza starej karty do niej od nowa (duplikat), „Scal kopię konta” przywracało ją z wizytą
+  z pliku, a pełna wymiana potrzebowała drugiego obiegu. Od E3-PR0e1 stary duplikat opróżniony przez fazę przeniesień
+  znika razem z nagrobkiem „Scal pacjentów”, gdy scalanie go zna (z ładunku albo tutejszy); bez znanego nagrobka — jak
+  dotąd. Wpis na końcu pliku.)*
 - **Pełny remis poprawek z dwóch kart** (ta sama chwila zmiany co do milisekundy, ten sam `rev` i rejestr gwiazdki,
   różna treść): każde urządzenie zostawia swoją treść — jak w jednej karcie i jak dotąd.
 - **Gwiazdka postawiona na urządzeniu ze starszą aplikacją** (bez rejestru gwiazdki W3) liczy się jak zmiana treści
@@ -30446,6 +30474,9 @@ tak samo, od razu i na każdym urządzeniu (dotąd gwiazdka widoczna po imporcie
   Niezależne od kolejności (0 z 300): `deletedAtISO`, `przycietoISO`, `gwiazdka`, a dla wersji `updatedAtISO`, treść
   i rejestr. Widok i obecność wizyty są te same; fuzz praw G2 pełny 10/2/6/2 programów. Manifest (PD-17) nie może
   kolejkować ponownie wersji tylko z powodu `rev`, a nagrobka — z powodu opisu, `revPary`, `koszISO` ani treści.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: odsyłanie wpisów Kosza trzyma się tej reguły — kanon porównania zdejmuje opis, `seq`,
+  `revPary`, `koszISO` i postać gwiazdki w treści (`_pinned`, `_pinnedState`); inną treść wizyty we wpisie (R4a′, np.
+  poprawioną masę) odsyła odsyłanie wpisów Kosza, nie manifest.)*
 - **Flota mieszana (D8 = a).**
   - ODP i T4d: urządzenie ze starszą aplikacją trzyma do aktualizacji starą kopię z gwiazdką, gdy pozostałe przyjęły
     świadome odpięcie albo usunięcie (rozjazd widoku 8/8/0 z 221), bez pętli zapisów; po aktualizacji — brak na wszystkich.
@@ -37104,14 +37135,15 @@ koduj” (wszystkie R1–R9 w jednej racie).
    punkt po „end” z przerwą < 3 mies. wraca do kursu, ≥ 3 mies. otwiera nowy. Kontekst niesie `ghKursy` / `redKursy`
    (etykieta kursu = preparat z jego ostatniego punktu) obok dotychczasowej koperty `gh` / `red`.
    **[ZASTĄPIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4, blok „Kursy leczenia otyłości = cykle” na końcu tej
-   sekcji; dla GH reguła obowiązuje bez zmian.]**
+   sekcji. ZASTĄPIONE dla GH — P-GH-WZNOWIENIE, część 1 (2026-11-20, wpis na końcu pliku): granicą kursu GH jest samo
+   Zakończenie, bez progu przerwy (`ghKursy`); dawna reguła została jako `kursyZPrzerwa`, tylko zapas kursów otyłości.]**
 2. *Okno w kursie* (`kursOkna`): start okna ≥ początek kursu − 6 mies., koniec ≤ koniec kursu (gdy zakończony), pokrycie
    leczeniem ≥ 50 % okna. Tylko takie okno dostaje werdykt odpowiedzi na leczenie. Okno mieszane dostaje werdykt
    populacyjny/MPH z dopiskiem „— w tym N mies. na GH” / „— w tym N mies. leczenia redukcyjnego” (dopisek jest
    ogonem etykiety; słowniki opisu i epikryzy odmieniają głowę, ogon wraca na koniec zdania).
    **[ZMIENIONE dla leczenia otyłości — P-OTYLOSC-CYKLE rata 4: dolna granica tolerancji startu = max(początek kursu
-   − 6 mies., koniec poprzedniego kursu otyłości); GH bez zmian. Blok „Kursy leczenia otyłości = cykle” na końcu tej
-   sekcji.]**
+   − 6 mies., koniec poprzedniego kursu otyłości). Blok „Kursy leczenia otyłości = cykle” na końcu tej sekcji. Od
+   P-GH-WZNOWIENIE, część 1 (2026-11-20) to samo przycięcie dla kursów GH.]**
 3. *Odpowiedź na GH na rok*: okno w kursie < 6 mies. → „za wcześnie na ocenę odpowiedzi na GH — N mies.”; ≥ 6 mies. →
    ΔhSDS × 12 / okno z progami ≥ +0,3 dobra, < +0,1 słaba (dotychczasowe liczby aplikacji, PR #63/v388; słaba
    odpowiedź w 1. roku < 0,3 wg konsensusu Bang 2012, doi:10.1111/j.1365-2265.2012.04420.x); okno 6–11 mies. z dopiskiem
@@ -37225,7 +37257,8 @@ drogą zapisu w monitorze, pozostałe tylko w starym zapisie albo w imporcie:
   je < 3 mies. — np. dopisek całości „w tym 13 mies.” → „w tym 12 mies.”). Wariant do decyzji właściciela (niżej).
 
 **Ścieżka bez modułu cykli.** Bez `VildaCykleLeczenia` (albo przy wyjątku w `podziel`) kursy otyłości liczy
-`therapyIntervals` (Zakończenie + przerwa ≥ 3 mies. = nowy kurs). NIE jest to jednak w pełni zachowanie sprzed raty 4 —
+`therapyIntervals` (Zakończenie + przerwa ≥ 3 mies. = nowy kurs; od P-GH-WZNOWIENIE, część 1, ta reguła nazywa się
+`kursyZPrzerwa`, a `therapyIntervals` liczy kursy GH bez progu przerwy — zapas otyłości bez zmian). NIE jest to jednak w pełni zachowanie sprzed raty 4 —
 kontekst nie niesie informacji, skąd pochodzą kursy (kształt `{a, b, label}` bez nowych pól), więc na każdej liście
 kursów otyłości działają: przycięcie tolerancji startu (zmienia wynik przy przerwie 3–6 mies.), żeton na każdy kurs
 w pasku meta, etykieta „otyłość” per kurs, a w Karcie pacjenta lista kursów w panelu „Analiza trajektorii” i suma pokryć
@@ -41057,7 +41090,7 @@ test w CI (ziarna domyślne trzech profili, p. 5, p. 6).
 |---|---|---|---|
 | E1 (obecność) | wizyta dana do Kosza na urządzeniu, które miało w karcie więcej wersji; w widoku jest jedyną wersją żywej karty | W1, W4, bloby | E1 „obecność wizyty przy dwóch koszach offline” (P-KOSZ-PO-KLUCZU); tak też Q8-obca-2 — miarą jest wynik jak po pełnej synchronizacji (decyzja 3a) |
 | E1/E1b (utrata wersji nieznanej scalającemu) | nagrobek „Scal pacjentów” na urządzeniu, w którego eksporcie przed scaleniem nie było tej wersji w karcie X | W1, W4, bloby | P-SYNC-WLASCICIEL, „Ograniczenia”, „Utrata wersji (E1/E1b)”; do naprawy w E3-PR0 (decyzja 9a; plan: E3-PR0f) |
-| E4b (stara karta po „Scal pacjentów”) | karta wizyty albo notatki w widoku ma alias scalenia | tylko W1 | P-KOSZ-PO-KLUCZU, rodzina E4b; do naprawy w E3-PR0 (decyzja 4a; plan: E3-PR0e) |
+| E4b (stara karta po „Scal pacjentów”) | karta wizyty albo notatki w widoku ma alias scalenia | tylko W1 | P-KOSZ-PO-KLUCZU, rodzina E4b; do naprawy w E3-PR0 (decyzja 4a; plan: E3-PR0e) *(2026-11-23: E3-PR0e2b razem z E3-PR0e1 — decyzja 2 z 2026-11-23)* |
 | kosz-po-2 (stara karta z ostatnią wersją przy samych blobach) | zapis wizyty w starej karcie po scaleniu, potem jej kosz w tej karcie na urządzeniu bez wiedzy o scaleniu | bloby | P-KOSZ-PO-KLUCZU, „kosz-po-2” (domknięcie wymaga celu scalenia w nagrobku, P5) |
 | D-4 A (stara karta wraca po zapisie bez wiedzy o scaleniu) | ta wizyta albo notatka zapisana w starej karcie X po scaleniu; w widoku pod X | W1, W4, bloby | plan, D-4 (wariant A: duplikat karty do ponownego scalenia); P-KOSZ-PO-KLUCZU |
 | P5 (Kosz pod kartą usuniętą po scaleniu) | ukryty wpis Kosza (jego karta nie istnieje) wskazuje kartę z aliasem scalenia | W1, W4, bloby | P-KOSZ-PO-KLUCZU (P5: „Domknięcie wymaga celu scalenia w nagrobku”; „Wpływ kliniczny”: wizyty dane do kosza w duplikacie, który zniknął, są w Koszu, ale bez karty) |
@@ -41069,7 +41102,7 @@ test w CI (ziarna domyślne trzech profili, p. 5, p. 6).
 | R4a | kosz na urządzeniu, które nie znało ostatniej gwiazdki wizyty | W1, bloby | klasa R4a; p. 6 R4-a |
 | R4a′ | kosz na urządzeniu, które nie znało ostatniej treści wizyty | W1, bloby | klasa R4a′; p. 6 R4-a′ |
 | karta częściowa (nagrobek przegrał lokalnie, bez haka H1) | „Usuń pacjenta”; karta wraca zmianą urządzenia, które o usunięciu nie wiedziało i wysłało tylko swoją zmianę (u odbiorców bez haka H1) | tylko W1 | P-DZIENNIK-ZDARZEN (E2-PR3b), „Świadomie bez haka H1”; p. 6 „R5-E1, C wysyła tylko zdarzenia” |
-| R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; naprawa w E3-PR0 |
+| R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; jawny wyjątek: wynik taki jak po pełnej synchronizacji (decyzja 1 z 2026-11-19 i decyzja z 2026-11-20; E3-PR0d2) *(do 2026-11-20: „naprawa w E3-PR0”, od 2026-11-19 — w E3-PR0d2)* |
 
 Klasa nie zależy od nazwy przebiegu: przebieg Q8-obca-2 dostaje E1 (obecność) i P5 z mechanizmu. Zawsze bez klasy:
 „zniknięcie bez operacji” i „retencja usunęła ostatni stan wizyty”.
@@ -41135,7 +41168,9 @@ poprawka haka nie jest potrzebna.
     samą masą i gwiazdką — o wersji z ładunku pod inną istniejącą kartą decyduje nowszy rekord („najpierw rev”,
     P-SYNC-WLASCICIEL); `'raport'` w W1, W2r i W2s profilu pełnego;
   - „nagrobek karty opróżnionej” (niewidoczna): nagrobek karty tylko po jednej stronie, a karty nie ma po żadnej — karta
-    opróżniona przeniesieniem ostatniej wersji pod inną kartę znika bez nagrobka (`vilda_vault.js:3662–3663`);
+    opróżniona przeniesieniem ostatniej wersji pod inną kartę znika bez nagrobka (`vilda_vault.js:3662–3663`); *(2026-11-23,
+    E3-PR0e1: od tej zmiany tylko wtedy, gdy scalanie nagrobka tej karty nie znało — `Bsw_poOddaniu`, wpis na końcu
+    pliku)*;
     `'raport'` w profilu pełnym i w W4 profilu pełnego (W4 bez punktu stałego zostaje czerwone);
   - „rekord złożony po jednej stronie” (widoczna): wersja na obu stronach z tą samą chwilą zmiany i inną treścią; strona
     z późniejszą chwilą treści ma rekord złożony (treść z jednego rekordu, gwiazdka z drugiego) i wyższą `rev`;
@@ -41241,10 +41276,16 @@ której nagrobek wygrał (1).
   `40d742d3` oraz na `28ee1c3e` z testem sprzed E3-PR0a: W4, krok 165), więc nie jest skutkiem tego PR ani
   vildaclinic/vilda-calc#958. Do wyboru: zmiana aplikacji (karta, która w fazie przeniesień traci ostatnią wersję,
   `vilda_vault.js:3662–3663`, przyjmuje nagrobek z ładunku tego scalania) albo decyzja właściciela (druga wymiana W4 dozwolona, gdy zmienia wyłącznie nagrobki kart
-  nieobecnych na obu urządzeniach). Ziarno jest poza CI.
+  nieobecnych na obu urządzeniach). Ziarno jest poza CI. *(2026-11-23, E3-PR0e1, P-SYNC-WLASCICIEL: wybrana zmiana aplikacji (decyzja 1
+  z 2026-11-23): karta opróżniona w fazie przeniesień znika razem z nagrobkiem znanym temu scalaniu; ziarno 5 profilu
+  pełnego bez przełącznika zielone (W4 z punktem stałym), wpis na końcu pliku. Z przełącznikiem różnica „nagrobek karty
+  opróżnionej” w W1 tego ziarna zostaje — wersja przechodzi tam kopertą odsyłania, która nie niesie nagrobka.)*
 - **R4a′ w profilu „dłuższa praca bez połączenia”** (ziarna 104, 123, 128, 132, 137): różnica widoczna — Kosz ma starszą
   treść niż późniejsza poprawka; profil ręczny zostaje czerwony. Naprawa w E3-PR0 (odsyłanie wpisów Kosza: pochodny wpis
   Kosza do kolejki albo pełna karta z haka H1 razem z wpisami Kosza).
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wybrana droga „pochodny wpis Kosza do kolejki” — uśpiona, wpis na końcu pliku; pełna karta
+  z haka H1 niesie tylko karty, bez wpisów Kosza. Z włączonym przełącznikiem R4a′ w W1 tych ziaren znika; ziarna 104,
+  128, 132 i 137 zostają czerwone tylko przez W2s „inne” — zdarzenia nadawcy bogatsze niż jego pełna kopia.)*
 - **Do decyzji właściciela przy kolejnych PR E3-PR0:** czy różnicę „tylko nagrobki pacjentów” (p. 5, 5 przebiegów w
   trybie ścisłym) dopuścić jak R2, R4n i D7; czy R5 ma należeć do klas niewidocznych trybu ścisłego (dziś R5 czerwieni
   W1 w trybie ścisłym: profil podstawowy ziarno 31, pełny 3 i 16, „dłuższa praca bez połączenia” 104, 113 i 114; dowód
@@ -41252,6 +41293,19 @@ której nagrobek wygrał (1).
   tylko na B (przyszedł pełnym ładunkiem, nie z dziennika) — niewidoczny, ale w trybie ścisłym W1 jest bez klasy.
   *(2026-11-16, przydział z E3-PR0b: R5 i ten nagrobek retencji — E3-PR0d; „tylko nagrobki pacjentów” — decyzja
   właściciela przy E3-PR0c; plan, „Zakres” E3-PR0.)*
+  *(2026-11-19, decyzje z 2026-11-19 (plan, rozdział 6, „Decyzje z 2026-11-19 (E3-PR0d, pytania 1–2 projektu)”): R5
+  z zapisem odsyła E3-PR0d; wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo
+  karta jest tu usunięta — odsyłanie w E3-PR0d2, nie klasa niewidoczna trybu ścisłego; nagrobek retencji bez treści
+  tylko na B z pełnej kopii — znane ograniczenie starszej wersji, w trybie ścisłym klasa ze statusem znanego
+  ograniczenia i dowodem; wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0d.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: odsyłanie wykonane, uśpione — wpis na końcu pliku. W trybie ścisłym
+  z przełącznikiem naruszenia R5 znikają: profil podstawowy 2 → 0 (ziarno 31 przestaje być czerwone), pełny 1–20 7 → 0
+  (ziarna 3 i 16), „dłuższa praca bez połączenia” 2 → 0 (ziarna 113 i 114); zostaje „nagrobek karty opróżnionej”
+  w pełnym ziarnie 5, tak samo na bazie.)*
+  *(2026-11-23, E3-PR0e1: „tylko nagrobki pacjentów” (decyzja 6 z 2026-11-17: „tylko lista usuniętych pacjentów”) nie
+  jest różnicą niewidoczną — brak nagrobka na liście ma skutek później: stara kopia zwraca wtedy starą kartę tylko na
+  urządzeniu bez nagrobka. Naprawia ją E3-PR0e2b razem z E3-PR0e1; w trybie ścisłym katalogu kosza po E3-PR0e1 dalej
+  5 przebiegów, jak na bazie (wpis na końcu pliku).)*
 - E1/E1b (utrata wersji nieznanej urządzeniu scalającemu) — jawny wyjątek do naprawy w E3-PR0 (decyzja 9a, wpis
   P-SYNC-WLASCICIEL, „Ograniczenia”); do tego czasu zasada: „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w
   sieci po ostatnich zmianach.
@@ -41496,7 +41550,7 @@ na bieżącym urządzeniu (albo bez warunku faktu) daje czerwień.
 | gwiazdka wpisu Kosza po koszu bez wiedzy o gwiazdce ze starszej aplikacji | kosz na bieżącym, które nie znało ostatniej gwiazdki zapisanej na urządzeniu bez W3 (między bieżącymi leczy to pełna wymiana) | Kosz, światy floty | klasa R4a; fikstura 221:454–462 | znane ograniczenie; naprawa: aktualizacja urządzeń |
 | treść wpisu Kosza po koszu bez wiedzy o poprawce ze starszej aplikacji | jak wyżej dla treści (między bieżącymi leczy to P-KOSZ-NOWSZA-TRESC) | Kosz, światy floty | klasa R4a′; P-KOSZ-NOWSZA-TRESC | znane ograniczenie; naprawa: aktualizacja urządzeń |
 | D-4 A (Kosz w zwróconej starej karcie) — samych bieżących | kosz wizyty w starej karcie X po „Scal pacjentów”, gdy X wróciła już wcześniej zapisem w niej (D-4 A), potem „Usuń pacjenta” karty docelowej: wpis zostaje przy żywej X (nic nie ginie). Kosz w karcie, która przed nim nie wróciła — bez klasy | W1, W4, bloby | plan D-4 (wariant A); P-KOSZ-PO-KLUCZU, „kosz-po-2” | przyjęte D-4 |
-| D-4 A (wersja nieznana scalającemu w zwróconej starej karcie) — samych bieżących | utrata E1/E1b wersji z kartą źródłową X, a X wróciła zapisem innej wizyty albo notatki (D-4 A) i urządzenie z tą wersją oddało ją do żywej X: wersja jest w duplikacie X, nie w karcie scalonej (nic nie ginie, także po W4) | W1, W4, bloby | plan D-4; P-SYNC-WLASCICIEL, „Utrata wersji (E1/E1b)”; kontrola N | przyjęte D-4; naprawa E3-PR0e/E3-PR0f |
+| D-4 A (wersja nieznana scalającemu w zwróconej starej karcie) — samych bieżących | utrata E1/E1b wersji z kartą źródłową X, a X wróciła zapisem innej wizyty albo notatki (D-4 A) i urządzenie z tą wersją oddało ją do żywej X: wersja jest w duplikacie X, nie w karcie scalonej (nic nie ginie, także po W4) | W1, W4, bloby | plan D-4; P-SYNC-WLASCICIEL, „Utrata wersji (E1/E1b)”; kontrola N | przyjęte D-4; naprawa E3-PR0e/E3-PR0f *(2026-11-23: E3-PR0f — decyzja 9a; plan, wiersz 6)* |
 
 Klasy poszerzone albo dopisane w trakcie PR, każda z pozytywem i negatywem: „Przywróć” bez chwili treści obejmuje
 poprawkę z dowolnego urządzenia, także z drugiego urządzenia 221 (ten przypadek był wcześniej negatywem, teraz jest
@@ -41561,7 +41615,9 @@ Odcisk = `h`: 234/234, 100/100, 44/44 wersji. Największa minuta slotu: 2 wiersz
 Reguła B = T w każdym profilu; pół wymiany i powtórka partii — 0 wierszy; wyjątki builderów, oversize i partie ponad
 200 zdarzeń — 0; `visitCipher` nieobecny w każdym wpisie Kosza (1089, 1771, 959). Utrata bez nośnika tylko w profilu
 pełnym: 30 kart opróżnionych po samych zdarzeniach, a w pół wymiany 1 karta opróżniona i nagrobek tej samej karty z
-ładunku (`ptomb`) bez śladu (ziarno 5, znany przypadek W4 niżej). Strażniki licznika zielone w każdym ziarnie;
+ładunku (`ptomb`) bez śladu (ziarno 5, znany przypadek W4 niżej). *(2026-11-23, E3-PR0e1: przypadku w pół wymiany
+(ziarno 5) już nie ma — karta znika razem z nagrobkiem z ładunku; 30 kart opróżnionych po samych zdarzeniach to sposób
+liczenia, nie utrata (nagrobek dochodzi w tej samej albo następnej dostawie) — licznik do poprawki w E3-PR0h.)* Strażniki licznika zielone w każdym ziarnie;
 czerwone są tylko znane przypadki sprzed E3-PR0b (profil pełny, ziarno 5, W4, krok 165; „bez połączenia”, ziarna
 104, 123, 128, 132, 137 — R4a′; wpis E3-PR0a). Warstwa wyk według rodzaju (podstawowy / pełny / „bez połączenia”;
 razem 133 / 116 / 188): `snap` w ładunku 67 / 34 / 91 (gwiazdka 35 / 18 / 43, inne 21 / 14 / 33, rekord złożony
@@ -41711,12 +41767,22 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
   *(2026-11-17, E3-PR0c, P-ZBIEZNOSC-ZDARZEN: wykonane dla wersji wizyt — wpis na końcu pliku; zakres po decyzjach z 2026-11-17:
   bez samego nagłówka karty, notatki i ich nagrobki bez odsyłania, tylko pomiar, tylko po pojedynczych zmianach, pełna
   karta z haka H1 i osobne odesłanie tej samej wersji mogą wyjść obie; wpisy Kosza — E3-PR0d.)*
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane dla wpisów Kosza — wpis na końcu pliku: warunek „scalanie zapisało” porównuje
+  surowe wpisy Kosza przed scaleniem i po nim, a samo wygaśnięcie treści po 30 dniach nie jest zapisem do odesłania
+  (ani względem stanu przed scaleniem, ani względem ładunku); kanon 2a bez R4n i D7; reguła pola dla `visitIdentity`
+  i `payload.visit` (`POLA_ZAWSZE.stomb`); wpis, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie
+  weszła, bo karta jest tu usunięta — E3-PR0d2, decyzja 1 z 2026-11-19.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: ten wpis odsyła E3-PR0d2 — uśpione, wpis na końcu pliku; reguła patrzy
+  na stan po udanym scaleniu, nie na zapis scalania, z własnym dowodem braku pętli.)*
 - **Rozbicie zakresu**: `snap` w ładunku → E3-PR0c (CI: 20 wierszy w profilu podstawowym; ręcznie 67 / 34 / 91), w
   tym rekord złożony i gwiazdka; `stomb` w ładunku i spoza ładunku (R4a, R4a′, R5, inne) → E3-PR0d (CI 4; ręcznie
   32 / 30 / 61); nagłówek karty w ładunku i spoza ładunku (34 i 1 w profilu pełnym) i `snap` spoza ładunku (z gwiazdką
   i bez; ręcznie 3 / 8 / 4) → propozycja E3-PR0c; `pnotetomb` w ładunku → E3-PR0c albo E3-PR0d; `pnote` w ładunku
   (ręcznie 0 / 3 / 0, nowe 1) → propozycja E3-PR0c albo E3-PR0d, jak `pnotetomb`, z pomiarem po E3-PR0b2 (reguła treści
-  notatki); R5 → E3-PR0d (plan, dopisek w „Zakresie”).
+  notatki); R5 → E3-PR0d (plan, dopisek w „Zakresie”). *(2026-11-19, E3-PR0d: `stomb` wykonane, także R5 z zapisem;
+  wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta —
+  E3-PR0d2, decyzja 1 z 2026-11-19.)*
+  *(2026-11-20, E3-PR0d2: wykonane, uśpione — wpis na końcu pliku.)*
 - **Bez podwójnego wysyłania**: warstwa „nowe” odejmuje to, co dziś wychodzi samo — haki H1/H2/H3 i przegląd kolejki
   po drenażu, który coś scalił. Notatki pacjenta spoza ładunku pokrywają haki (wyk 10, nowe 0 w CI; ręcznie 27 / 4 /
   32, nowe 0), więc nie wymagają pracy. Przegląd nie pokrywa echa zdarzeń (nowe = noweOst we wszystkich profilach),
@@ -41724,12 +41790,20 @@ trwał w nim 200,8 s (przed scaleniem 161,9 s i 162,7 s, na bazie `4355e325` 127
 - **Starsza aplikacja**: echo do 276 nie leczy różnicy z bieżącą (w pomiarze przygotowawczym 276 pominęło 154 ze 168
   kopert wersji jako „nie nowsze”), a R4a i R4a′ przez 221 dają jeden dodatkowy obieg echa do starszego urządzenia
   (scenariusz „drugi rząd przez 221”: 1 wiersz do nadawcy, trzeci rząd 0; losowa flota 221, ziarno 3: drugi rząd 2) —
-  opisać, nie ukrywać (E3-PR0d). Stres: bez reguły pola jedna pełna kopia 221 dałaby minutę slotu ponad 4 MiB.
+  opisać, nie ukrywać (E3-PR0d).
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: odsyłanie tylko po zdarzeniach, więc przez 221 obiegu nie ma z konstrukcji (flota 221,
+  10 ziaren: 0 kopert odsyłania wpisów); dodatkowy obieg dotyczy 276 — z jednego zdarzenia 276 odsyłają oba bieżące
+  urządzenia (dwie koperty, jeden obieg), zmierzony w dwóch scenariuszach floty w CI i we flocie 276 ręcznie; wpis na
+  końcu pliku, „Flota ze starszą aplikacją”.)* Stres: bez reguły pola jedna pełna kopia 221 dałaby minutę slotu ponad 4 MiB.
 - **E3-PR0e**: „Usuń pacjenta” duplikatu karty po „Scal pacjentów” (decyzja 4a; sprawa niżej, scenariusz w bloku znanych
   usterek jako test wejściowy), propozycja: scenariusz dla luki mutantów po przegranym nagrobku karty, utrata bez
   nośnika (w 20 ziarnach profilu pełnego 30 kart opróżnionych po samych zdarzeniach, w pół wymiany 1 karta opróżniona
   i nagrobek tej karty bez śladu), „miejsce wizyty po „Scal pacjentów””, wersja nieznana scalającemu w zwróconej starej
   karcie.
+  *(2026-11-23, decyzje z 2026-11-23: E3-PR0e = E3-PR0e1–E3-PR0e3 (plan, wiersze 5–5c). Luka mutantów — scenariusz
+  w E3-PR0e1, zamknięta; utrata bez nośnika — przypadek w pół wymiany w E3-PR0e1, 30 kart opróżnionych — licznik
+  w E3-PR0h; „miejsce wizyty po „Scal pacjentów”” — W4 w jednej pełnej wymianie od E3-PR0e1, W1 — E3-PR0e2b; „Usuń
+  pacjenta” duplikatu z poprawką — E3-PR0e2b; wersja nieznana scalającemu w zwróconej starej karcie — E3-PR0f.)*
 - **E3-PR0h**: floty z odsyłaniem (221, 276, C = N), trzy bieżące urządzenia w CI, stres z wypełniaczem, echo na
   klonach z prawdziwą kolejką, wariant `publikuje`, rozmiary ech; linia bazowa — przebiegi ręczne licznika wyżej.
 
@@ -41792,7 +41866,7 @@ wynik.
 | `E2_AB_ECHO_KLONY=wszystkie` | echo na klonach każdego scalenia z echem w losowych flotach |
 | `E2_AB_NORM_VISIT=0` | wyrocznia bez normalizacji tożsamości wizyty (czerwienieje także literały scenariuszy) |
 | `E2_AB_P6_FLOTA=wszystkie` | scenariusze ręczne floty i kontrole C = N |
-| `E2_AB_ZNANE_USTERKI=1` | blok znanych usterek bieżącej aplikacji (dziś czerwony): notatka pacjenta — do naprawy w E3-PR0b2, „Usuń pacjenta” duplikatu karty — w E3-PR0e *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: notatka pacjenta naprawiona, przypadek w CI; w bloku zostaje duplikat karty.)* |
+| `E2_AB_ZNANE_USTERKI=1` | blok znanych usterek bieżącej aplikacji (dziś czerwony): notatka pacjenta — do naprawy w E3-PR0b2, „Usuń pacjenta” duplikatu karty — w E3-PR0e *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: notatka pacjenta naprawiona, przypadek w CI; w bloku zostaje duplikat karty.)* *(2026-11-23: „Usuń pacjenta” duplikatu karty — światy 881–884 E3-PR0e2b, świat 885 — wyjątek wyroczni z decyzji 4 z 2026-11-23 w E3-PR0e3.)* |
 | `E2_AB_STRES=0`, `E2_AB_STRES_WARIANTY=<lista>`, `E2_AB_STRES_KART=<n>`, `E2_AB_STRES_TRESC=<n>` | stres: wyłączenie, warianty („C→A”, „C→A i C→B”, „C→A+konflikt”, „276→A”, „N→A”, „N→A+konflikt”), liczba kart, wypełniacz w treści każdej wersji |
 | `E2_AB_SLAD=<prefiks>[,…]` | stan wersji i wpisu Kosza na A, B, C po każdym wierszu dziennika floty |
 | `E2_AB_WYNIKI=<plik>` | JSONL: pole `odsyl` ziaren, wiersze `typ` 'flota221', 'flota276', 'flotaN', 'p6f', 'stres', 'znana usterka' |
@@ -41831,6 +41905,10 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   dla niej operacją na v); zmiana aliasu uciszyłaby tę sprawę, więc jej nie wprowadzono. Bez klasy i bez literału;
   scenariusz w bloku `E2_AB_ZNANE_USTERKI=1` jest testem wejściowym E3-PR0e. Do czasu naprawy zalecenie jak przy
   decyzji 9a: duplikat karty po „Scal pacjentów” scalać ponownie („Scal pacjentów”), nie usuwać („Usuń pacjenta”).
+  *(2026-11-23, decyzje z 2026-11-23: poprawki i gwiazdki wizyt przeniesionych scaleniem trafią do karty scalonej
+  w E3-PR0e2b (decyzja 2), więc stara karta nie wróci z ich powodu; „Usuń pacjenta” zwróconej starej karty z nowymi
+  wizytami zapisanymi bez wiedzy o scaleniu to świadome usunięcie (decyzja 4) — wąski wyjątek wyroczni w E3-PR0e3.
+  Zalecenie „duplikat scalać ponownie, nie usuwać” zostaje.)*
 - **Przypadki do rozpoznania, wywoływane danymi starszej wersji** (bez klasy i bez literału, tylko w seriach ręcznych):
   - *nieświeży odcisk `h` po scaleniu wersji z 276* — flota 276, profil pełny, `E2_AB_SWIAT_FLOTA=300000`, ziarno 2
     (świat 400 002), krok 88: różnica par BC i CA w W4 floty bez klasy (`payload._pinnedState.h`, `payload.visit`).
@@ -41851,7 +41929,8 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   Wszystkie urządzenia właściciela mają dziś aktualną wersję; flota ze starszą aplikacją zostaje w testach jako
   zabezpieczenie (np. stara karta przeglądarki albo urządzenie otwarte po długiej przerwie).
 - **Luka mutantów:** usunięcie wersji poprawionych przed chwilą usunięcia karty po przegranym nagrobku łapie tylko
-  strażnik źródła — brakuje scenariusza; mutant przeżywa (luka; propozycja: scenariusz w E3-PR0e).
+  strażnik źródła — brakuje scenariusza; mutant przeżywa (luka; propozycja: scenariusz w E3-PR0e). *(2026-11-23, E3-PR0e1, P-SYNC-WLASCICIEL: luka zamknięta
+  — scenariusz w `tests/unit/polkrata-cien.test.mjs`, na bazie zielony, mutant czerwony; wpis na końcu pliku.)*
 - **Przybliżenia modelu:** moduły okna C (tabela wyżej); retencja wołana jawnie (w aplikacji po zapisie przy ≥ 10
   zapisach, z ochroną 24 h); C startuje jako bliźniak A (z magazynu bieżącej aplikacji); transport 221 bez utraty
   beaconu 64 KiB, bez 429 i AUTH, bez wyścigu delty z retencją; 276 bez `/delta` przy wyłączonym dzienniku; pełna kopia
@@ -43547,7 +43626,8 @@ poprawki modułu planów z etapami (wiersz 2c, vildaclinic/vilda-calc#990):
 - notatki pacjenta i ich nagrobki bez odsyłania (ani w E3-PR0c, ani w E3-PR0d), tylko pomiar;
 - odsyłanie tylko po pojedynczych zmianach (`applyEncryptedEvent`), nie po pełnej kopii ani delcie;
 - dopuszczona podwójna wysyłka wizyty (pełna karta z haka H1 i osobne odesłanie), bez pomijania przy H1;
-- różnica „tylko lista usuniętych pacjentów” odłożona do E3-PR0e.
+- różnica „tylko lista usuniętych pacjentów” odłożona do E3-PR0e. *(2026-11-23: różnica nie jest niewidoczna; naprawa w E3-PR0e2b
+  razem z E3-PR0e1 — wpis E3-PR0e1 na końcu pliku.)*
 
 Wejście z E3-PR0b (wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0b, „Wejście do kolejnych PR”: reguła echa, rozbicie zakresu, bez
 podwójnego wysyłania) i z E3-PR0b2b (wpis P-NOTATKA-POZNIEJSZA, „Wymagania dla następnych PR”). *(2026-11-18, po
@@ -43713,7 +43793,9 @@ wizyty (`Bvisit_sync` zostawia tutejszą, różnica to tylko `rev`). Test odbior
 rekord i nic nie odsyła; C z późniejszą poprawką składa nowe złączenie i odsyła je raz; A po złączeniu C nic nie odsyła.
 
 **Model haków i odsyłania w teście A ≡ B.** Przy włączonym przełączniku (pole świata `S.echo` albo `E2_AB_ECHO=1` dla
-wszystkich światów, ręcznie) urządzenia testu mają pole `VILDA_EVENT_ECHO = true` (dziedziczą je klony). Wpisy `snap`
+wszystkich światów, ręcznie) urządzenia testu mają pole `VILDA_EVENT_ECHO = true` (dziedziczą je klony). *(2026-11-23,
+E3-PR0e1: do E3-PR0e1 bez urządzeń katalogu kosza (blok deterministyczny p. 5) — przebiegi katalogu z `E2_AB_ECHO=1`
+szły bez odsyłania; wpis na końcu pliku, „Uprząż testu A ≡ B”.)* Wpisy `snap`
 rejestru łańcucha z zastosowania partii to odsyłanie (wpis Q z polem `src: 'echo'`), a model haków dostaje model
 odsyłania z licznika (`modelEcha`: warstwa wykonalna rodzaju `snap`, liczona zdarzenie po zdarzeniu, tylko dla
 ładunku z polem `event`, bez wersji przeniesionych, bez odejmowania haków). Odsyłanie sejfu musi równać się modelowi
@@ -43760,7 +43842,9 @@ kopiach, przy obu stanach przełącznika, z tymi samymi faktami i bez ani jednej
 wyjątków wyroczni i bez literału — nic nie zostaje ukryte. Skutek: ręczny przebieg profilu pełnego z włączonym
 przełącznikiem ma jedno czerwone ziarno (8) do czasu E3-PR0e. Kontrola w drugą stronę: czysty przebieg ziarna 8 bez
 przełącznika odtworzony z przełącznikiem — te same mutacje, 7 kopert odsyłania, 0 naruszeń bez klasy (odsyłanie usuwa
-przy tym jedyną różnicę W1 tego przebiegu, „retencja — przycięcie bez treści”).
+przy tym jedyną różnicę W1 tego przebiegu, „retencja — przycięcie bez treści”). *(2026-11-23, decyzja 4 z 2026-11-23: „Usuń
+pacjenta” zwróconej starej karty z nowymi wizytami zapisanymi bez wiedzy o scaleniu to świadome usunięcie; czystość
+ziarna 8 z przełącznikiem da wąski wyjątek wyroczni w E3-PR0e3 (świat 885 do CI), nie naprawa aplikacji.)*
 
 **Flota ze starszą aplikacją.**
 - 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty. Delty idą u bieżącego urządzenia przez
@@ -43934,6 +44018,9 @@ z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
   wyżej); druga kopia u odbiorcy nic nie zapisuje.
 - **Granica z E3-PR0d.** Odesłanie wersji zmienionej fazą Kosza (zdarzenie `stomb`) jest w E3-PR0c, bo to zapis
   wersji; sam wpis Kosza (R4a, R4a′, R5) — E3-PR0d.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane — wpis na końcu pliku; bez wpisu, który zostaje tylko na jednym urządzeniu, gdy
+  późniejsza wersja nie weszła, bo karta jest tu usunięta (E3-PR0d2, decyzja 1 z 2026-11-19).)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: ten wpis odsyła E3-PR0d2 — uśpione, wpis na końcu pliku.)*
 - **Notatki** (decyzja z 2026-11-17: notatki bez odsyłania): rekord złączony notatki (+1 ms, `Bnp_poObu`) E3-PR0c
   nie odsyła; wysyła go przegląd kolejki, gdy chwila złączenia jest późniejsza od pary z ładunku i od wiersza encji.
   Oba urządzenia liczą to samo złączenie, więc podwójna wysyłka, jeśli zajdzie, jest bez szkody. Komentarz „Bez
@@ -43970,7 +44057,8 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
 8. **Ziarno 8 profilu pełnego** jako przypadek ręcznego bloku znanych usterek (bez klasy w tabeli wyjątków, bez
    literału), a nie wpis w tabeli wyjątków — usterka zostaje widoczna; ręczny przebieg profilu pełnego z włączonym
    przełącznikiem ma jedno czerwone ziarno do E3-PR0e. Inna możliwość: wpis w tabeli wyjątków (przebieg zielony,
-   usterka mniej widoczna).
+   usterka mniej widoczna). *(2026-11-23: decyzja 4 z 2026-11-23 — wąski wyjątek wyroczni w E3-PR0e3: czystość daje wyjątek,
+   nie naprawa.)*
 9. **Literały ręcznych przebiegów** (floty, `ZNANE_W1`) opisują przebieg z wyłączonym przełącznikiem; przebiegi
    z przełącznikiem ocenia wyrocznia, model odsyłania i zieleń profilu (przepisanie literałów — E3-PR0i).
 10. **Bez wpisu polityki prywatności** dla klucza `vilda-event-echo-v1` w tym PR (klucz ustawiają tylko testy; wpis
@@ -43982,9 +44070,14 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
   fazą Kosza zostaje z E3-PR0c (bez podwójnego wysyłania tej samej wersji); notatki i nagrobki notatek dalej bez
   odsyłania, tylko pomiar (decyzja z 2026-11-17); R4a i R4a′ przez urządzenie 276 — jeden dodatkowy obieg,
   opisać; model haków i odsyłania w teście A ≡ B rozszerzony o `stomb`; warstwa „odesłane” jest gotowa.
+  *(2026-11-19, E3-PR0d, P-ZBIEZNOSC-ZDARZEN: wykonane, uśpione tym samym przełącznikiem — wpis na końcu pliku; bez części E3-PR0d2
+  (decyzja 1 z 2026-11-19); dodatkowy obieg zmierzony dla 276.)*
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: część E3-PR0d2 wykonana, uśpiona — wpis na końcu pliku.)*
 - **E3-PR0e**: „Usuń pacjenta” zwróconej starej karty po „Scal pacjentów” — scenariusz z ziarna 8 profilu pełnego
   (świat 885 ręcznego bloku znanych usterek) obok czterech dotychczasowych; po naprawie ziarno 8 z włączonym
   przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (odłożona tutaj decyzją z 2026-11-17).
+  *(2026-11-23, decyzje z 2026-11-23: E3-PR0e = E3-PR0e1–E3-PR0e3; ziarno 8 i świat 885 — wąski wyjątek wyroczni
+  z decyzji 4 w E3-PR0e3 (czystość ziarna 8 daje wyjątek, nie naprawa); „tylko lista” — E3-PR0e2b razem z E3-PR0e1.)*
 - **E3-PR0f**: wersje przeniesione pod inną kartę (dziś wykluczone z odsyłania) i wizyta nieznana urządzeniu
   scalającemu; mutant „bez wyjątku przeniesienia” czerwieni dziś test wersji przeniesionej — po zmianie reguły
   przepisać.
@@ -43997,7 +44090,8 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
   wymiany — 0 z konstrukcji (odsyłanie tylko po pojedynczych zmianach), pomiar zostaje; wyniesienie uprzęży testu
   A ≡ B do `tests/support/` i osobny plik przebiegów z przełącznikiem (równoległość plików w vitest).
 - **E3-PR0i**: znaczenie klucza odwrócone („brak klucza = włączone, `'0'` wyłącza”), literały A ≡ B, floty
-  i `ZNANE_W1` przepisane na wynik z odsyłaniem, ziarno 8 profilu pełnego po E3-PR0e.
+  i `ZNANE_W1` przepisane na wynik z odsyłaniem, ziarno 8 profilu pełnego po E3-PR0e. *(2026-11-23: po wyjątku wyroczni
+  z E3-PR0e3.)*
 - Każdy PR: nowe miejsce zapisu wersji w scalaniu — sprawdzić, czy kandydat jest w ładunku (strażnik kandydatów
   w modelu haków i odsyłania); nowe pole zapisywane zawsze przez bieżącą wersję — dopisać do `Bev_ECHO_ZAWSZE`
   i `POLA_ZAWSZE.snap` licznika (test równości); zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie
@@ -44401,6 +44495,85 @@ w historii pomiarów (to pomiary z gabinetu). Progi i reguły werdyktów bez zmi
   i bez dziennika (jak dotąd).
 - e2e `tests/e2e/otylosc-siatki.spec.mjs` SI-1…SI-5.
 
+## Pomiary od pacjenta w całej aplikacji (P-OTYLOSC-STRONA, SW 1.1.563, `vilda_cykle_leczenia.js` 12, `vilda_centile_live_*`, `vilda_professional_summary.js` 3, `vilda_trajectory_analysis.js` 48, `vilda_summary_cards.js` 66, `inline_index_04.js` 30, 2026-11-20)
+
+**Decyzje właściciela.** Temat D projektu „Leczenie otyłości — wpisy poza wizytą”: po Karcie pacjenta (P-OTYLOSC-SIATKI)
+pomiary od pacjenta mają być w całej aplikacji — w siatkach ze strony głównej i w karcie „Podsumowanie wyników”
+(2026-11-19). Makieta zaakceptowana 2026-11-20 („koduj”) po poprawkach właściciela:
+1. pomiary od pacjenta oznaczone w istniejących listach, siatkach i wierszach — bez osobnych tabel i ramek;
+2. legenda siatki: czerwona kropka „dane z gabinetu” i romb „dane od pacjenta”; licznik pomiarów ustępuje jej miejsca;
+3. dymek przy rombie: „◇ od pacjenta · wiek”, „Waga 74,6 kg”, data wpisu;
+4. „Poprzednie pomiary”: blok z odznaką „pomiar od pacjenta” (bez daty i odnośnika), liczniki „6 pomiarów” i
+   „3 od pacjenta”; w analizie trajektorii żeton „w tym 3 od pacjenta” i obramowanie karty „Waga” (bez podpisu);
+5. PDF siatki: romby na siatce, ramka podsumowania BEZ pomiarów od pacjenta, legenda pod siatkami „dane z gabinetu” /
+   „dane od pacjenta”;
+6. „Porównanie z poprzednim pomiarem”: żeton i linijka w wierszu „Waga” w tym samym brzmieniu co w podsumowaniu.
+
+**Które wpisy** — te same reguły co w Karcie: `VildaDziennikOtylosci.pomiaryDoSiatek` (wizyta wygrywa w tym samym
+miesiącu życia, z tą samą datą albo z tą samą masą ±0,05 kg miesiąc obok; źródło „pacjent” tylko z wpisu). Nowe
+`pomiaryStrony(osCzasu, {patientId, doWiekuMies})` bierze projekcję dziennika pacjenta wczytanego na stronie
+(`punktyWczytanego`, P-TRAJEKTORIA-DZIENNIK); inny pacjent niż odczytany dziennik albo brak dziennika — nic.
+Odtworzenie dawnej wizyty (w historii jest późniejszy pomiar) nie bierze wpisów po jej wieku — ta sama zasada co przy
+pomiarach wizyt („historyczne odtworzenie nie bierze danych z późniejszego okresu”). Ostatnia wizyta — bierze także
+wpisy po niej.
+
+**Gdzie i jak:**
+- **„Podsumowanie wyników” → „Siatka centylowa”** (podgląd i pełny ekran): masa (wzrost) od pacjenta — pomarańczowy
+  romb obok przebiegu, bez linii; wpis z gabinetu poza wizytą — kropka w kolorze centyla, bez linii. Przebieg, bieżący
+  pomiar, jego etykieta i nagłówek „OBECNY POMIAR” — bez zmian. Centyl punktu — ta sama funkcja co dla pomiarów
+  (`getCentilePercentileStatsForSource`). Odczyt między pomiarami nadal interpoluje tylko wizyty.
+- **„Podsumowanie wyników” → „Podsumowanie”**: w wierszu „Waga” linijka „◇ od pacjenta DD.MM.RRRR: X kg” — ostatnia
+  masa od pacjenta PO bieżącym pomiarze, tylko gdy bieżący pomiar jest ostatni w historii. Wiersz, centyl, SDS i ocena
+  — bez zmian (liczone z pomiaru wizyty).
+- **„Zaawansowane obliczenia wzrostowe” → „Poprzednie pomiary”**: bloki tylko do odczytu między wierszami (kolejność
+  wieku); nie są wierszami formularza — `collectAdvancedMeasurements()`, obliczenia wierszy (tempo, prognozy) i zapis
+  wizyty ich nie widzą. **Analiza trajektorii** tej karty liczy z nimi (wariant B, jak w Karcie).
+- **PDF „Generuj siatkę OLAF”** (strona profesjonalna OLAF/WHO/Palczewska 0–3): pusty romb (od pacjenta), czarna
+  kropka (z gabinetu), legenda pod siatkami; ramka podsumowania bez zmian.
+- **„Porównanie z poprzednim pomiarem”**: masy od pacjenta między poprzednim a dzisiejszym pomiarem (od wyłącznie, do
+  włącznie): żeton „◇ w odcinku N pomiar(y) od pacjenta” i linijka pod „Dziś” w wierszu „Waga” z ostatnią z nich.
+  **Zmiana w tabeli zostaje liczona między pomiarami z wizyt.**
+
+**Poza zakresem (bez zmian):** kafelek tempa w „Status” Karty, PDF z Karty, strona „standardowa” PDF, karta
+„Obliczenia wzrostowe” (tryb podstawowy), „Analiza punktu pomiarowego” dla bloku z dziennika. Sejf i zapis bez zmian.
+
+**Uzupełnienie 2026-11-23 (P-OTYLOSC-STRONA-2, polecenie właściciela):**
+- **PDF siatek Palczewskiej** (przycisk „Generuj siatkę” przy źródle Palczewska — wcześniej bez rombów, także 0–3 lata):
+  puste romby i legenda „dane z gabinetu” / „dane od pacjenta” — na stronie wagi (pionowo, legenda pod wykresem) albo
+  pod stopką strony poziomej; ramka podsumowania bez zmian.
+- **DocPro** (sprostowanie: wpis wyżej wymieniał DocPro jako bez zmian, a DocPro ładuje te same pliki): linijka pod
+  „Waga”, romby na siatce „Podsumowania wyników”, **analiza trajektorii karty zaawansowanej z wpisami (wariant B)**,
+  „Porównanie” i PDF działają jak na stronie głównej; bloków „pomiar od pacjenta” w „Poprzednich pomiarach” DocPro nie ma.
+  Ten sam wpływ kliniczny co na stronie głównej: analiza trajektorii karty zaawansowanej w DocPro liczy z masami od pacjenta.
+  **Decyzja właściciela 2026-11-23:** „zostaw tak jak na str. głównej” — DocPro liczy analizę trajektorii karty
+  zaawansowanej z masami od pacjenta (wariant B), tak jak strona główna i Karta pacjenta.
+
+**Przypadki syntetyczne** (dane fikcyjne; Testowa Zuzanna ur. 11.04.2013; wizyty 11 l. 63,0 kg, 12 l. 70,5, 13 l. 80,0;
+bieżący pomiar 13 l. 6 mies. 75,2 kg (13.10.2026); masy od pacjenta 10.07 (77,8), 12.08 (76,9), 12.11.2026 (74,6)):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| ST-1 | odtworzenie ostatniej wizyty | wiersz Waga: „od pacjenta 12.11.2026: 74,6 kg”; siatka wagi: romby 159, 160, 163 mies., 4 kropki przebiegu; legenda „dane z gabinetu” / „dane od pacjenta”; dymek „◇ od pacjenta · 13 lat 7 mies.”, „Waga 74,6 kg”, „12.11.2026” |
+| ST-2 | karta zaawansowana | bloki 159, 160, 163 po wierszach 11, 12, 13 l.; „6 pomiarów”, „3 od pacjenta”; `collectAdvancedMeasurements()` — 3; analiza „w tym 3 od pacjenta”; PDF z legendą „dane od pacjenta” |
+| ST-3 | dziś 13 l. 9 mies. (73,5 kg), wpisy 12.11 (74,6) i 15.12.2026 (74,1) | „w odcinku 2 pomiary od pacjenta”; „od pacjenta 15.12.2026: 74,1 kg”; zmiana −1,7 kg (wizyta → dziś) |
+| ST-4 | telefon 390 px | romby i legenda; bez poziomego przewijania |
+| ST-5 | pacjent bez dziennika | wszystko jak dotąd („Przebieg pacjenta”, „Dziewczęta · 4 pomiary”) |
+| reguła | odtworzenie wizyty 13 l. 2 mies. (jest pomiar 13 l. 6 mies.) | bez wpisów po 158 mies. |
+| reguła | wpis z tego samego miesiąca życia co dzisiejszy pomiar | pominięty (wizyta wygrywa) |
+
+**Wpływ kliniczny.** Zmienia się analiza trajektorii w karcie „Zaawansowane obliczenia wzrostowe” na stronie głównej:
+do serii wchodzą wpisy z dziennika (masa ważona przez pacjenta bywa mniej dokładna) — jak w Karcie od tematu C;
+ostatni punkt, werdykt i „najpoważniejszy odcinek” wagi i BMI mogą się zmienić, a karta ma żeton „w tym N od pacjenta”
+i obramowanie. Pozostałe miejsca tylko POKAZUJĄ pomiary od pacjenta jako oznaczone: centyle, oceny, tempo, prognozy
+i zmiana w „Porównaniu” liczą się jak dotąd z pomiarów wizyt. Progi bez zmian. Decyzja kliniczna należy do lekarza.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/otylosc-strona.test.mjs` (14): `pomiaryStrony` na prawdziwym sejfie (bez dziennika, inny pacjent,
+  `doWiekuMies`, wpis z gabinetu), `pomiaryOdcinka` i opisy, `analyze` z flagą karty zaawansowanej i bez, podgląd
+  siatki z prawdziwymi producentami (`reported`, `probe`), źródła łatek, czyste funkcje `VildaAdvDziennik`.
+- e2e `tests/e2e/otylosc-strona.spec.mjs` ST-1…ST-8 (ST-6/ST-7 — PDF siatki Palczewskiej 1–18 lat pionowo i poziomo,
+  z dziennikiem i bez; ST-8 — DocPro).
+
 **Wdrożenie.** Od razu przy wydaniu; sejf bez zmian. **Cofnięcie** = rewert PR: siatki i analiza znów tylko z wizyt.
 
 ### Energia porcji własnego produktu
@@ -44428,3 +44601,3138 @@ Tempo wzrastania wymaga dwóch potwierdzonych dat pomiarów i co najmniej sześc
 Implementacja w `vilda_home_comparison_clinical.js`. Regresje w `tests/unit/home-visit-comparison-clinical.test.mjs` obejmują wizytę z samą masą, BMI i SDS w wieku obu pomiarów, przejście między siatkami, populację DS po 18. roku życia, daty pomiarów i okres leczenia.
 
 Po przeniesieniu wizyty do kosza karta wybiera poprzednią dostępną wizytę według tej samej chronologii klinicznej. W przykładzie z trzema kolejnymi pomiarami 46, 50 i 54 kg usunięcie środkowej wizyty zmienia porównanie ostatniej z +4 kg na +8 kg. Przywrócenie wizyty odtwarza porównanie z pomiarem 50 kg. Regresja obejmuje również dwie wersje zapisu środkowej wizyty (`tests/e2e/home-gabinet-visit-trash.spec.mjs`).
+
+## Dziennik zdarzeń: odsyłanie wpisów Kosza po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d, SW 1.1.560, `vilda_vault.js` 282, 2026-11-19)
+
+**Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
+serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie wpisów Kosza włącza ten sam
+przełącznik co odsyłanie poprawionych wizyt (E3-PR0c: klucz `localStorage` `vilda-event-echo-v1` dokładnie `'1'` albo
+pole okna `VILDA_EVENT_ECHO === true`), którego żaden ekran aplikacji nie ustawia. Przy wyłączonym przełączniku
+zastosowanie zmiany z innego urządzenia (`applyEncryptedEvent`) idzie dokładnie jak dotąd: ta sama obietnica, te same
+zapisy, te same wiersze kolejki, bez odczytu metadanych konta. Po włączeniu przełącznika zmienia się wynik
+synchronizacji na innych urządzeniach. Urządzenie, które scaliło zmianę z innego urządzenia i zapisało wpis Kosza
+inaczej, niż był przed scaleniem i niż przyszedł (wpis dostał gwiazdkę albo nowszą treść wizyty z drugiego
+urządzenia), samo wyśle ten wpis pozostałym — dziś niesie go tylko pełna wysyłka. W przykładzie niżej Kosz na
+komputerze zamiast 20 kg pokazuje 40 kg, a „Przywróć” przywraca 40 kg (to cel). Odsyłanie wpisów Kosza jest częścią tej
+samej drogi ze scalania do kolejki co odsyłanie poprawionych wizyt — rozszerzenie decyzji 9 z 2026-10-29, do akceptacji
+właściciela przy PR (niżej).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 4 (i nowy wiersz
+4a). Decyzje z 2026-11-15: 1a (odsyłanie uśpione ukrytym przełącznikiem do PR włączającego), 2a (bez odsyłania R2, R4n
+i D7, z dowodem, że widok, Kosz i „Przywróć” są na obu urządzeniach takie same). Decyzje z 2026-11-17 (blok „Decyzje
+z 2026-11-17 (E3-PR0c, pytania 1–6 projektu)”): notatki pacjenta i ich nagrobki bez odsyłania także tutaj, tylko
+pomiar; odsyłanie tylko po pojedynczych zmianach. Decyzje z 2026-11-19 — odpowiedź właściciela („1a, 2a”) na dwa
+pytania projektu E3-PR0d, obie zgodne z rekomendacją; zapis w planie, rozdział 6, blok „Decyzje z 2026-11-19 (E3-PR0d,
+pytania 1–2 projektu)” (dopisany w tym PR):
+- ukryty wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja wizyty nie weszła, bo karta jest
+  tu usunięta, będzie odsyłany osobnym małym PR zaraz po E3-PR0d, po pomiarze (wiersz 4a, E3-PR0d2); E3-PR0d idzie bez
+  tej części *(2026-11-20: wykonane w E3-PR0d2, uśpione — wpis na końcu pliku)*;
+- niewidoczny nagrobek porządkowania bez treści wizyty tylko na jednym urządzeniu, który przyszedł pełną kopią od
+  starszej aplikacji, to znane ograniczenie starszej wersji — bez odsyłania; test A ≡ B oznacza go w ręcznym trybie
+  ścisłym klasą ze statusem znanego ograniczenia.
+
+Wejście z E3-PR0a (wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0a, „Ograniczenia i sprawy otwarte”: R4a′ w profilu „dłuższa praca
+bez połączenia”, R5, nagrobek retencji tylko na B), z E3-PR0b („Wejście do kolejnych PR”: reguła echa, rozbicie
+zakresu, starsza aplikacja) i z E3-PR0c („Ograniczenia”, „Granica z E3-PR0d”; „Wejście do kolejnych PR”). Sprawy,
+których projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym dla danych — niżej, „Do
+akceptacji właściciela przy PR”.
+
+### E3-PR0d
+
+**Co było** (`audyt` `4bff32aa`; prawdziwy sejf, dwa urządzenia jednego fikcyjnego konta, test wejściowy A ≡ B niżej).
+Wpis Kosza leży na jednej liście w metadanych konta (`snapshotTombstones`). Zdarzenie `stomb` (wszystkie wpisy tej
+wersji i karta bez wizyt) wysyłają „Usuń do Kosza” i porządkowanie starych wizyt; scalanie zmiany z innego urządzenia
+`stomb` nie wysyła. Gdy scalanie zmieni wpis Kosza — dołoży gwiazdkę z tutejszego rejestru albo nowszą treść wizyty
+z innego urządzenia (`Bkz_pomin`, `Bkz_scalKoniec`) — pozostałe urządzenia dostają ten wpis tylko pełną wysyłką
+(`PUT /blob`), którą etap 3 wyłączy. E3-PR0c odsyła wersję wizyty zmienioną fazą Kosza, ale nie sam wpis. Przykład:
+komputer w gabinecie (A) i telefon (B), karta „Pacjent Testowy 1” z wizytą v (20 kg).
+- A poprawia masę v na 40 kg, potem robi „Usuń pacjenta”. B, bez sieci i bez wiedzy o obu zmianach, daje v do Kosza.
+- B dostaje poprawkę A: wersja przegrywa z późniejszym Koszem, ale jej treść jest nowsza, więc wpis Kosza na B ma
+  40 kg. A dostaje Kosz B (20 kg) z kartą bez wizyt — Kosz to zmiana w karcie, więc karta wraca na A z v w Koszu, 20 kg.
+- Po samych zdarzeniach: Kosz na A pokazuje 20 kg, na B 40 kg; „Przywróć” na A przywraca 20 kg — poprawka ginie na A aż
+  do pełnej wymiany (literał p. 6 „R4-a′”: różnica wpisu Kosza w W1, naruszenie wyroczni „R4a′ | W1”). To samo
+  z gwiazdką zamiast poprawki (p. 6 „R4-a”, „R4a | W1”): Kosz na A bez gwiazdki, „Przywróć” na A daje v bez gwiazdki.
+- Po E3-PR0d (przełącznik włączony): B zaraz po scaleniu poprawki dopisuje do kolejki swój wpis (40 kg); A go przyjmuje
+  i niczego nie odsyła. Na obu Kosz 40 kg, „Przywróć” daje 40 kg (test wejściowy: jedna koperta, jeden obieg).
+
+**Reguła.** Po zastosowaniu pojedynczej zmiany z innego urządzenia (koperta zdarzenia) urządzenie dopisuje do kolejki
+`stomb` każdej wersji z ładunku, której wpis Kosza scalanie zapisało inaczej, niż był przed scaleniem i niż przyszedł —
+z pominięciem opisu wpisu (D7), postaci gwiazdki w treści (R4n), samej tożsamości wizyty dopisanej przez bieżącą
+wersję i samego wygaśnięcia treści po 30 dniach.
+- **Kandydaci** — te same identyfikatory co w odsyłaniu wersji: `patients[].snapshots[].snapshotId`
+  i `snapshotTombstones[].snapshotId` ładunku (`Bev_kandydaciEcha`); wpisy Kosza z ładunku pogrupowane po `snapshotId`
+  (`Bev_kandydaciKosza`, funkcja czysta). Ładunek bez wersji (notatka, lista, preferencja, hasło) — bez odczytu
+  metadanych konta. W pomiarze każdy wiersz `stomb` modelu ma `snapshotId` wśród kandydatów (0 wyjątków).
+- **Stan wpisów** (`Bev_stanKosza`): kontrola sesji zastosowania, strzeżony adapter `Bev_start(null)` (od początku „Usuń
+  konto” tego konta każda metoda odmawia kodem `SYNC_DB_DELETED`), odczyt metadanych konta i znów kontrola sesji; kopie
+  surowych elementów listy Kosza kandydatów, bez odszyfrowania, bez zapisów i bez zegara. Lista na dysku trzyma pełny
+  szyfr treści, więc odczyt surowy wystarcza. Odczyt „przed” idzie po odczycie wersji i jego kontrolach, odczyt „po” —
+  po odczycie wersji „po”, każdy we własnym `try` i z tymi samymi kontrolami kodów.
+- **Wpis idzie do kolejki, gdy zachodzi wszystko naraz** (`Bev_echoKosza`):
+  - scalanie ruszyło w tej sesji (jak w E3-PR0c: wynik `applied` albo wyjątek z `Le` zamieniony na `busy` lub
+    `apply-error`). Faza Kosza zapisuje listę także wtedy, gdy przerwie ją błąd (np. zajęta blokada karty przy
+    wyszukiwaniu wersji pod innymi kartami) — wyjątek wychodzi dopiero po zapisie listy: ponowienie ma wtedy stan przed
+    = po, więc odesłanie wychodzi przy pierwszej próbie;
+  - po scaleniu jest wpis tej wersji. Wpis zdjęty scaleniem (przegrał z późniejszą wersją) nie idzie — wtedy zapisuje się
+    wersja i tę odsyła E3-PR0c;
+  - scalanie zapisało: surowe elementy listy z tym `snapshotId` przed i po scaleniu różnią się (JSON z posortowanymi
+    kluczami, `Bev_json`). Ten sam zapis — bez odszyfrowania i bez odesłania;
+  - różnica jest w postaci wysyłkowej: elementy w kształcie koperty `stomb` (`Bev_wpisKosza`: pola eksportu, tożsamość
+    wizyty i treść odszyfrowane) po kanonie (`Bev_kanonKosza`: bez `rev`, `updatedAtISO`, `zmianaISO`, `koszISO`,
+    `revPary`, `seq`, `payload._pinned` i `payload._pinnedState`, lista posortowana) przed ≠ po. Zmiana samych
+    składników lokalnych wpisu (`Bpk`, `trescISO`, `visitCipher`, `payloadCipher` — nie jadą w ładunku) albo samego opisu
+    nie daje odesłania;
+  - nie samo wygaśnięcie treści (`Bev_samoWygasniecie`): gdy element „po” nie ma treści tam, gdzie element „przed” tej
+    samej karty ją miał, a poza tym są równe (oba w kanonie) — jak „scalanie nie zapisało”;
+  - nie to, co przyszło: wpisu nie ma w ładunku (typowo zdarzenie `snap` tej wizyty) albo po regule pola wpis po
+    scaleniu ≠ wpis z ładunku (oba w kanonie) i nie jest to samo wygaśnięcie względem ładunku. Reguła pola
+    (`Bev_echoKoszaT`, niezależna od źródła ładunku): z elementu po scaleniu, który ma w ładunku element tej samej karty,
+    zdejmuje `visitIdentity` i `payload.visit`, gdy tamten ich nie ma (`Bev_ECHO_ZAWSZE_KOSZA` = `POLA_ZAWSZE.stomb`
+    licznika odsyłania — strażnik w teście). Element bez pary w ładunku (wpis innej karty) zostaje bez zmian.
+- **Kanon** = `POLA_D7` + `seq` + `POSTAC_GWIAZDKI` licznika (`Bev_KANON_KOSZA`, strażnik w teście) — ten sam co kanon
+  2a licznika dla `stomb`, więc licznik odsyłania testu A ≡ B jest wyrocznią. Reguła „każde pole nieobecne w ładunku”
+  odrzucona: tłumiłaby R4a w ładunku (wpis z koperty starszej strony nie ma pola `gwiazdka`, a scalanie dokłada je
+  z tutejszego rejestru — to właśnie różnica do odesłania).
+- **Wiersz odsyłania** to zwykły wiersz `stomb` z kluczem `snapshotId`, zbudowany ze stanu w chwili dopisania
+  (`Bev_stomb`), więc niesie wszystkie wpisy tej wersji i kartę bez wizyt, jak własny Kosz. Wpis, którego w chwili
+  dopisania już nie ma (np. wygasł), nie daje wiersza („brak encji”). Kolektor dostaje same identyfikatory wersji, bez
+  treści.
+
+**Kiedy nie odsyłamy.**
+
+| Przypadek | Dlaczego |
+|---|---|
+| sam opis wpisu (`rev`, `updatedAtISO`, `zmianaISO`, `koszISO`, `revPary`) i `seq` — D7 | zależy od kolejności scaleń, a manifest (PD-17) nie kolejkuje nagrobka z powodu opisu, `revPary` ani `koszISO` (wpis P-KOSZ-POLKRATA); decyzja 2a z 2026-11-15; dowód widoku w testach |
+| sama postać gwiazdki w treści wpisu (`payload._pinned`, `payload._pinnedState`) — R4n | scalanie świadomie jej nie uzgadnia; decyzja 2a. Widok gwiazdki w Koszu to późniejszy z rejestru wpisu (`gwiazdka`) i postaci w treści, więc kod nie wykluczał innego widoku przy równym polu `gwiazdka` — testy z kopertą starszej aplikacji (bez pola `gwiazdka`, treść bez rejestru albo z samym `_pinned: true`, przy przypiętym i przy odpiętym rejestrze, późniejsza chwila zmiany wpisu) pokazały okno Kosza i „Przywróć” takie same na obu urządzeniach; kanon bez zmian |
+| tożsamość wizyty dopisana przez bieżącą wersję (koperta od starszej aplikacji bez `visitIdentity` i `payload.visit`) | reguła pola |
+| tylko składniki lokalne wpisu | nie jadą w ładunku (`Bev_POLA_KOSZA`); porównanie w postaci wysyłkowej |
+| samo wygaśnięcie treści po 30 dniach — względem stanu przed scaleniem i względem ładunku | każde urządzenie czyści treść samo; porównanie bez zegara („Bez zegara”, „Wygasanie Kosza i okno nagrobków”) |
+| wpis zdjęty scaleniem (wersja wygrała) | wersję odsyła E3-PR0c; bez wpisu builder i tak nie daje koperty |
+| wpis wygasły (365 dni) | wpisu po scaleniu nie ma |
+| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | decyzja 1 z 2026-11-19 — E3-PR0d2 („Ograniczenia”, „Wejście do kolejnych PR”) *(2026-11-20: wykonane w E3-PR0d2, uśpione — wpis na końcu pliku)* |
+| niewidoczny nagrobek porządkowania bez treści tylko na jednym urządzeniu, który przyszedł pełną kopią od starszej aplikacji | decyzja 2 z 2026-11-19 — znane ograniczenie starszej wersji; po pełnej kopii bez odsyłania (decyzja z 2026-11-17) |
+| notatki pacjenta i ich nagrobki | decyzja z 2026-11-17: notatki bez odsyłania, tylko pomiar; odsyłanie emituje tylko `snap` i `stomb` |
+| pełna kopia (`mergeSyncPayload`), delta (`applyEncryptedDelta`), stara delta (`applyEncryptedEvent` bez pola `event`) | jak w E3-PR0c: odsyłanie tylko po kopertach zdarzeń (decyzja z 2026-11-17); poza blokiem P-DZIENNIK-ZDARZEN bez nowego wywołania |
+| importy (karta z pliku, scalenie i odtworzenie kopii konta) | same dopisują to, co zapisały (`Bkz_poImporcie`) |
+| przeniesienie wersji pod inną kartę | koperta `stomb` niesie wszystkie wpisy tej wersji z każdą kartą; przeniesienie wersji (E3-PR0f) zostaje po stronie odsyłania wersji |
+
+**Błędy — spójnie z E3-PR0c.** Błąd zdejmuje tylko porównanie, nigdy nie dokłada wpisów spoza kandydatów; wpis, który
+reguła bez błędu by odesłała, jest odesłany zawsze. `Bev_echoKosza` nigdy nie rzuca.
+- Nieudany cały odczyt wpisów „przed” (inny błąd niż niżej) albo nieczytelna tożsamość elementu „przed”: dla tego
+  kandydata bez porównania z „przed”; zostaje porównanie z ładunkiem, więc kandydat spoza ładunku z wpisem po scaleniu
+  idzie zawsze (jednorazowy nadmiar bez pętli, jak w E3-PR0c).
+- Nieczytelna tożsamość elementu „po” (`INVALID_VISIT_IDENTITY`) albo błąd porównania: odesłanie tego kandydata.
+  Dopisanie buduje kopertę tym samym builderem co własny Kosz, a ten rzuca ten sam kod: odmowa z kodem, bez wiersza,
+  wpis w pamięci braków, przegląd kolejki ponawia — tak samo jak dziś przy własnym Koszu takiego wpisu. Pełna wysyłka
+  stoi z tym samym kodem (eksport też go rzuca), więc błąd jest widoczny w dzienniku, nie ukryty.
+- Nieczytelna treść elementu „po” — nie błąd: wpis bez treści, jak w eksporcie.
+- Nieudany cały odczyt wpisów „po”: odesłanie każdego kandydata (także zdarzenia `snap` bez wpisu w ładunku — inaczej
+  ginie R4a spoza ładunku, gdy zawiodą oba odczyty). Klucz bez wpisu w chwili dopisania daje „brak encji” i zdejmuje
+  wpis pamięci braków — bez śladu.
+
+**Sesja, blokada i usuwanie konta.** Jak w E3-PR0c, z dwiema świadomymi zmianami drogi E3-PR0c przy włączonym
+przełączniku:
+- zmiana sesji albo zablokowany sejf w trakcie odczytu „przed” (wersji albo wpisów, także gdy z tego powodu zawiódł
+  odczyt) — wynik jak dziś po zmianie sesji, bez scalania (zdarzenie zostaje do ponowienia); usuwanie konta w toku
+  (`SYNC_DB_DELETED`, także „Usuń konto” ruszone w trakcie odczytu wpisów) — `session-changed`, bez scalania; strażnik
+  tożsamości chronionego sejfu niedostępny (`PATIENT_AUTHORITY_UNAVAILABLE`) — `busy` z tym kodem, bez scalania.
+  **Zmiana 1:** te kody z odczytu wpisów zatrzymują scalanie także wtedy, gdy odczyt wersji się udał. Łagodne: te same
+  kody z odczytu wersji robią dziś to samo;
+- zmiana sesji w trakcie `Le` albo odczytu „po” — wynik jak dziś, bez odsyłania wersji i wpisów;
+- **zmiana 2:** usuwanie konta w odczycie „po” — wersji albo wpisów, także gdy „Usuń konto” ruszyło w trakcie ostatniego
+  odczytu (sprawdzenie strażnika po odczycie wpisów „po”) — zdejmuje całe odsyłanie (wersje i wpisy). W E3-PR0c ten kod
+  z odczytu wersji „po” zdejmował odesłanie wersji; nowe jest tylko to, że ten sam kod z odczytu wpisów zdejmuje też
+  wersje. Bez tej zmiany szkody by nie było (dopisanie sprawdza konto), ale reguła „konto usuwane — nic” jest prostsza;
+- lista wpisów do odesłania trafia do kolektora w tym samym warunku sesji co lista wersji, a emisja idzie z sesją
+  scalania (zmieniona sesja albo zablokowany sejf — bez wpisu). Operacje kolejki i kwarantanny sprawdzają sesję tak jak
+  zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu.
+
+**Bez zegara.** Porównanie nie czyści list chwilą zegara (reguła testu buduje odsyłanie bez zegara: domknięcie wywołań
+funkcji odsyłania bez `Date` w teście builderów). Lista na dysku traci treść dopiero przy pierwszym zapisie po granicy
+30 dni (odczyt czyści tylko kopię), a każde scalanie zapisuje listę wyczyszczoną chwilą zegara — dlatego lista „przed”
+może jeszcze mieć treść, której lista „po” już nie ma; tę różnicę zdejmuje filtr samego wygaśnięcia, też bez zegara. Ten
+sam filtr działa względem ładunku: odbiorca po granicy, który wpisu wcześniej nie miał, zapisuje wpis z ładunku bez
+treści i nie odsyła go tylko z tego powodu (nadawca i tak zachowuje swoją treść — treść z szyfrem wygrywa z brakiem
+treści). Odrzucone: wspólna chwila dla trzech stron (wymaga odczytu zegara w zastosowaniu i wyjątku w regule „bez
+zegara” testu builderów) i zostawienie zbędnego odesłania przy granicy (model testu A ≡ B, liczony z eksportów, nie
+mógłby się wtedy zgodzić z sejfem).
+
+**Bez podwójnego wysyłania.**
+- H1 (pełna karta po przegranym nagrobku, `pfull`) niesie tylko karty (`patients`), bez wpisów Kosza; z kopertą `stomb`
+  tej karty dzieli tylko nagłówek karty bez wersji — nieszkodliwe (odbiorca bierze późniejszą chwilę zapisu karty).
+  Dlatego z dwóch dróg z wpisu E3-PR0a („pochodny wpis Kosza do kolejki albo pełna karta z haka H1 razem z wpisami
+  Kosza”) wybrana jest pierwsza.
+- H2 i hak karty notatki dotyczą notatek — bez części wspólnej.
+- Karta w kopercie (decyzja z 2026-11-17: bez osobnego odsyłania samego opisu karty): odesłany `stomb` niesie kartę bez
+  wizyt tylko jako część koperty wpisu, zbudowanej tym samym builderem co własny Kosz, nigdy osobno.
+- Odesłanie wersji (E3-PR0c) to inna encja (`snap`, klucz `karta/wersja`). Oba wychodzą z jednego scalenia tylko, gdy
+  zmienią się i wersja, i wpis — dwie encje, nie duplikat (test: wersja w i wpis v w jednym scaleniu).
+- Przegląd kolejki tego nie wyśle: chwila encji `stomb` (`Bkz_ostatnie`) scalonego wpisu jest najwyżej późniejszą
+  z chwil obu stron, pokrytą parą z ładunku albo własnym wierszem. Wiersz odsyłania ma chwilę utworzenia z chwili
+  dopisania, więc późniejszy przegląd uznaje encję za pokrytą.
+- Łączenie wpisów kolejki (`Bob_plan`, bez zmian): odesłanie po własnym czekającym `stomb` tej wersji zastępuje go;
+  własny `stomb` po odesłaniu zastępuje odesłanie; odesłanie i wiersz innej encji między nimi — oba zostają (reguła
+  ogona).
+- Dwa urządzenia, które złożyły ten sam wpis, odsyłają go po razie (test wejściowy E3-PR0c z retencją: A i B odsyłają
+  wpis retencji po razie); odbiorca ma już ten wpis, nic nie zapisuje, więc echa echa nie ma. Odsiewanie po stronie
+  dostawy odrzucone z tego samego powodu co w E3-PR0c.
+
+**Wpięcie i kolejność.** W `Bem_zastosujEcho` po jedynym `await` dwa wywołania w sesji scalania: najpierw
+`Bem_zmiana('snap', kol.echo, kol.s)` (E3-PR0c), potem `Bem_zmiana('stomb', kol.kosz, kol.s)` — jak `Bem_RANGI`
+(`snap` przed `stomb`) poza krokiem i w kroku, więc odbiorca dostaje wersję przed wpisem. Bez nowego `await`, bez
+czekania na wpis łańcucha; `Bem_zastosujEcho` nie czyta drugi raz przełącznika ani bramki, a każda emisja (`Bem_zmiana`)
+czyta bramkę jako pierwszą instrukcję, jak każda emisja — przy niepustym `kol.kosz` to jeden odczyt pola bramki więcej
+na zastosowanie niż po E3-PR0c; przy wyłączonym przełączniku albo zamkniętej bramce żadnego dodatkowego odczytu.
+`Bev_zastosujZEchem` dostaje odczyt wpisów
+„przed” i „po”, flagę usuwania konta i listę `kol.kosz`; statusy bez zmian. Bez zmian: `Bev_zastosuj`, `Bem_zastosuj`,
+`Bob_bramkaEcha`, `Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stomb`, `Bem_zmiana`, `Bob_plan`, `Bev_EKSPORT`
+(39 kluczy). Nowe funkcje wołają siebie nawzajem i funkcje już wołane z części `Bev_` (`Bev_start`, `Bev_kopia`,
+`Bev_json`, `Bev_pole`, `Bev_bezPola`, `Bev_ma`, `Bev_id`, `Bev_obiekt`, `Bev_wpisKosza`, `Bses_pilnuj`).
+
+**Zakres** (licznik odsyłania testu A ≡ B, warstwa wykonalna rodzaju `stomb` po pojedynczym zdarzeniu od bieżącego
+urządzenia albo od 276; pomiar na `bdbfafcd`, bez przełącznika; w nawiasie — wpis w ładunku / spoza ładunku, spoza =
+zdarzenie `snap` tej wizyty; CI: profil podstawowy 8 ziaren, koalescencja 3, scenariusze floty; ręcznie: podstawowy 40,
+pełny 20, „dłuższa praca bez połączenia” 40 — ziarna 101–140).
+
+| Klasa | CI | Ręcznie: podstawowy / pełny / „bez połączenia” | E3-PR0d | Dlaczego |
+|---|---|---|---|---|
+| R4a (różni się gwiazdka) | 2 w profilu podstawowym (1/1), 2 w scenariuszu floty „Drugi rząd przez 221” (1/1) | 11 (4/7) / 4 (1/3) / 17 (6/11) | odsyła | wiersz 4 planu; przykład z gwiazdką |
+| R4a′ (inna treść wizyty) | 2 w profilu podstawowym (1/1), 4 w koalescencji (2/2) | 21 (9/12) / 19 (8/11) / 36 (13/23) | odsyła | wiersz 4 planu; przykład wyżej; w „bez połączenia” różnica widoczna |
+| R5 z zapisem (wpis karty nieżywej, który scalanie zmieniło) | 0 | 0 / 1 (1/0) / 6 (3/3) | odsyła | ten sam warunek co R4a |
+| inne (Kosz połączony z przycięciem: `przycietoISO`, `deletedAtISO`, `powod`) | 0 | 0 / 6 (5/1) / 2 (2/0) | odsyła | ten sam warunek |
+| R4a przez 276 (gwiazdka i tożsamość wizyty) | — | flota 276: 2 (ziarno 5) | odsyła | reguła pola zdejmuje tożsamość wizyty, zostaje gwiazdka („Flota ze starszą aplikacją”) |
+| **razem w zakresie** | **10** (podstawowy 4, koalescencja 4, flota 2) | **32 / 30 / 61** | | „w CI 4 wiersze” z wiersza 4 planu = profil podstawowy |
+| wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta | — | różnice W1: podstawowy ziarno 31; pełny 3, 16; „bez połączenia” 113, 114 | nie — E3-PR0d2 *(2026-11-20: wykonane, uśpione)* | decyzja 1 z 2026-11-19 |
+| R4n samodzielnie | 0 | 0 / 0 / 0 | nie | decyzja 2a, dowód widoku |
+| D7 (sam opis, `koszISO`, `revPary`) | pełny 1 | 0 / 19 / 1 | nie | decyzja 2a, dowód widoku |
+| tożsamość wizyty nieobecna w ładunku | 0 | 0 | nie | reguła pola |
+| samo wygaśnięcie treści (30 dni) | 0 (bez skoku zegara) | 0 | nie | filtr samego wygaśnięcia; testy zegara |
+| nagrobek porządkowania bez treści tylko na jednym urządzeniu (pełna kopia od starszej aplikacji) | — | p. 6 „nagrobek retencji bez ochrony wizyt…” | nie | decyzja 2 z 2026-11-19 |
+| notatki (`pnote` spoza ładunku, `pnotetomb` w ładunku) | `pnote` 10 (podstawowy), 6 (koalescencja) | `pnote` 27 / 9 / 32; `pnotetomb` 4 / 2 / 0 | nie, pomiar | decyzja z 2026-11-17: notatki bez odsyłania |
+
+Z włączonym przełącznikiem na prawdziwym kodzie liczba kopert `stomb` jest inna (34 / 34 / 58, „Długie przebiegi”), bo
+koperty odsyłania zmieniają długość kolejek i całą dalszą historię losowania; miarą zgodności jest model odsyłania
+w uprzęży (0 kopert ponad model i 0 wierszy nieodesłanych w każdej partii).
+
+**Uśpienie.** Ten sam przełącznik co w E3-PR0c (`Bob_bramkaEcha`), czytany raz w `Bem_zastosuj`; odsyłanie wpisów
+siedzi wewnątrz `Bem_zastosujEcho` i `Bev_zastosujZEchem`, więc bez dodatkowego odczytu przełącznika; bramkę czyta
+tylko emisja wpisów (`Bem_zmiana`, jak każda emisja), gdy jest co odesłać.
+Powód: decyzja 1a z 2026-11-15 — jeden ukryty przełącznik odsyłania (w Ustawieniach w E3-PR0g, dla wszystkich
+w E3-PR0i); drugi klucz dałby drugi przełącznik i drugi wpis polityki prywatności bez zysku. Polityka prywatności bez
+zmian (klucz ten sam; wpis razem z przełącznikiem w Ustawieniach, E3-PR0g).
+
+**Przy wyłączonym przełączniku (co nowego).**
+
+| Skutek | Wartość | Dowód |
+|---|---|---|
+| odczyty przy `applyEncryptedEvent` | jak po E3-PR0c: jedno pole okna `VILDA_EVENT_ECHO` i jeden `getItem('vilda-event-echo-v1')`; 0 odczytów metadanych konta, `VILDA_EVENT_LOG`, `indexedDB` i `crypto` ponad dziś | test „przełącznik wyłączony” przy kopertach wpisów (4 zastosowania, 4 odczyty pola i 4 klucza); test uśpienia (bramka przy wyłączonym przełączniku) |
+| wynik, zapisy sklepu, wiersze kolejki, operacje `crypto.subtle` | te same co w kopii sejfu bez odsyłania (koperty z gwiazdką i z poprawką, wpis w ładunku i spoza) | test równoważności w `sync-odsylanie` |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | fikstura i test bez zmian; przy zamkniętej bramce `Bem_zastosujEcho` kończy się przed odczytem metadanych | `sync-dziennik-zapis-bazowy` |
+| test A ≡ B | wszystkie literały bajt w bajt (`ZNANE_ODSYL`, `ZNANE_W1`, `ZNANE_WYR`, `P6_LITERALY`, `P6_WYR`, floty, stres, determinizm, test wejściowy E3-PR0c bez przełącznika) | przebieg CI |
+| program długich przebiegów | dziennik operacji każdego ziarna taki sam jak przed E3-PR0d: podstawowy 40/40, „bez połączenia” 40/40, pełny 20/20, floty 221 i 276 po 10/10 | porównanie z pomiarem na `bdbfafcd` |
+| literał miejsc poza blokiem P-DZIENNIK-ZDARZEN, test haków | bez zmian (poza blokiem nic, także komentarze) | test uśpienia, test haków |
+
+**Bez pętli.**
+1. Odesłanie tylko przy różnicy w kanonie wobec stanu przed scaleniem i wobec ładunku — nigdy na samym fakcie zapisu.
+2. Wpis po scaleniu to złączenie półkraty wpisu Kosza (`Bpk_polacz`: przemienne, łączne, idempotentne): odbiorca bez
+   nowego składnika zapisuje to, co przyszło, i nic nie odsyła; z nowym — odsyła raz złączenie ściśle większe. Łańcuch
+   kończy się po liczbie niezależnych zmian.
+3. Kanon wycina to, czego scalanie świadomie nie uzgadnia (opis D7, postać gwiazdki R4n) — w porównaniu odbijałoby się
+   bez końca.
+4. Reguła pola niezależna od źródła; filtr samego wygaśnięcia bez zegara.
+
+Testy wejściowe, testy zegara i test odbiorcy po „Usuń pacjenta” sprawdzają odbiorcę: odesłany wpis przyjmuje i nic
+nie odsyła (trzy urządzenia — C też nic).
+Długie przebiegi z przełącznikiem: brak spoczynku 0, ponowne wysłanie tej samej wartości 0.
+
+**Model haków i odsyłania w teście A ≡ B.** Przy włączonym przełączniku wpisy `stomb` rejestru łańcucha z zastosowania
+partii (odbiorca z bieżącą aplikacją) to odsyłanie wpisów (wpis Q z polem `src: 'echo'`). Model odsyłania z licznika
+(`modelEcha`) liczy też `stomb`: warstwa wykonalna, klucz = `snapshotId`, bez samego wygaśnięcia treści (ten sam filtr co
+w sejfie — tylko w modelu; warstwy licznika i ich literały bez zmian); w partii wiersz zostaje tylko, gdy po całej
+partii jest wpis tej wersji (builder działa po partii — test „wpis zmieniony i zdjęty w jednej partii”). Wartość dla
+„ponownego wysłania tej samej wartości” to kanon wpisów koperty bez `seq`. Warstwa „odesłane” porównuje koperty `stomb`
+z wierszami modelu. Sprawdzian `savedAtISO` (pole opisu, które zostaje w porównaniu, bo wersja zachowuje je przy
+poprawce i „Przywróć”): wiersze modelu `stomb`, które istnieją tylko przez `savedAtISO` — 0 w CI (ziarno 1 profilu
+podstawowego i ziarno 8 koalescencji z przełącznikiem) i 0 ręcznie (podstawowy: 1504 porównania, 105 wierszy modelu;
+pełny: 825 / 65; „bez połączenia”: 362 / 153). Przy wyłączonym przełączniku model jest pusty, a literały bez zmian.
+W ręcznym trybie ścisłym nowa klasa różnicy par: nagrobek porządkowania starszej aplikacji z pełnej kopii — status
+`WYR.OGRANICZENIE_STARSZEJ` (`tests/support/ostatnia-zmiana.mjs`), warunek kształtu starszej aplikacji (powód
+`retencja`, bez treści, bez `visitIdentity` w eksporcie i bez `visitCipher` w surowych metadanych), dowód (wpisu nie ma
+w oknie Kosza żadnej strony, wersja wizyty jest w karcie na obu). Klasa działa tylko w trybie ścisłym, więc literał
+p. 6 przy wyłączonym przełączniku się nie zmienia; test w CI woła sprawdzian trybu ścisłego wprost.
+
+**Długie przebiegi** (ręcznie, 2026-11-19, kod tego PR na kopii drzewa, każdy przy obu stanach przełącznika:
+`E2_AB_ECHO=1` i bez; CPU dzielone z drugim przebiegiem). Koperty `stomb` według klas licznika: w ładunku / spoza.
+
+| Przebieg (ziarna) | Przełącznik | Koperty `snap` | Koperty `stomb` | Ponad model / nieodesłane | Ponowne wysłanie | Brak spoczynku, W3, W4 | Punkty W1 z różnicą (klasy) | Wyrocznia: bez klasy | Czerwone przypadki | Czas |
+|---|---|---|---|---|---|---|---|---|---|---|
+| podstawowy (1–40) | włączony | 71 | 34 (R4a 3/7; R4a′ 11/13) | 0 / 0 | 0 | 0, 0, 0 | 3 (R4n 1; R5 2 — ziarno 31) | 0 | ziarna 1 i 4 — tylko literał `ZNANE_W1` (różnice R2 znikają) | 225 s |
+| podstawowy (1–40) | wyłączony | 0 | 0 | — | — | 0, 0, 0 | 11 (R2 4, R4a 4, R4n 1, R5 2) | 0 | — | 215 s |
+| pełny (1–20) | włączony | 31 | 34 (R4a 2/4; R4a′ 9/14; R5 3/0; inne 0/2) | 0 / 0 | 0 | 0, 0, 0 | 7 (R5 5 — ziarna 3 i 16; nagrobek karty opróżnionej 2) | 16 — tylko ziarno 8 (niżej) | ziarno 8 | 135 s |
+| pełny (1–20) | wyłączony | 0 | 0 | — | — | 0, 0, 1 | 13 (D7 7, R5 5, miejsce wizyty 1, rekord złożony 1) | 0 | ziarno 5 (W4, tak samo na bazie) | 125 s |
+| „dłuższa praca bez połączenia” (101–140) | włączony | 95 | 58 (R4a 8/13; R4a′ 11/18; R5 3/2; inne 3/0) | 0 / 0 | 0 | 0, 0, 0 | 3 (R5 2 — ziarna 113, 114; R4n 1 — ziarno 134, widok Kosza równy) | 0 | 104, 128, 132, 137 — tylko W2s „inne” R4a′ (niżej) | 130 s |
+| „dłuższa praca bez połączenia” (101–140) | wyłączony | 0 | 0 | — | — | 0, 0, 0 | 19 (R2 8, R4a′ 5, R5 4, D7 4) | 0 | 104, 123, 128, 132, 137 — R4a′ w W1 i W2s „inne” (tak samo na bazie) | 121 s |
+| flota 221 (1–10) | włączony | 5 | 0 | 0 / 0 | — | 0, —, 0 | — | 0 | ziarna 2 i 3 — tylko literały floty (jak po E3-PR0c) | 31 s |
+| flota 221 (1–10) | wyłączony | 0 | 0 | — | — | 0, —, 0 | — | 0 | — | 30 s |
+| flota 276 (1–10) | włączony | 26 | 2 (ziarno 5: R4a przez 276, od A i od B) | 0 / 0 | — | 0, —, 0 | — | 0 | ziarno 2 — tylko literał floty (jak po E3-PR0c) | 44 s |
+| flota 276 (1–10) | wyłączony | 0 | 0 | — | — | 0, —, 0 | — | 0 | — | 38 s |
+
+- R4a i R4a′ w W1 znikają: podstawowy R4a 4 → 0, „bez połączenia” R4a′ 5 → 0; naruszenia wyroczni „R4a | W1” 4 → 0
+  i „R4a′ | W1” 5 → 0. D7 w W1 też maleje (pełny 7 → 0, „bez połączenia” 4 → 0). Punkty W1 obu stanów nie odpowiadają
+  sobie jeden do jednego (inna historia losowania), więc to spodziewany skutek, nie dowód.
+- Zostają do E3-PR0d2 różnice „wpis Kosza tylko na jednym urządzeniu” po „Przywróć” na jednym urządzeniu i „Usuń
+  pacjenta” (albo „Scal pacjentów”) na drugim: podstawowy ziarno 31, pełny 3 i 16, „bez połączenia” 113 i 114.
+  *(2026-11-20, E3-PR0d2: z odsyłaniem ukrytego wpisu znikają — punkty W1 z klasą R5 19 → 0, z pełnym 21–40 (ziarna 39
+  i 40); wpis na końcu pliku.)*
+- R4n w W1 (podstawowy ziarno 21 przy obu stanach, „bez połączenia” ziarno 134 z przełącznikiem): klasa R4n wymaga
+  równego okna Kosza obu stron, a „Przywróć” na klonach daje ten sam wynik — widok taki sam.
+- Profil pełny, ziarna 21–40 (dodatkowo, oba stany): czerwone 37, 38, 39 przy obu stanach przełącznika (utrata dwóch
+  wizyt po „Scal pacjentów”, E4b w W4 z identycznym dziennikiem i bez kopert odsyłania, karta częściowa) — nie skutek
+  odsyłania; ziarno 21 czerwone tylko bez przełącznika.
+- Przebiegi szły na kodzie sprzed ostatniej poprawki (sprawdzenie usuwania konta po odczycie wpisów „po”); po niej
+  profile podstawowy, pełny i „bez połączenia” z przełącznikiem powtórzone: te same wiersze modelu (105 / 65 / 153) i te
+  same czerwone ziarna.
+
+**Diagnoza przed PR** (prawdziwy kod, oba stany przełącznika).
+- **Profil pełny, ziarno 8, z włączonym przełącznikiem:** 16 naruszeń wyroczni bez klasy — ta sama znana usterka co po
+  E3-PR0c („Usuń pacjenta” zwróconej starej karty po „Scal pacjentów”, naprawa w E3-PR0e; świat 885 ręcznego bloku
+  znanych usterek). Odtworzenie tego samego ciągu operacji bez kopert odsyłania (te same 103 mutacje, dostawy krótsze
+  tylko o koperty odsyłania) gubi te same dwie wizyty w tych samych punktach, z tymi samymi klasami wyroczni.
+  *(2026-11-23: decyzja 4 z 2026-11-23 — świadome usunięcie; wąski wyjątek wyroczni w E3-PR0e3.)*
+- Przybliżenie z pomiaru (uprząż dopisywała koperty wpisu z modelu) dawało nowe czerwone ziarno 14 i E4b w W4 ziaren 5
+  i 14. Na prawdziwym kodzie ziarna 5 i 14 są zielone, a E4b w ziarnach 1–20 nie występuje — przybliżenie szło innym
+  ciągiem operacji (w ziarnie 14 od kroku 14: 1 koperta w przybliżeniu, 2 w sejfie, model uprzęży zgodny z sejfem).
+- **W2s w „dłuższej pracy bez połączenia”.** Sprawdzian widzi koperty odsyłania nadawcy jak zdarzenia: z przełącznikiem
+  punktów W2s „inne” jest 4 zamiast 9, ziarno 123 zielenieje. Zostają ziarna 104, 128, 132 i 137, wszystkie w tym
+  samym kształcie: nadawca poprawił wizytę, potem usunął jej kartę, a odbiorca bez wiedzy dał wizytę do Kosza.
+  Poprawka czeka w kolejce nadawcy, ale jego pełna kopia już jej nie ma (wizyta zniknęła z kartą), więc odbiorca po
+  zdarzeniach ma we wpisie Kosza nowszą treść niż odbiorca po pełnej kopii i W2s zgłasza różnicę. Zaraz potem odbiorca
+  odsyła wpis i po spoczynku oba urządzenia mają nowszą treść: W1 bez różnicy, wyrocznia bez naruszeń. Ta sama strata
+  przy samych pełnych kopiach jest już w literale p. 6 („R4a′ | bloby”). Sprawdzianu nie zmieniono — cztery czerwone
+  zostają widoczne (do akceptacji niżej).
+
+**Flota ze starszą aplikacją.**
+- 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty; delta idzie u bieżącego urządzenia przez `applyEncryptedEvent`
+  bez pola `event`, a pełna kopia — z pominięciem tej funkcji, więc odesłania po nich nie ma i obiegu przez 221 nie ma
+  z konstrukcji. Ręcznie (ziarna 1–10, z przełącznikiem): 0 kopert `stomb`. W scenariuszu „Drugi rząd przez 221”
+  2 wiersze R4a powstają między bieżącymi urządzeniami; do 221 nic nie trafia (221 nie czyta zdarzeń).
+- 276 (zdarzenia, SW 1.1.530–1.1.534): wysyła własne `stomb` (Kosz, porządkowanie), ale nie odsyła. Dodatkowy obieg:
+  telefon ze starszą aplikacją (C) daje v do Kosza bez wiedzy o gwiazdce (albo poprawce), którą A dało v wcześniej, a B
+  już zna. A i B scalają `stomb` od C, każde składa wpis z tutejszą gwiazdką (albo treścią) i każde go odsyła — dwie
+  koperty z jednego zdarzenia 276. A dostaje kopertę B, B — kopertę A; obie nic nie zmieniają, więc nic nie odsyłają.
+  C scala obie swoimi regułami i nie odsyła. Nowe scenariusze floty w CI z przełącznikiem sejfu na A i B („R4a przez
+  276: gwiazdka na A, Kosz na 276”, „R4a′ przez 276: poprawka na A, Kosz na 276”): 2 koperty, 1 obieg wymiany A–B, Kosz
+  na A, B i C taki sam (20 kg z gwiazdką albo 40 kg), 0 ponownych wysłań; pary z C różnią się tylko tożsamością wizyty
+  (klasa floty „tożsamość wizyty nieznana starszej aplikacji”); w tych scenariuszach nie ma nagrobka karty, więc ani
+  hak H1, ani pełna karta. Ręcznie (ziarna 1–10): 2 koperty `stomb` (ziarno 5, od A i od B); punktów spoczynku
+  z drugim obiegiem wymiany 8 z 56 (bez przełącznika 2 z 53), bez punktów ponad limit.
+- Koperta od 276 nie ma `visitIdentity` we wpisie; reguła pola zdejmuje ją z porównania, zostaje różnica gwiazdki.
+- Odesłanie nie leczy różnicy z 276, gdy reguły 276 dają inny wynik. Każde nowe zdarzenie 276 może wywołać najwyżej
+  jedno odesłanie wpisu od każdego bieżącego urządzenia; odesłany wpis niesie kartę bez wersji, a gdy wywoła na 276
+  pełną kartę z haka H1, u bieżących urządzeń to zwykłe zastosowanie z najwyżej jednym odesłaniem — skończone, bez pętli.
+  Znane ograniczenie starszej wersji (decyzja 2 z 2026-11-16).
+- Literały floty w CI (poza dwoma nowymi scenariuszami) opisują przebieg z wyłączonym przełącznikiem; przepisze je
+  E3-PR0i.
+
+**Wygasanie Kosza i okno nagrobków.** Treść wpisu znika 30 dni od chwili Kosza (`BKZ_KOSZ_MS`), wpis (jak każdy nagrobek
+wersji) — 365 dni od późniejszej z chwil Kosza i przycięcia (`Bkz_ostatnie`); porównania są ostre (dokładnie na
+granicy treść i wpis zostają, 1 ms później znikają). „Okno nagrobków” z wiersza 4 planu to te 365 dni — jedyne okno
+nagrobka wersji w kodzie. Testy deterministyczne na sztucznym zegarze (gwiazdka spoza ładunku, chyba że napisano
+inaczej):
+
+| Przypadek | Wynik |
+|---|---|
+| Kosz + 30 d − 1 ms i dokładnie + 30 d | jeden wiersz `stomb` v z treścią i gwiazdką; odbiorca nic nie odsyła; okno Kosza i „Przywróć” takie same na obu |
+| Kosz + 30 d + 1 ms | jeden wiersz bez treści, z gwiazdką; odbiorca nic nie odsyła; okno Kosza i „Przywróć” takie same na obu (okno puste) |
+| wpis z treścią po granicy, zdarzenie z v bez nowości | scalanie zapisuje wpis bez treści, 0 wierszy (samo wygaśnięcie) |
+| odbiorca po granicy dostaje wpis z treścią, bez innej różnicy | zapis bez treści, 0 wierszy (samo wygaśnięcie względem ładunku) |
+| granica w trakcie scalania (zegar przestawiony przy szyfrowaniu treści z ładunku w fazie Kosza) | poprawka z gwiazdką: jeden wiersz bez treści, z gwiazdką; sama poprawka: 0 (treść wygasła przy zapisie) |
+| rozjazd zegarów: odbiorca (A) po granicy, nadawca (B) przed | A odsyła raz wpis bez treści, z gwiazdką; B zachowuje swoją treść i odsyła raz złączenie z gwiazdką; A nic; B po granicy przy kolejnym zdarzeniu z v — 0 |
+| Kosz połączony z późniejszym przycięciem (unieważnienie Kosza zmienia też powód i chwile) | jeden wiersz `stomb` — to nie samo wygaśnięcie |
+| ostatnia chwila + 365 d − 1 ms | jeden wiersz bez treści, z gwiazdką |
+| ostatnia chwila + 365 d + 1 ms | wpisu nie ma: 0 wierszy i 0 emisji `stomb`; v wraca do karty ze starej koperty (z gwiazdką), bez wiersza `snap` — dziś tak samo i przy pełnej wymianie |
+
+Wpis, który wygaśnie między scaleniem a dopisaniem, nie daje wiersza („brak encji”).
+
+Przy rozjeździe zegarów nadawca też odsyła raz (jego złączenie z gwiazdką jest nowe) — jedna wiadomość więcej, niż
+zakładał projekt, bez utraty i bez pętli; jej ukrycie wymagałoby zegara w porównaniu (do akceptacji niżej). Test A ≡ B
+z zegarem (bez wyroczni, bo wyrocznia nie zna wygasania Kosza): R4a — spoczynek tuż przed granicą (2 obiegi, 2 koperty,
+Kosz 20 kg z gwiazdką na obu), skok zegara tuż za granicę, drugi spoczynek — wpisy tracą treść bez odsyłania, okno
+Kosza puste na obu; R4a′ tuż po granicy — treść wygasła na obu, nic do odesłania; model zgodny w każdej partii, W1 bez
+różnic.
+
+**Testy.** Dane wyłącznie fikcyjne („Testowy Jan…”, „Pacjent Testowy 1”, masy 20–45 kg), bez PESEL; prawdziwy
+`vilda_vault.js` i `vilda_sync.js` w uprzęży (okno `tests/support/okno-magazynu.mjs`, atrapa IndexedDB, bliźniaki na
+kopii baz atrapy, kopia sejfu z licznikiem odczytów bramki).
+- `tests/unit/sync-odsylanie.test.mjs` (92 przypadki, było 49): wpis, który scalanie zapisało inaczej, niż był i niż
+  przyszedł (gwiazdka i poprawka, każda w ładunku i spoza ładunku — wpis złożony, jeden wiersz `stomb`); bez odsyłania
+  (sam opis wpisu z wyższym `rev` i innym `seq`, sama postać gwiazdki w treści, koperta starszej aplikacji bez pola
+  `gwiazdka` przy przypiętym i odpiętym rejestrze — z dowodem: okno Kosza i „Przywróć” takie same, koperta bez
+  tożsamości wizyty, powtórka zdarzenia bez odszyfrowania, ładunek równy stanowi, wpis z ładunku przyjęty bez zmian
+  także przy odwrotnej kolejności kluczy, same składniki lokalne, wpis zdjęty scaleniem); wersja i wpis w jednym
+  scaleniu (`snap`, potem `stomb`); łączenie wpisów kolejki; `busy` po zapisie listy Kosza (odesłanie przy pierwszej
+  próbie, ponowienie bez duplikatu); zmiana sesji, blokada, usuwanie konta i strażnik tożsamości w odczycie wpisów
+  „przed” i „po”, zmiana sesji w odczycie wersji „przed” (bez wejścia do odczytu wpisów), zmiana sesji w porównaniu
+  wpisów, „Usuń konto” tego konta ruszone w chwili wznowienia odczytu wpisów „przed” (`session-changed`, scalanie nie
+  rusza) i „po” (`applied`, bez odsyłania wersji i wpisów), strażnik formy odczytu; błędy osobno dla każdego kandydata
+  (nieczytelna tożsamość „po” i „przed”, cały odczyt „przed”, cały odczyt „po”, oba); stałe, kanon, reguła pola
+  (para po karcie, nie po kolejności) i samo wygaśnięcie wycięte z kodu sejfu; drogi bez odsyłania (notatka, stara
+  delta, delta, pełna kopia), przełącznik wyłączony przy kopertach wpisów (równoważność z kopią sejfu bez odsyłania),
+  zamknięta bramka i „Komputer w pracy”; wartownik treści (emisja odsyłania wpisu z samym identyfikatorem); odbiorca po
+  „Usuń pacjenta” (karta zostaje usunięta); samo wygaśnięcie a unieważnienie Kosza; zegar (tabela wyżej). Przypadek
+  „zdarzenie w otwartym kroku” ma dopisany wprost własny wiersz `stomb` z „Usuń do Kosza” (bez emisji odsyłania).
+  Kopia sejfu tylko w pliku testu ma nowe miejsca jednorazowego fikcyjnego błędu: początek wyszukiwania wersji pod
+  innymi kartami w fazie Kosza (`Bkz_obceKarty`; faza kończy się `busy` dopiero po zapisie listy) i początek odczytu
+  wpisów (`Bev_stanKosza`); wariant z listą błędów dla kolejnych wejść.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B; 226 przypadków, było 197; 21 pominiętych): p. 6
+  z włączonym przełącznikiem (światy 942–949: R4-a i R4-a′ bez różnicy i bez naruszeń wyroczni, R4n z dowodem, różnice
+  „wpis Kosza tylko na jednym urządzeniu” w R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” z polem naprawy E3-PR0d2,
+  „Kosz i Przywróć na B, porządkowanie i Scal pacjentów P → Q na A” bez różnicy, nagrobek retencji „tylko B”); test
+  wejściowy E3-PR0d (światy 936–941: gwiazdka A–B, poprawka A–B, poprawka przy trzech urządzeniach, każdy przy obu
+  stanach przełącznika; wpis Kosza na każdym urządzeniu, treść wierszy kolejki, obiegi, koperty, W1); wpis zmieniony
+  i zdjęty w jednej partii (świat 956); tryb ścisły — klasa nagrobka porządkowania starszej aplikacji (światy 952–955:
+  kształt starszej aplikacji — klasa z dowodem; ten sam nagrobek w kształcie bieżącej wersji, bez powodu porządkowania
+  albo bez dowodu — przyczyna W1; założenie klasy: porządkowanie bieżącej aplikacji zapisuje tożsamość wizyty także
+  wersji zapisanej bez niej); granica 30 dni (światy 950–951); ziarno 8 koalescencji z przełącznikiem; dwa scenariusze
+  floty z przełącznikiem sejfu (R4a i R4a′ przez 276); test wejściowy E3-PR0c z przełącznikiem — literał przepisany
+  (z retencją A i B odsyłają też wpis retencji: 3 koperty i 2 obiegi przy dwóch urządzeniach, 4 koperty przy trzech).
+  Przy wyłączonym przełączniku wszystkie literały bajt w bajt.
+  *(2026-11-20, E3-PR0d2: literały p. 6 R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” z przełącznikiem przepisane na
+  wynik bez różnicy, pole naprawy usunięte; W4 i wyrocznia bez zmian — R5-E1 to jawny wyjątek, decyzja z 2026-11-20.)*
+- `tests/unit/sync-dziennik-uspienie.test.mjs` (53): forma `Bem_zastosujEcho` — po jedynym `await` dokładnie dwa
+  `Bem_zmiana`, najpierw `'snap'` z `kol.echo`, potem `'stomb'` z `kol.kosz`, oba z `kol.s`; samokontrola wariantami
+  zła (forma E3-PR0c, `'stomb'` przed `await`, dwa `'stomb'`, `'stomb'` przed `'snap'`, inny rodzaj, `kol.echo` zamiast
+  `kol.kosz`); literał miejsc poza blokiem bez zmian.
+- `tests/unit/sync-zdarzenia-buildery.test.mjs` (reguła „bez zegara”): sześć nowych funkcji części `Bev_`
+  sklasyfikowanych jako odsyłanie (domknięcie przez strzeżony adapter, bez zegara, szyfrowania, scalania, eksportu
+  i zapisów).
+- `tests/unit/licznik-odsylania.test.mjs` (38, było 29): model odsyłania wpisów (R4a w ładunku i spoza, R4a′, R5
+  z zapisem; R4n, D7, sama tożsamość wizyty, samo wygaśnięcie, stara delta i wpis zdjęty — pusto), warstwa „odesłane”
+  z kopertą `stomb`, sprawdzian wierszy tylko przez `savedAtISO`. Uprząż: `tests/support/licznik-odsylania.mjs`
+  (`modelEcha` dla `stomb`, `wierszeTylkoSavedAtISO`).
+- `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` — bez zmian (zielony).
+- e2e `tests/e2e/sync-zdarzenia-drenaz.spec.mjs` (Chromium, 2 nowe): klucz `'1'` — drugi kontekst (B) daje v gwiazdkę,
+  A ma v w Koszu (później); prawdziwy drenaż `vilda_sync.js` na A daje w kolejce A dokładnie jeden wiersz `stomb` v
+  z gwiazdką i treścią, a B (klucz `'1'` sprawdzony) przyjmuje go bez nowego wiersza; bez klucza — ten sam drenaż,
+  gwiazdka wpisu tylko na A, w kolejce A bez wiersza `stomb`.
+
+**Czerwone na bazie** (`4bff32aa`, sejf bez odsyłania wpisów, testy i uprząż tego PR): `sync-odsylanie` 27 z 43 nowych
+(zielone z natury: drogi i przypadki „bez odsyłania”, przełącznik wyłączony, zamknięta bramka i „Komputer w pracy”,
+zmiana sesji w odczycie wpisów „przed” i w trakcie `Le`, samo wygaśnięcie przy kopercie bez nowości, odbiorca po
+granicy bez innej różnicy — strażniki „bez zmian”), test A ≡ B 14 (12 z 29 nowych — każdy z „echo sejfu ≠ model”
+albo z kontrolą „sejf odesłał wpis” — i 2 przypadki testu wejściowego E3-PR0c z przepisanym literałem; przypadki przy
+wyłączonym przełączniku, różnice do E3-PR0d2, nagrobek retencji i klasa trybu ścisłego — zielone), test uśpienia 1
+(forma `Bem_zastosujEcho`), buildery 1 (reguła „bez zegara”), e2e drenażu 1 z 2 (klucz `'1'`). Licznik odsyłania — 0
+(funkcje uprzęży).
+Pełny `vitest run` na sejfie bazy z testami sprzed poprawek po przeglądzie kodu: czerwone wyłącznie w czterech plikach
+tego PR (39 przypadków; reszta — 31 529 — zielona).
+*(2026-11-20, E3-PR0d2: „różnice do E3-PR0d2” — od E3-PR0d2 z przełącznikiem bez różnicy; wpis na końcu pliku.)*
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B, część także e2e drenażu i pełny plik A ≡ B): 86
+mutantów kodu odsyłania wpisów i jego otoczenia (85 na kodzie przed poprawkami po przeglądzie i 1 nowy dla poprawki).
+Wynik: 80 czerwieni co najmniej jeden test CI, 6 przeżywa — wszystkie równoważne albo nieosiągalne. Rodziny: kanon (bez
+zdjęcia całego opisu D7 i każdego jego pola osobno, bez `seq`, bez postaci gwiazdki i każdego z jej dwóch pól, kanon
+zdejmuje też `gwiazdka`, bez sortowania elementów, JSON bez sortowania kluczy w całym sejfie i tylko w nowej części);
+reguła pola (bez niej, bez `payload.visit`, bez `visitIdentity`, „każde pole nieobecne w ładunku”, para po kolejności
+zamiast po karcie, zdejmowanie także z elementu bez pary); porównanie (bez warunku „przed”, bez porównania z ładunkiem,
+bez porównania surowych elementów, bez porównania postaci wysyłkowej, surowe zamiast postaci wysyłkowej, bez warunku
+„wpis jest po scaleniu”); samo wygaśnięcie (bez filtra w obu miejscach i w każdym osobno, filtr także przy innej zmianie
+pól, dopasowanie bez karty, warunek odwrócony); kandydaci (tylko `snapshotTombstones`, tylko `patients[].snapshots[]`);
+błędy (błąd „po” bez odsyłania albo tylko kandydatów z wpisem przed lub w ładunku, błąd „przed” jako koniec bez
+odsyłania, nieczytelna tożsamość „po” bez odsyłania, nieczytelny stan „przed” jako pominięcie zamiast porównania z
+ładunkiem); sesja i konto (odczyt wpisów bez każdej z dwóch kontroli sesji i bez obu, odczyt wpisów „przed” po zmianie
+sesji w odczycie wersji, bez kontroli sesji po odczycie wpisów „przed”, kody z odczytu wpisów „przed” ignorowane — oba i
+każdy osobno, bez sprawdzenia usuwania konta po odczycie wpisów „przed” i „po”, kod usuwania konta z odczytu wpisów „po”
+nie zdejmuje odesłania wersji, kod z odczytu wersji „po” nie zatrzymuje odczytu wpisów, lista wpisów przy zmienionej
+sesji — także z emisją bez sesji scalania, odsyłanie przy zmianie sesji w trakcie `Le`); bramki i przełącznik (odczyt
+metadanych przy ładunku bez kandydatów i przed bramką, drugi odczyt przełącznika albo bramki w części `Bem_` i drugi
+odczyt przełącznika w części `Bev_`); emisja (treść wpisu zamiast identyfikatora, `'stomb'` przed `'snap'`, `'stomb'` z
+listą wersji, bez sesji scalania, emisja usunięta, jako `'pnote'`, podwójna, czekanie na wpis łańcucha); drogi
+(odsyłanie po starej delcie i notatek; po pełnej kopii i po delcie — tylko jako mutanty poza blokiem); zegar (w
+porównaniu i w filtrze samego wygaśnięcia — reguła „bez zegara” testu builderów); uprząż i klasa trybu ścisłego (model
+bez `stomb`, `jestEcho` bez `stomb`, model bez warunku „wpis po całej partii”, klasa bez warunku kształtu starszej
+aplikacji, bez powodu porządkowania i braku treści, bez dowodu, dowód bez „wizyta w karcie na obu”). Drugi odczyt
+przełącznika albo bramki, zegar w porównaniu i odsyłanie po pełnej kopii albo delcie łapią też strażniki formy (test
+uśpienia: identyfikatory części bloku poza blokiem i reguła domknięcia części `Bem_`; reguła „bez zegara” testu
+builderów). Mutanty, które w pierwszym przebiegu przeżyły (nieczytelny stan „przed” jako pominięcie, JSON bez sortowania
+tylko w nowej części, para reguły pola po kolejności, bez sprawdzenia usuwania konta po odczycie wpisów „przed”,
+odsyłanie przy zmianie sesji w trakcie `Le`, trzy mutanty klasy trybu ścisłego i model bez warunku „wpis po całej
+partii”), dostały testy działania czerwone na mutancie. Przegląd kodu wskazał lukę: „Usuń konto” ruszone w trakcie
+odczytu wpisów „po” nie zdejmowało odsyłania (skutku dla danych nie było — dopisanie odmawiało); kod poprawiony
+(sprawdzenie strażnika po tym odczycie), test czerwony na kodzie sprzed poprawki i na nowym mutancie, który tę kontrolę
+usuwa. Przeżywa 6, równoważne: błąd poza porównaniem kandydata (poza `try` kandydata nic nie rzuca); odczyt wpisów „po”
+bez kontroli sesji przed nim (pierwsza instrukcja odczytu to kontrola sesji — strażnik formy przypina tę kolejność);
+porównanie surowych elementów bez sortowania (inna kolejność tych samych elementów kończy się porównaniem posortowanych
+kanonów, różni się tylko liczba odszyfrowań); klasa trybu ścisłego bez sprawdzenia `visitIdentity` w eksporcie albo bez
+sprawdzenia `visitCipher` w surowych metadanych (bez `visitCipher` tożsamość w eksporcie daje tylko czytelna treść,
+którą odrzuca warunek „bez treści”; nieczytelny `visitCipher` przerywa eksport) i dowód bez „poza oknem Kosza” (nagrobek
+porządkowania nie trafia do okna Kosza). Pierwsza kontrola sesji w odczycie wpisów (zmiana sesji dokładnie między
+odczytem wersji a odczytem wpisów jest prawdziwą drogą nieosiągalna) zostaje jako obrona; przypina ją strażnik formy.
+
+**Czas pliku A ≡ B** (lokalnie, sam plik, dwa przebiegi równolegle — baza i ten PR — w ustawieniach CI): 136 s
+(226 zdanych, 21 pominiętych) wobec 132 s na `4bff32aa` (197 zdanych, 21 pominiętych); wcześniejsza para przy większym
+obciążeniu, na kodzie sprzed poprawek po przeglądzie kodu: 159 s wobec 152 s. Dochodzi p. 6 z przełącznikiem
+(8 scenariuszy), test wejściowy (6 przebiegów), dwa scenariusze floty, zegar, ziarno koalescencji, tryb ścisły i jedna
+partia. Cel ok. 180 s w CI (w CI po E3-PR0c: 117,9 s) — zmierzyć w opisie PR.
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także komentarze;
+bez nowych wywołań `Bem_`/`Bob_` poza blokiem; literał miejsc poza blokiem bez zmian); fragment natywny i blok trwałych
+wizyt bez zmian, zero nazw `Bem_`/`Bob_`/`Bev_` we fragmencie natywnym. Przeliczone 7 skrótów w 5 plikach: baza
+trwałych wizyt `417ac2f4…` i obraz `ed2f7832…` (`runtime/durable-visits-v1/manifest.json`,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `e0fdbf35…`,
+`integratedVaultSHA256` `d9f5b5e9…` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0d w komentarzu); `node tools/visits-vault-delta.mjs`
+i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` i jego piny bez zmian. Sejf się
+zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na
+`audyt`.
+
+**Ograniczenia.**
+- **Wpis Kosza zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta**
+  (decyzja 1 z 2026-11-19; naprawa w E3-PR0d2). Na jednym urządzeniu „Przywróć” (albo gwiazdka) wizyty po Koszu, na
+  drugim — zanim ta zmiana doszła — „Usuń pacjenta” albo „Scal pacjentów”. Zmiana dochodzi, karta jest tu usunięta,
+  więc wersja nie wchodzi, a wpis zostaje: ukryty wpis tylko na jednym urządzeniu (okno Kosza go nie pokazuje). Gdy
+  karta wróci późniejszą zmianą trzeciego urządzenia, wizyta jest w Koszu na jednym urządzeniu, a w karcie na drugim —
+  do pełnej synchronizacji (R5-E1). Odsyłanie „scalanie zapisało inaczej” tego nie łapie, bo scalanie niczego nie
+  zapisało. W teście A ≡ B: p. 6 R5-0, R5-E1 i „R5-E1, C wysyła tylko zdarzenia” z włączonym przełącznikiem (pole
+  naprawy E3-PR0d2); długie przebiegi: podstawowy ziarno 31, pełny 3 i 16, „bez połączenia” 113 i 114. Pełna wysyłka
+  działa do etapu 3.
+  *(2026-11-20, E3-PR0d2, P-ZBIEZNOSC-ZDARZEN: wykonane, uśpione — wpis na końcu pliku. Z przełącznikiem po samych
+  zdarzeniach wizyta jest w Koszu na wszystkich urządzeniach, jak po pełnej synchronizacji; R5-E1 w wyroczni nie jest
+  naprawiane — to jawny wyjątek „wynik taki jak po pełnej synchronizacji” (decyzja z 2026-11-20).)*
+- **Nagrobek porządkowania ze starszej aplikacji z pełnej kopii** (decyzja 2 z 2026-11-19): niewidoczny nagrobek bez
+  treści tylko na jednym urządzeniu zostaje (znane ograniczenie starszej wersji; naprawa — aktualizacja urządzeń);
+  wizyta jest w karcie na obu urządzeniach, okno Kosza go nie pokazuje; w etapie 3 kolejkuje go manifest. Zasięg klasy
+  w trybie ścisłym: bieżąca aplikacja zapisuje tożsamość wizyty w nagrobku porządkowania także dla starych zapisów bez
+  osobnej tożsamości (wylicza ją przy odczycie karty) — test przypina to założenie; ten sam kształt dałaby tylko wizyta
+  z nieczytelną treścią przycięta na trzecim urządzeniu, ze skutkiem jak w decyzji 2 (wizyta zostaje na obu). Klasa
+  działa tylko w ręcznym trybie ścisłym testu, nigdy na danych.
+- **Nieczytelna tożsamość wpisu** po scaleniu: odesłanie kończy się odmową z kodem i ponawia się w przeglądzie kolejki,
+  jak dziś przy własnym Koszu; pełna wysyłka stoi z tym samym kodem. Bez zmiany klinicznej.
+- **Bardzo stary wpis bez zapisanej tożsamości wizyty** (tożsamość liczona z treści): po 30 dniach tożsamość znika razem
+  z treścią, więc taki wpis może raz pojechać bez treści — jedna zbędna wiadomość bez skutku dla danych i bez pętli.
+  Filtr samego wygaśnięcia zostaje wąski (tylko treść), żeby nie ukryć prawdziwej różnicy.
+- **Kandydaci tylko z ładunku.** Wpisy, które scalanie zmienia bez ich identyfikatora w ładunku (tutejsze wersje karty
+  usuwanej zdarzeniem `ptomb`, wpisy ruszane wyszukiwaniem wersji pod innymi kartami przy kopercie `stomb`), nie są
+  kandydatami. W pomiarze i w długich przebiegach takich wierszy nie było; strażnikiem jest model w teście A ≡ B
+  (wiersz modelu spoza kandydatów = niezgodność).
+- **Koszt.** Zastosowanie koperty z kandydatami czyta metadane konta (z całą listą Kosza i szyframi treści) jeszcze
+  dwa razy, przed scaleniem i po nim: koperta `snap` bez wpisu Kosza — 8 transakcji sklepu metadanych zamiast 6
+  w sejfie bez odsyłania (+33 %). Skracanie odczytu „po”
+  odrzucone: scalanie może dodać wpis kandydata, którego przed nie było (wersja przegrywa z Koszem). Koperta `stomb`
+  z treścią niesie całą wizytę (32–45 KiB), a większość odesłań jest zbędna (drugie urządzenie składa ten sam wpis),
+  choć nieszkodliwa. Każda koperta `stomb` uruchamia u odbiorcy wyszukiwanie wersji pod innymi kartami, więc odesłania
+  robią to częściej (te same reguły co przy pełnej kopii). Pomiar w stresie drogi zdarzeń — E3-PR0h, przed włączeniem
+  dla wszystkich (E3-PR0i).
+- **Okna utraty jak w E3-PR0c:** zmiana sesji albo blokada w trakcie scalania, zamknięcie dokumentu między zapisem `Le`
+  a dopisaniem, ten sam stan najpierw pełnym pobraniem — odesłania nie ma; zabezpieczenie: pełna wysyłka do etapu 3,
+  potem manifest punktu kontrolnego.
+- **Rozjazd zegarów przy granicy 30 dni** — jedna wiadomość więcej (wyżej).
+- **Klasyfikator testu A ≡ B nazywa R4a także sam opis wpisu Kosza żywej karty**, który decyzja 2a nazywa D7. W pomiarze
+  takich różnic nie było; gdyby się pojawiły — poprawka testu (sam opis → D7) w E3-PR0h, bez odsyłania.
+- **Starsza aplikacja** — „Flota ze starszą aplikacją” wyżej.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Rozszerzenie decyzji 9 z 2026-10-29.** Odsyłanie wpisów Kosza jest częścią tej samej czwartej drogi ze scalania do
+   kolejki co odsyłanie poprawionych wizyt: po włączeniu odsyłania urządzenie, które zastosowało zmianę z innego
+   urządzenia i zapisało inny wpis Kosza, niż był i niż przyszedł, wyśle ten wpis pozostałym urządzeniom. Reguły
+   scalania bez zmian.
+2. **Ten sam przełącznik co odsyłanie poprawionych wizyt** (decyzja 1a z 2026-11-15) — bez drugiego klucza i bez
+   drugiego wpisu polityki prywatności.
+3. **„Okno nagrobków” z planu = 365 dni** (jedyne okno nagrobka wersji w kodzie); treść wpisu znika po 30 dniach.
+4. **Samo wygaśnięcie treści po 30 dniach nie jest odsyłane** — ani względem stanu przed scaleniem, ani względem wpisu,
+   który właśnie przyszedł (urządzenie po granicy nie odsyła wpisu tylko dlatego, że u niego treść wygasła; nadawca
+   zachowuje swoją treść do swoich 30 dni). Każda inna różnica (np. gwiazdka) dalej idzie. Porównanie bez zegara.
+5. **Dwa zegary po obu stronach granicy 30 dni** — nadawca też odsyła raz swoje złączenie z gwiazdką (jedna wiadomość
+   więcej, bez utraty i bez pętli); ukrycie wymagałoby zegara w porównaniu.
+6. **Bardzo stary wpis bez zapisanej tożsamości wizyty** może po 30 dniach raz pojechać bez treści (wariant ostrożny;
+   reguła samego wygaśnięcia nie obejmuje tożsamości).
+7. **R4n i D7 bez odsyłania** (decyzja 2a) — dowód widoku wykonany: przy równym rejestrze gwiazdki okno Kosza
+   i „Przywróć” są na obu urządzeniach takie same (także koperta starszej aplikacji); kanon bez zmian, pytania nie ma.
+8. **Nieczytelna tożsamość wpisu po scaleniu — odsyłamy** (zasada E3-PR0c: błąd nie zdejmuje odesłania); skutek: odmowa
+   z kodem, bez wiersza, ponowienie w przeglądzie kolejki, jak dziś przy własnym Koszu.
+9. **Kody „konto usuwane” i „strażnik tożsamości niedostępny” z odczytu wpisów** zatrzymują scalanie jak te same kody
+   z odczytu wersji; „konto usuwane” w odczycie „po” (także ruszone w trakcie ostatniego odczytu) zdejmuje całe
+   odsyłanie — wersje i wpisy.
+10. **Dodatkowy obieg przez 276** opisany i zmierzony: z jednego zdarzenia 276 odsyłają oba bieżące urządzenia
+    (2 koperty, 1 obieg); 221 — 0 z konstrukcji.
+11. **Klasa nagrobka porządkowania starszej aplikacji tylko w ręcznym trybie ścisłym** (decyzja 2 z 2026-11-19), a nie
+    w zwykłym opisie różnic — inaczej zmieniłby się literał p. 6 przy wyłączonym przełączniku; w CI osobny test:
+    nagrobek w kształcie starszej aplikacji dostaje klasę, ten sam w kształcie bieżącej wersji — czerwień. Zasięg klasy
+    — „Ograniczenia”; klasy nie zawężono.
+12. **Cztery czerwone ziarna ręcznego profilu „dłuższa praca bez połączenia” z przełącznikiem** (104, 128, 132, 137 —
+    tylko W2s „inne” R4a′; W1 i wyrocznia czyste) zostają widoczne, bez wyjątku w sprawdzianie. Inna możliwość:
+    osobną zmianą testu wąska kategoria „nowsza treść wpisu Kosza tylko w zdarzeniach nadawcy” (różnica w drugą stronę
+    dalej czerwieni).
+13. **Kolejka ścisła:** E3-PR0d2 wchodzi zaraz po E3-PR0d, więc E3-PR0e czeka na niego (plan, wiersz 5). *(2026-11-20: E3-PR0d2 przygotowany; E3-PR0e może ruszać po jego scaleniu.)* *(2026-11-23: E3-PR0e = E3-PR0e1–E3-PR0e3, w kolejności E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b; plan, wiersze 5–5c.)*
+14. **Notatki i ich nagrobki bez odsyłania** (decyzja z 2026-11-17) — tylko pomiar.
+15. **Sprzeczność „karty częściowej”**: plan („Zakres” E3-PR0: między bieżącymi zamyka ją hak H1) a ALGORITHMS (wpis
+    P-DZIENNIK-ZDARZEN, E2-PR3b, „Świadomie bez haka H1”; naprawa w etapie 3) — poza E3-PR0d, do rozstrzygnięcia przed
+    odbiorem (E3-PR0h).
+
+**Wejście do kolejnych PR.**
+- **E3-PR0d2** (zaraz po E3-PR0d, decyzja 1 z 2026-11-19): odsyłanie wpisu Kosza, który zostaje tylko na jednym
+  urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta. Szkic warunku: ładunek niesie wersję S tej
+  wizyty pod kartą P; po scaleniu wersji nie ma pod żadną kartą; po scaleniu jest wpis tej wersji, z którym S by
+  wygrała (`Bkz_wygrywa`, `Bkz_zmiana`, `Bgw_stan` — dopiero w tym PR); karty wpisu nie ma po scaleniu, a karta P
+  przegrała tutaj z nagrobkiem pacjenta (bez tego warunek łapie też `busy` przed zapisem wersji żywej karty i wpis pod
+  żywą kartą po „Scal pacjentów”). Reguła patrzy na stan, a nie na zapis scalania, więc każda powtórka zdarzenia z tą
+  wersją odeśle wpis jeszcze raz: w teście A ≡ B osobny licznik „odesłanie ze stanu”, wyłączony z „ponownego wysłania
+  tej samej wartości”, z górną granicą i literałem. Pomiar przed PR (podstawowy 40, „bez połączenia” 40, pełny 20,
+  z przełącznikiem): czy znikają różnice ziaren 31; 113, 114; 3, 16 (i w pełnym 21–40: 39, 40), ile kopert i odesłań
+  ze stanu, czy nowe czerwone; kolejność przy trzech urządzeniach i przy „Usuń pacjenta” w otwartym kroku (wpis `stomb`
+  przed nagrobkiem karty). Model w liczniku — z kodu wyciętego z sejfu ze strażnikiem „wycięte = sejf”. Testy: odesłanie
+  ukrytego wpisu i odbiorca po usunięciu karty, karta żywa, wersja wcześniejsza niż Kosz, `busy` przed zapisem wersji
+  żywej karty, wpis pod żywą kartą po „Scal pacjentów”, wstrzymane „Usuń pacjenta”; literały p. 6 R5-0, R5-E1 i „R5-E1,
+  C wysyła tylko zdarzenia” z przełącznikiem przepisane na wynik bez różnicy.
+  *(2026-11-20, E3-PR0d2: wykonane — wpis na końcu pliku. Szkic warunku przyjęty bez zmiany wyrażenia, z dodatkowym
+  warunkiem „tylko po udanym scaleniu”; licznik „odesłanie ze stanu” z granicą niezależną od modeli; z kodu wyciętego
+  z sejfu w modelu jest tylko rozstrzygnięcie „nagrobek wygrywa z wersją”.)*
+- **E3-PR0e**: profil pełny z przełącznikiem — ziarno 8 (jak po E3-PR0c) i ziarna 37, 38 i 39 profilu pełnego 21–40
+  (czerwone przy obu stanach przełącznika: utrata po „Scal pacjentów”, E4b w W4, karta częściowa) jako wejście.
+  *(2026-11-23, decyzje z 2026-11-23: ziarna 8 i 37 — wąski wyjątek wyroczni z decyzji 4 w E3-PR0e3; ziarno 38 —
+  E3-PR0e2b; ziarno 39 — E3-PR0f, razem z kolejnością klas wyroczni.)*
+- **E3-PR0h**: koszt dodatkowych odczytów metadanych (8 zamiast 6 transakcji na kopertę z kandydatami) i duplikatów
+  wpisów (dwa urządzenia odsyłają ten sam wpis), rozmiar kopert `stomb` z treścią, stres drogi zdarzeń z odsyłaniem
+  wpisów; klasyfikator testu A ≡ B: sam opis wpisu Kosza żywej karty jako D7, nie R4a; sprzeczność „karty częściowej”
+  (plan a ALGORITHMS) przed odbiorem; ewentualna kategoria W2s „nowsza treść wpisu Kosza tylko w zdarzeniach nadawcy”.
+- **E3-PR0i**: literały A ≡ B, floty i `ZNANE_W1` przepisane na wynik z odsyłaniem wersji i wpisów.
+- Każdy PR: nowe miejsce, w którym scalanie zmienia wpis Kosza bez jego identyfikatora w ładunku — sprawdzić model
+  w teście A ≡ B (strażnik kandydatów); nowe pole wpisu zapisywane zawsze przez bieżącą wersję — dopisać do
+  `Bev_ECHO_ZAWSZE_KOSZA` i `POLA_ZAWSZE.stomb` licznika; nowe pole opisu wpisu — do `Bev_KANON_KOSZA` i `POLA_D7`
+  (testy równości); zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie skrótów kontroli granicy.
+
+**Cofnięcie** = rewert PR, bez migracji (przy wyłączonym przełączniku nic nie powstaje; wiersze odsyłania to zwykłe
+wiersze `stomb`; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok P-DZIENNIK-ZDARZEN (6686–10204): część `Bev_` — `Bev_ECHO_ZAWSZE_KOSZA`,
+`Bev_KANON_KOSZA`, `Bev_kandydaciKosza`, `Bev_stanKosza`, `Bev_kanonKosza`, `Bev_samoWygasniecie`, `Bev_echoKoszaT`,
+`Bev_echoKosza` (7627–7755), `Bev_zastosujZEchem` (7756–7830: odczyt wpisów „przed” i „po”, flaga usuwania konta,
+`kol.kosz`); część `Bem_` — `Bem_zastosujEcho` (10189–10197: drugie `Bem_zmiana`); komentarze: nagłówek bloku, opis
+`Bev_zastosuj`, opis odsyłania wersji, nagłówek części emisji, opis `Bem_zastosuj`. Poza blokiem bez zmian.
+
+**Wersje.** `vilda_vault.js` 281 → 282, `vilda_chrome.js` 310 → 311 i `vilda_session_bridge.js` 226 → 227 (wstrzykują
+sejf), SW 1.1.559 → 1.1.560 — `npm run podbij-wersje`; baza `origin/audyt` `dac2691f` (po vildaclinic/vilda-calc#1008;
+sejf, `vilda_sync.js` i testy synchronizacji bez zmian względem `4bff32aa`, na którym są pomiary).
+Bez nowego pliku w pamięci offline.
+
+## P-KARTA-LECZENIE, etap 1 — zakładka „Leczenie” i pasek leczenia (SW 1.1.561, `vilda_auth_ui.js` 575, `vilda_auth_ui.css` 87, 2026-11-20)
+
+**Zmiana kliniczna: TAK — wyłącznie nowa, skrócona forma istniejącej oceny wg ChPL na pasku (D1); progi, okna, warunki
+i pełne zdania bez zmian; pozostałe zmiany to układ karty.** Plan i etapy: `docs/KARTA_LECZENIE_PLAN.md`.
+
+**Decyzje właściciela** (2026-11-19, makieta hybrydy zaakceptowana — komputer i telefon):
+- D1: krótka ocena na pasku: „⏳ oceń po 12 tyg.”, „✓ kontynuować leczenie”, „✗ wg ChPL odstawić i ponownie ocenić”;
+- D2: trwające leczenie na górze, zakończone pod nim;
+- D3: siedem zakładek na telefonie 2 + 2 + 2 + 1 (istniejąca reguła siatki zakładek);
+- D4: pasek zakładek nie skacze przy przełączaniu zakładek — pasek leczenia stoi stale nad zakładkami;
+- D5: hybryda powstaje w obecnej Karcie jako jeden moduł; karta B1 użyje później tych samych kart leczenia;
+- etap 1 do realizacji; przełączniki „Przegląd | Wpisy | Analiza” / „Przegląd | Trend dawki | Analiza” i przeniesienie
+  „Trendu leczenia GH” — etapy 2 i 3.
+- 2026-11-20 (przegląd PR): zaakceptowane zawijanie zakładek 5 + 2 przy 1025–1200 px, trzy linie paska zakończonego GH
+  na telefonie i czas leczenia otyłości tylko z punktem „Włączenie”; brzmienie D1 bez zmian (także „20 tyg. · ⏳ oceń po
+  12 tyg.”); GH wznowione po przerwie (dziś „zakończone” przy jakimkolwiek „Zakończeniu”) — osobna poprawka
+  (P-GH-WZNOWIENIE) z regułą „od wznowienia”: stan, „Włączenie”, czas, tempo i ΔhSDS od ostatniego „Włączenia”.
+
+**Stan przed zmianą.** Podsumowanie i „Dane analityczne” GH oraz grupa otyłości (podsumowanie → „Wpisy leczenia” →
+„Dane analityczne — otyłość” albo karta „wg notatek”) stały nad paskiem zakładek, przy każdej zakładce; GH zawsze przed
+otyłością. Odnośnik z „Notatek” przełączał na „Status”.
+
+**Zakładka „Leczenie”** (`data-tab="leczenie"`, druga po „Status”): istnieje tylko, gdy Karta ma co najmniej jeden blok
+leczenia (GH, grupa otyłości, w tym karta „wg notatek” — rozpoznawana z notatek, które Karta już przeczytała, a nie
+osobnym odczytem po narysowaniu). W niej dzisiejsze bloki bez zmian wyglądu i działania, w kolejności D2: najpierw
+leczenia trwające, potem zakończone, przy równym stanie GH przed otyłością. „Zakończone” = warunek znacznika
+„leczenie zakończone” w podsumowaniu (GH: jakikolwiek punkt „Zakończenie”; otyłość: ostatni punkt to „Zakończenie”;
+karta „wg notatek”: „przerwane (wg notatek)”). Przebudowa grupy otyłości (zapis wpisu, „Pokaż wszystkie wpisy”,
+„Usunięte wpisy”) zostaje w zakładce i odświeża pasek; przełącznik cykli w panelu zostaje w zakładce, pasek bez zmian. Domyślnie „Status”; „leczenie” przyjmują opcja
+`activeTab`, `xa.restoreTab`, stan nawigacji i przebudowa po `vilda:sync-merged`; bez leczenia — „Status”.
+
+**Pasek leczenia** (jeden na leczenie, nad zakładkami, `<button>` „{znacznik}: otwórz zakładkę Leczenie”): znacznik
+i stan jak w podsumowaniu, wartości, pigułka oceny, „Leczenie →” (komputer) albo „›” (telefon ≤ 560 px, dwie linie).
+Wartości liczą **te same wywołania, które rysują bloki** (`wl`, `kl`, `Cl`, `Ml`, `jl` wypełniają obiekt wyjściowy),
+nigdy tekst z DOM; brak wartości — część pominięta, bez „—”:
+- otyłość: „{Aktualna dawka} · {Czas leczenia} · {miara} {Redukcja do oceny}” — dawka jak w podsumowaniu
+  (P-OTYLOSC-DAWKA), czas jak kafelek „Czas leczenia” (tylko z punktem „Włączenie”; „Czas od 1. punktu” pominięty),
+  redukcja jak kafelek „Redukcja do oceny” z miarą „BMI” (dzieci i młodzież) albo „masa” (dorośli, „masa ciała”);
+  kafelek zdjęty (brak Włączenia, zapis do uporządkowania) albo „—” → pominięta;
+- GH: „{Aktualna dawka} · {N mies.} · tempo {x,x cm/rok} · ΔhSDS {±x,xx}” — dawka jak w podsumowaniu (Increlex na
+  podanie, P-GH-INCRELEX-KARTA), czas jak „przez N mies.” kafelka przyrostu tylko z punktem „Włączenie”
+  (P-GH-BEZ-STARTU), tempo jak kafelek „Tempo wzrastania”, ale pominięte przy „krótki odstęp” (P-TEMPO-6), ΔhSDS jak
+  kafelek „Odpowiedź (ΔhSDS)”;
+- karta „wg notatek”: ostatnia dawka z notatki;
+- leczenie zakończone: te same wartości co jego podsumowanie i panel (stan na koniec), bez pigułki.
+Komputer: jedna linia — tekst wartości maleje 0,92 → 0,84 rem, potem odpadają ostatnie części; gdy nawet jedna część się
+nie mieści, pasek przechodzi na dwie linie. Telefon: dwie linie, tekst do 0,8 rem (12,8 px), potem odpadają ostatnie
+części — nigdy pigułka. Kliknięcie: zakładka „Leczenie” i przewinięcie (pierwsze leczenie — pasek zakładek u góry
+widoku; kolejne — jego pierwszy blok); położenie paska zakładek w Karcie się nie zmienia.
+
+**Pigułka oceny (D1)** — tylko otyłość, tylko bieżący trwający cykl, tylko trzy stany:
+
+| Stan oceny (`evaluate`) | Tytuł pola oceny (bez zmian) | Pigułka |
+|---|---|---|
+| `before-window` | „Przed oknem oceny — oceń po {N}” | „⏳ oceń po {N}” (bursztyn, przerywana ramka) |
+| `pass` | „Odpowiedź wystarczająca — kontynuować leczenie” | „✓ kontynuować leczenie” (zieleń) |
+| `fail-stop` | „Odpowiedź niewystarczająca — wg ChPL odstawić i ponownie ocenić” | „✗ wg ChPL odstawić i ponownie ocenić” (czerwień) |
+
+Krótka forma jest końcówką tytułu po „ — ” i powstaje w tym samym miejscu, które ustala stan i tytuł (`Ml`, `Ob_b`):
+tytuł składa się z części stałej i krótkiej formy (`krotko`), więc pole oceny i pigułka nie mogą się rozjechać, a N to
+ta sama liczba (`windowLabel`/`windowWeeks` grupy z `obesity_response_criteria.js`). Każdy stan, który podmienia pole
+oceny (ocena kliniczna, „clinical-zscore”, poniżej progu bez twardego stopu, za mało danych, potrzebny wzrost,
+brak Włączenia, zapis do uporządkowania, dwie wersje wpisu w oknie, cykl zakończony, brak dopasowania do progów,
+moduł niezaładowany) — bez pigułki. Progi, okna, kotwica, warunki i pełne zdania oceny bez zmian
+(`obesity_response_criteria.js` bez zmian).
+
+**Odnośniki.** „Notatki” — „Wpisy leczenia otyłości (N) — Leczenie →” otwiera zakładkę „Leczenie” i przewija do „Wpisy
+leczenia” (przewijanie liczone na kontenerze Karty: `custom-fixes.js` podmienia `Element.scrollIntoView` na stronie
+formularza, więc dotąd odnośnik nie przewijał). „Postępy” dorosłego: ostrzeżenie „w zakładce „Leczenie”, „Wpisy
+leczenia”” jest tekstem bez akcji — bez zmian (zakładka teraz istnieje). Inne miejsca z akcją do bloków leczenia
+w `audyt` nie istnieją: Historia („poprawka w „Wpisy leczenia””) i pole oceny („Wybierz prawidłową wersję w „Wpisy
+leczenia””) to teksty; „Wybierz wersję” działa w sekcji w zakładce; „Edytuj w DocPro →” prowadzi do DocPro; przyciski
+notatki GH „↗ Otwórz kartę pacjenta” / „↗ Siatki / punkt GH” otwierają „Status” / „Siatki centylowe” (trend GH zostaje
+tam do etapu 3) [dopisek: od etapu 3 (2026-11-21, wpis „P-KARTA-LECZENIE, etap 3”) drugi przycisk to „↗ Trend dawki /
+punkt GH” — bez punktu GH otwiera zakładkę „Leczenie” z kartą GH na widoku „Trend dawki”, z punktem — DocPro jak dotąd]; powłoka (`vilda_shell.js`) przekazuje `activeTab` bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; chwila 19.11.2026; komputer 1440 px, telefon 393 px):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| O1 | nastolatka 17 l., Wegovy: Włączenie 23.06.2026 91,9 kg / 157 cm, Kontynuacja 10.11.2026 84 kg / 157 cm, 2,4 mg | 7 zakładek, „Status” aktywny; pasek „Leczenie otyłości — Wegovy · aktywne · 2,4 mg · 20 tyg. · BMI −8,6% · ⏳ oceń po 12 tyg.” (komputer 52 px; telefon dwie linie, 13,44 px, nic nie odpada) |
+| O1 + wpis | „+ Kontynuacja” 17.11.2026, 82,5 kg / 157 cm | grupa przebudowana w zakładce (3 wpisy); pasek „2,4 mg · 21 tyg. · BMI −10,2%”, pigułka bez zmian |
+| O2 | Włączenie 17.02.2026 91,9 kg, Kontynuacja 10.11.2026 79,4 kg / 157,4 cm (+ 3 wpisy od pacjenta) | „2,4 mg · 38 tyg. · BMI −14,0% · ✓ kontynuować leczenie”; telefon: „2,4 mg · 38 tyg.” + pigułka (BMI odpada) |
+| niewystarczająca | jak O2, 10.11.2026 90,5 kg / 157 cm | pigułka „✗ wg ChPL odstawić i ponownie ocenić” = końcówka tytułu |
+| dorosły | Saxenda 40 l., 104 → 97 kg po 17 tyg. | „3,0 mg · 17 tyg. · masa −6,7% · ✓ kontynuować leczenie”; Wegovy 47 l.: „masa −11,5%”, bez pigułki (ocena kliniczna) |
+| bez wzrostu | dziecko, okno trwa, w oknie brak wzrostu | „2,4 mg · 38 tyg.”, bez redukcji i bez pigułki („Potrzebny pomiar wzrostu do oceny ChPL”) |
+| G1 | chłopiec 10 l., GH od 7 l. 0 mies. (110 cm) do 10 l. 0 mies. (132,4 cm), 0,033 mg/kg/d | „Leczony hormonem wzrostu (rhGH) · aktywne · 0,033 mg/kg/d · 36 mies. · tempo 6,2 cm/rok · ΔhSDS +1,47”; telefon: dwie linie, 12,8 px, ΔhSDS odpada |
+| GH bez startu / krótki odstęp / Increlex | — | bez czasu / bez tempa / „2 × 2,4 mg na dobę (0,12 mg/kg na podanie)”, „Leczony IGF-1 (mekasermina)” |
+| X1 | GH zakończone (Omnitrope, 9–15 l.) + Wegovy trwa | najpierw pasek i blok otyłości („… BMI −7,4% · ⏳ oceń po 12 tyg.”), potem GH („leczenie zakończone · 0,025 mg/kg/d · 72 mies. · tempo 6,8 cm/rok”, ΔhSDS +1,73 odpada przy 880 px) |
+| bez leczenia | brak punktów i notatek o leku | 6 zakładek, bez paska; `activeTab: "leczenie"` → „Status” |
+
+**Ograniczenia.** Inne stany oceny niż trzy z D1 nie mają pigułki (pełne zdanie zostaje w „Danych analitycznych”).
+Wartości paska otyłości opisują bieżący (ostatni) cykl — jak panel w stanie domyślnym; przełącznik cykli w panelu nie
+zmienia paska. Pasek nie ma cyklu („cykl N z M”) ani „zmiany preparatu”. Karta „wg notatek” wymaga notatek odczytanych
+przy otwarciu Karty (gdy odczyt się nie udał, karty „wg notatek” nie ma — wcześniej czytała je ponownie sama).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/karta-leczenie.test.mjs` (36): prawdziwe funkcje Karty wycięte z `vilda_auth_ui.js` (od `Tt` do `Pl`:
+  `wl`, `kl`, `Cl`, `Ml`, `Ob_dz`, `jl`, `Kl_*`) z prawdziwymi kryteriami ChPL i modułem cykli — warunek zakładki,
+  kolejność D2, wartości paska wobec kafelków z tego samego rysunku (otyłość dziecko/dorosły, brak wzrostu, bez
+  Włączenia, zakończone; GH ze startem i bez, krótki odstęp, Increlex, zakończone), pigułka dla 3 stanów i brak dla 6
+  innych, zgodność pigułki z tytułem, biała lista zakładek i przywracanie; panel otyłości, który się nie narysował
+  (wyjątek wykresu), nie zostawia na pasku czasu, redukcji ani pigułki.
+- e2e `tests/e2e/karta-leczenie.spec.mjs` KL-1…KL-6 (komputer) i `tests/e2e/karta-leczenie-mobile.spec.mjs` KLM-1…KLM-3
+  (telefon: dwie linie, 7 zakładek 2 + 2 + 2 + 1, bez przewijania w bok).
+- 16 istniejących specyfikacji, które zakładały bloki nad zakładkami, otwiera zakładkę „Leczenie” (asercje bez zmian);
+  `otylosc-siatki.spec.mjs` czeka dłużej na koniec przewinięcia siatki: bez bloków nad zakładkami punkt siatki bywa
+  w oknie już przed przewinięciem, które `custom-fixes.js` zaczyna po 100 ms (punkt musi stać ≥ 300 ms w obu osiach).
+
+**Wdrożenie.** Od razu przy wydaniu; sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: bloki
+znów nad zakładkami, bez paska i zakładki.
+
+## P-GH-WZNOWIENIE, część 1 — kursy GH od wznowienia w Karcie i trajektorii (SW 1.1.562, `vilda_auth_ui.js` 576, `vilda_trajectory_analysis.js` 47, `growth-basic-module.js` 25, 2026-11-20)
+
+**Zmiana kliniczna: TAK** — stan, Włączenie, czas, przyrost, tempo i ΔhSDS leczenia GH wznowionego po Zakończeniu
+liczone od bieżącego kursu; granica kursu GH w trajektorii bez progu 3 mies. (zastępuje część P-WERDYKT rata 6). Progi
+werdyktów i odpowiedzi na GH, wzory tempa i hSDS, siatki, P-TEMPO-6, P-GH-BEZ-STARTU i P-GH-INCRELEX-KARTA bez zmian;
+zmienia się to, od którego punktu i w obrębie których punktów są liczone. Plan: `docs/KARTA_LECZENIE_PLAN.md`; łatki:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-GH-WZNOWIENIE, część 1”.
+
+**Decyzje właściciela (2026-11-20).**
+- **W1 „od wznowienia”**: GH (rhGH, także IGF-1/Increlex) z punktami Włączenie → … → Zakończenie → Włączenie → … ma stan
+  „aktywne”; „Włączenie”, czas leczenia, przyrost, tempo i ΔhSDS od ostatniego Włączenia (bieżący kurs), jak nowy cykl
+  leczenia otyłości; wcześniejszy kurs zostaje widoczny w punktach i trendzie.
+- **W2 Kontynuacja po Zakończeniu bez nowego Włączenia** (stare zapisy): „aktywne”, bez czasu leczenia, przyrostu i ΔhSDS,
+  z prośbą o dopisanie Włączenia w DocPro (w części 1 sama informacja o braku Włączenia — patrz niżej).
+- **W3 granica kursu = samo Zakończenie, wszędzie tak samo** (Karta i analiza trajektorii), bez progu 3 mies. przerwy
+  (`KURS_PRZERWA_MIN_M`) — jak cykle leczenia otyłości; zastępuje część reguły GH z P-WERDYKT rata 6 (2026-09-27).
+- **W4**: część 1 = odczyt (ten PR); część 2 = wpis w DocPro (drugie Włączenie, monitor, B.64, odcinki).
+
+**Stan przed zmianą.** Karta pacjenta: podsumowanie GH (`wl`) — „leczenie zakończone”, gdy w historii był jakikolwiek
+punkt „Zakończenie”, „Włączenie” = pierwsze „start” w kolejności tablicy; „Dane analityczne” (`kl`) — punkt bazowy, czas,
+przyrost i ΔhSDS od tego Włączenia (przerwa liczona jak leczenie), tempo i odcinki leków z całej historii; pasek i kolejność
+D2 z tych wartości (wznowione GH opisane i sortowane jako zakończone); trend — program z pierwszego Włączenia w kolejności
+tablicy, linia dawki ciągła przez przerwę; siatki — jeden pas od pierwszego Włączenia do Zakończenia, wznowione leczenie
+bez pasa; panel „Analiza trajektorii” Karty i strona podstawowa (`growth-basic-module.js`) dostawały tylko kopertę `gh`
+(przerwa = leczenie), „💉 GH w przedziale” panelu „Porównanie pomiarów” liczyło kopertę. Trajektoria: `therapyIntervals` —
+punkt po „end” z przerwą < 3 mies. wracał do kursu, ≥ 3 mies. otwierał nowy; okna GH bez przycięcia startu; jeden żeton
+„💉 GH” z koperty. Lista „aktualnie leczeni” w sejfie liczy po ostatnim punkcie wg wieku — bez zmian (przy W2 już „aktywne”).
+
+**Reguła — jedno źródło `VildaTrajectoryAnalysis.ghKursy(punkty)`** (`vilda_trajectory_analysis.js`, ładowany na tych
+samych 8 stronach co Karta):
+1. Punkty GH (`start` | `continue` | `end`) z wiekiem > 0, posortowane stabilnie po wieku w pełnych miesiącach
+   (`ageYears·12 + ageMonths`). Przy równym wieku (punkty nie mają daty): Kontynuacja, potem Zakończenie, potem
+   Włączenie, a w obrębie typu kolejność tablicy — Kontynuacja z miesiąca Zakończenia dopisana po nim (np. późny wynik
+   IGF-1; oba formularze monitora dokładają punkt na koniec tablicy) zostaje w zamykanym kursie, a Włączenie z miesiąca
+   Zakończenia otwiera nowy kurs. Wynik nie zależy od kolejności tablicy.
+2. Kurs zaczyna pierwszy punkt albo pierwszy punkt po „end”; „end” zamyka kurs; bez progu przerwy. Drugie „start”
+   w otwartym kursie nie dzieli kursu (Włączeniem jest pierwsze). Zakończenie tuż po Zakończeniu (zdublowany wpis, np. po
+   scaleniu) zostaje w zamkniętym kursie i NIE przesuwa jego końca — kurs kończy pierwsze Zakończenie, przerwa po nim nie
+   jest leczeniem (dotąd: kurs zerowej długości w miejscu drugiego Zakończenia, ta sama suma miesięcy leczenia).
+3. Kurs `{ numer, a, b, active, label, punkty, wlaczenie }`: `a` — wiek pierwszego punktu, `b` — wiek Zakończenia albo
+   null, `label` — preparat ostatniego punktu z preparatem, `wlaczenie` — pierwsze „start” w kursie albo null. Kurs bez
+   Włączenia po zamkniętym kursie = W2; jedyny kurs bez Włączenia = P-GH-BEZ-STARTU (bez zmian).
+4. `therapyIntervals` = kursy z `ghKursy` w kształcie `{a, b, label, active}` (kontekst `ghKursy` i koperta `gh`
+   z `buildClinicalContext` bez zmian kształtu). Okna werdyktu GH (`kursOkna`, pomiar startowy wariantu G flagi w dół)
+   dostają przycięcie startu do końca poprzedniego kursu (`dolnaGranicaStartu`), jak kursy otyłości; przy jednym kursie
+   granica = start − 6 mies., jak dotąd. Pasek meta analizy: żeton „💉 GH” na każdy kurs przy > 1 kursie.
+5. `KURS_PRZERWA_MIN_M` zostaje w `P`, ale nie dzieli kursów GH; dawna reguła jest `kursyZPrzerwa` — wyłącznie zapas
+   kursów otyłości na stronie bez modułu cykli (bez zmian). Próg nakładania redukcji ≥ 3 mies. bez zmian.
+
+**Karta pacjenta** (`vilda_auth_ui.js`; bieżący kurs = ostatni; przy jednym kursie albo bez modułu trajektorii Karta
+liczy dokładnie jak dotąd):
+- podsumowanie (`wl`): „leczenie zakończone” tylko przy zamkniętym bieżącym kursie (`Kl_wy.zakonczone` → pasek i kolejność
+  D2); przy > 1 kursie znacznik „kurs k z N” (wygląd „cykl k z N”) i „Punkty kontrolne: n w kursie (M łącznie)”;
+  „Włączenie”, program i preparat z bieżącego kursu; „Aktualna dawka” i „Ostatnia kontrola” — ostatni punkt wg wieku;
+  przy jednym kursie „Włączenie” = pierwsze „start” wg wieku (dotąd wg tablicy) — tak samo pas na siatkach (`Gw_pasy`)
+  i program trendu (`Gw_punktyProgramu`): przy jednym kursie dostają punkty wg wieku (różnica tylko przy dwóch
+  Włączeniach w jednym kursie);
+- W2: „Włączenie: brak punktu” i ramka (wygląd P-GH-BEZ-STARTU): „Kontynuacja po Zakończeniu bez nowego Włączenia
+  (Zakończenie w wieku …, pierwszy punkt kursu: w wieku …). Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu
+  „Włączenie leczenia”, którego ten kurs nie ma.” — bez prośby o dopisanie w DocPro, bo monitor do części 2 nie przyjmuje
+  drugiego Włączenia (prośba wejdzie z częścią 2);
+- „Dane analityczne” (`kl`): nagłówek „Wzrastanie — kurs k z N”; wzrost przy włączeniu, przyrost i czas („przez N mies.”),
+  tempo (para ≥ 6 mies. albo „krótki odstęp” P-TEMPO-6 — w obrębie kursu), ΔhSDS i kafelki „Odpowiedź na leczenie wg
+  preparatu” z punktów bieżącego kursu; W2: „Przyrost od Włączenia —” i ΔhSDS „—” z podpisem „brak Włączenia po
+  Zakończeniu”, tempo z punktów kursu, gdy są ≥ 2; „Wiek kostny (ost.)” — ostatni z całej historii, jak dotąd;
+- pasek leczenia i kolejność D2 bez własnej logiki (wartości z `wl`/`kl`);
+- „Trend leczenia GH”: punkty wg wieku; linia dawki (mg/kg/d) i odcinki % dawki zalecanej bez odcinka Zakończenie →
+  kolejny kurs; program (typowy zakres dawki) z bieżącego kursu; IGF-1 i tabela bez zmian;
+- siatki: pas GH na kurs (od Włączenia kursu albo pierwszego punktu do Zakończenia; otwarty kurs — do ostatniego punktu
+  albo bieżącego wieku, jak dotąd);
+- panel „Analiza trajektorii” Karty dostaje `ghKursy`; „💉 GH w przedziale” = suma pokryć kursów (`ctxGhKursy`);
+- strona podstawowa (`growth-basic-module.js`) przekazuje `ghKursy` i `redKursy` (dotąd obie gubiła; karta zaawansowana
+  przekazywała je od raty 6). `vilda_advanced_growth.js`, `vilda_summary_cards.js` i epikryza (kontekst karty
+  zaawansowanej) już dostawały kursy — bez zmian.
+
+**Przypadki syntetyczne** (dane fikcyjne; wiek lata;miesiące, wzrost w cm; GH Genotropin, SNP, 0,025 → 0,033 mg/kg/d).
+Liczby hSDS w testach jednostkowych z atrapy liniowej siatki, w e2e — z OLAF (prawdziwa strona):
+
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| GR1 wznowienie | W 7;0 (110) → K 8;0 (117) → Z 9;0 (123) → W 10;0 (130) → K 11;0 (137) | „aktywne”, „kurs 2 z 2”, Włączenie „w wieku 10 l. 0 mies.”, „2 w kursie (5 łącznie)”; „Wzrost przy włączeniu 130 cm”, „+7,0 cm przez 12 mies.”, tempo 7 cm/rok („ost. okres (z 12 mies.)”), ΔhSDS +0,18 (atrapa); pasek „0,033 mg/kg/d · 12 mies. · tempo 7 cm/rok · ΔhSDS +0,18”, e2e (OLAF, hSDS −1,77 → −1,40) „… · ΔhSDS +0,37”; GH aktywne przed trwającym leczeniem otyłości (D2) | „leczenie zakończone”, Włączenie 7 l. 0 mies., 48 mies., ΔhSDS od 7 l.; pasek po trwającej otyłości |
+| GR2 (W2) | W 7;0 → Z 9;0 → K 10;0 (130) | „aktywne”, „kurs 2 z 2”, Włączenie „brak punktu”, „1 w kursie (3 łącznie)”, ramka W2; przyrost i ΔhSDS „—” („brak Włączenia po Zakończeniu”); pasek „0,03 mg/kg/d”; z drugą Kontynuacją 11;0 (137) — tempo 7 cm/rok zostaje, pasek „0,033 mg/kg/d · tempo 7 cm/rok” | „leczenie zakończone”, czas i ΔhSDS od 7 l. |
+| GR3 bez wznowienia | W 7;0 → K 8;0 → Z 9;0 | „leczenie zakończone”, „0,03 mg/kg/d · 24 mies. · tempo 6 cm/rok · ΔhSDS +0,18” — rysunek identyczny (DOM) jak bez modułu kursów | bez zmian |
+| GR4 kolejność tablicy | punkty GR1 przemieszane / odwrócone | rysunek i pasek identyczne jak GR1 | zależne od kolejności tablicy |
+| GR5 krótka przerwa | W 7;0 → Z 9;0 → W 9;2 | dwa kursy [84, 108] i [110, —]; para wzrostu 8;9 → 9;8 nie jest „w kursie” (dolna granica startu 108): „wyrównywanie niedoboru wzrostu (catch-up) — w tym 9 mies. na GH” | jeden kurs [84, —]; „odpowiedź umiarkowana (GH) — wstępnie (11 mies.)” |
+| GR6 jeden kurs bez startu, Increlex | P-GH-BEZ-STARTU, Increlex, krótki odstęp, GH zakończone (pojedynczy kurs) | rysunek identyczny (DOM) jak bez modułu kursów | bez zmian |
+| GR7 siatki i trend | GR1 | dwa pasy GH: 84–108 (nieaktywny) i 120 → bieżący wiek (aktywny), na siatce wzrostu i masy; ścieżka dawki z „M” po Zakończeniu (bez odcinka 9 → 10 l.); trend % dawki: 3 odcinki zamiast 4; program trendu z bieżącego kursu; panel trajektorii: odcinek 9 → 10 l. bez GH, całość „— w tym 36 mies. na GH”, żetony „💉 GH od 7 lat do 9 lat”, „💉 GH od 10 lat — nadal” | jeden pas 84–108; linia ciągła; odcinek przerwy „odpowiedź … (GH)” |
+| GR8 porównanie pomiarów | GR1, przedział 8 → 11 l. | „💉 GH w przedziale (24 mies.)”; przedział 9 → 10 l. — bez GH | 36 mies. (koperta) |
+
+**Rozstrzygnięcia wykonawcy (do potwierdzenia przez właściciela).**
+- Zdublowane Zakończenie (Z tuż po Z, bez Włączenia ani Kontynuacji między nimi) nie otwiera kursu zerowej długości —
+  przesuwa koniec zamkniętego kursu (tak robiła dawna reguła przy przerwie < 3 mies.; przy ≥ 3 mies. dawała kurs zerowej
+  długości). Dosłowna reguła W3 dałaby „kurs 2 z 2” bez Włączenia, zakończony, u pacjenta po scaleniu duplikatów
+  (cykle otyłości mają tu „zakonczenie-bez-wizyt” — wariant do decyzji właściciela z raty 4).
+- Punkty z wiekiem 0 (bez wieku) nie należą do żadnego kursu (jak dotąd w `therapyIntervals`); przy jednym kursie Karta
+  liczy je jak dotąd, przy > 1 kursie liczą się tylko w „M łącznie”.
+- „Wiek kostny (ost.)” i „Preparaty (historia)” w podsumowaniu — z całej historii (nie są wartością kursu); odcinki leków
+  w „Danych analitycznych” — z bieżącego kursu.
+- W trajektorii kurs W2 jest zwykłym kursem (od pierwszej Kontynuacji), jak kurs bez Włączenia w cyklach otyłości
+  i jedyny kurs bez Włączenia (P-GH-BEZ-STARTU).
+- Zapas kursów otyłości bez modułu cykli (`kursyZPrzerwa`) zostaje przy progu 3 mies. (A.5: inne użycia stałej bez zmian).
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- `tests/unit/gh-wznowienie-kursy.test.mjs` (16, nowy): `ghKursy` (GR1–GR6, drugie Włączenie, zdublowane Zakończenie
+  z przerwą — koniec przy pierwszym, Kontynuacja i Włączenie z miesiąca Zakończenia, równy wiek, wiek 0), GR5 w werdykcie pary (przycięcie startu), GR1 w analizie (odcinek przerwy, dopisek, dwa żetony),
+  jeden kurs = koperta, `ctxGhKursy` wycięta z `vilda_auth_ui.js` (GR8), strażnik `growth-basic-module.js`.
+- `tests/unit/karta-leczenie.test.mjs` (36 → 49): prawdziwe `wl`, `kl`, `Pl`, `Kl_*`, `Gw_*` i `Lt` z `vilda_auth_ui.js`
+  z prawdziwym modułem trajektorii — GR1, GR1 + otyłość (D2), GR4, GR2 (dwa warianty), GR3/GR6 (DOM identyczny jak bez
+  modułu kursów, 7 zapisów), drugie Włączenie, GR7 (ścieżka dawki, % dawki, program, pasy), Kontynuacja z miesiąca
+  Zakończenia („leczenie zakończone”, bez kursu 2), pas jednego kursu z dwoma Włączeniami (od pierwszego wg wieku).
+- Zmienione oczekiwania (zamierzone): `werdykt-kursy-rata-6` — punkt po „end” z przerwą < 3 mies. otwiera nowy kurs
+  (dotąd wracał do kursu); `kursy-otylosci-cykle` — GH z punktami „K po Z” ma dwa kursy (dotąd jeden), strażnik Karty:
+  panel trajektorii dostaje `ghKursy`, `ghM` z `ctxGhKursy` (dotąd „nie ghKursy”, koperta); asercje „dotąd …” reguły
+  sprzed raty 4 wołają `kursyZPrzerwa` (dawne `therapyIntervals`, te same wartości); `karta-leczenie` — nazwa testu
+  warunku „zakończone” (GH: bieżący kurs zamknięty), asercje bez zmian.
+- e2e: `karta-leczenie.spec.mjs` KL-7 (komputer) i `karta-leczenie-mobile.spec.mjs` KLM-4 (telefon) — pacjent R1 (GR1)
+  wstrzyknięty do fikcyjnego sejfu: pasek, zakładka „Leczenie”, dwa pasy GH na siatkach, trend, żetony analizy.
+- Kontrola negatywna na `audyt` 119f022: nowe testy Karty (10) i trajektorii (14 z 15; test „jeden kurs = koperta”
+  przechodzi, bo pilnuje braku zmiany), zmienione oczekiwania oraz KL-7 i KLM-4 nie przechodzą.
+
+**Ograniczenia (część 2 i poza zakresem).** [Dopisek: część 2 (2026-11-20, wpis „P-GH-WZNOWIENIE, część 2” na końcu
+pliku) — DocPro przyjmuje Włączenie po Zakończeniu, monitor, B.64, odcinki i Terminarz liczą per kurs, ramka W2 prosi
+o dopisanie Włączenia w DocPro.] DocPro nadal przyjmuje najwyżej jedno Włączenie i jedno Zakończenie
+(`vilda_gh_punkty.js`), dlatego ramka W2 tylko informuje o braku Włączenia (prośba o dopisanie — z częścią 2); wznowienie
+powstaje dziś tylko przez
+scalenie duplikatów, import albo ręcznie. Monitor GH (tabela, metryki, B.64, przyciski, formularz wsteczny), odcinki
+leków (`gh_therapy_segments.js` — wznowienie tym samym lekiem to jeden odcinek przez przerwę), „Preparaty (historia)”,
+Terminarz, Historia, edytor notatki i sejf — bez zmian. Punkty w tym samym miesiącu porządkuje typ (Kontynuacja,
+Zakończenie, Włączenie); bezsensowny zapis „Włączenie i Zakończenie w tym samym miesiącu, bez wcześniejszych punktów”
+daje kurs z samym Zakończeniem i nowy kurs od Włączenia (punkty nie mają daty, by to rozstrzygnąć).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta
+i trajektoria wracają do reguły „jakiekolwiek Zakończenie” i progu 3 mies.
+
+## P-GH-WZNOWIENIE, część 2 — wznowienie leczenia GH w DocPro (SW 1.1.564, `vilda_gh_punkty.js` 7, `gh_therapy_monitor.js` 65, `gh_therapy_segments.js` 6, `gh_igf_therapy.js` 34, `vilda_gh_punkt_z_wiersza.js` 4, `vilda_auth_ui.js` 577, 2026-11-20)
+
+**Zmiana kliniczna: TAK** — DocPro przyjmuje Włączenie po Zakończeniu i nie przyjmuje Kontynuacji po Zakończeniu bez
+Włączenia; metryki monitora, B.64 i odcinki leków liczone per kurs; wizyta kontrolna Terminarza z ostatniego punktu wg
+wieku. Wzory hSDS, tempa, hSDS−mpSDS, dawki, próg B.64 (2 cm/rok, 180 dni), P-TEMPO-6 i reguła kursów z części 1
+(`VildaTrajectoryAnalysis.ghKursy`) bez zmian; zmienia się, który punkt wolno dopisać i w obrębie których punktów monitor
+liczy. Łatki: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatki P-GH-WZNOWIENIE, część 2”; plan: `docs/KARTA_LECZENIE_PLAN.md`.
+
+**Decyzje właściciela (2026-11-20).** W1 „od wznowienia” (część 1, odczyt). **W2**: po Zakończeniu DocPro proponuje
+i przyjmuje tylko nowe Włączenie (wznowienie); Kontynuacji po Zakończeniu bez nowego Włączenia nie da się już dodać; stare
+takie zapisy w Karcie — „aktywne”, bez czasu i ΔhSDS, z prośbą o dopisanie Włączenia w DocPro. W3 granica kursu = samo
+Zakończenie (część 1). W4: część 2 = wpis w DocPro i liczenie w monitorze per kurs.
+
+**Stan przed zmianą.** `VildaGhPunkty.sprawdzRodzaj`: najwyżej jedno Włączenie i jedno Zakończenie w CAŁEJ liście, bez
+wieku punktu — drugie Włączenie (wznowienie) odrzucone („Punkt „Włączenie leczenia” został już dodany.”), Kontynuacja
+zawsze przyjęta (także po Zakończeniu), Zakończenie przyjęte w dowolnym wieku (przed ostatnim punktem, na pustej liście).
+Wznowienie powstawało tylko przez scalenie duplikatów, import albo ręcznie. Monitor: tabela sortowana wg rodzaju (wszystkie
+Włączenia, Kontynuacje, Zakończenia), potem wieku; program (wiersz i blokada `#therProg`) z pierwszego Włączenia;
+metryki z bazą w pierwszym Włączeniu listy i parami punktów przez przerwę (Zakończenie → Włączenie liczone jak tempo
+w trakcie leczenia, także w ocenie B.64); jeden odcinek leku przez przerwę przy wznowieniu tym samym lekiem; podpowiedź
+tylko przy braku jakiegokolwiek Włączenia. Formularz wsteczny: własna kopia reguły (Włączenie/Zakończenie wyłączone, gdy
+są na liście). Panel wiersza na Start: Włączenie/Zakończenie wyłączone, gdy są na liście, domyślnie Kontynuacja. Terminarz
+(`gh_igf_therapy.js` `Qe`): wizyta kontrolna wiązana z OSTATNIM ELEMENTEM tablicy (punkt wsteczny dopisany na koniec
+przejmował powiązanie). Karta, ramka W2: tylko informacja o braku Włączenia.
+
+**Reguła wpisu — jedno źródło `vilda_gh_punkty.js` (`wersja: 4`).** `sprawdzRodzaj(lista, typ, { wiekM, pomin })`:
+lista bez edytowanego punktu (`pomin`, jak dotąd po `String(id)`) + nowy punkt N w wieku `wiekM` (pełne miesiące,
+`wiekMiesZPol` — ta sama normalizacja co zapis punktu) → `VildaTrajectoryAnalysis.ghKursy` (czytany przy wywołaniu; bez niego
+odmowa „Nie zapisano: aplikacja nie wczytała się w całości. Odśwież stronę i spróbuj ponownie.”, bez powrotu do dawnej
+reguły). Edycja ocenia się więc na liście PO zmianie (punkt zastąpiony), nie na liście bez punktu — usunięcie Zakończenia
+na chwilę scaliłoby kursy, a tego stanu zmiana nie tworzy (poprawka po przeglądzie, niżej). K — kurs, do którego trafia N
+(punkty wg wieku, przy równym wieku Kontynuacja → Zakończenie → Włączenie):
+- **Włączenie** — K bez innego Włączenia; w kursie po Zakończeniu (numer > 1) N nie później niż pierwszy punkt K
+  (wznowienie, dopisanie brakującego Włączenia na początku kursu bez Włączenia — także w miesiącu jego pierwszego punktu).
+  W pierwszym kursie wcześniejsze Kontynuacje (wizyty przed leczeniem) nie blokują Włączenia ani jego edycji;
+- **Zakończenie** — N ostatnim punktem K, K bez innego Zakończenia i z punktem przed N (Zakończenie w miesiącu Włączenia
+  bez wcześniejszego punktu — osobny tekst). Gdy za N jest punkt, a granica kursu przed nim nie istniała przed zmianą
+  (nowy podział kursu), za N musi stać Włączenie, a K musi mieć własne Włączenie — inaczej odmowa „musi być ostatnim
+  punktem kursu” (punkt bez Włączenia za N otwierałby kurs W2; Zakończenie przed Włączeniem kursu 1 zamykałoby same
+  wizyty przed leczeniem). Granica, która już była (edycja Zakończenia kursu 1 po wznowieniu, w starym zapisie W2, także
+  po dopisaniu Włączenia w miesiącu pierwszego punktu kursu 2) — zgoda;
+- **Kontynuacja** — odmowa, gdy K jest kursem po Zakończeniu (numer > 1) bez Włączenia wcześniejszego niż N albo z tego
+  samego miesiąca (W2; także Kontynuacja w przerwie między Zakończeniem a późniejszym Włączeniem). W środku kursu (także
+  zamkniętego, także w miesiącu Zakończenia), przed Włączeniem pierwszego kursu i w jedynym kursie bez Włączenia
+  (P-GH-BEZ-STARTU) — jak dotąd przyjęta;
+- edycja Włączenia albo Kontynuacji bez zmiany rodzaju, która nie pogarsza zapisu (punkt już przed zmianą łamał tę samą
+  regułę położenia w tym samym kursie: Kontynuacja starego zapisu W2, Włączenie z importu po pierwszym punkcie kursu 2) —
+  zgoda (poprawka wzrostu czy dawki nie wymaga najpierw naprawy rodzaju); drugie Włączenie w kursie — odmowa jak dotąd;
+- bez wieku > 0 — odmowa „wartości” (ten sam tekst, którym odmówiłoby sprawdzenie wartości); wpis niebędący obiektem nie
+  jest punktem (jak w `ghKursy`; wołający i tak wstrzymują zapis przy uszkodzonych wpisach).
+Teksty: „Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.”,
+„„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.”, „Ten kurs leczenia ma już punkt
+„Zakończenie leczenia”.”, „„Zakończenie leczenia” musi być ostatnim punktem kursu.”, „„Zakończenie leczenia” zamyka kurs
+leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.”, „„Zakończenie leczenia” nie może być w tym samym
+miesiącu co „Włączenie leczenia” tego kursu.”, „Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie
+leczenia).”. Reguła rodzaju idzie jak dotąd przed sprawdzeniem wartości.
+
+**Poprawki po przeglądzie (2026-11-20, przed scaleniem).** Pierwsza wersja oceniała Zakończenie na liście bez
+edytowanego punktu: po wznowieniu (W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0) Zakończenia kursu 1 nie dało się edytować
+(nawet poprawka wzrostu) ani usunąć i dodać ponownie, tak samo w starym zapisie W2; a w jedynym kursie Włączenia
+z wcześniejszą Kontynuacją (wizyta przed leczeniem: K 7;0 → W 8;0) nie dało się edytować („nie później niż pierwszy
+punkt”). Teraz: edycja na liście po zmianie, „nie później niż pierwszy punkt” tylko w kursie po Zakończeniu, warunek
+granicy kursu dla Zakończenia (wyżej), osobny tekst dla Zakończenia w miesiącu Włączenia, edycja bez pogorszenia.
+Pierwotna poprawka przyjmowała też Zakończenie między wizytą przed leczeniem a Włączeniem kursu 1 (K 7;0 → Z 7;6 → W 8;0)
+i odrzucała edycję Zakończenia kursu 1 po dopisaniu Włączenia w miesiącu pierwszego punktu kursu 2 (W 7;0 → Z 9;0 →
+K 10;0 + W 10;0) — stąd warunek granicy: nowy podział kursu wymaga Włączenia za N i w K, istniejąca granica — zgoda.
+
+`dostepneRodzaje(lista)` (punkt po ostatnim istniejącym): brak punktów → Włączenie, Kontynuacja (domyślnie Włączenie);
+ostatni kurs zamknięty → tylko Włączenie; otwarty z Włączeniem → Kontynuacja, Zakończenie (domyślnie Kontynuacja);
+otwarty bez Włączenia → wszystkie (domyślnie Włączenie). `dostepneRodzaje(lista, { wsteczny: true })` (formularz
+wsteczny monitora — punkt w dowolnym wieku): rodzaje możliwe w JAKIMŚ wieku — Włączenie, gdy lista pusta, ostatni kurs
+zamknięty albo któryś kurs nie ma Włączenia; Kontynuacja zawsze; Zakończenie, gdy ostatni kurs otwarty; domyślnie
+Kontynuacja, gdy ostatni kurs ma Włączenie (przy jednym kursie jak dawne opcje), inaczej Włączenie.
+
+Wołający przekazują wiek: przyciski karty i zapis edycji (`He`: wiek z `#age`/`#ageMonths` albo z formularza edycji),
+formularz wsteczny (`ghAddRetroPoint`: `#ghRetroAge`/`#ghRetroAgeMonths`; opcje `ghRetroSyncTypeOptions` z
+`dostepneRodzaje(…, {wsteczny})`), panel wiersza (`przygotujPunkt`: wiek wiersza). Monitor i panel wiersza przyjmują tylko
+API wersji 4 (inna — odmowa z prośbą o odświeżenie strony, jak dotąd). Panel wiersza: radio pokazuje rodzaje możliwe w wieku
+wiersza (`rodzajeWWieku` = `sprawdzRodzaj` dla każdego rodzaju) — po Zakończeniu tylko Włączenie (wybrane), w środku kursu
+jak dotąd Kontynuacja; przycisk w wierszu nieaktywny w przerwie między kursami („W tym wieku nie można dodać punktu leczenia
+GH: to przerwa po „Zakończeniu leczenia”, przed kolejnym „Włączeniem leczenia”.”); widoczność (punkt Włączenia na liście,
+D8) i zakaz punktu w zajętym miesiącu bez zmian.
+
+**Monitor GH (`gh_therapy_monitor.js`).** Kursy z `ghKursy` (czytelny blok w artefakcie, opis w ZRODLA_ARTEFAKTOW):
+- tabela punktów wg reguły kursów (wiek; przy równym wieku Kontynuacja → Zakończenie → Włączenie; wpis bez wieku na
+  początku), przed pierwszym wierszem kursu k ≥ 2 wiersz „Kurs k — wznowienie w wieku L l. M mies.” albo „Kurs k — bez
+  Włączenia (pierwszy punkt w wieku …)”; zmiana preparatu tylko w obrębie kursu; ten sam wiersz-separator w tabeli metryk;
+- program (wiersz i blokada `#therProg`) z Włączenia bieżącego (ostatniego) kursu, a bez niego z pierwszego punktu kursu;
+  przy edycji — z kursu edytowanego punktu [od P-GH-PROGRAM-BIEZACY (2026-11-23): wiersz i pole poza edycją — program
+  bieżący bieżącego kursu (program ostatniego punktu, jak Karta); przy edycji bez zmian] [od P-GH-PROGRAM-EDYCJA
+  (2026-11-23): przy edycji — program edytowanego punktu, bez niego program bieżący jego kursu z chwili punktu; Włączenie
+  kursu edytowanego punktu tylko jako zapas];
+- podpowiedź `#ghTherapyStartHint`: jeden kurs bez Włączenia — dawny tekst; bieżący kurs bez Włączenia po Zakończeniu
+  (W2) — „Kurs k (po „Zakończeniu leczenia”) nie ma punktu „Włączenie leczenia”. Dodaj go (także wstecznie) — w wieku nie
+  późniejszym niż pierwszy punkt tego kursu (…) — aby czas leczenia, tempo i zmiany liczyły się od wznowienia.”; po
+  Zakończeniu — „Aby wznowić leczenie, dodaj „Włączenie leczenia”.”; pusta lista — bez podpowiedzi (jak dotąd). Przyciski
+  nie są wyłączane (służą też do zapisu edycji) — Kontynuację i Zakończenie po Zakończeniu odrzuca reguła, jak dotąd drugie
+  Włączenie;
+- metryki (`ae`): przy ≥ 2 kursach każdy kurs osobno tą samą pętlą — baza = Włączenie kursu (albo pierwszy punkt kursu bez
+  Włączenia), pierwszy wiersz kursu ≥ 2 bez metryk pary (tempo, „vs poprzednia”), wiersze niosą numer kursu (`Gw_kurs`);
+- B.64: `ocenOstatni` dostaje tylko wiersze bieżącego kursu — przerwa Zakończenie → Włączenie nigdy nie jest „tempem
+  w trakcie leczenia”, a tempo poprzedniego kursu nie jest oceniane jako bieżące;
+- odcinki leków: `gh_therapy_segments.js` przy ≥ 2 kursach dzieli odcinki na granicy kursu (odcinek niesie `kurs`);
+  opcja `poKursach: false` — dawny łańcuch (Karta pacjenta, „Preparaty (historia)” w podsumowaniu); „Dane analityczne”
+  Karty wołają moduł już z punktami bieżącego kursu (bez zmian).
+Jeden kurs: metryki, B.64, odcinki i program liczone dokładnie jak dotąd (ta sama ścieżka kodu); zmienia się tylko
+kolejność wierszy tabeli, gdy sortowanie wg rodzaju różniło się od wieku (Kontynuacja sprzed Włączenia albo z jego miesiąca
+jest teraz przed nim; dla zapisu W → K → … → Z kolejność ta sama), oraz nowa podpowiedź po Zakończeniu. Bez modułu
+trajektorii — tabela, metryki i podpowiedź jak dotąd, a zapis punktu odmawia.
+
+**Terminarz (`gh_igf_therapy.js` `Qe`).** Wizyta kontrolna wiąże się z ostatnim punktem wg reguły kursów (ostatni punkt
+ostatniego kursu `ghKursy`); bez modułu kursów albo bez punktu z wiekiem — ostatni element tablicy, jak dotąd.
+
+**Karta (`vilda_auth_ui.js`, `Gw_infoW2`).** Ramka W2: „Kontynuacja po Zakończeniu bez nowego Włączenia (Zakończenie
+w wieku …, pierwszy punkt kursu: w wieku …). Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas
+leczenia, przyrost i ΔhSDS od wznowienia.” Bez innych zmian Karty.
+
+**Przypadki syntetyczne** (dane fikcyjne; wiek lata;miesiące, wzrost w cm; hSDS w testach jednostkowych z atrapy liniowej
+siatki (wzrost − (77 + 6·wiek)) / 5,5):
+
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| GW1 wznowienie | W 7;0 (110) → K 8;0 (117) → Z 9;0 (123); + W 10;0 (130) wstecznie albo przyciskiem karty; + K 11;0 (137) z karty; osobno + K 10;0 | wszystkie przyjęte; tabela „Program terapeutyczny: ZT” (program Włączenia kursu 2), W 7;0, K 8;0, Z 9;0, „Kurs 2 — wznowienie w wieku 10 l. 0 mies.”, W 10;0, K 11;0 (K 10;0 — przed W 10;0); `#therProg` = ZT, K 11;0 z programem ZT; metryki: kurs 1 tempo 7 i 6 cm/rok, kurs 2 — W 10;0 bez tempa, ΔhSDS 0; K 11;0 7 cm/rok (z 12 mies.), ΔhSDS +0,18, ΔTempo 0; B.64 przed K 11;0 — brak noty, potem „7,0 cm/rok (z 12 mies.)”; odcinki 84–108 (6,5 cm/rok) i 120–132 (7 cm/rok) | Włączenie 10;0 odrzucone („Punkt „Włączenie leczenia” został już dodany.”); lista W→Z→W z importu: tabela W 7;0, W 10;0, K…, Z; metryki od W 7;0 i para Z 9;0 → W 10;0 (7 cm/rok w B.64); jeden odcinek 84–132 |
+| GW2 K po Z | W 7;0 → Z 9;0; + K 10;0 (karta, wstecznie) | odmowa „Po „Zakończeniu leczenia” dodaj najpierw „Włączenie leczenia” (wznowienie leczenia).”; Z 10;0 — „Ten kurs leczenia ma już punkt „Zakończenie leczenia”.”; `dostepneRodzaje` → tylko Włączenie (domyślne); formularz wsteczny: Włączenie, Kontynuacja (przeszłość — K 8;0 przyjęta), bez Zakończenia | przyjęte; formularz bez Włączenia |
+| GW3 drugie W w kursie | W 7;0 → K 8;0; + W 9;0 albo 6;0 | odmowa „Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.” | odmowa „Punkt „Włączenie leczenia” został już dodany.” |
+| GW4 Zakończenie | W 7;0 → K 8;0 → K 9;0; Z 8;6; Z 9;6; potem Z 10;0 i Z 8;0; Z po Z (W 7;0 → Z 9;0 → W 10;0 + Z 9;6); Z na pustej liście; Z 7;0 przy W 7;0; K 7;0 → W 8;0 → K 9;0 + Z 7;6 | Z 8;6 — „„Zakończenie leczenia” musi być ostatnim punktem kursu.”; Z 9;6 (i 9;0) przyjęte; Z 10;0 i Z po Z — „Ten kurs leczenia ma już punkt „Zakończenie leczenia”.”, Z 8;0 (przed K 9;0 zamkniętego kursu) i Z 7;6 (przed Włączeniem kursu 1) — „…musi być ostatnim punktem kursu.”; pusta lista / przed pierwszym punktem — „„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.”; Z w miesiącu jedynego Włączenia — „„Zakończenie leczenia” nie może być w tym samym miesiącu co „Włączenie leczenia” tego kursu.” | Z 8;6, Z 7;6 i Z na pustej liście przyjęte; drugie Z — „…został już dodany.” |
+| GW5 stary zapis W2 | W 7;0 → Z 9;0 → K 10;0; + W 10;0 albo 9;6; + W 10;6; edycja Z 9;0 i K 10;0 | W 10;0 / 9;6 przyjęte, W 10;6 — „„Włączenie leczenia” nie może być późniejsze niż pierwszy punkt tego kursu leczenia.”; edycja Z 9;0 (przed i po dopisaniu W 10;0) i K 10;0 bez zmiany rodzaju — przyjęte; przed — podpowiedź W2, wiersz „Kurs 2 — bez Włączenia (pierwszy punkt w wieku 10 l. 0 mies.)”, K 11;0 odrzucona; po — „Kurs 2 — wznowienie w wieku 10 l. 0 mies.”, K 11;0 przyjęta; Karta: „kurs 2 z 2”, Włączenie „w wieku 10 l. 0 mies.” (z 9;6 i K 11;0: „+10,0 cm przez 18 mies.”), bez ramki W2 | Włączenie odrzucone („…został już dodany.”); Karta — ramka W2 bez prośby o DocPro |
+| GW6 jeden kurs | testy monitora, API, panelu wiersza, złotej siatki; K 7;0 → W 8;0 → K 9;0 | metryki, odcinki, B.64, program i wiersze tabeli identyczne jak bez modułu kursów (6 list); Włączenie po wcześniejszej Kontynuacji (dodanie i edycja) przyjęte jak dotąd; złota siatka: z 5128 przypadków z modułem dawki 4266 bez zmiany reguły — skróty z BAZA (monitor sprzed API) bez zmian; 862 zmienione regułą kursów (Zakończenie bez wcześniejszego punktu albo przed ostatnim punktem kursu, nowe teksty odmowy drugiego Włączenia/Zakończenia) — odmowa tekstem reguły, bez zapisu | — |
+| GW7 edycja | W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0: K 8;0 → W; Z 9;0 → K; W 10;0 → K; Z 9;0 bez zmiany (poprawka wzrostu) albo na 9;6; Z 9;0 usunięte i dodane wstecznie; Z 9;0 → 10;6 albo 7;6 | K → W — „Ten kurs leczenia ma już punkt „Włączenie leczenia”…”; Z → K przyjęte (jeden kurs, W 10;0 drugim Włączeniem jak po scaleniu, bez separatora); W 10;0 → K — „Po „Zakończeniu leczenia” dodaj najpierw…”; edycja Z 9;0 (także 9;6) i ponowne dodanie — przyjęte, dwa kursy zostają; Z na 10;6 albo 7;6 — „…musi być ostatnim punktem kursu.” | K → W odrzucone („…został już dodany.”); Z → K, W → K i edycja Z przyjęte |
+| GW8 Terminarz | tablica [W 10;0, W 7;0, Z 9;0]; [W 9;0, K 8;6] (punkt wsteczny dopisany na koniec) | wizyta kontrolna z W 10;0; z W 9;0 (108 mies., „start”) | z Z 9;0; z K 8;6 (102 mies., „change”) |
+| GW9 odcinki | W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0, ten sam lek | dwa odcinki: 84–108 (6,5 cm/rok), 120–132 (+7 cm, 7 cm/rok); `poKursach: false` — jeden 84–132 | jeden odcinek 84–132 (6,75 cm/rok) |
+
+**Rozstrzygnięcia wykonawcy (do potwierdzenia przez właściciela).**
+- Formularz wsteczny proponuje rodzaje możliwe w jakimkolwiek wieku (`dostepneRodzaje(…, {wsteczny})`), nie tylko dla
+  punktu po ostatnim istniejącym: po Zakończeniu zostaje Kontynuacja (dopisanie pominiętej wizyty w środku zamkniętego
+  kursu), a domyślna przy jednym kursie jak dotąd. Panel wiersza sprawdza każdy rodzaj w wieku wiersza (wiersz bywa
+  historyczny). Wariant bez opcji (`dostepneRodzaje(lista)`) zgodny z tabelą specyfikacji.
+- „Włączenie nie później niż pierwszy punkt kursu” (kurs po Zakończeniu) przyjmuje Włączenie w MIESIĄCU pierwszego punktu
+  (punkty nie mają daty; przy równym wieku Kontynuacja stoi przed Włączeniem).
+- Edycja Włączenia albo Kontynuacji, która nie pogarsza zapisu, jest przyjmowana (poprawka po przeglądzie, wyżej); „ten
+  sam kurs” = ten sam numer kursu przed i po zmianie.
+- Kontynuacja w przerwie przed późniejszym Włączeniem kursu 2 (W 7;0 → Z 9;0 → W 10;0 + K 9;6) — odmowa (dosłowny skrót
+  „przed N Zakończenie, w K brak Włączenia” by ją przyjął; pierwsze zdanie reguły W2 — kurs otwarty Kontynuacją po
+  zamkniętym kursie — ją wyklucza).
+- Zakończenie na pustej liście i przed pierwszym punktem — odmowa (wynika z reguły; dotąd przyjęte).
+- Edycja Z → K przy istniejącym kursie 2 — przyjęta (ta sama symulacja: lista bez Zakończenia to jeden kurs z Włączeniem);
+  wynik jak po scaleniu duplikatów (drugie Włączenie wewnątrz kursu); odmowa zablokowałaby poprawkę omyłkowego
+  Zakończenia.
+- `#therProg` przy edycji z programu kursu edytowanego punktu (inaczej edycja punktu kursu 1 przejęłaby program kursu 2)
+  [od P-GH-PROGRAM-EDYCJA (2026-11-23): program edytowanego punktu; bez programu — program bieżący kursu tego punktu
+  z chwili punktu, więc dalej nie z kursu 2].
+- Podpowiedź przy pustej liście — bez zmian (ukryta); separator kursu także w tabeli metryk.
+- Łańcuch „Preparaty (historia)” w podsumowaniu Karty bez podziału na kursy (`poKursach: false`), bo specyfikacja nie
+  zmienia Karty poza ramką W2.
+- Opcje formularza wstecznego biorą API przez bramkę wersji bez modułu dawki (bez modułu dawki odmawia dopiero zapis, D6).
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- `tests/unit/gh-punkty-api.test.mjs` (139 → 177): reguła kursów (GW1–GW5, GW7, kolejność tablicy, wiek, null, brak modułu,
+  edycja po przeglądzie), `wiekMiesZPol`, `dostepneRodzaje` (oba warianty), teksty, wersja 4.
+- `tests/unit/gh-wznowienie-kursy.test.mjs` (+28): monitor w atrapie z metrykami (GW1–GW5, GW7, jeden kurs = bez modułu
+  kursów na 6 listach, kolejność wierszy, podpowiedzi, brak modułu kursów, edycja po wznowieniu i ponowne dodanie
+  Zakończenia, stary zapis W2, Włączenie po wizycie przed leczeniem, Zakończenie w miesiącu Włączenia), odcinki (GW9), `Qe`
+  wycięte z `gh_igf_therapy.js` (GW8).
+- `tests/unit/gh-punkt-z-wiersza.test.mjs` (+7): `rodzajeWWieku`, `stanPrzycisku` z rodzajami, `przygotujPunkt` po
+  Zakończeniu; `tests/unit/karta-leczenie.test.mjs` (+1): GW5 w Karcie.
+- Złota siatka (`gh-punkty-siatka`, generator `tests/scripts/gh-punkty-wzorzec.mjs`): nowe pole wzorca
+  `kategorieRegulaKursow` — skróty z BAZA tylko z przypadków bez zmiany reguły (`wplywRegulyKursow` woła API z drzewa
+  roboczego); dawne pola bez zmian (+1 test pokrycia). `gh-punkty-monitor-tryby` (48 → 55): API wersji 3 odrzucane
+  (6 czynności), strażnik nazw zmian reguły. `wiek-kostny-zapis-wizyty`: okno z modułem trajektorii (jak docpro.html).
+- Zmienione oczekiwania (zamierzone, reguła „jedno Włączenie/Zakończenie” albo kolejność wg rodzaju): teksty odmowy rodzaju
+  w `gh-punkty-api`, `gh-punkty-charakterystyka-monitor`, `gh-punkt-z-wiersza`; `gh-punkty-monitor-tryby` — tłumaczenie
+  tekstów wyroczni i jawne zmiany 10 scenariuszy (5 decyzji, 5 kolejności wierszy), API wersji 3 odrzucane, wiekMiesZPol
+  w sekwencji wywołań; `gh-punkty-api-roznicowy` — rekord porównywany bez reguły rodzaju, reguła: odmowa drugiego
+  Włączenia/Zakończenia wyroczni = odmowa reguły kursów, zamierzone nowe odmowy wypisane; `gh-punkty-charakterystyka-monitor`
+  — Zakończenie Ngenli po Włączeniu (dotąd na pustej liście), edycja Zakończenia z młodszym trzecim punktem;
+  `karta-leczenie` GR2 — ramka W2 z prośbą o DocPro; e2e `gh-punkty-charakterystyka` G — wizyta kontrolna z ostatniego
+  punktu wg wieku. Po przeglądzie: `gh-punkty-uszkodzone` wrócił do wersji z `audyt` (Włączenie po Kontynuacji w kursie 1
+  znów przyjęte); `gh-punkty-monitor-tryby` — „karta start, dawny format” już nie odmowa, tylko kolejność wierszy,
+  „wsteczny end, pełny kurs” — tekst „musi być ostatnim punktem kursu”, „edycja end, Ngenla” — tekst „w tym samym miesiącu”;
+  `gh-punkty-api` — Z 8;0 przed K 9;0 zamkniętego kursu: „musi być ostatnim punktem kursu” (było „ma już Zakończenie”),
+  Z w miesiącu Włączenia: nowy tekst, Włączenie 8;6 w kursie [K 8;0, K 9;0]: zgoda (było odmową); wzorzec siatki
+  (`kategorieRegulaKursow`) policzony na nowo z BAZA.
+- e2e: nowe `gh-wznowienie-docpro.spec.mjs` (komputer: wznowienie przyciskiem karty i odmowa K po Z, B.64, edycja
+  Zakończenia kursu 1 po wznowieniu i Karta „kurs 2 z 2”; zapis W2 i Włączenie wsteczne; panel wiersza po Zakończeniu)
+  i `gh-wznowienie-docpro-mobile.spec.mjs` (telefon).
+
+**Ograniczenia.** Punkty nie mają daty: kolejność w jednym miesiącu ustala rodzaj (Kontynuacja → Zakończenie → Włączenie),
+więc Kontynuacja z miesiąca Włączenia stoi w tabeli przed nim. Przyciski karty nie są wyłączane — po Zakończeniu odmowę
+daje zapis. `#therProg` po Zakończeniu zostaje zablokowany programem zamkniętego kursu: wznowienie innym programem — przez
+formularz wsteczny (program wybierany w formularzu). Lista pacjentów sejfu, Historia, Terminarz poza `Qe`, edytor notatki
+i sejf — bez zmian.
+
+**Wdrożenie.** Od razu przy wydaniu; dane, zapis, sejf i synchronizacja bez zmian (zmienia się tylko, które punkty wolno
+dopisać). **Cofnięcie** = rewert PR: DocPro wraca do reguły „jedno Włączenie i jedno Zakończenie w całej liście”, monitor
+do sortowania wg rodzaju i metryk z całej listy, Terminarz do ostatniego elementu tablicy.
+
+## P-KARTA-LECZENIE, etap 2 — karta leczenia otyłości z przełącznikiem (SW 1.1.565, `vilda_auth_ui.js` 578, `vilda_auth_ui.css` 88, `vilda_cykle_leczenia.js` 13, 2026-11-21)
+
+**Zmiana kliniczna: NIE — prezentacja istniejących wartości i oceny wg ChPL (bez nowych obliczeń, progów ani zdań;
+linia oceny w Przeglądzie = tytuł i pierwsze zdanie tej samej oceny).** Plan i etapy: `docs/KARTA_LECZENIE_PLAN.md`;
+łatki: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-KARTA-LECZENIE, etap 2”.
+
+**Decyzje właściciela.** Makieta hybrydy zaakceptowana 2026-11-19 (komputer i telefon: „Przegląd”, „Wpisy”, „Wpisy (7)”,
+„Analiza”); „zaczynaj etap 2” 2026-11-21. GH (przełącznik „Przegląd | Trend dawki | Analiza”) — etap 3.
+
+**Stan przed zmianą.** W zakładce „Leczenie” grupa otyłości (`Ob_dz`) to trzy bloki jeden pod drugim: podsumowanie
+(`Cl`: znacznik, stan, pola Lek, Substancja, Włączenie, Aktualna dawka, Punkty kontrolne, Ostatnia kontrola), sekcja
+„Wpisy leczenia” (`VildaDziennikOtylosciUI.sekcja`: tytuł, wstęp, „+ Kontynuacja”, podpowiedź, wpisy) i belka „Dane
+analityczne — otyłość” (`Ml`, panel zwinięty).
+
+**Karta leczenia** (jedna miętowa karta — kontener podsumowania `.vilda-gh-summary`; `Ko_karta`):
+- **Nagłówek**: znacznik leku i stan (jak dotąd, także „cykl k z N”), po prawej „+ Kontynuacja” — ten sam przycisk i ta
+  sama obsługa co w nagłówku sekcji (sekcja w układzie „karta” oddaje akcje swojego nagłówka; bez aktywnego cyklu także
+  „Włączenie w DocPro →”, „Brak aktywnego cyklu — …” i po kliknięciu wyjaśnienie DZ-5 — w komunikacie pod nagłówkiem),
+  widoczny w każdym widoku. Pola siatki podsumowania znikają z góry; „Poprzednie cykle”, ramka „Brak punktu
+  „Włączenie”” i nota „Zapis cyklu wymaga uporządkowania” zostają pod nagłówkiem (w każdym widoku).
+- **Przełącznik** „Przegląd | Wpisy (N) | Analiza” (wygląd `.vilda-oba-seg`, `tablist`/`tab`, `aria-selected`,
+  `tabpanel`), domyślnie „Przegląd”. N = liczba widocznych wpisów dziennika bieżącego zapisu (ta sama liczba co
+  „Pokaż wszystkie wpisy (N)”, oddana przez sekcję z danych dziennika).
+- **Przegląd**: cztery kafelki (komputer 1 × 4, telefon ≤ 560 px 2 × 2) i linia oceny. Wartości z obiektów wyjściowych
+  `Cl` i `Ml`/`Ob_b` — z tych samych zmiennych, z których powstają kafelki i pole oceny panelu (bieżący cykl), nigdy
+  z tekstu DOM; brak wartości — „—”:
+  - Aktualna dawka — wartość jak dotąd w podsumowaniu (P-OTYLOSC-DAWKA); podpis: częstość leku i „od DD.MM.RRRR”.
+    Częstość: lek rozpoznany jak w ocenie (`ObesityResponseCriteria.resolveDrug`), wartość jak `products[…].frequency`
+    katalogu `obesity_therapy.js` (Wegovy, Mounjaro „1×/tydz.”, Saxenda „1×/dobę”; Mysimba „wg titracji” i lek
+    nierozpoznany — bez częstości). „od” — najwcześniejszy punkt bieżącego cyklu z tą samą dawką (tekst jak w podsumowaniu)
+    ciągle do ostatniego punktu; punkt bez dawki albo z inną przerywa ciąg; bez dawki — bez podpisu;
+  - Czas leczenia — kafelek „Czas leczenia” panelu (bez Włączenia „Czas od 1. punktu”, wtedy ta etykieta i bez podpisu);
+    podpis „od DD.MM.RRRR (wiek)” z punktu Włączenia (bez daty — „w wieku …”);
+  - Masa — „Masa ostatnia”; podpis jak „Redukcja masy”: „−X kg (−Y%) od włączenia” (kolor good/bad kafelka; bez
+    Włączenia „od 1. punktu”);
+  - BMI — BMI ostatniego punktu (jak w podpisie „Masa ostatnia”); podpis jak „Redukcja BMI”: „−Y% od włączenia”.
+    Ostatni wpis bez wzrostu (np. masa od pacjenta), a ocena liczy BMI albo ΔbmiSDS: wartość „—”, podpis „brak wzrostu
+    w ostatnim wpisie · ocena: {wartość „Redukcji do oceny”} (z wpisu {data wpisu z kafelka „Wzrost do oceny”}) · próg
+    ChPL ≥ …” — te same liczby co pasek leczenia i panel (poprawka po przeglądzie 2026-11-21; dotąd „—” z samym
+    progiem, a „Przegląd” nie mówił, że ocena pochodzi ze starszego wpisu); ocena wstrzymana — bez części „ocena”;
+  - „próg ChPL ≥ …” (wartość kafelka „Próg ChPL”, tylko gdy kafelek stoi w panelu i ma próg) w podpisie kafelka miary
+    oceny: Masa przy „masa ciała” (dorośli), BMI przy „BMI” i „ΔbmiSDS” (dzieci i młodzież);
+  - linia oceny — ikona, tytuł i pierwsze zdanie opisu pola oceny panelu (każdy stan; kolory pola: oczekiwanie —
+    bursztyn przerywany, wystarczająca — zieleń, niewystarczająca — czerwień), na końcu „Szczegóły oceny” (→ „Analiza”,
+    przewinięcie do pola oceny i fokus na nim). Linia opisuje bieżący cykl, więc „Szczegóły oceny” przełącza panel z powrotem
+    na bieżący cykl (przycisk przełącznika cykli z `data-biezacy="true"`), gdy lekarz wybrał w „Analizie” inny cykl
+    (poprawka po przeglądzie 2026-11-21; dotąd pokazywało pole oceny ostatnio wybranego cyklu). Pierwsze zdanie: tekst opisu do pierwszej kropki (wykrzyknika, pytajnika,
+    także „.)”), po której stoi odstęp i wielka litera — skróty („4. tydz.”, „tyg.”, „l.”) nie kończą zdania; tekst bez
+    zmian (separator „ · ” nie kończy zdania). Brak oceny (moduł progów niezaładowany, panel bez rysunku) — bez linii.
+- **Wpisy**: sekcja bez nagłówka; objaśnienia (wstęp, podpowiedź o DocPro, „Wpisy z dawnych wizyt…”) pod łączem
+  rozwijanym „Jak działa dziennik leczenia ⌄” (stan łącza per pacjent, jak „Pokaż wszystkie”). Wpisy, przyciski,
+  „Pokaż wszystkie wpisy”, „Usunięte wpisy”, konflikt wersji, „Cofnij” — bez zmian.
+- **Analiza**: panel „Dane analityczne — otyłość” rozwinięty, bez belki; nad nim cicha linia „{lek} · {substancja} ·
+  N punktów kontrolnych” (przy > 1 cyklu „N … w cyklu (M łącznie)”, jak dotąd pole „Punkty kontrolne”). Kafelki, pole
+  oceny, przełącznik cykli i wykres z Masa / BMI / ΔBMI-SDS — bez zmian.
+- **Stan widoku**: przebudowa grupy (zapis wpisu, „Pokaż wszystkie”, „Usunięte wpisy”, odświeżenie Karty po
+  synchronizacji) zostawia wybrany widok; „Przegląd”, N i pasek leczenia są przeliczone. Przełącznik cykli zmienia tylko
+  panel. Nowe otwarcie Karty (także powrót „wstecz” rysujący Kartę od nowa) — „Przegląd”.
+- **Liczniki wpisów**: „Wpisy (N)” liczy wszystkie wiersze sekcji (jak „Pokaż wszystkie wpisy (N)”), także punkty
+  dawnych wizyt jeszcze nieprzeniesione do dziennika; „Wpisy leczenia otyłości (N)” w „Notatkach” liczy notatki dziennika
+  schowane na liście Notatek (bez punktów wizyt) — dwie różne liczby, bez zmian w tym PR.
+- **Odnośniki**: pasek leczenia nad zakładkami — zakładka i przewinięcie do karty, bez zmiany widoku; „Notatki”
+  („Wpisy leczenia otyłości (N) — Leczenie →”) — zakładka, widok „Wpisy”, przewinięcie do karty, fokus na „Wpisy”;
+  „Wybierz wersję”, „Edytuj w DocPro →” — w „Wpisach”; zdania z tekstem „w „Wpisy leczenia”” (pole oceny przy konflikcie,
+  Historia, ostrzeżenie „Postępów”) — bez zmian (tekst; sekcja ma etykietę „Wpisy leczenia”).
+- **Bez zmian**: karta „wg notatek” (`jl`), GH, pacjent bez leczenia otyłości; pasek leczenia (etap 1); dane, sejf,
+  dziennik, progi, zdania oceny, skoki do DocPro. Gdy karta się nie złoży (wyjątek) — grupa jak w etapie 1.
+
+**Przypadki syntetyczne** (dane fikcyjne; chwila 19.11.2026; komputer 1440 px, telefon 393 px):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| O1 | nastolatka 17 l., Wegovy: Włączenie 23.06.2026 91,9 kg / 157 cm (0,25 mg), Kontynuacja 10.11.2026 84 kg (2,4 mg) | Przegląd: „2,4 mg” (1×/tydz. · od 10.11.2026), „20 tyg.” (od 23.06.2026 (17 l. 6 mies.)), „84 kg” (−7,9 kg (−8,6%) od włączenia), „BMI 34,1” (−8,6% od włączenia · próg ChPL ≥5%); linia „⏳ Przed oknem oceny — oceń po 12 tyg. Obecnie 4. tydz. stosowania dawki podtrzymującej. Szczegóły oceny”; „Wpisy (2)”; Analiza — kafelki, pole oceny i wykres jak dotąd |
+| O1 + wpis z „Wpisów” | „+ Kontynuacja” 17.11.2026 82,5 kg / 157 cm | zostaje „Wpisy”, „Wpisy (3)”; Przegląd „21 tyg.”, „82,5 kg” (−9,4 kg (−10,2%)), BMI 33,5 (−10,2%); pasek „2,4 mg · 21 tyg. · BMI −10,2%”; zapis z „Przeglądu” — zostaje „Przegląd” |
+| O2 | 4 wizyty + 3 wpisy od pacjentki (7 wpisów), 79,4 kg / 157,4 cm 10.11.2026 | „Wpisy (7)”, „Pokaż wszystkie wpisy (7)” zostawia „Wpisy”; dawka „od 09.06.2026”; linia „✓ Odpowiedź wystarczająca — kontynuować leczenie Osiągnięto −14,0% (BMI) po 22 tyg. stosowania dawki podtrzymującej · próg ChPL: … ocenić.” |
+| dorosły | Saxenda 40 l., 104 → 97 kg / 170 cm, 17 tyg. | „3,0 mg” (1×/dobę · od 12.05.2026); Masa „97 kg” (−7,0 kg (−6,7%) od włączenia · próg ChPL ≥5%), BMI bez progu; Wegovy 47 l. (ocena kliniczna, „Próg ChPL: —”) — bez progu |
+| bez Włączenia | O1, oba punkty „Kontynuacja” | kafelek „Czas od 1. punktu” „20 tyg.” bez podpisu, redukcje „od 1. punktu”; linia „ℹ️ Brak punktu „Włączenie” — ocena wg ChPL niedostępna ChPL ocenia odpowiedź … nie zastępuje.” |
+| zakończone | O1 + Zakończenie 17.11.2026 | ta sama karta i przełącznik („Wpisy (3)”); „+ Kontynuacja” z `aria-disabled`, „Włączenie w DocPro →”, wyjaśnienie po kliknięciu w „Przeglądzie”; „Aktualna dawka” „—”; linia „⏳ Cykl zakończony przed oknem oceny Cykl zakończony 17.11.2026 — ocena na dzień Zakończenia, bez zaleceń na dziś.” |
+| dwa cykle | cykl 1 06–12.2025 zakończony, cykl 2 = O1 | Przegląd jak O1; „cykl 2 z 2”; Analiza: „2 punkty kontrolne w cyklu (5 łącznie)”, przełącznik cykli (cykl 1 zmienia panel, nie Przegląd) |
+| ostatni wpis bez wzrostu | nastolatka, Wegovy: Włączenie 05.01.2026 95 kg / 160 cm, 01.08.2026 88 kg / 160 cm, 10.11.2026 85 kg bez wzrostu | BMI „—” (brak wzrostu w ostatnim wpisie · ocena: −7,4% (z wpisu 01.08.2026) · próg ChPL ≥5%); pasek „BMI −7,4%”; „Wzrost do oceny” „pomiar z 01.08.2026 · ostatni wpis bez wzrostu” |
+| dwa cykle + „Szczegóły oceny” | w „Analizie” wybrany cykl 1, potem „Przegląd” → „Szczegóły oceny” | „Analiza” na cyklu 2 („Cykl 2 · Wegovy · bieżący”), pole „Przed oknem oceny — oceń po 12 tyg.” z fokusem |
+| moduł progów niezaładowany | O1 bez `obesity_response_criteria.js` | pole „Moduł progów ChPL niezaładowany” w Analizie; Przegląd bez linii i bez częstości |
+
+**Ograniczenia.** Pierwsze zdanie wyznacza reguła interpunkcji (powyżej): opis zaczynający się od wielkiej litery po
+skrócie z kropką skróciłby zdanie — dziś takich opisów nie ma (test na wszystkich stanach z testów). Porównanie dawek
+w „od” jest tekstowe: „2,4 mg” i „2,4 mg / tydz.” to różne zapisy (podpis nie zawyża czasu stosowania dawki). Częstość
+leku — kopia wartości katalogu `obesity_therapy.js` (ładowany tylko w DocPro); zgodność pilnuje test jednostkowy.
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/karta-leczenie.test.mjs` (50 → 80): prawdziwe `Cl`, `Ml`, `Ob_dz`, `Ko_*` i `vilda_cykle_leczenia.js`
+  — nagłówek, przełącznik i widoki; kafelki i linia wobec kafelków i pola oceny panelu z tego samego rysunku (O1, O2,
+  niewystarczająca, dorosły Saxenda/Wegovy, bez Włączenia, zakończone, dwa cykle, dawka „od”); linia dla każdego stanu
+  oceny; `Ko_pierwszeZdanie`; moduł progów niezaładowany; częstość wobec katalogu; stan widoku po przebudowie, po
+  odświeżeniu po synchronizacji i po nowym otwarciu; „Jak działa…” po przebudowie; karta, która się nie składa — grupa
+  jak w etapie 1; GH i „wg notatek” bez karty; sekcja bez opcji jak dotąd; po przeglądzie: „Szczegóły oceny” po wyborze
+  cyklu 1 wraca do bieżącego cyklu, kafelek BMI przy ostatnim wpisie bez wzrostu (ocena z wcześniejszego wpisu, ocena
+  wstrzymana, ocena z masy — bez zmian). Zmienione oczekiwania (zamierzone): struktura
+  grupy (jedna karta zamiast trzech bloków), „Aktualna dawka” jako kafelek (dawniej pole podsumowania — O1 i zakończone),
+  panel z wyjątkiem wykresu — karta bez „Analizy”.
+- e2e: nowe `tests/e2e/karta-leczenie-etap2.spec.mjs` KO-1…KO-10 (komputer; KO-6 także „Szczegóły oceny” po wyborze
+  cyklu 1, KO-10 — ostatni wpis bez wzrostu) i `karta-leczenie-etap2-mobile.spec.mjs` KOM-1…KOM-3 (telefon: „+ Kontynuacja”
+  44 px po prawej, przełącznik w jednym wierszu, kafelki 2 × 2, linia w kolumnie, „Jak działa…”, zapis z „Wpisów”,
+  podpis kafelka BMI bez wylewania). Istniejące specyfikacje — tylko nawigacja do widoku, asercje treści bez zmian:
+  klik „Wpisy” przed czekaniem na `.vdo` (`otylosc-dziennik-karta` — pomocnik i DZ-4 przed „Wybierz wersję”,
+  `otylosc-dziennik-karta-mobile`, `otylosc-siatki`, `otylosc-skok-docpro` ×2, `postepy-dziennik` ×2, `otylosc-dawka`,
+  `karta-leczenie` KL-5); klik „Analiza” zamiast belki „Dane analityczne — otyłość” (`otylosc-dziennik-karta` ×4,
+  `otylosc-wzrost-etap-1` i `-mobile`, `kotwica-okna-chpl`, `karta-otylosc-bez-punktu-wlaczenia`,
+  `karta-otylosc-cykle-rata-3`, `-rata-4`, `karta-leczenie` KL-1). Zmienione oczekiwania (zamierzone, z tej zmiany):
+  pola podsumowania zniknęły z góry karty — `otylosc-dawka` DW-2 „Aktualna dawka” jako kafelek „Przeglądu”,
+  `karta-otylosc-cykle-rata-3` „Włączenie” → podpis kafelka „Czas leczenia”, „Punkty kontrolne” → cicha linia „Analizy”,
+  `karta-otylosc-bez-punktu-wlaczenia` „Włączenie: brak punktu” → kafelek „Czas od 1. punktu”, „Włączenie w wieku …” →
+  podpis „od DD.MM.RRRR (wiek)”; DZ-5 — wyjaśnienie „+ Kontynuacja” pod nagłówkiem karty (`.vilda-ko-karta
+  .vdo-msg-warn`, dotąd `.vdo .vdo-msg-warn`); KL-6 — przewinięcie do karty i fokus na „Wpisy” (dotąd do sekcji i na jej
+  tytuł, którego w karcie nie ma); KL-1 — pasek zakładek u góry albo Karta przewinięta do końca (krótka zakładka mieści
+  się w oknie 1000 px); SK-4 — sekcja bez własnego tła, miętowe tło karty (makieta; wpisy i przyciski bez zmian).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, sejf, dziennik, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR:
+grupa otyłości znów trzy bloki (etap 1).
+
+## P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem (SW 1.1.567, `vilda_auth_ui.js` 579, `vilda_auth_ui.css` 89, 2026-11-21)
+
+**Zmiana kliniczna: NIE — prezentacja istniejących wartości (bez nowych obliczeń, progów ani zdań); trend dawki
+przeniesiony z „Siatek centylowych” do karty.** Plan i etapy: `docs/KARTA_LECZENIE_PLAN.md`; łatki:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-KARTA-LECZENIE, etap 3”.
+
+**Decyzje właściciela.** Makieta hybrydy zaakceptowana 2026-11-19 (komputer i telefon: „Przegląd”, „Trend dawki”,
+„Analiza”, telefon „Przegląd”, oba leczenia); „Etap 3, karta leczenia GH” 2026-11-21. Zmiana etykiety przycisku
+notatki GH na „↗ Trend dawki / punkt GH” i cel bez `ghPointId` (karta GH, „Trend dawki”) — decyzja wykonawcy wynikająca
+z przeniesienia trendu (makieta jej nie obejmuje), zgłoszona właścicielowi 2026-11-21.
+
+**Stan przed zmianą.** W zakładce „Leczenie” grupa GH (`div.vilda-kl-gh`) to podsumowanie `wl` (znacznik, stan,
+„kurs k z N”, „🔄 zmiana preparatu”, pola Program, Preparat, Włączenie, Aktualna dawka, Punkty kontrolne, Ostatnia
+kontrola; „Preparaty (historia)”, ramka P-GH-BEZ-STARTU albo W2) i belka „📊 Dane analityczne” (`kl`, panel zwinięty).
+„Trend leczenia GH” (`Pl`: legenda, wykres % dawki zalecanej albo mg/kg, IGF-1, tabela Wiek | Dawka | IGF-1) stał na
+dole zakładki „Siatki centylowe”. Przycisk notatki GH „↗ Siatki / punkt GH” bez punktu GH otwierał „Siatki centylowe”.
+
+**Karta leczenia GH** (jedna miętowa karta — kontener podsumowania `.vilda-gh-summary`; `Kg_karta`):
+- **Nagłówek**: znacznik („Leczony hormonem wzrostu (rhGH)” / „Leczony IGF-1 (mekasermina)”), stan, „kurs k z N”
+  i „🔄 zmiana preparatu” — jak dotąd; po prawej (telefon ≤ 560 px — w osobnej linii pod znacznikiem) cichy tekst
+  „Program SNP · 7 punktów kontrolnych”: program jak pole „Program” z tym samym dymkiem pełnej nazwy (`bl`), punkty jak
+  pole „Punkty kontrolne” w odmianie `Ko_punkty` (przy > 1 kursie „N … w kursie (M łącznie)”); bez programu — same
+  punkty. Bez przycisków (wpis GH jest w DocPro). Siatka pól podsumowania znika; „Preparaty (historia)”, ramka
+  P-GH-BEZ-STARTU i informacja W2 zostają pod nagłówkiem, nad przełącznikiem (w każdym widoku), bez zmian treści i wyglądu.
+- **Przełącznik** „Przegląd | Trend dawki | Analiza” (wygląd `.vilda-oba-seg`, `tablist`/`tab`, `aria-selected`,
+  `tabpanel`; etykieta „{znacznik} — widok karty”), domyślnie „Przegląd”. „Trend dawki” jest tylko wtedy, gdy `Pl` rysuje
+  trend z punktów GH — co najmniej jeden punkt Włączenie / Kontynuacja / Zakończenie z liczbową dawką (`Kg_punktyTrendu`,
+  ten sam filtr, którego używa `Pl`); inaczej „Przegląd | Analiza”, a `Pl` zostaje w „Siatkach centylowych” jak dotąd
+  (rysuje tam ewentualny trend z wpisów Terminarza).
+- **Przegląd**: cztery kafelki (kafelki etapu 2 — `Ko_kafel`, `Ko_podpisy`; komputer 1 × 4, telefon 2 × 2). Wartości
+  z obiektów wyjściowych `wl` i `kl` — z tych samych zmiennych, z których powstają pola podsumowania i kafelki panelu
+  (bieżący kurs), nigdy z tekstu DOM; brak wartości — „—”; bez linii oceny (GH nie ma oceny ani progów):
+  - Preparat i dawka — „Aktualna dawka” rozbita z danych, z których `wl` składa jej tekst: liczba i jednostka punktu
+    („0,033” + „mg/kg/d”; Ngenla „0,66” + „mg/kg/tydz”); Increlex (P-GH-INCRELEX-KARTA) — części `Gwl_inc`: „2 × 1,2 mg”
+    + „na dobę”, podpis „0,04 mg/kg na podanie · {preparat}” (bez dawki dobowej w mg — „0,04” + „mg/kg na podanie”);
+    podpis — preparat jak pole „Preparat”; brak dawki — „—” z preparatem;
+  - Czas leczenia — ta sama liczba miesięcy co „przez N mies.” kafelka „Przyrost całkowity” (i pasek leczenia), podpis
+    „od {wiek Włączenia bieżącego kursu}” (jak pole „Włączenie”); bez Włączenia (P-GH-BEZ-STARTU) — etykieta „Czas od
+    1. punktu”, liczba z kafelka „Przyrost od 1. punktu”, podpis „od {wiek 1. punktu}”; W2 — „Czas leczenia” „—”
+    z podpisem „brak Włączenia po Zakończeniu”;
+  - Tempo wzrastania — wartość, jednostka, kolor i podpis kafelka panelu („6,2 cm/rok”, „ost. okres (z 6 mies.)”;
+    „krótki odstęp” bez koloru, P-TEMPO-6);
+  - Odpowiedź (ΔhSDS) — wartość i kolor kafelka panelu (zielony ≥ 0, czerwony < 0); podpis „hSDS −2,87 → −1,40” (hSDS
+    kafelków „Wzrost przy włączeniu”/„Wzrost w 1. punkcie” i „Wzrost ostatni”), bez Włączenia z „· od 1. punktu”; brak
+    wartości — „—” i podpis panelu („brak SDS start/teraz”, W2 „brak Włączenia po Zakończeniu”).
+- **Trend dawki**: blok `Pl` w trybie karty (trzeci argument `{ karta: true }`: bez nagłówka „Trend leczenia GH” i bez
+  górnego marginesu; legenda, wykres, „100% zalecana”, znacznik 🔄, „Pokaż typowy zakres dawki”, tabela, scalanie IGF-1
+  z notatek i przerwa linii między kursami bez zmian) w białej ramce wykresu; nagłówek tabeli w ramce — ciemny tekst na
+  jasnym tle (w „Siatkach” motyw dawał mu turkusowe tło; poprawka klasą tylko w karcie). `Pl` bez opcji rysuje jak
+  dotąd. Gdy karta ma „Trend dawki”, „Siatki centylowe” trendu nie rysują — `Pl` woła się raz, w karcie (asynchronicznie;
+  karta na niego nie czeka). Wykres to SVG z `viewBox` (szerokość 100%), więc rysuje się poprawnie także w widoku
+  ukrytym przy budowie karty i w ukrytej zakładce.
+- **Analiza**: panel „📊 Dane analityczne” rozwinięty, bez belki; nad nim cicha linia „SNP — somatotropinowa
+  niedoczynność przysadki · Genotropin 12 mg · ostatnia kontrola w wieku 10 l. 0 mies.” (pełna nazwa programu jak dymek
+  pola „Program”, preparat, ostatnia kontrola jak pole; brak części — bez niej). Sekcje „Wzrastanie”, „Odpowiedź na
+  leczenie wg preparatu”, „Prognoza wzrostu ostatecznego”, „Prognozy wg danych z …” i przypis — bez zmian treści.
+- **Stan widoku**: pamięć widoku per pacjent (`Kg_widoki`, osobna od karty otyłości) przetrwa odświeżenie Karty po
+  synchronizacji; nowe otwarcie Karty — „Przegląd” (czyszczona razem z `Ko_zapomnij`).
+- **Odnośniki**: pasek GH nad zakładkami — bez zmian (zakładka i przewinięcie do karty, widok bez zmian); arkusz
+  notatki GH — **„↗ Trend dawki / punkt GH”** (dotąd „↗ Siatki / punkt GH”): z `ghPointId` — DocPro jak dotąd (`Gr`);
+  bez `ghPointId` — Karta opcją `{ activeTab: "leczenie", widokGh: "trend" }`: zakładka „Leczenie”, karta GH na „Trendzie
+  dawki”, przewinięcie do karty i fokus na „Trend dawki” (gdy trend jeszcze czeka na odczyt notatek z IGF-1, a Karta jest
+  za krótka, by przewinąć — przewinięcie powtarza się po narysowaniu, o ile widok się nie zmienił); gdy karta GH nie ma
+  „Trendu dawki” albo Karta nie ma karty GH — „Siatki centylowe” jak dotąd (`Kg_opcjeKarty`). „↗ Otwórz kartę pacjenta” — bez zmian („Status”).
+- **Bez zmian**: karta otyłości (etap 2) i jej DOM, karta „wg notatek”, pasek leczenia (treść), kolejność kart (D2), pas
+  GH na siatkach, „Analiza trajektorii”, Status, Historia, Badania, DocPro, monitor, dane, sejf, obliczenia, progi, teksty
+  kafelków panelu. Pacjent bez GH — DOM jak dotąd. Gdy karta GH się nie złoży (wyjątek) — bloki jak w etapie 1 i trend
+  w „Siatkach”.
+
+**Przypadki syntetyczne** (dane fikcyjne; chwila 19.11.2026; komputer 1440 px, telefon 393 px; hSDS w e2e z OLAF —
+prawdziwa strona, w testach jednostkowych z atrapy liniowej):
+
+| Przypadek | Wejście | Oczekiwany wynik |
+|---|---|---|
+| G1 | chłopiec 10 l., SNP, Genotropin 12 mg, 7 punktów 7 l. 0 mies. (110 cm, 0,025) – 10 l. 0 mies. (132,4 cm, 0,033 mg/kg/d) | nagłówek „Program SNP · 7 punktów kontrolnych” (dymek „SNP — somatotropinowa niedoczynność przysadki”); Przegląd: „0,033 mg/kg/d” · Genotropin 12 mg; „36 mies.” · od 7 l. 0 mies.; „6,2 cm/rok” · ost. okres (z 6 mies.) (zielony); „+1,47” · hSDS −2,87 → −1,40 (zielony); Trend dawki — wykres (74% … 97%, „100% zalecana”) i tabela 7 wierszy; „Siatki centylowe” bez „Trend leczenia GH”; Analiza — cicha linia jak wyżej i dzisiejsze kafelki |
+| G2 | G1, od 9 l. 0 mies. Omnitrope 10 mg | „🔄 zmiana preparatu”, „Preparaty (historia)” nad przełącznikiem (w każdym widoku), legenda „Genotropin 12 mg”, „Omnitrope 10 mg”, znacznik 🔄 na wykresie, „Odpowiedź na leczenie wg preparatu” w Analizie |
+| G3 | G1 bez punktu Włączenie (6 punktów od 7 l. 6 mies.) | ramka P-GH-BEZ-STARTU nad przełącznikiem; „Czas od 1. punktu” „30 mies.” · od 7 l. 6 mies.; ΔhSDS „… · od 1. punktu” |
+| Increlex | IGF-1, Increlex 40 mg, 7 l. 6 mies. – 8 l. 0 mies., 4,8 mg/d przy 20 kg | „Leczony IGF-1 (mekasermina)”, „Program IGF-1 · 2 punkty kontrolne”; kafelek „2 × 2,4 mg” + „na dobę”, podpis „0,12 mg/kg na podanie · Increlex 40 mg”; trend — tabela „2 × 0,8 mg na dobę (0,042 mg/kg na podanie)”, „2 × 2,4 mg na dobę (0,12 mg/kg na podanie)” (legenda „dawka (mg/kg na podanie)” tam, gdzie nie ma % dawki zalecanej — bez zmian `Pl`) |
+| zakończone | X1: GH Omnitrope 9–15 l. zakończone + Wegovy trwa | „leczenie zakończone”, ta sama karta i przełącznik; „Program SNP · 4 punkty kontrolne”; „0,025 mg/kg/d”, „72 mies.” · od 9 l. 0 mies., „6,8 cm/rok”, „+1,73” · hSDS −2,54 → −0,81; karta otyłości nad kartą GH (D2) |
+| wznowienie | R1 (GR1): W 7;0 → K 8;0 → Z 9;0 → W 10;0 → K 11;0 | „kurs 2 z 2”, „Program SNP · 2 punkty kontrolne w kursie (5 łącznie)”; „12 mies.” · od 10 l. 0 mies., „7 cm/rok” · ost. okres (z 12 mies.), „+0,37” · hSDS −1,77 → −1,40; trend z przerwą linii (3 odcinki % dawki) |
+| W2 | W 7;0 → Z 9;0 → K 10;0 → K 11;0 | informacja W2 nad przełącznikiem; „Czas leczenia” „—” · brak Włączenia po Zakończeniu; ΔhSDS „—” · brak Włączenia po Zakończeniu; „2 punkty kontrolne w kursie (4 łącznie)” |
+| punkty bez dawki | G1 bez dawek + wpis Terminarza 0,033 mg/kg/d | „Przegląd \| Analiza”; „Trend leczenia GH” (z Terminarza) w „Siatkach centylowych” |
+| GH + otyłość | G1 + O1 / X1 | dwie karty, kolejność i paski bez zmian; widoki obu kart niezależne (także po odświeżeniu po synchronizacji) |
+| odświeżenie / nowe otwarcie / pasek | G1 na „Trendzie dawki” | `vilda:sync-merged` — „Trend dawki” zostaje; nowe otwarcie — „Przegląd”; pasek — zakładka i przewinięcie do karty, widok bez zmian |
+| notatka GH | bez `ghPointId` / z `ghPointId` | „Leczenie”, karta GH na „Trendzie dawki”, karta u góry widoku, fokus na „Trend dawki” / DocPro (`docpro.html`); bez punktów z dawką — „Siatki centylowe” |
+
+**Ograniczenia.** Kafelki opisują bieżący kurs, jak podsumowanie i panel. Podpis „od …” kafelka czasu to wiek (punkty GH
+nie mają daty). Gdy Włączenie jest jedynym punktem kursu, „Czas leczenia” ma „—” (panel nie podaje wtedy „przez N mies.”).
+Tabela trendu w ramce dziedziczy rozmiar tekstu komórek z motywu strony, jak w „Siatkach” (bez zmian).
+
+**Testy.** Dane wyłącznie fikcyjne.
+- `tests/unit/karta-leczenie.test.mjs` (80 → 104): prawdziwe `wl`, `kl`, `Pl`, `Kl_leczenie` i `Kg_*` — nagłówek,
+  dymek, przełącznik i widoki; kafelki wobec kafelków panelu z tego samego rysunku (G1, G2, G3, Increlex z trzema
+  wariantami dawki, Ngenla, zakończone, GR1, W2, bez dawki), `Pl` bez opcji jak dotąd i z opcją karty bez nagłówka
+  (to samo drzewo pozostałych węzłów), jeden filtr trendu, panel „Analizy” = panel spod belki, GH + otyłość z niezależnymi
+  widokami, stan widoku (`tlo`, nowe otwarcie), opcja `widokGh` i `Kg_opcjeKarty`, karta, która się nie składa (bloki
+  etapu 1), pacjent bez GH; trend rysowany po odczycie notatek (zgłoszenie `poRysunku`, IGF-1 z notatki w tabeli,
+  ponowne przewinięcie z notatki GH i jego brak po zmianie widoku). Zmienione oczekiwania (zamierzone): pola podsumowania GH → nagłówek, kafelki i cicha linia
+  (GR1, GR2, GW5, GR3, drugie Włączenie, „ze startem”, Increlex), belka GH → „Analiza”, informacje W2/P-GH-BEZ-STARTU
+  odczytywane nad przełącznikiem, „GH bez karty z przełącznikiem” → GH bez karty otyłości.
+- `tests/unit/care-plan-auth-ui-boundary.test.mjs`: nowy odcisk treści edytora notatki (etykieta i opcja otwarcia Karty).
+- e2e: nowe `tests/e2e/karta-leczenie-etap3.spec.mjs` KG-1…KG-10 (komputer) i `karta-leczenie-etap3-mobile.spec.mjs`
+  KGM-1…KGM-2 (telefon: cichy tekst pod znacznikiem, przełącznik w jednym wierszu, kafelki 2 × 2, trend i tabela bez
+  przewijania w bok). Istniejące specyfikacje — nawigacja do widoku: klik „Analiza” zamiast belki „📊 Dane analityczne”
+  (`karta-leczenie` KL-2, KL-7, `karta-gh-bez-punktu-wlaczenia`, `karta-gh-increlex-widoki`, `karta-gh-tempo-krotki-odstep`),
+  trend w widoku „Trend dawki” zamiast „Siatek” (`karta-leczenie` KL-7, `karta-gh-increlex-widoki` — trend z samego
+  Terminarza dalej w „Siatkach”), etykieta „Trend dawki / punkt GH” w lokatorach (`skok-gh-rozgloszenie`,
+  `sesja-bez-cudzych-danych`, `cel-wlasny-zapis`, `powloka-panel-obcy-pacjent`, `powloka-tozsamosc-ramki`,
+  `powloka-zmiana-pacjenta`), `widokKarty` (pomocnik etapu 2) szuka zakładek w karcie otyłości. Zmienione oczekiwania
+  (zamierzone, z tej zmiany): pola podsumowania GH zniknęły — „Włączenie” → podpis kafelka „Czas leczenia”/„Czas od
+  1. punktu”, „Punkty kontrolne” → cichy tekst nagłówka, „Ostatnia kontrola” → cicha linia „Analizy”, „Aktualna dawka” →
+  kafelek „Preparat i dawka” (`karta-leczenie` KL-7, `gh-wznowienie-docpro` i `-mobile`, `karta-gh-bez-punktu-wlaczenia`,
+  `karta-gh-increlex-dawka`); `karta-leczenie-etap2` KO-9 — GH ma własną kartę (dotąd „GH bez przełącznika, z polami”).
+- Kontrola negatywna na `origin/audyt` 19fd027e: nie przechodzi 34 testów jednostkowych (24 nowe, 9 zmienionych oczekiwań,
+  odcisk edytora notatki) i 34 testy e2e (12 nowych KG/KGM i 22 zmienione: nawigacja do widoku, etykieta przycisku,
+  pola podsumowania).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, sejf, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: GH znów
+podsumowanie z polami i belka „Dane analityczne”, trend w „Siatkach centylowych”, przycisk notatki „↗ Siatki / punkt GH”.
+
+## P-GH-PREPARAT-BIEZACY — Karta: Increlex czy rhGH wg bieżącego preparatu (SW 1.1.573, `vilda_auth_ui.js` 582, 2026-11-23)
+
+**Zmiana kliniczna: TAK — po zmianie Increlex → rhGH (albo odwrotnie) Karta opisuje bieżący preparat: znacznik, program,
+dawka (bez dzielenia dawki rhGH na podanie).** Wzory, dawki zapisane w punktach, % dawki zalecanej, progi, kursy
+(P-GH-WZNOWIENIE), DocPro, Terminarz, sejf i zapis — bez zmian. Łatka: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka
+P-GH-PREPARAT-BIEZACY”.
+
+**Decyzja właściciela.** Przegląd etapu 3 Karty „Leczenie” (2026-11-21) znalazł błąd sprzed etapu 3; właściciel
+2026-11-23: „popraw ten błąd” (zgoda na zmianę kliniczną).
+
+**Źródło, populacja, jednostki.** Jak w P-GH-INCRELEX-PODANIE i P-GH-INCRELEX-KARTA: ChPL Increlex (EMA, PDF
+z 26.03.2026), pkt 4.2 — dawka mekaserminy wyrażana na podanie (mg/kg), 2× na dobę; preparaty somatotropiny i somatrogonu
+— dawka mg/kg/d albo mg/kg/tydz (bez zmian). Zmiana nie wprowadza nowych liczb ani progów: przypisuje istniejący sposób
+pokazania dawki do preparatu, który dziecko przyjmuje teraz. Populacja: dzieci leczone w programach GH/IGF-1 ze zmianą
+preparatu między mekaserminą a rhGH (oraz zapisy z brakującym lekiem lub programem w punkcie).
+
+**Stan przed zmianą (`audyt` a7b2920b, prawdziwe `wl`/`Pl` w teście jednostkowym i prawdziwa Karta w e2e).** Podsumowanie
+GH (`wl`) brało program z punktu Włączenia bieżącego kursu (`c=r.program||d.program`), a `s=c==="IGF-1"||/^Increlex/…` —
+program startu przesądzał o Increlexie, choć bieżący lek (ostatni punkt) to Genotropin. Przypadek I→G niżej: znacznik
+„Leczony IGF-1 (mekasermina)”, „Program IGF-1 · 3 punkty kontrolne” (dymek „IGF-1 — pierwotny niedobór IGF-1”), kafelek
+„Preparat i dawka” „2 × 0,35 mg na dobę” · „0,017 mg/kg na podanie · Genotropin 12 mg” (dawka Genotropinu dzielona na pół
+jak dawka Increlexu na podanie), pasek leczenia „2 × 0,35 mg na dobę (0,017 mg/kg na podanie) · 12 mies. · …”, linia
+„Analizy” „IGF-1 — pierwotny niedobór IGF-1 · Genotropin 12 mg · …”, etykieta przełącznika „Leczony IGF-1 (mekasermina) —
+widok karty”. Odwrotnie (G→I) znacznik i dawka były już IGF-1 (lek ostatniego punktu), ale program — SNP (Włączenia).
+Trend (`Pl`): program pasa „Pokaż typowy zakres dawki” = program pierwszego Włączenia z programem w kursie (I→G — pas
+IGF-1 0,08–0,24 mg/kg/d przy punktach Genotropinu; pas widać tylko na wykresie w mg/kg, gdy żaden punkt nie ma % dawki
+zalecanej). Punkt pojedynczy (`Gwl_isInc`): „Increlex ALBO program IGF*” — Genotropin z programem IGF-1 w dawce na podanie.
+
+**Reguła** (blok `Gp_*` w `vilda_auth_ui.js`). Stan bieżący leczenia GH opisuje bieżący preparat — ostatni punkt wg wieku
+bieżącego kursu (`d`, jak „Aktualna dawka” i „Ostatnia kontrola”):
+1. **Increlex czy rhGH**: ostatni punkt kursu (wg wieku, od końca), który ma lek albo program — gdy ma lek, decyduje lek
+   (`/^Increlex/`), bez leku — jego program (`/^IGF/`); bez leku i programu w całym kursie — rhGH.
+   **Lek bieżący**: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy lek **tego samego rodzaju** (Increlex albo rhGH);
+   brak — „—” (lek drugiego rodzaju nigdy nie podpisuje bieżącej dawki).
+2. **Program bieżący** (cichy tekst „Program …”, dymek pełnej nazwy, pole „Program” przy karcie, która się nie złożyła):
+   program ostatniego punktu; gdy pusty — ostatni wcześniejszy program **tego samego rodzaju** (IGF… przy Increlexie, inny
+   przy rhGH); brak — „—” (program Włączenia IGF-1 nie przechodzi na kurs rhGH). Uzupełnianie „tylko tego samego rodzaju”
+   dodano po niezależnym przeglądzie (2026-11-23): w starych zapisach z lukami (punkt bez leku z programem SNP po Włączeniu
+   Increlex; Genotropin bez programu po Włączeniu Increlex) znacznik, program, dawka i wiersz trendu nie mogą sobie przeczyć.
+3. Z 1 i 2 — jak dotąd z `c`/`s`: znacznik, „Aktualna dawka” (Increlex na podanie `Gwl_inc` vs mg/kg/d, mg/kg/tydz),
+   kafelek „Preparat i dawka” (`Kg_dawkaCz`), pasek leczenia (`Kl_daneGh`), cichy tekst nagłówka, etykieta przełącznika,
+   linia „Analizy” (`Kl_wy.program`, `programPelny`). Pole „Preparat” i podpis kafelka (`Kl_wy.preparat`) — ten sam lek
+   bieżący (dotąd `d.drug||r.drug`; różnica tylko przy ostatnim punkcie bez leku — rozstrzygnięcie wykonawcy, by kafelek
+   nie podpisał dawki rhGH preparatem Włączenia).
+4. **Punkt pojedynczy** (`Gwl_isInc`: wiersz tabeli trendu, legenda i skala wykresu w mg/kg — `Gwl_all`, odcinki leków
+   w „Analizie”, Historia i edytor notatki — `Gwl_hist`): gdy punkt ma lek — decyduje lek; bez leku — program punktu
+   (`/^IGF/`, jak dotąd). Różnica tylko dla punktu z niespójnymi danymi (np. Genotropin z programem IGF-1).
+5. **Trend** (`Pl`): program pasa „Pokaż typowy zakres dawki” — program bieżący z pkt 2 (punkty bieżącego kursu,
+   `Gw_punktyProgramu`). % dawki zalecanej per punkt (`VildaGhSegments.ghDosePercent`) — bez zmian.
+6. Kurs jednym preparatem i jednym programem (każdy punkt z lekiem i programem, jak zapisuje je DocPro) — wynik
+   identyczny jak dotąd. Wynik inny niż dotąd również (z tej samej reguły) przy: punkcie bez leku/programu (pkt 1–2 sięgają
+   do wcześniejszego punktu kursu) i **zmianie programu w kursie bez zmiany leku** (np. Genotropin SNP → Genotropin ZT:
+   Karta pokazuje program ostatniego punktu, dotąd program Włączenia — tak jak lista „aktualnie leczonych” w sejfie, która
+   bierze program ostatniego punktu).
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; wartości z kodu; wiek l.;mies.).
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| I→G | W Increlex 40 mg, IGF-1, 7;0 (18 kg, 0,08 mg/kg/d, 1,44 mg/d) → K Genotropin 12 mg, SNP, 7;6 (0,033) → K Genotropin, SNP, 8;0 (21,3 kg, 0,033, 0,7 mg/d) | „Leczony hormonem wzrostu (rhGH)”, „Program SNP · 3 punkty kontrolne” (dymek „SNP — somatotropinowa niedoczynność przysadki”); kafelek „0,033” + „mg/kg/d” · Genotropin 12 mg; pasek „0,033 mg/kg/d · 12 mies. · …”; linia „Analizy” „SNP — … · Genotropin 12 mg · ostatnia kontrola w wieku 8 l. 0 mies.”; tabela trendu: „2 × 0,72 mg na dobę (0,04 mg/kg na podanie)”, „0,033 mg/kg/d”, „0,033 mg/kg/d”; pas typowego zakresu SNP | IGF-1, „2 × 0,35 mg na dobę” · 0,017 mg/kg na podanie; tabela bez zmian; pas IGF-1 |
+| G→I | W Genotropin 12 mg, SNP, 7;0 (0,025) → K Increlex 40 mg, IGF-1, 7;6 (19,6 kg, 0,08, 1,6 mg/d) | „Leczony IGF-1 (mekasermina)”, „Program IGF-1 · 2 punkty kontrolne”; kafelek „2 × 0,8 mg” + „na dobę” · 0,04 mg/kg na podanie · Increlex 40 mg; pasek „2 × 0,8 mg na dobę (0,04 mg/kg na podanie) · 6 mies. · …” | „Program SNP · …” (reszta jak po zmianie) |
+| cały Increlex / cały rhGH | P-GH-INCRELEX-* (Increlex 40 mg, IGF-1), G1 etapu 3 (Genotropin, SNP), Ngenla, zakończone, wznowienie GR1, W2, bez Włączenia | bez zmian (testy etapu 3 i P-GH-INCRELEX-* bez zmian oczekiwań) | — |
+| punkt bez leku | I→G z ostatnim punktem bez leku i programu | rhGH, „Program SNP · 3 punkty kontrolne”, „0,033 mg/kg/d” · Genotropin 12 mg; wiersz trendu „0,033 mg/kg/d” | IGF-1, „2 × 0,35 mg na dobę” · 0,017 mg/kg na podanie · Increlex 40 mg |
+| luki po Włączeniu Increlex | A: Kontynuacje bez leku z programem SNP; B: Kontynuacje Genotropin bez programu | A: rhGH, „Program SNP · 3 punkty kontrolne”, „0,033 mg/kg/d” bez podpisu preparatu, wiersz trendu „0,033 mg/kg/d”; B: rhGH, „3 punkty kontrolne” (bez programu), „0,033 mg/kg/d” · Genotropin 12 mg, bez pasa typowego zakresu | A: IGF-1, dawka na podanie, „Program IGF-1”; B: IGF-1, dawka na podanie |
+| niespójny punkt | G1 z programem IGF-1 we wszystkich punktach | rhGH, „Program IGF-1 · 3 punkty kontrolne” (program jak zapisany), „0,033 mg/kg/d”; tabela trendu w mg/kg/d, legenda „dawka (mg/kg/d)” | IGF-1, „2 × 0,49 mg na dobę” · 0,017 mg/kg na podanie; tabela na podanie |
+| wznowienie | kurs 1 Increlex (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0) | „kurs 2 z 2”, rhGH, „Program SNP · 2 punkty kontrolne w kursie (4 łącznie)”, „0,033 mg/kg/d” | tak samo (bieżący kurs zaczyna Genotropin — już dotąd) |
+
+**Czego to nie zmienia (inwentarz poza Kartą).**
+- `gh_therapy_monitor.js` (monitor DocPro): tabela i dawka per wiersz z leku punktu (`Gmpod` — `VildaGhDawka.preparat`),
+  bez reguły „program ze startu”. Pole „Program terapeutyczny” karty terapii (`#therProg`) bierze program z Włączenia
+  kursu i jest zablokowane przy punktach (P-GH-PROGRAM-ODBLOKUJ) — po I→G pokazuje IGF-1; to pole zasila program nowych
+  punktów z karty terapii i kalkulator dawki (preparaty wg programu), więc zmiana nie jest małą poprawką wyświetlania —
+  do decyzji właściciela. [od P-GH-PROGRAM-BIEZACY (decyzja właściciela 2026-11-23, wpis niżej): pole poza edycją punktu
+  i wiersz „Program terapeutyczny: …” nad tabelą = program bieżący bieżącego kursu wg tej samej reguły co Karta (po I→G —
+  SNP), a lista preparatów karty idzie za polem, gdy program pola zgadza się z rodzajem bieżącego preparatu; edycja
+  punktu, blokada i pusta lista bez zmian.] [od P-GH-PROGRAM-EDYCJA (2026-11-23): przy edycji punktu pole i program
+  zapisany edycją = program edytowanego punktu, nie program Włączenia.]
+- `gh_igf_therapy.js` (Terminarz, `Qe`): wizyta kontrolna z ostatniego punktu wg wieku, dawka wg leku punktu — bez błędu.
+  Tytuł nowego wpisu „Leczenie IGF-1 (mekasermina)” przy „Increlex albo program IGF-1” punktu — różni się od reguły pkt 4
+  tylko przy niespójnym punkcie; to zapis wpisu (dane), bez zmian.
+- `vilda_vault.js`: listy automatyczne „GH” (`De`) — „aktywne” z programu ostatniego punktu wg wieku, „kiedykolwiek” —
+  z dowolnego punktu, zmiana preparatu z `fromDrug/toDrug` — bez błędu; tytuł wpisów Historii z punktów — per punkt
+  „Increlex albo IGF-1” (jak Terminarz) — sejf bez zmian.
+- `gh_therapy_segments.js`: 100% dawki zalecanej per punkt (`ghRecommendedDose`: „program IGF-1 albo lek Increlex” →
+  0,24 mg/kg/d) — w I→G poprawne (każdy punkt ze swoim programem); niespójny punkt Genotropin + IGF-1 dostaje cel
+  Increlexu — tylko opis (bez zmian pliku). Program odcinka = program 1. punktu odcinka.
+- `vilda_trajectory_analysis.js` (`ghKursy`: etykieta kursu = preparat ostatniego punktu z preparatem),
+  `vilda_summary_cards.js`, epikryza (`vilda_epicrisis.js`) — bez rozróżnienia Increlex/rhGH ani programu z punktów.
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- `tests/unit/karta-leczenie.test.mjs` (104 → 114; prawdziwe `wl`, `kl`, `Pl`, `Kl_leczenie` i blok `Gp_*`): I→G (karta,
+  pasek, trend), I→G z odcinkami, G→I, cały Increlex / cały rhGH, punkt bez leku, luki po Włączeniu Increlex (A, B), niespójny punkt, wznowienie, pas
+  typowego zakresu w trendzie, reguła w kodzie (`Gp_biezacy`, `Gp_program`, `Gwl_isInc`, `Gwl_all`). Bez zmian oczekiwań
+  istniejących testów.
+- e2e: nowe `tests/e2e/karta-gh-preparat-biezacy.spec.mjs` KP-1 (I→G), KP-2 (G→I) — komputer;
+  `karta-gh-preparat-biezacy-mobile.spec.mjs` KPM-1 (I→G) — telefon; pacjenci w `tests/support/karta-leczenie.mjs`.
+- Kontrola negatywna na `origin/audyt` a7b2920b: nie przechodzi 7 z 9 nowych testów jednostkowych (przechodzą „cały kurs”
+  i „wznowienie” — pilnują braku zmiany) i 3 z 3 nowych e2e.
+- Porównanie rysunku Karty (drzewo DOM zakładki, paski, trend) z `origin/audyt` dla 18 przypadków bez zmiany Increlex ↔
+  rhGH (w tym Genotropin → Omnitrope, Ngenla, wznowienie, bez Włączenia, bez dawki, bez leku) w trzech konfiguracjach
+  modułów — identyczne (skrypt poza repozytorium).
+
+**Wdrożenie.** Od razu przy wydaniu; dane, sejf, zapis i synchronizacja bez zmian. **Cofnięcie** = rewert PR: Karta znów
+bierze program Włączenia i „Increlex albo program IGF-1” per punkt.
+
+**Wersje.** `vilda_auth_ui.js` 581 → 582 (wszystkie strony, które go ładują), `vilda_chrome.js` 320 → 321
+i `vilda_session_bridge.js` 236 → 237 (wstrzykują `vilda_auth_ui.js` z nowym `?v=`); precache (append-only);
+`SW_VERSION` 1.1.572 → 1.1.573 (+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` —
+wszystko z `npm run podbij-wersje` względem `origin/audyt` a7b2920b. Bez nowego pliku ładowanego i bez nowych stylów.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; program bieżący przy zmianie programu bez zmiany leku
+(pkt 6); pole „Preparat” z leku bieżącego (pkt 3); program karty terapii w DocPro po zmianie preparatu (inwentarz)
+[rozstrzygnięte 2026-11-23: „popraw program w formularzu monitora DocPro” — P-GH-PROGRAM-BIEZACY].
+
+## P-GH-PROGRAM-BIEZACY — DocPro: program w formularzu monitora wg bieżącego preparatu (SW 1.1.575, `gh_therapy_monitor.js` 66, 2026-11-23)
+
+**Zmiana kliniczna: TAK — po zmianie Increlex ↔ rhGH w kursie pole „Program terapeutyczny”, wiersz programu i program
+nowych punktów z karty terapii = program bieżący (jak Karta, P-GH-PREPARAT-BIEZACY), nie program Włączenia.** Za polem
+idą lista preparatów karty (`#therDrug`), podpowiedź i kalkulator dawki, formularz wstecznego punktu i wizyta kontrolna
+w Terminarzu — gdy program pola zgadza się z rodzajem bieżącego preparatu (przy sprzeczności, np. Genotropin z programem
+IGF-1, karta zostaje jak dotąd). Wzory, dawki zapisane w punktach, progi, kursy (P-GH-WZNOWIENIE), walidacja
+(`VildaGhPunkty.sprawdzRodzaj`), edycja punktu, blokada pola (P-GH-PROGRAM-ODBLOKUJ), sejf i Karta — bez zmian. Łatka:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-GH-PROGRAM-BIEZACY”.
+
+**Decyzja właściciela.** P-GH-PREPARAT-BIEZACY zostawił program karty terapii w DocPro do decyzji (inwentarz „Czego to nie
+zmienia”); właściciel 2026-11-23: „popraw program w formularzu monitora DocPro” (zgoda na zmianę — dotyczy też programu
+zapisywanego w nowych punktach).
+
+**Źródło, populacja, jednostki.** Jak w P-GH-PREPARAT-BIEZACY (ChPL Increlex, EMA, PDF z 26.03.2026, pkt 4.2; preparaty
+somatotropiny i somatrogonu — bez zmian). Zmiana nie wprowadza nowych liczb ani progów: przypisuje istniejący program
+(a z nim listę preparatów programu i dawkę zalecaną karty) do preparatu, który dziecko przyjmuje teraz. Populacja: dzieci
+leczone w programach GH/IGF-1 ze zmianą preparatu między mekaserminą a rhGH w jednym kursie (oraz zapisy z brakującym
+lekiem lub programem w punkcie i zmianą programu w kursie).
+
+**Stan przed zmianą (`audyt` e163b85a, prawdziwy monitor w atrapie i prawdziwe DocPro w e2e).** `F()`
+(`renderGHTherapyTable`) brało program z punktu Włączenia: pole — `s.program` pierwszego Włączenia, bez niego program
+pierwszego wiersza, przy kilku kursach `ghProgramKursu(ghKursProgramu(Gwk))` (Włączenie bieżącego kursu albo jego pierwszy
+punkt); wiersz nad tabelą — to samo dla bieżącego kursu. Przypadek I→G niżej: pole i wiersz „IGF-1”, nowa Kontynuacja
+z karty z programem IGF-1, formularz wsteczny IGF-1; karta z listą Increlex 40 mg (np. stan karty zapisany przy dawnym
+polu) — wizyta kontrolna w Terminarzu „Leczenie IGF-1 (mekasermina)”, program IGF-1. Programowe ustawienie pola nie
+przeliczało listy preparatów: po wczytaniu pacjenta lista zostawała z poprzedniego programu karty (np. kurs Increlex przy
+karcie z listą rhGH: program IGF-1, preparat Omnitrope 10 mg, dawka zalecana SNP — Kontynuacja z karty dostawała program
+IGF-1 z preparatem rhGH).
+
+**Reguła** (czytelna część `gh_therapy_monitor.js`, blok P-GH-PROGRAM-BIEZACY). Ta sama reguła co Karta (`Gp_biezacy`
+w `vilda_auth_ui.js`), na punktach bieżącego kursu wg wieku (kilka kursów — ostatni kurs `ghKursy`; jeden kurs albo brak
+modułu kursów — cała lista wg wieku, stabilnie, jak `Gw_punktyProgramu`):
+1. rodzaj (Increlex czy rhGH): ostatni punkt kursu z lekiem albo programem — lek decyduje (`/^Increlex/`), bez leku —
+   program (`/^IGF/`);
+2. program: program ostatniego punktu; gdy pusty — ostatni wcześniejszy program tego samego rodzaju; brak — jak dotąd
+   (dawne wyrażenie: Włączenie, pierwszy punkt listy, a bez nich pole bez zmiany);
+3. lek bieżący: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy lek tego samego rodzaju (`ghBiezacy` =
+   `{ lek, program, increlex }`, jak `Gp_biezacy`).
+Zastosowanie: `#therProg` poza edycją punktu i wiersz „Program terapeutyczny: …” (jedna funkcja); pole dalej zablokowane
+przy punktach. Edycja punktu (`x != null`) — bez zmian (dawne wyrażenie z kursem edytowanego punktu) [od
+P-GH-PROGRAM-EDYCJA (2026-11-23): przy edycji — program edytowanego punktu, bez niego program bieżący jego kursu z chwili
+punktu; dawne wyrażenie tylko jako zapas]. Lista preparatów
+(poza edycją) — tylko gdy oba warunki: wybrany preparat karty nie należy do programu pola (preparaty programu jak
+w edycji i punkcie wstecznym) i program pola zgadza się z rodzajem bieżącego preparatu (`/^IGF/` programu = Increlex
+z pkt 1). Wtedy karta przelicza listę jak po zmianie programu (zdarzenie change pola: `u()` — czyści ręczną datę kontroli
+i własną liczbę dni, `De()` — lista i preparat domyślny programu, `pe()` — dawka zalecana i podpowiedź programu, `T()` —
+kalkulator; `gh_igf_therapy.js`), a gdy na nowej liście jest lek bieżący z pkt 3 — wybiera go (zdarzenie change preparatu:
+`u()`, `pe()`, `Gdpo` — dawka podawana na kroku wstrzykiwacza nowego preparatu, `T()`). Ręczną datę kontroli i własną
+liczbę dni wpisane przed przeliczeniem karta dostaje z powrotem (`restoreState` karty ze stanem po przeliczeniu, bez
+zdarzeń); dawka zostaje dawką zalecaną nowego programu. Sprzeczność (lek rhGH przy programie IGF-1 albo odwrotnie —
+z zapisu albo z zapasu przy luce w programie) i preparat należący do programu — bez zdarzeń i bez zmiany karty (jak
+dotąd). Formularz wsteczny kopiuje pole i preparat karty (jak dotąd), Terminarz (`Je()`) czyta pole i preparat karty
+(jak dotąd).
+Rozstrzygnięcie wykonawcy: reguła mieszka w monitorze, nie w `VildaGhPunkty` — monitor i panel wiersza przyjmują tylko API
+wersji 4 (bramka zapisu), a nowa funkcja API oznaczałaby nową wersję i zmianę obu bramek; spójność z Kartą pilnuje test
+jednostkowy na wspólnym zbiorze przypadków. Wybór preparatu bieżącego kursu (zamiast preparatu domyślnego programu karty)
+przy przeliczonej liście — także rozstrzygnięcie wykonawcy (po I→G karta pokazuje Genotropin 12 mg, nie Omnitrope 10 mg).
+Warunek zgodności rodzaju i lek bieżący wg reguły Karty — po niezależnym przeglądzie (2026-11-23): bez niego karta przy
+Genotropinie z programem IGF-1 (S1–S3 niżej) przechodziła na Increlex 40 mg z dawką 0,08 mg/kg/d, a następna Kontynuacja
+zapisywała się jako Increlex/IGF-1.
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; wartości z kodu; wiek l.;mies.).
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd |
+|---|---|---|---|
+| I→G | W Increlex 40 mg IGF-1 7;0 → K Genotropin 12 mg SNP 7;6 → K Genotropin SNP 8;0; wizyta 8;6, 22,5 kg; karta przed wczytaniem z programem IGF-1 (lista Increlex 40 mg) i ręczną datą kontroli | `#therProg` SNP (zablokowane), „Program terapeutyczny: SNP”; lista 6 preparatów rhGH, wybrany Genotropin 12 mg, dawka 0,027 mg/kg/d (zalecana SNP 0,025 na kroku wstrzykiwacza: 0,6 mg/d), „zalecana dawka dla programu SNP”, ręczna data kontroli zostaje; Kontynuacja z karty 8;6 — Genotropin 12 mg, SNP; formularz wsteczny SNP + Genotropin 12 mg; Terminarz „Leczenie rhGH”, „Program: SNP (Somatotropinowa niedoczynność przysadki).”; po wczytaniu z sejfu i F5 — SNP. Karta z listą rhGH (Omnitrope 10 mg, 0,027) — bez zmian karty | IGF-1 w polu i wierszu; lista Increlex 40 mg, 0,08 mg/kg/d; Kontynuacja IGF-1 + Increlex; Terminarz „Leczenie IGF-1 (mekasermina)”; po F5 — IGF-1 |
+| G→I | W Genotropin SNP 7;0 → K Increlex IGF-1 7;6; karta z listą rhGH (Omnitrope 10 mg, 0,027 mg/kg/d) | IGF-1, „Program terapeutyczny: IGF-1”, lista Increlex 40 mg (wybrany), dawka 0,08 mg/kg/d (podanie 0,9 mg przy 22,5 kg), podpowiedź IGF-1 (mekasermina); Kontynuacja z karty 8;0 — Increlex 40 mg, IGF-1; wczytanie z sejfu — stan zapisu „zapisano” | SNP; Omnitrope 10 mg, 0,027 mg/kg/d |
+| cały kurs SNP; wznowienie | W→K→K Genotropin SNP; kurs 1 Increlex IGF-1 (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0) | SNP, wiersz SNP, „Kurs 2 — wznowienie w wieku 9 l. 0 mies.”, tabela, preparat, lista i dawka karty — bez zmian | tak samo |
+| cały kurs IGF-1 | W→K Increlex IGF-1 | IGF-1, wiersz IGF-1 — bez zmian; przy karcie z listą rhGH (Omnitrope 10 mg, 0,027) lista idzie za polem: Increlex 40 mg, 0,08 mg/kg/d | Omnitrope 10 mg, 0,027 mg/kg/d przy programie IGF-1 |
+| S1 sprzeczny zapis | W Increlex IGF-1 7;0 → K Genotropin 12 mg z programem IGF-1 7;6 i 8;0; karta na Genotropin 12 mg z ręczną datą kontroli | IGF-1 (program ostatniego punktu), karta bez zmian i bez zdarzeń: Genotropin 12 mg, lista rhGH, dawka i data kontroli jak przed wczytaniem; Kontynuacja z karty — Genotropin 12 mg, IGF-1 | tak samo |
+| S2 edycja ostatniej K | I→G, karta na Genotropin 12 mg; edycja K 8;0 zapisana bez zmian (program z Włączenia — IGF-1, pytanie 17) | pole IGF-1, karta bez zmian i bez zdarzeń (Genotropin 12 mg, data kontroli zostaje); Kontynuacja z karty — Genotropin 12 mg, IGF-1 [od P-GH-PROGRAM-EDYCJA (2026-11-23): edycja zapisuje SNP — pole SNP, Kontynuacja z karty SNP; tego stanu edycja już nie tworzy] | tak samo (pole IGF-1 także przed edycją) |
+| S3 luka B | W Increlex IGF-1 → K Genotropin bez programu (7;6, 8;0); karta na Genotropin 12 mg | IGF-1 (program bieżący pusty — zapas jak dotąd), karta bez zmian i bez zdarzeń: Genotropin 12 mg, lista, dawka | tak samo |
+| edycja | I→G, edycja Włączenia Increlex; edycja Kontynuacji Genotropin | Włączenie: pole IGF-1 podczas edycji (lista karty bez zmian), po zapisie edycji — SNP, Włączenie dalej IGF-1; Kontynuacja: pole IGF-1, zapis z IGF-1 — jak dotąd (stan obecny, pytanie 17) [od P-GH-PROGRAM-EDYCJA (2026-11-23): Kontynuacja — pole i zapis SNP] | tak samo (po zapisie edycji — IGF-1) |
+| pusta lista | brak punktów | pole odblokowane, bez wiersza programu, bez przeliczania listy | tak samo |
+| luki, zmiana programu | I→G z Kontynuacjami bez leku (SNP), karta z listą Increlex; Genotropin SNP → Genotropin ZT; W2 (K Increlex IGF-1 po Z) | SNP — lista SNP, preparat domyślny programu (Omnitrope 10 mg; w kursie brak leku rhGH do wyboru, nowa Kontynuacja z karty — Omnitrope 10 mg, SNP, o ile lekarz nie zmieni preparatu); ZT; IGF-1 | IGF-1 (karta Increlex 40 mg, Kontynuacja Increlex, IGF-1); SNP; IGF-1 |
+
+**Czego to nie zmienia (inwentarz).**
+- Edycja punktu (`O()` + `F()`): pole jak dotąd z programu Włączenia kursu edytowanego punktu — `F()` nadpisuje program
+  wpisany przez `O()`; edycja Kontynuacji Genotropin w I→G zapisuje IGF-1 (stan obecny, pytanie 17, testy charakterystyki
+  R9) — do decyzji właściciela [od P-GH-PROGRAM-EDYCJA (2026-11-23, decyzja właściciela „popraw edycję punktu (pytanie
+  17)”): pole i zapis — program edytowanego punktu (I→G — SNP, R9 — PWS), bez programu — program bieżący kursu z chwili
+  punktu; wpis niżej].
+- Panel wiersza (`vilda_gh_punkt_z_wiersza.js`, `domyslne`): program i preparat z ostatniego punktu wg wieku (po I→G — SNP,
+  Genotropin 12 mg), wybierane w panelu — bez błędu „program z Włączenia”; ostatni punkt bez programu → pierwszy program
+  listy (nie reguła Karty) — opis, bez zmian pliku.
+- Terminarz (`gh_igf_therapy.js`, `Je`/`Qe`): czyta pole i preparat karty albo ostatni punkt wg wieku — poprawiony przez
+  pole (e2e GPB-1), bez zmian pliku. Formularz wsteczny: kopiuje pole (jak dotąd).
+- Po otwarciu karty GH/IGF-1 pole pokazuje program domyślny karty (SNP), dopóki monitor nie odświeży tabeli (zakładka
+  „Monitorowanie”, zmiana listy) — `F()` przy montowaniu karty biegnie przed wypełnieniem listy programów; jak dotąd.
+- Stan formularza karty: programowe zdarzenia change pola i preparatu przy przeliczeniu listy zapisuje autozapis stanu
+  strony (`vilda_persist_runtime.js` przyjmuje też zdarzenia nie od użytkownika) — `therProg` zawsze, `therDrug` tylko
+  wtedy, gdy po przeliczeniu listy monitor wybiera lek bieżący zdarzeniem zmiany preparatu (gdy przeliczona lista od razu
+  wskazuje ten lek, np. G→I — Increlex 40 mg, zapisany zostaje dawny preparat karty). Po F5 karta wraca z zapisanym stanem,
+  a monitor przy odświeżeniu tabeli przelicza listę ponownie tą samą regułą (preparat spoza programu → lista programu);
+  wskaźnik zapisu pacjenta pomija zdarzenia nie od użytkownika — stan
+  zapisu zostaje „zapisano” (e2e GPB-8). Własna liczba dni i ręczna data kontroli wracają przez `restoreState` karty, bez
+  zdarzeń. Rekord pacjenta, punkty, sejf i synchronizacja — bez zmian.
+- `vilda_auth_ui.js` (Karta), `vilda_gh_punkty.js`, `gh_therapy_segments.js`, `vilda_vault.js`.
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- nowy `tests/unit/gh-program-biezacy.test.mjs` (32): spójność reguły — `ghBiezacy(ghPunktyBiezacegoKursu(…))` monitora
+  (`{ lek, program, increlex }`) = `Gp_biezacy` (wl) Karty, program = `Gp_program(Gw_punktyProgramu(…))` (Pl), funkcje
+  wycięte z obu plików, 19 list (I→G, G→I, cały kurs, wznowienie w obie strony, luki, niespójny punkt, zmiana programu,
+  bez Włączenia, W2, równy wiek, punkty bez wieku, inny rodzaj wpisu, pusta) + lek i rodzaj z wartościami + bez modułu
+  kursów; prawdziwy monitor w atrapie: I→G, G→I (lista preparatów), kurs jednym programem / wznowienie / luka B / bez
+  Włączenia = monitor z usuniętymi wywołaniami łatki („jak dotąd”: pole, wiersz, tabela, preparat, lista, dawka, brak
+  zdarzeń karty; różnica tylko przy programie IGF-1 z kartą rhGH), S1–S3 (karta bez zdarzeń, Kontynuacja jak dotąd),
+  bez modułu kursów, wznowienie, edycja Włączenia i Kontynuacji, pusta lista [od P-GH-PROGRAM-EDYCJA (2026-11-23): S2
+  i edycja Kontynuacji — zmienione oczekiwania (SNP)].
+- `tests/unit/gh-punkty-siatka.test.mjs` (26 → 28) i `tests/scripts/gh-punkty-wzorzec.mjs`: złota siatka — 534 z 5128
+  przypadków z modułem dawki (nowy punkt z karty na listach W+bez-id → ZT i W+obce-pole → IGF-1) mają program bieżący;
+  przypadki reprezentatywne (6) = wynik wzorca z programem bieżącym, skrót z programem cofniętym do programu Włączenia =
+  skrót BAZA; nowa kontrola negatywna (pole znów z programu Włączenia). Plik wzorca bez zmian.
+- e2e: nowe `tests/e2e/gh-program-biezacy-docpro.spec.mjs` GPB-1…GPB-8 (komputer; GPB-1 z ręczną datą kontroli,
+  GPB-6 S1, GPB-7 S2, GPB-8 G→I z sejfu i stan zapisu) i `gh-program-biezacy-docpro-mobile.spec.mjs` GPBM-1 (telefon).
+- Kontrola negatywna na `origin/audyt` e163b85a: e2e — nie przechodzi 7 z 9 nowych (przechodzą GPB-4 i GPB-6 — pilnują
+  braku zmiany); unit — plik nowych testów nie ładuje się (brak funkcji reguły), a w wariancie bez wycinania nie przechodzi
+  26 z 32 (przechodzą: S1, S2, S3, wznowienie, edycja Kontynuacji, pusta lista — pilnują braku zmiany); siatka — nie
+  przechodzą 2 nowe. Wobec wersji sprzed przeglądu (bez warunku rodzaju i przywracania daty): nie przechodzą e2e GPB-1
+  (data kontroli), GPB-6, GPB-7 i unit S1–S3 oraz „kurs jednym programem” (luka B).
+
+**Wdrożenie.** Od razu przy wydaniu; rekord pacjenta, sejf, zapis punktów i synchronizacja bez zmian (stan formularza
+karty po przeliczeniu listy zapisuje autozapis strony, jak po ręcznej zmianie — inwentarz wyżej). Zapisane wcześniej
+punkty nie są poprawiane (Kontynuacje zapisane z programem IGF-1 przy rhGH zostają; karta przy nich nie przechodzi na
+Increlex — S1). **Cofnięcie** = rewert PR: pole i wiersz znów
+z programu Włączenia, lista preparatów bez przeliczania.
+
+**Wersje.** `gh_therapy_monitor.js` 65 → 66 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.574 → 1.1.575
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `origin/audyt` a4986460. Bez nowego pliku ładowanego i bez nowych stylów.
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku; program przy edycji punktu (pytanie 17) — droga
+edycji tworzy stan „Genotropin z programem IGF-1” (S2: edycja ostatniej Kontynuacji po I→G zapisuje IGF-1, pole pokazuje
+IGF-1); od tej poprawki karta nie przechodzi przez to na Increlex (zostaje Genotropin), ale następna Kontynuacja z karty
+dostaje program IGF-1 jak dotąd [rozstrzygnięte 2026-11-23: „popraw edycję punktu (pytanie 17)” — P-GH-PROGRAM-EDYCJA:
+edycja zapisuje program edytowanego punktu, więc stanu S2 już nie tworzy]; lek bieżący przy przeliczonej liście; program
+bieżący przy zmianie programu bez zmiany leku i przy luce w programie; preparat domyślny programu, gdy w kursie nie ma
+leku zgodnego z programem (luka w leku — stare punkty bez preparatu); powrót ręcznej daty kontroli i własnej liczby dni
+po przeliczeniu listy.
+
+## P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (pytanie 17) (SW 1.1.577, `gh_therapy_monitor.js` 67, 2026-11-23)
+
+**Zmiana kliniczna: TAK — przy edycji istniejącego punktu program zapisywany = program edytowanego punktu (bez programu
+— program bieżący kursu z chwili punktu), nie program Włączenia.** Pole „Program terapeutyczny” (`#therProg`) pokazuje
+w trakcie edycji ten sam program i zostaje zablokowane. Wzory, dawki zapisane w punktach, progi, lista preparatów
+formularza edycji, karta terapii (`#therDrug`), zapis punktów poza programem zapisanym przy edycji, walidacja
+(`VildaGhPunkty.sprawdzRodzaj`), kursy (P-GH-WZNOWIENIE), sejf i Karta — bez zmian. Łatka: `docs/ZRODLA_ARTEFAKTOW.md`,
+„Łatka P-GH-PROGRAM-EDYCJA”.
+
+**Decyzja właściciela.** P-GH-PROGRAM-BIEZACY zostawił program przy edycji punktu do decyzji (pytanie 17, „Co pozostaje
+decyzją właściciela”); właściciel 2026-11-23: „popraw edycję punktu (pytanie 17)” — po rekomendacji: przy edycji pole
+pokazuje program edytowanego punktu, a nie program Włączenia; edycja nie zmienia danych, których lekarz nie dotknął;
+punkt bez programu — program bieżący kursu z chwili tego punktu.
+
+**Źródło, populacja, jednostki.** Jak w P-GH-PREPARAT-BIEZACY i P-GH-PROGRAM-BIEZACY (ChPL Increlex, EMA, PDF
+z 26.03.2026, pkt 4.2; preparaty somatotropiny i somatrogonu — bez zmian). Zmiana nie wprowadza nowych liczb ani progów:
+edycja zachowuje program zapisany w punkcie (a z nim listę preparatów programu w formularzu edycji). Populacja: dzieci
+leczone w programach GH/IGF-1, których punkty lekarz poprawia w monitorze DocPro — zwłaszcza po zmianie preparatu między
+mekaserminą a rhGH w kursie, przy kilku programach w kursie i w kursie bez Włączenia.
+
+**Stan przed zmianą (`audyt` 77cb60dc, prawdziwy monitor w atrapie i prawdziwe DocPro w e2e).** „Edytuj” w tabeli
+punktów → `O()` wpisywało do `#therProg` program punktu, ale `F()` zaraz nadpisywało pole dawnym wyrażeniem
+(`ghProgramPola` przy `x != null` zwracało je bez zmian): program Włączenia kursu edytowanego punktu
+(`ghProgramKursu(ghKursProgramu(Gwk))`), przy jednym kursie — `s.program` pierwszego Włączenia, bez niego program
+pierwszego punktu wg wieku. Zapis edycji (`Gph` → `VildaGhPunkty.polaZPodawanej`) bierze program z `#therProg`, więc
+punkt dostawał program Włączenia. Po I→G edycja Kontynuacji Genotropin — także bez żadnej zmiany — zapisywała ją
+z programem IGF-1 (stan „Genotropin z programem IGF-1”, S2 w P-GH-PROGRAM-BIEZACY), a edycja ostatniej Kontynuacji
+przestawiała program bieżący: pole i następna Kontynuacja z karty — IGF-1. Bez Włączenia — program pierwszego punktu
+(test charakterystyki: edycja starszego SNP 10;0 przy młodszym PWS 8;0 → PWS); punkt z programem innym niż Włączenie
+(R9: PWS w kursie z Włączeniem SNP) → SNP.
+
+**Reguła** (czytelna część `gh_therapy_monitor.js`: funkcja `ghProgramEdycji(Gwk, dotad)` w bloku P-GH-PROGRAM-EDYCJA
+zaraz po `ghProgramPola`; `ghProgramPola` woła ją przy `x != null`; `F()` już woła `ghProgramPola`; poprawki po
+przeglądzie niżej mają cztery kotwice w zminifikowanym ciele). Przy edycji punktu pole `#therProg`, a więc program
+zapisany edycją:
+1. program edytowanego punktu, gdy jest (niepusty) — także gdy przeczy lekowi punktu (np. dawny zapis „Genotropin
+   + IGF-1”): edycja nie poprawia programu po cichu;
+2. bez programu — program bieżący kursu z chwili tego punktu: `ghBiezacy` (reguła P-GH-PROGRAM-BIEZACY = `Gp_biezacy`
+   Karty) na punktach kursu edytowanego punktu wg wieku do edytowanego punktu włącznie (kilka kursów — kurs punktu
+   z `ghKursy`; jeden kurs albo brak modułu kursów — cała lista wg wieku; punkt spoza kursów, np. bez wieku — sam punkt):
+   edytowany punkt liczy się z lekiem z formularza edycji (`#ghEditDrug`; pusty — lek punktu): rodzaj z ostatniego punktu
+   z lekiem albo programem, więc z preparatu wybranego w formularzu (bez leku w punkcie — pierwszy preparat listy, jak
+   dotąd), program — ostatni wcześniejszy program tego rodzaju; późniejsze punkty się nie liczą. Zmiana preparatu
+   w formularzu edycji takiego punktu liczy pole od nowa (`ghZmianaPreparatuEdycji` — jeden słuchacz `change` na
+   dokumencie, `F()`); `O()` wypełnia listę preparatów przed `F()`, więc pole jest właściwe od otwarcia edycji;
+3. bez tego — jak dotąd (dawne wyrażenie: program Włączenia kursu edytowanego punktu, bez niego jego pierwszego punktu);
+   także gdy w kursie przed punktem nie ma programu rodzaju wybranego preparatu (np. Increlex wybrany w kursie bez
+   programu IGF-1 — pole zostaje programem Włączenia, np. SNP; programu nie wymyślamy).
+Edytowany punkt = pierwszy o równym `String(id)` na bieżącej liście, jak w `O()` i `zmienWMiejscu`. Rozstrzygnięcie
+wykonawcy: gdy edytowanego punktu nie ma już na liście (usunięty w trakcie edycji — `re()` woła `F()` przed zakończeniem
+edycji `Gek()`), pole bierze program bieżący, jak poza edycją; dotąd zostawało dawne wyrażenie (po I→G — IGF-1, a z nim
+następna Kontynuacja z karty).
+**Poprawki po niezależnym przeglądzie (2026-11-23).** (1) Punkt bez programu brał rodzaj z zapisanego punktu, a formularz
+edycji oferuje mu wszystkie 7 preparatów przy zablokowanym polu: K bez leku i programu po K Increlex dostawała Omnitrope
+5 mg + IGF-1, a K Genotropin bez programu po I→G z wybranym Increlexem — Increlex + SNP; dziś rodzaj z preparatu
+formularza (pkt 2 wyżej). (2) Koniec edycji bez `F()` zostawiał pole z chwili edycji, a z nim program następnego punktu
+z karty i formularza wstecznego: zmiana pacjenta sesji karty w innej ramce (zdarzenie `storage` `vildaCurrentPatientId`,
+P-GH-EDYCJA-PACJENT) i odczyt listy `D()` formularza wstecznego (`i()` przy otwarciu, `ghAddRetroPoint`), gdy
+edytowanego punktu nie ma już na liście; dziś po zakończeniu edycji w tych miejscach `ghPoKoncuEdycji()` (`F()`, jak
+poza edycją). Tam, gdzie po `Gek()` idzie `F()` (odświeżenie listy, zapis edycji, `He`), bez zmian. (3) Formularz
+wstecznego punktu otwarty w trakcie edycji dodaje nowy punkt, więc kopiuje program i lek bieżący kursu
+(`ghWstecznyZKarty`; program — `ghProgramPozaEdycji`: program, który pole pokazuje poza edycją, czyli bez programu
+bieżącego dawne wyrażenie `F()` z Włączenia; preparat — lek bieżący, brak — preparat karty, jak dotąd), nie program
+edytowanego punktu (drugi przegląd 2026-11-23: W Genotropin SNP → K Genotropin PWS → K Increlex bez programu, edycja K PWS
+— formularz wsteczny SNP jak poza edycją; wersja 05e1c7fe brała PWS z zablokowanego pola).
+
+**Przypadki `wejście → oczekiwany wynik`** (dane fikcyjne; wartości z kodu — unit i e2e; wiek l.;mies.; „pole” = pole
+podczas edycji = program zapisany edycją bez zmian; „po” = pole po zapisie).
+| Przypadek | Wejście | Wynik (po zmianie) | Dotąd (77cb60dc) |
+|---|---|---|---|
+| I→G, Kontynuacja Genotropin | W Increlex 40 mg IGF-1 7;0 → K Genotropin 12 mg SNP 7;6 → K Genotropin SNP 8;0; edycja K 7;6 bez zmian | pole SNP (zablokowane), preparaty edycji — 6 rhGH, wybrany Genotropin 12 mg; zapis SNP, punkt jak przed edycją (`dose` i `doseAbs` z dawki podawanej formularza, jak dotąd); po — SNP, „Program terapeutyczny: SNP”, karta Genotropin 12 mg bez zdarzeń; Kontynuacja z karty — Genotropin 12 mg, SNP | pole i zapis IGF-1; po — SNP |
+| S2, ostatnia Kontynuacja | I→G, karta na Genotropin 12 mg z ręczną datą kontroli; edycja K 8;0 bez zmian | pole i zapis SNP; po — SNP, karta i data kontroli bez zmian; Kontynuacja z karty — Genotropin 12 mg, SNP | IGF-1; po — IGF-1; Kontynuacja z karty IGF-1 |
+| I→G, Włączenie Increlex | edycja W 7;0 bez zmian | pole i zapis IGF-1 (preparaty edycji: Increlex 40 mg); po — SNP (lista karty wraca za programem bieżącym) | tak samo |
+| R9 (charakterystyka) | W SNP 9;0, K Omnitrope 10 mg PWS 9;6, K SNP 8;6; edycja K 9;6 zapisana jako Zakończenie | pole PWS, zapis `program: 'PWS'` | SNP |
+| bez Włączenia (charakterystyka) | K SNP 10;0, K PWS 8;0; edycja K 10;0 | zapis SNP | PWS |
+| bez programu po W rhGH | W Genotropin SNP 7;0 → K Genotropin bez programu 7;6 | pole i zapis SNP (pkt 2); preparaty edycji — wszystkie 7, wybrany Genotropin 12 mg | tak samo |
+| bez programu po W Increlex | W Increlex IGF-1 7;0 → K Genotropin bez programu 7;6 | IGF-1 (pkt 3 — w kursie przed punktem brak programu rhGH); zapis Genotropin z IGF-1 | tak samo |
+| bez programu, I→G | I→G, K 8;0 Genotropin bez programu | pole i zapis SNP (z K 7;6) | IGF-1 |
+| bez leku i programu | I→G + K 8;6 bez leku i programu | SNP (rodzaj z preparatu formularza — pierwszy z listy, Omnitrope 5 mg — i z nim zapis, jak dotąd) | IGF-1 |
+| przypadek 1 przeglądu | W Genotropin SNP 7;0 → K Increlex IGF-1 7;6 → K 8;0 bez leku i programu | pole SNP od otwarcia (rodzaj z Omnitrope 5 mg formularza), zapis Omnitrope 5 mg + SNP; po — SNP | tak samo (wersja przed przeglądem: Omnitrope 5 mg + IGF-1) |
+| przypadek 2 przeglądu | I→G, K 8;0 Genotropin bez programu; w formularzu edycji wybór Increlex 40 mg (dawka 0,8 mg na podanie) | pole SNP przy otwarciu, po wyborze Increlexu od razu IGF-1 (powrót do Genotropinu — SNP); zapis Increlex 40 mg + IGF-1 | pole IGF-1 przez całą edycję, zapis Increlex + IGF-1 (wersja przed przeglądem: SNP, Increlex + SNP) |
+| pkt 3 przy wybranym preparacie | W Genotropin SNP 7;0 → K Genotropin bez programu 7;6; w formularzu wybór Increlex 40 mg | pole zostaje SNP (przed punktem brak programu IGF-1), zapis Increlex 40 mg + SNP — do decyzji właściciela | tak samo |
+| W2, zapas z innego kursu | kurs 1 Increlex IGF-1 (W 7;0 → Z 8;0), kurs 2 bez Włączenia: K Genotropin bez programu 9;0 → K Genotropin SNP 9;6; edycja K 9;0 | IGF-1 (pkt 3: dawne wyrażenie bierze program pierwszego Włączenia — kursu 1); po — SNP | tak samo |
+| bez programu przed SNP | W Increlex IGF-1 7;0 → K Genotropin bez programu 7;6 → K Genotropin SNP 8;0; edycja 7;6 | IGF-1 (pkt 3 — późniejsze SNP się nie liczy); po — SNP | tak samo |
+| punkt niespójny | W Increlex IGF-1 7;0 → K Genotropin z programem IGF-1 7;6 i 8;0 (zapis dawną edycją); karta na Genotropin 12 mg; edycja 8;0 | pole IGF-1 (pkt 1, bez cichej poprawki); preparaty edycji programu IGF-1 — tylko Increlex 40 mg, Genotropinu brak, pole preparatu puste: zapis bez zmian odmawia „Wybierz program i preparat…”, punkt, lista i karta (Genotropin, bez zdarzeń) bez zmian | tak samo |
+| wznowienie | kurs 1 Increlex IGF-1 (W 7;0 → Z 8;0), kurs 2 Genotropin SNP (W 9;0 → K 10;0); edycja Z 8;0 / K 10;0 | IGF-1 / SNP; po — SNP | tak samo |
+| wznowienie, I→G w kursie 2 | kurs 1 Genotropin SNP (W 7;0 → Z 8;0 bez programu), kurs 2 W Increlex IGF-1 9;0 → K Genotropin SNP 9;6 → K Genotropin bez programu 10;0 | K 9;6 — SNP; K 10;0 — SNP (pkt 2, kurs 2); Z 8;0 — SNP (pkt 2, kurs 1 — nie IGF-1 kursu 2); po — SNP | K 9;6 i K 10;0 — IGF-1 (po — IGF-1); Z 8;0 — SNP |
+| zmiana rodzaju w edycji | I→G, edycja K 8;0 zapisana przyciskiem „Zakończenie” | `type: 'end'`, program SNP | IGF-1 |
+| bez modułu kursów | I→G, edycja K 7;6; luka (K 8;0 bez programu) | SNP; SNP (cała lista wg wieku do punktu) | IGF-1 |
+| formularz wsteczny w trakcie edycji | I→G, edycja W 7;0 albo K 7;6, „Wsteczny punkt” | program i lek bieżący kursu: SNP, Genotropin 12 mg (nowy punkt); edycja trwa, pole — program edytowanego punktu (IGF-1 / SNP) | IGF-1, Increlex 40 mg (wersja przed przeglądem: program i lek edytowanego punktu — przy edycji W IGF-1, Increlex) |
+| zmiana pacjenta w innej ramce w trakcie edycji | W Increlex IGF-1 7;0 → K Genotropin SNP 7;6 → K Increlex IGF-1 8;0; edycja K 7;6; inny pacjent sesji karty (zdarzenie `storage`); Kontynuacja z karty 8;6 | edycja zamknięta, pole IGF-1 (program bieżący); Kontynuacja z karty — Increlex 40 mg, IGF-1 | pole IGF-1 z Włączenia, Kontynuacja z karty Genotropin 12 mg + IGF-1 (wersja przed przeglądem: pole SNP, Genotropin + SNP) |
+| formularz wsteczny, punkt znika | ta sama lista; edycja K 7;6, punkt usunięty w innej ramce (lista w pamięci modułu bez niego), „Wsteczny punkt” | formularz IGF-1, Increlex 40 mg; edycja zamknięta, pole IGF-1; Kontynuacja z karty — Increlex 40 mg, IGF-1 | formularz IGF-1, Increlex; Kontynuacja z karty Genotropin 12 mg + IGF-1 (wersja przed przeglądem: SNP, Genotropin + SNP) |
+| koniec edycji bez zapisu | I→G: edycja K 8;0, potem „Usuń” tego punktu | edycja zamknięta, pole SNP; Kontynuacja z karty — Genotropin 12 mg, SNP | pole IGF-1, Kontynuacja z karty IGF-1 |
+| lista bez edytowanego punktu | edycja K 8;0, lista z innej ramki bez niego (P-GH-EDYCJA-LISTA); odświeżenie tej samej listy | edycja zamknięta, pole SNP; ta sama lista — edycja trwa, pole SNP | pole SNP; ta sama lista — IGF-1 |
+
+**Czego to nie zmienia (inwentarz innych dróg edycji).**
+- Panel wiersza (`vilda_gh_punkt_z_wiersza.js`): tylko nowe punkty z wiersza karty zaawansowanej („Edycja i usuwanie
+  punktu zostają w monitorze DocPro”), program i preparat wybierane w panelu — bez zmian.
+- Karta pacjenta (`vilda_auth_ui.js`): nie edytuje punktów; skok do punktu (`vilda:gh-jump` → `pe()` w monitorze) tylko
+  otwiera „Monitorowanie” i podświetla wiersz — bez zmian. `O()` wołają wyłącznie „Edytuj” w tabeli i odtworzenie stanu
+  edycji (`restoreState`) — oba idą przez `F()`, więc przez nową regułę.
+- Import, scalanie i sejf (`vilda_data_import_export.js`, `vilda_vault.js`): przenoszą listę punktów bez `#therProg` —
+  bez zmian.
+- Zmiana rodzaju punktu przyciskiem W/K/Z w edycji (`btnGhStart`/`btnGhContinue`/`btnGhEnd` przy `x`): ten sam zapis
+  edycji (`Gph`) — program wg reguły wyżej; reguła rodzaju (kursy) bez zmian.
+- Formularz wstecznego punktu otwarty w trakcie edycji: dziś program i lek bieżący kursu (nowy punkt — `ghWstecznyZKarty`;
+  dotąd program Włączenia z preparatem tego programu — po I→G IGF-1 i Increlex 40 mg).
+- Lista preparatów formularza edycji (`#ghEditDrug`: preparaty programu punktu, bez programu — wszystkie; lek punktu
+  wybrany) — bez zmian. Spójność z pkt 2: rodzaj z preparatu wybranego w formularzu, więc lista (wszystkie) i pole idą
+  razem — Genotropin → SNP, wybór Increlexu → IGF-1, o ile w kursie przed punktem jest program tego rodzaju; punkt bez
+  leku → pierwszy preparat listy (Omnitrope 5 mg) trafia do zapisu, a pole idzie za nim (jak dotąd co do leku). Bez
+  programu tego rodzaju przed punktem — pkt 3: Genotropin bez programu przed pierwszym programem rhGH po Włączeniu
+  Increlex → IGF-1, Increlex wybrany w kursie bez programu IGF-1 → program Włączenia (np. SNP) — jak dotąd.
+- Zapas (pkt 3, dawne wyrażenie) może wziąć program z innego kursu: kurs 2 bez Włączenia, którego pierwszy punkt nie ma
+  programu (`ghProgramKursu` puste) — program pierwszego Włączenia na liście (kurs 1, np. IGF-1); jak dotąd, bez zmiany.
+- Punkty niespójne: bez cichej poprawki. Formularz edycji ma listę preparatów programu IGF-1 bez Genotropinu, więc zapis
+  bez wyboru preparatu odmawia (jak dotąd), a wybór Increlex 40 mg zmienia lek punktu — świadomie. Zapisane wcześniej
+  punkty nie są poprawiane.
+- Karta terapii przy edycji: `ghPreparatyKarty` przy `x != null` nic nie robi (bez zmian). Po zapisie albo końcu edycji
+  — jak po P-GH-PROGRAM-BIEZACY (`F()` z `x == null`, program bieżący; np. po edycji Włączenia Increlex lista karty wraca
+  do SNP).
+- Koniec edycji bez zapisu (monitor nie ma przycisku „Anuluj edycję”): wczytanie listy bez punktu albo innego pacjenta
+  (`D()` → `Gek()`, potem `F()`), reset monitora (`Q()` → `F()`), usunięcie edytowanego punktu (rozstrzygnięcie wyżej),
+  zmiana pacjenta sesji karty w innej ramce i odczyt listy formularza wstecznego (poprawka (2) wyżej — `ghPoKoncuEdycji`)
+  odświeżają pole programem bieżącym. Reset przy otwartej edycji zostawia formularz edycji widoczny (P-GH-EDYCJA-LISTA,
+  „chowanie formularza po resecie nadal do decyzji”) — bez zmian.
+- `vilda_auth_ui.js`, `vilda_gh_punkty.js`, `gh_igf_therapy.js`, `vilda_gh_punkt_z_wiersza.js`, `gh_therapy_segments.js`,
+  `vilda_vault.js`.
+
+**Testy.** Dane wyłącznie fikcyjne; testy wołają kod produkcyjny.
+- nowy `tests/unit/gh-program-edycja.test.mjs` (30): prawdziwy monitor w atrapie obok tego samego monitora z cofniętymi
+  wpięciami P-GH-PROGRAM-EDYCJA (`ZAMIANY_PRZED`; wariant „przed” sprawdzony poza repozytorium na pliku z 77cb60dc — te same
+  wyniki): 15 przypadków z tabeli (pole podczas edycji = zapisany program, pole po zapisie; zapis różni się od
+  dotychczasowego tylko programem; lista preparatów edycji bez zmian; pkt 2 = `Gp_biezacy` Karty wycięte
+  z `vilda_auth_ui.js` na punktach do edytowanego, z lekiem z formularza) + I→G szczegółowo (lista, punkt, karta bez
+  zdarzeń, odświeżenie w trakcie edycji, Kontynuacja z karty), lista preparatów punktu bez programu i bez leku, punkt
+  niespójny, zmiana rodzaju w edycji, bez modułu kursów, formularz wsteczny w trakcie edycji, przypadek 2 przeglądu
+  (wybór Increlexu → IGF-1, powrót → SNP), pkt 3 przy wybranym preparacie, punkt z programem przy zmianie preparatu,
+  koniec edycji bez zapisu (zmiana pacjenta w innej ramce, formularz wsteczny po zniknięciu punktu, usunięcie
+  edytowanego punktu, lista bez punktu, odświeżenie tej samej listy, usunięcie innego punktu), formularz wsteczny
+  w trakcie edycji przy kursie bez programu bieżącego (drugi przegląd; na wersji 05e1c7fe nie przechodzi).
+- zmienione oczekiwania z powodem w nazwie i komentarzu („od P-GH-PROGRAM-EDYCJA”): `gh-punkty-charakterystyka-monitor`
+  — R9 (pole i zapis PWS; dotąd SNP) i „bez punktu Włączenia” (SNP; dotąd PWS); `gh-program-biezacy` — S2 (zapis, pole
+  i Kontynuacja z karty SNP; dotąd IGF-1) i edycja Kontynuacji Genotropin w I→G (SNP; dotąd IGF-1).
+- `tests/unit/gh-punkty-siatka.test.mjs` (28 → 30) i `tests/scripts/gh-punkty-wzorzec.mjs`: złota siatka — 253 z 963
+  zapisów edycji z modułem dawki (bez odmów reguły kursów; W+bez-id, punkt bez id → ZT: 112; W+obce-pole, `fikc-k2` →
+  IGF-1: 141; dotąd SNP Włączenia) mają program edytowanego punktu (`wplywProgramuEdycji` — program czyta prawdziwy
+  monitor podczas edycji); 3 przypadki reprezentatywne = wynik wzorca z programem punktu od zapisu dalej
+  (`zProgramemEdytowanego`), skrót z programem cofniętym = skrót BAZA; nowy test struktury, nowa kontrola negatywna (pole
+  przy edycji znów z dawnego wyrażenia), a kontrola „#therProg z programu Włączenia” obejmuje też te edycje. Plik wzorca
+  bez zmian.
+- e2e (prawdziwe DocPro): `tests/e2e/gh-program-biezacy-docpro.spec.mjs` — nowe GPB-9 (I→G, edycja K 7;6: pole SNP,
+  preparaty rhGH, zapis SNP, karta SNP i Genotropin; usunięcie edytowanego punktu — pole SNP, Kontynuacja z karty SNP)
+  i GPB-10 (punkt bez programu → SNP, wszystkie preparaty; punkt niespójny → IGF-1, pole preparatu puste, odmowa, punkt
+  i karta bez zmian), po przeglądzie GPB-11 (punkt bez programu: wybór Increlex 40 mg w formularzu → pole IGF-1, powrót
+  → SNP, zapis Increlex + IGF-1; formularz wsteczny w trakcie edycji Włączenia Increlex → SNP, Genotropin 12 mg),
+  zmienione GPB-7 (S2: zapis, pole i Kontynuacja z karty SNP; dotąd IGF-1 — edycja tworzyła stan
+  „Genotropin + IGF-1”); `gh-program-biezacy-docpro-mobile.spec.mjs` — nowe GPBM-2 (telefon: pole i zapis SNP, bez
+  przewijania w bok). Wagi obu plików w `tests/fixtures/czasy-e2e.json` zmierzone na nowo (po przeglądzie: 67,6 s
+  i 15,1 s).
+- Kontrola negatywna na `origin/audyt` 77cb60dc: e2e — nie przechodzą 4 z 4 nowych i zmienionych (GPB-7, GPB-9, GPB-10,
+  GPBM-2; przed GPB-11), pozostałe 8 testów obu plików przechodzą; unit — nowy plik nie ładuje się (brak wpięć), a
+  w wariancie bez wymogu kotwic nie przechodzi 17 z 29 (przechodzi 12 pilnujących braku zmiany: edycja Włączenia, punkty
+  bez programu z wynikiem jak dotąd ×4, wznowienie ×2, Zakończenie kursu 1 bez programu, W2, punkt niespójny, pkt 3 przy
+  wybranym preparacie, usunięcie innego punktu); `gh-program-biezacy` w tym samym wariancie — 2 z 32 (S2, edycja
+  Kontynuacji); charakterystyka — 2 z 20; siatka — 2 z 30 (test struktury i nowa kontrola negatywna).
+- Kontrola negatywna poprawek po przeglądzie na 395e52c0 (wersja przed przeglądem): unit — w wariancie bez wymogu kotwic
+  nie przechodzi 5 z 29 (przypadek 1, przypadek 2, zmiana pacjenta w innej ramce, formularz wsteczny w trakcie edycji
+  i po zniknięciu punktu); e2e — nie przechodzi GPB-11, pozostałe 10 testów pliku przechodzą.
+- Powiązane e2e (GPB, GPBM, odblokowanie pola, wznowienie, API punktów, panel wiersza, F5, karta preparatu, edycja ×4,
+  charakterystyka, karta ukryta): 56 z 57 przechodzi; nie przechodzi znany niestabilny
+  `gh-punkt-z-wiersza.spec.mjs:463` — w powtórkach tak samo na 395e52c0 (6 z 16 nie przechodzi) i 77cb60dc (1 z 4) jak
+  na drzewie roboczym (7 z 16).
+
+**Wdrożenie.** Od razu przy wydaniu; dotyczy punktów edytowanych po wdrożeniu. Rekord pacjenta, sejf, zapis punktów
+(poza programem zapisanym przy edycji) i synchronizacja bez zmian. Zapisane wcześniej punkty nie są poprawiane
+(Kontynuacje zapisane dawną edycją z programem IGF-1 przy rhGH zostają — S1; ich edycja zachowuje IGF-1).
+**Cofnięcie** = rewert PR: pole przy edycji znów z dawnego wyrażenia (program Włączenia kursu).
+
+**Wersje.** `gh_therapy_monitor.js` 66 → 67 (`docpro.html`); precache (append-only); `SW_VERSION` 1.1.576 → 1.1.577
+(+ pin w `tests/unit/klirens-ui-model.test.mjs`); `tests/fixtures/wersje-zasobow.json` — wszystko z `npm run podbij-wersje`
+względem `origin/audyt` d6f133eb. Bez nowego pliku ładowanego i bez nowych stylów.
+
+**Decyzje właściciela (2026-11-23, po PR).** „akceptuję 3-5, punkty 1 - nie ma takiego przypadku do tej pory w aplikacji
+więc można o nim zapomnieć, punt 2 odłóż.”
+- zaakceptowane: zapas z innego kursu (kurs 2 bez Włączenia i bez programu pierwszego punktu — program Włączenia kursu 1,
+  jak dotąd); preparat punktu bez leku przy edycji (pierwszy z listy, jak dotąd); punkt usunięty w trakcie edycji — pole
+  pokazuje program bieżący (rozstrzygnięcie wykonawcy);
+- zamknięte bez zmian: punkty niespójne (np. Genotropin z programem IGF-1 — edycja ich nie poprawia, a lista preparatów
+  formularza edycji idzie za programem punktu, więc zapis bez zmian odmawia) — takich zapisów w aplikacji dotąd nie ma;
+- odłożone: punkt bez programu, przed którym w kursie nie ma programu rodzaju preparatu z formularza edycji (pkt 3 —
+  program Włączenia, np. Increlex wybrany w kursie bez programu IGF-1 — z programem SNP; monitor nie wymyśla programu).
+
+**Co pozostaje decyzją właściciela.** Akceptacja kliniczna wyniku (przy scaleniu); to, że pkt 2 nie patrzy na późniejsze
+punkty; formularz wsteczny w trakcie edycji — program i lek bieżący kursu (rozstrzygnięcie wykonawcy).
+
+## Dziennik zdarzeń: odsyłanie ukrytego wpisu Kosza karty usuniętej po zastosowaniu zmiany z innego urządzenia — uśpione (P-ZBIEZNOSC-ZDARZEN, E3-PR0d2, SW 1.1.568, `vilda_vault.js` 283, 2026-11-20)
+
+**Zmiana kliniczna: NIE (uśpiona).** Wzory, progi, jednostki, interpretacje, reguły scalania (`Le`), format kopii,
+serwer i `vilda_sync.js` bez zmian. Dla użytkownika dziś nic się nie zmienia: odsyłanie ukrytego wpisu włącza ten sam
+przełącznik co odsyłanie poprawionych wizyt i wpisów Kosza (E3-PR0c, E3-PR0d: klucz `localStorage`
+`vilda-event-echo-v1` dokładnie `'1'` albo pole okna `VILDA_EVENT_ECHO === true`), którego żaden ekran aplikacji nie
+ustawia; przy wyłączonym przełączniku zastosowanie zmiany z innego urządzenia idzie dokładnie jak po E3-PR0d. Po
+włączeniu zmienia się wynik synchronizacji w jednej rzadkiej sytuacji. Przykład (fikcyjny): komputer w gabinecie (A),
+telefon (B), laptop ze starszą kopią (C), karta „Pacjent Testowy 1” z wizytą v z 3 marca (20 kg).
+- 10 listopada telefon daje v do Kosza; komputer to dostaje.
+- Telefon klika „Przywróć”. Komputer, zanim to dostanie, robi „Usuń pacjenta”: karta i jej wersje znikają, a wpis
+  Kosza v zostaje jako ukryty (okno Kosza go nie pokazuje, bo karty nie ma; „Przywróć” takiego wpisu odmawia).
+- Komputer dostaje „Przywróć”: karta przegrywa tu z nagrobkiem pacjenta, więc wersja nie wchodzi, a wpis zostaje.
+  Telefon dostaje „Usuń pacjenta” i traci v razem z kartą (swojego wpisu Kosza już nie ma).
+- Dziś: ukryty wpis jest tylko na komputerze. Gdy laptop dopisze do karty nową wizytę i karta wróci, v jest na
+  komputerze w Koszu, a na telefonie w karcie — do pełnej synchronizacji, która kładzie ją do Kosza wszędzie (R5-E1).
+- Po E3-PR0d2: komputer zaraz po udanym scaleniu „Przywróć” dopisuje do kolejki swój wpis (`stomb` v); telefon, który
+  zna już „Usuń pacjenta”, zapisuje go jako ukryty i nic nie odsyła. Po powrocie karty v jest w Koszu na wszystkich
+  trzech urządzeniach — tak jak dziś po pełnej synchronizacji. „Przywróć” działa 30 dni od chwili wrzucenia do Kosza
+  (tu do 10 grudnia), nie od daty wizyty; potem zostaje wpis bez treści, jak po pełnej synchronizacji.
+- Po „Scal pacjentów” zamiast „Usuń pacjenta” karta zwykle nie wraca, a okno Kosza karty docelowej nie pokazuje wpisu
+  z dawną kartą: wizyta jest niewidoczna na wszystkich urządzeniach, dopóki karta nie wróci — jak dziś (na drugim
+  urządzeniu znika razem z kartą).
+To samo, gdy zamiast „Przywróć” wizyta dostała po Koszu inną późniejszą zmianę (gwiazdkę, poprawkę) na urządzeniu, które
+o Koszu nie wiedziało. Odsyłanie ukrytego wpisu jest dalszą częścią tej samej drogi ze scalania do kolejki co odsyłanie
+poprawionych wizyt i wpisów Kosza — rozszerzenie decyzji 9 z 2026-10-29, do akceptacji właściciela przy PR (niżej).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 4a. Decyzja 1
+z 2026-11-19 (plan, rozdział 6, blok „Decyzje z 2026-11-19 (E3-PR0d, pytania 1–2 projektu)”): ukryty wpis Kosza, który
+zostaje tylko na jednym urządzeniu, bo późniejsza wersja nie weszła przy karcie usuniętej tutaj, będzie odsyłany
+pozostałym urządzeniom — osobny mały PR zaraz po E3-PR0d, po sprawdzeniu skutków; zbędna druga wiadomość przy powtórce tej samej
+zmiany i różnica do pełnej synchronizacji przy trzech urządzeniach albo przy „Usuń pacjenta” w tej samej chwili są
+przyjęte. Decyzja z 2026-11-20 — odpowiedź właściciela („1a”) na pytanie projektu E3-PR0d2, zgodna z rekomendacją;
+zapis w planie, rozdział 6, blok „Decyzja z 2026-11-20 (E3-PR0d2, pytanie 1 projektu)” (dopisany w tym PR): wizyta
+przywrócona na jednym urządzeniu, a usunięta z kartą na drugim (R5-E1), należy do jawnych wyjątków wyroczni „nie
+zginęła ostatnia zmiana” w kryterium odbioru E3-PR0 jako „wynik taki jak po pełnej synchronizacji”; wyrocznia dalej ją
+zgłasza i opisuje jako znaną. Dalej obowiązują: decyzja 1a z 2026-11-15 (jeden ukryty przełącznik), decyzje z 2026-11-17
+(odsyłanie tylko po pojedynczych zmianach; notatki bez odsyłania). Wejście z E3-PR0d („Ograniczenia”, „Wejście do
+kolejnych PR”: szkic warunku). Wszystko, co wspólne z E3-PR0d — przełącznik, strzeżony adapter, zasada błędów, emisja,
+„Przy wyłączonym przełączniku” — opisuje wpis E3-PR0d wyżej; tu tylko to, co nowe. Sprawy, których projekt i decyzje nie
+rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym dla danych — „Do akceptacji właściciela przy PR”.
+
+### E3-PR0d2
+
+**Co było** (`audyt` `119f0225`). Odsyłanie E3-PR0c i E3-PR0d porównuje stan przed scaleniem i po nim. W przykładzie
+scalanie „Przywróć” niczego nie zapisuje: wersji po scaleniu nie ma (karta przegrała z nagrobkiem), a wpis Kosza przed =
+po (wersja jest późniejsza niż Kosz, więc scalanie wpisu nie rusza). Nic nie wychodzi — literał p. 6 z przełącznikiem
+„kosz v|P: tylko A [R5]” (R5-0) i dalszy ciąg R5-E1 („kosz v|P: tylko A”, „wersja P/v: tylko B”).
+
+**Reguła.** Po udanym zastosowaniu pojedynczej zmiany z innego urządzenia (koperta zdarzenia, scalanie bez wyjątku)
+urządzenie dopisuje do kolejki `stomb` każdej wersji, którą ładunek niósł pod kartą, a której po scaleniu nie ma pod
+żadną kartą, choć jest jej wpis Kosza, z którym ta wersja by wygrała; karty żadnego elementu tego wpisu nie ma, a karta
+z ładunku przegrała tu z nagrobkiem pacjenta. Reguła patrzy na stan po scaleniu, a nie na to, co scalanie zapisało —
+odchodzi od zasady E3-PR0c i E3-PR0d „nigdy na samym fakcie zapisu”, więc ma własny dowód braku pętli (niżej).
+Wszystkie warunki naraz, dla każdej wersji v z ładunku:
+- **tylko po udanym scaleniu** — `Le` bez wyjątku. Przy `busy` i `apply-error` reguła nie liczy kandydatów i nie czyta
+  kart. Powód: drenaż przy `busy` i `apply-error` zostawia kursor przed wierszem i stosuje go ponownie przy każdym
+  drenażu, bez limitu prób, a emisja odsyłania idzie bez względu na status — zdarzenie, które trwale nie wchodzi,
+  wysyłałoby ten sam wpis przy każdym drenażu. Z warunkiem: 0 wierszy po każdej nieudanej próbie, jeden po udanym
+  ponowieniu. Odsyłanie E3-PR0c i E3-PR0d po wyjątku bez zmian;
+- **ładunek niesie wersję S tej wizyty pod kartą P** (`patients[].snapshots[]`; `Bev_kandydaciUkrytych`: kopia wersji
+  z ładunku zrobiona przed scaleniem — ta sama lista kandydatów co w E3-PR0c, `Bev_kandydaciEcha` — i `lastSavedAtISO`
+  karty P z ładunku, pusty napis, gdy go nie ma). Koperta `stomb` wersji nie niesie (karta bez wizyt), więc odesłany
+  wpis sam tej reguły nie wywoła;
+- **wersji v nie ma pod żadną kartą po scaleniu** — odczyt wersji „po” z E3-PR0c, bez nowego odczytu. Gdy v leży pod
+  kartą, wpis albo przegrał, albo jest pod żywą kartą — to sprawa E3-PR0c i E3-PR0d;
+- **jest wpis v po scaleniu i S wygrywa z każdym jego elementem** — odczyt wpisów „po” z E3-PR0d; dla każdego elementu e
+  `!Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload))`, wywołanie wpisane wprost (`Bev_wstepUkrytych`). To samo
+  rozstrzygnięcie, którego scalanie używa dla wersji z ładunku pod kartą usuniętą przy ważnym Koszu (`Bsl_koszZLadunku`).
+  Wersja nie późniejsza niż Kosz przegrywa — scalanie wchłania ją we wpis, a gdy wpis się przy tym zmienił, odsyła go
+  E3-PR0d;
+- **karty żadnego elementu wpisu nie ma po scaleniu** — nowy odczyt istnienia rekordu karty, bez odszyfrowania. Wyklucza
+  wpis pod żywą kartą Q po „Scal pacjentów” (wpis widać w Koszu Q; rodzina E4b — E3-PR0e; *od 2026-11-23: E3-PR0e3*). Element bez poprawnego
+  `patientId` (buildery takiego nie tworzą) liczy się jak „karta jest”;
+- **karta P przegrała tu z nagrobkiem pacjenta** — rekordu karty P nie ma, a najpóźniejszy nagrobek P jest nie
+  wcześniejszy niż `lastSavedAtISO` karty P z ładunku (pusty zapis — jak spełnione): ta sama reguła co w `Le` (nagrobek
+  wygrywa z kartą, której zapis nie jest późniejszy). Wyklucza kartę, która tu wraca, i kartę bez nagrobka.
+Warunki o ładunku, wersji i wpisie są czyste i liczone najpierw (`Bev_kandydaciUkrytych`, `Bev_wstepUkrytych`); odczyt
+kart i nagrobków (`Bev_stanKart`) idzie tylko przy udanym scaleniu i niepustym wstępie, a decyzję daje funkcja czysta `Bev_echoUkrytych`. Zwykła koperta
+wersji żywej karty nie dostaje żadnej nowej transakcji.
+
+**Kiedy nie odsyłamy.**
+
+| Przypadek | Dlaczego |
+|---|---|
+| `busy` albo `apply-error` scalania, także przy ukrytym wpisie | tylko po udanym scaleniu; udane ponowienie odsyła raz |
+| karta żywa (wersja weszła) | wersja jest pod kartą po scaleniu; wpis i tak zdejmuje scalanie (Kosz przegrywa z późniejszą wersją) |
+| wersja nie późniejsza niż Kosz | wpis wygrywa; zmieniony wpis odsyła E3-PR0d („(echo)”) |
+| karta P, która tu wraca (nagrobek wcześniejszy niż zapis karty z ładunku), albo karta bez nagrobka | karta nie przegrała z nagrobkiem |
+| wpis pod żywą kartą Q po „Scal pacjentów” | karta wpisu jest, wpis widać w Koszu Q; gwiazdka z innego urządzenia ginie tam tak samo jak dziś — E3-PR0e *(2026-11-23: E3-PR0e3)* |
+| wpis wygasły (365 dni) | builder wpisu nie daje koperty („brak encji”), bez wiersza i bez pamięci braków |
+| pełna kopia, delta, stara delta (bez pola `event`), importy | jak w E3-PR0c i E3-PR0d: tylko po kopertach zdarzeń (decyzja z 2026-11-17); testy wszystkich trzech dróg z „Przywróć” po „Usuń pacjenta” |
+| przełącznik wyłączony, zamknięta bramka dziennika, „Komputer w pracy” | jak w E3-PR0c: przed całą drogą |
+| notatki i ich nagrobki | decyzja z 2026-11-17: notatki bez odsyłania; reguła dotyczy tylko `stomb` |
+| odesłany wpis u odbiorcy | koperta `stomb` nie niesie wersji, więc u odbiorcy nie ma kandydata |
+
+**Wpisy porządkowania.** Reguła ich nie zawęża: obejmuje każdy element listy Kosza tej wersji, także nagrobek
+porządkowania, z którym S by wygrała. To szerzej niż zdejmowanie wpisu przy żywej karcie: przypięta wersja, nie
+późniejsza niż przycięcie, „wygrywa”, a przy żywej karcie nagrobek porządkowania przy niej zostaje — w tym rogu
+odesłanie niczego nie wyrównuje i powtarza się przy każdym udanym zdarzeniu z tą wersją. Wyrażenie zostaje: to szkic
+przyjęty we wpisie E3-PR0d i to samo rozstrzygnięcie co w scalaniu; skutek u odbiorców jest taki jak po pełnej
+synchronizacji (koperta niesie wszystkie elementy tej wersji); E3-PR0d też odsyła elementy porządkowania; w długich
+przebiegach takich odesłań nie było (licznik `retencja` = 0); koszt ogranicza granica (niżej). Zawężenie (wpis tylko
+wtedy, gdy przy żywej karcie zostałby zdjęty) zmieniałoby szkic i nie usuwa żadnej zaobserwowanej różnicy — odrzucone.
+Test w oknie przypina oba rogi: pod usuniętą kartą wpis porządkowania idzie bez zmian (bez treści); przy żywej karcie
+v wraca do karty, a wpis przy niej odsyła E3-PR0d.
+
+**Odczyty.** `Bev_stanKart(wstep, s)`: kontrola sesji zastosowania, strzeżony adapter `Bev_start(null)` (od początku
+„Usuń konto” tego konta każda metoda odmawia kodem `SYNC_DB_DELETED`), `getPatientForUser` dla kart elementów wpisu
+i kart P z ładunku (bez powtórzeń i bez niepoprawnych identyfikatorów), po każdym odczycie kontrola sesji; jeden
+`listTombstonesForUser` i kontrola sesji; na kartę najpóźniejszy nagrobek; po wyjściu sprawdzenie strażnika (`strzez`),
+jak po odczycie wpisów „po”. Bez odszyfrowania (istnienie rekordu karty i jawne pola nagrobka), bez zapisów, bez zegara.
+Odczyty wersji „po”, wpisów „po” i kart to osobne transakcje, po kolei, nie z jednej chwili: równoległa operacja może
+zmienić stan między nimi. Fałszywe trafienie daje najwyżej jeden zbędny `stomb`, zbudowany ze stanu w chwili dopisania;
+pominięcie — wynik jak dziś. Koszt: zwykła koperta — 0 nowych transakcji (test: transakcje sklepów `patients`
+i `tombstones` przy włączonym przełączniku = przy wyłączonym); ukryty wpis — odczyt kart (zwykle jedna — karta P jest
+kartą wpisu) i jedna transakcja listy nagrobków.
+
+**Błędy, sesja i usuwanie konta** — zasada E3-PR0c i E3-PR0d: błąd zdejmuje tylko porównanie, nigdy nie dokłada wpisów
+spoza kandydatów; wpis, który reguła bez błędu by odesłała, jest odesłany zawsze.
+
+| Błąd | Skutek | Dlaczego bezpieczne |
+|---|---|---|
+| scalanie rzuciło (`busy`, `apply-error`) | bez wstępu i bez odczytu kart — 0 odesłań ukrytego wpisu | stan bez udanego zapisu; udane ponowienie odsyła raz |
+| cały odczyt wersji „po” zawiódł | warunek „wersji nie ma pod kartą” jak spełniony | E3-PR0c odsyła wtedy każdego kandydata |
+| cały odczyt wpisów „po” zawiódł | wstęp pusty | E3-PR0d odsyła wtedy każdego kandydata, więc v i tak idzie |
+| wyjątek rozstrzygnięcia jednego elementu | jak „S wygrywa” | odesłanie własnego wpisu — najwyżej jeden zbędny wiersz |
+| odczyt kart albo nagrobków zawiódł z innym kodem (np. niedostępny strażnik tożsamości chronionego sejfu, błąd magazynu) | odesłanie każdego kandydata wstępu | kandydaci wstępu mają wpis po scaleniu, więc builder zbuduje kopertę; to własny stan urządzenia, który odbiorca scala tymi samymi regułami co pełną kopię |
+| zmiana sesji albo blokada w trakcie odczytu kart | bez kolektora — bez odsyłania; status `applied` jak dziś (scalanie się skończyło) | jak w E3-PR0c i E3-PR0d. Kod `VAULT_LOCKED` strzeżonego adaptera jest tu nieosiągalny: zablokowany sejf to zmiana sesji, więc kontrola sesji rzuca wcześniej |
+| `SYNC_DB_DELETED` w odczycie kart | bez odsyłania wersji i wpisów | jak „zmiana 2” E3-PR0d: konto usuwane — nic |
+
+Statusy zastosowania (`applied`, `busy`, `apply-error`, `session-changed`) bez zmian. Wiersz do kolejki buduje builder
+wpisu (`Bev_stomb`) ze stanu w chwili dopisania, z tym samym sprawdzeniem sesji i konta co w E3-PR0d. Operacje kolejki
+i kwarantanny sprawdzają sesję tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu.
+
+**Jedna lista, bez duplikatu.** `kol.kosz` = wpisy z odsyłania E3-PR0d, a za nimi ukryte wpisy bez kluczy, które już są
+na liście. `Bem_zastosujEcho` bez zmian (po jedynym `await` dokładnie dwa `Bem_zmiana`: `snap` z `kol.echo`, potem
+`stomb` z `kol.kosz`; forma przypięta w teście uśpienia), emisja w sesji scalania, kolejność jak `Bem_RANGI`. Osobna
+lista z trzecim `Bem_zmiana` — odrzucona (zmiana formy). W jednym zdarzeniu obie reguły praktycznie się wykluczają:
+E3-PR0d wymaga zapisu wpisu przez scalanie, a w gałęzi „karta usunięta” wpis zapisuje się tylko wtedy, gdy Kosz wygrywa.
+Ten sam klucz z obu reguł w jednym zdarzeniu daje tylko błąd odczytu wpisów przed scaleniem (E3-PR0d odsyła wtedy
+kandydata bez porównania z „przed”) — klucz idzie raz (test w oknie). W jednej
+partii dwóch zdarzeń ten sam klucz może mieć wiersz E3-PR0d i wiersz ukrytego wpisu (długie przebiegi, „bez połączenia”).
+
+**Bez pętli** (własny dowód):
+1. Odesłanie ukrytego wpisu wywołuje tylko koperta, która niesie wersję v pod kartą; koperta `stomb` wersji nie niesie,
+   więc odesłany wpis nie wywołuje tej reguły u nikogo.
+2. Urządzenie z ukrytym wpisem nie ma karty, więc samo nie wyśle `snap` tej wersji (E3-PR0c wymaga wersji pod kartą po
+   scaleniu).
+3. Nowe koperty z v pod kartą powstają tylko na urządzeniach z żywą v: z ich własnych zmian albo z odesłania E3-PR0c po
+   zapisie, który zapisuje tylko ściśle nowszy rejestr albo treść — skończenie wiele razy; każde takie urządzenie po
+   nagrobku P traci kartę i v.
+4. Nieudane zastosowania nie odsyłają, więc ponawiany w kółko wiersz drenażu nie mnoży wiadomości.
+5. Liczba odesłań ≤ (liczba udanych zastosowań kopert z v pod kartą) × (liczba urządzeń z ukrytym wpisem) — skończona.
+Długie przebiegi: brak spoczynku 0; testy deterministyczne: 1–2 obiegi.
+
+**Powtórki i granica.** Granica jest własnością reguły: na jedno udane zastosowanie koperty zdarzenia najwyżej jedno
+odesłanie danej wersji od danego urządzenia (wstęp przechodzi raz przez każdy `snapshotId` ładunku, a `kol.kosz` nie ma
+powtórzeń). Ta sama koperta zastosowana drugi raz z powodzeniem (np. kursor nie zapisał się po udanym zastosowaniu)
+odsyła wpis jeszcze raz — zbędna druga wiadomość przyjęta decyzją 1 z 2026-11-19 (w oknie drugi wiersz `stomb` v;
+w teście A ≡ B druga koperta, licznik `ponowne` 1, bez różnicy). Nieudane próby nie odsyłają nic; kolejne zdarzenia
+z tą wersją pod P odsyłają raz każde. Całość wygasa z wpisem (365 dni) albo gdy v wróci pod kartę. Pilnują: sprawdzian
+granicy w teście A ≡ B niezależny od modeli, porównanie model = sejf w każdej partii, brak spoczynku = 0 i test w oknie
+z `busy`, `busy`, `apply-error`. Długie przebiegi: najwyżej 1 odesłanie na udane zastosowanie.
+
+**Kolejność.**
+- **Własny krok.** „Usuń pacjenta” bierze blokadę karty, a scalanie karty P czeka na tę samą blokadę i dopiero pod nią
+  czyta świeży nagrobek; po zapisie nagrobka do końca kroku nie ma już `await`. W kolejce `ptomb` P, potem `stomb` v;
+  odbiorca z żywą v stosuje je w tej kolejności: karta usunięta, wpis ukryty, 0 wierszy (test w oknie z „Usuń pacjenta”
+  wstrzymanym na zatwierdzeniu nagrobka i na usunięciu karty).
+- **Cudzy otwarty krok.** Licznik kroków jest jeden na dokument: gdy trwa inny krok (np. „Usuń do Kosza” wizyty innej
+  karty czekające na odszyfrowanie), a w jego trakcie użytkownik zrobi „Usuń pacjenta” P i drenaż zastosuje zdarzenie
+  z v pod P, po końcu kroku wychodzi `stomb` v, `stomb` q, `ptomb` P (ranga). Odbiorca z żywą v najpierw zdejmuje wpis
+  (Kosz przegrywa), potem usuwa kartę razem z v — ukryty wpis zostaje tylko na A. Przy dwóch urządzeniach nikt nie ma
+  już żywej v, więc różnica zostaje do pełnej synchronizacji, jak dziś; wyrównać może ją tylko kolejne zdarzenie z v
+  z trzeciego urządzenia, które ma jeszcze żywą v. Znane ograniczenie, wprost dopuszczone decyzją 1 („przy usuwaniu
+  pacjenta w tej samej chwili”); test w oknie przypina wynik (A: ukryty wpis, B: bez wpisu). Naprawa (odsyłanie po
+  nagrobkach kart na końcu kroku) wymagałaby znacznika na wpisie i zmiany formy `Bem_zastosujEcho` — odrzucona.
+  W długich przebiegach nie wystąpiło (uprząż nie ma nakładających się kroków).
+- **Pozostałe wyjątki** — urządzenie zwykle odsyła ukryty wpis dopiero po zastosowaniu nagrobka P, więc odbiorca czyta
+  nagrobek pierwszy, ale nie zawsze; w każdym z tych przypadków skutek jak dziś (różnica do następnego zdarzenia z v
+  z urządzenia z żywą v albo do pełnej synchronizacji): nagrobek znany tylko z pełnej kopii (cudzy `ptomb` może wejść do
+  dziennika po odesłaniu); `ptomb` ponad limitem po „Scal pacjentów” (koperta niesie całą kartę docelową z wersjami;
+  wiersz ponad limitem pomija wysyłka, kartę dowozi pełna wysyłka) — `stomb` v idzie, `ptomb` nie; nieudane dopisanie
+  `ptomb` (limit blokady konta, brak miejsca, blokada sejfu, zmiana sesji, błąd zapisu) trafia do pamięci braków
+  i dopisuje je później przegląd kolejki — za `stomb` v; inna karta przeglądarki (blokada pacjenta działa między
+  kartami, ale łańcuchy dopisań są osobne w każdym dokumencie); „Scal pacjentów” we własnym kroku zamyka krok dopiero po
+  zwolnieniu obu blokad, więc scalanie czekające na blokadę P mogłoby wyemitować w jeszcze otwartym kroku (bardzo małe
+  okno); u odbiorcy kwarantanna albo przeskok dziury mogą pominąć `ptomb` przed `stomb` v.
+
+**Trzy urządzenia.** Test wejściowy A ≡ B, 12 kolejności spoczynku trzech urządzeń (kartę usuwa urządzenie z wpisem
+Kosza albo urządzenie bez wiedzy o Koszu, po 6 permutacji): każda bez różnicy W1, 1–2 obiegi, 1–2 koperty odsyłania
+ukrytego wpisu (przy części kolejności odsyła też drugie urządzenie, gdy po odesłaniu pierwszego dostanie jeszcze
+kopertę z v), 0 ponownych wysłań tej samej wartości; przy wyłączonym przełączniku — dzisiejsza różnica. Odbiorca z żywą
+v, który dostaje odesłany wpis przed nagrobkiem karty, zdejmuje wpis; zbieżność daje trzecie urządzenie, które po
+kopercie z v odsyła swój ukryty wpis za swoim `ptomb` P — na końcu bez różnicy, 2 koperty. Uprząż dostarcza kolejki
+parami (od jednego nadawcy po kolei), więc daje też kolejności niemożliwe w jednym dzienniku — mimo to wszystkie się
+zbiegają. Gwarancji ogólnej nie ma: gdy żadne urządzenie z ukrytym wpisem nie dostanie już koperty z v, różnica zostaje
+do pełnej synchronizacji (dopuszczone decyzją 1).
+
+**Przy wyłączonym przełączniku.** Nowy kod stoi tylko w `Bev_zastosujZEchem`, do której wchodzi się wyłącznie
+z kolektorem, czyli za przełącznikiem (`Bob_bramkaEcha`, bez zmian, czytany raz w `Bem_zastosuj`).
+
+| Skutek | Wartość | Dowód |
+|---|---|---|
+| odczyty przy `applyEncryptedEvent` | jak po E3-PR0d: jedno pole okna i jeden `getItem` przełącznika; 0 odczytów kart i nagrobków | test „przełącznik wyłączony” z kopertami ukrytego wpisu |
+| wynik, zapisy sklepu, wiersze kolejki, operacje `crypto.subtle` | te same co w kopii sejfu bez odsyłania („Przywróć” po „Usuń pacjenta”, poprawka pod kartą usuniętą) | test równoważności w `sync-odsylanie` |
+| zamknięta bramka, „Komputer w pracy” | 0 wierszy, bez odczytu kart i nagrobków ponad dziś | testy w `sync-odsylanie` |
+| zapis bazowy (`tests/fixtures/dziennik-zapis-bazowy.json`) | fikstura i test bez zmian | `sync-dziennik-zapis-bazowy` |
+| test A ≡ B | wszystkie literały bez przełącznika bajt w bajt | przebieg CI |
+| program długich przebiegów | każdy rekord wyniku ziarna taki sam jak przed E3-PR0d2: CI 45/45, podstawowy 40/40, „bez połączenia” 40/40, pełny 1–20 i 21–40 po 20/20, floty 221 i 276 po 10/10; plik wyników p. 6 bajt w bajt | porównanie z kodem `119f0225` |
+| literał miejsc poza blokiem P-DZIENNIK-ZDARZEN, forma `Bem_zastosujEcho` | bez zmian | test uśpienia |
+
+Z bloku (część `Bev_`) pierwszy raz wołane są `Bkz_wygrywa`, `Bkz_zmiana` i `Bgw_stan`, jak zapowiadał szkic E3-PR0d;
+w części `Bob_` dalej zakazane (test uśpienia). Poza blokiem P-DZIENNIK-ZDARZEN nic, także komentarze.
+
+**Model w teście A ≡ B.** Licznik (`tests/support/licznik-odsylania.mjs`) ma model odsyłania ukrytego wpisu na
+eksportach (`modelStanu`): jeden wiersz `stomb` na wersję i zdarzenie. Warunki „wersja pod kartą w ładunku”, „wersji
+nie ma pod kartą po scaleniu”, „kart elementów nie ma” i „karta P przegrała z nagrobkiem” są w liczniku napisane
+osobno; z kodu wyciętego z sejfu jest tylko rozstrzygnięcie „nagrobek wygrywa z wersją” (`wygrywaZKodu`: 25 funkcji
+domknięcia `Bkz_wygrywa`, `Bkz_zmiana` i `Bgw_stan` oraz stała `Bgw_czPam`). Strażnik „wycięte = sejf” (test licznika):
+domknięcie wywołań w bieżącym sejfie = lista licznika; jedyna zmienna modułu — `Bgw_czPam`; bez zegara; licznik nie
+deklaruje żadnej z tych funkcji; tekst każdego wycinka = tekst deklaracji z drzewa składni (jedna deklaracja na nazwę,
+stała — jedna deklaracja `const` z jednym deklaratorem); w bloku dokładnie jedno wywołanie `Bkz_wygrywa`,
+w `Bev_wstepUkrytych`, z drugim argumentem `Bkz_zmiana(X)` i trzecim `Bgw_stan(X, X.payload)`; próbki (Kosz przed
+i po wersji, retencja z gwiazdką i bez, rejestr wpisu przypięty). Zmiana reguły poza blokiem zmienia więc model i sejf
+naraz. Uprząż: na zdarzenie wiersze E3-PR0c i E3-PR0d oraz wiersze ukrytego wpisu bez kluczy tamtych (wiersz zostaje,
+gdy po całej partii jest wpis tej wersji); **najpierw** granica niezależna od modeli — w każdej partii i dla każdego
+klucza v liczba kopert `stomb` v odsyłania sejfu (E3-PR0d i ukryty wpis razem) ≤ liczba kopert zdarzeń partii, które
+wymieniają v (`patients[].snapshots[]` albo `snapshotTombstones[]`; koperta jawna katalogu się nie liczy), przekroczenie
+to osobny komunikat „odesłanie ponad granicę” przed porównaniem z modelem; **potem** multizbiór kluczy sejfu = model.
+Koperty klucza idą najpierw do wierszy E3-PR0d (sprawdzane jako „ponowne wysłanie tej samej wartości”), reszta do
+wierszy ukrytego wpisu — osobny licznik „odesłanie ze stanu” `S.stat.zeStanu { koperty, ponowne, retencja }`, wyłączony
+z „ponownego wysłania tej samej wartości” (`ponowne` = ta sama wartość od tego samego urządzenia w późniejszej partii);
+każda koperta liczy się w `S.stat.echo`; w opisie kolejki etykieta „(ze stanu)”. Warstwa „odesłane” licznika przy
+jednym kluczu z dwóch reguł w jednej partii daje kopertom klasę ostatniego wiersza — asercje odesłań ukrytego wpisu
+idą więc tylko na `S.stat.zeStanu`; poprawka krotności — E3-PR0h. Przy wyłączonym przełączniku model jest pusty.
+
+**R5-E1 w wyroczni.** Po E3-PR0d2 wizyta jest w Koszu na wszystkich urządzeniach, a ostatnią zmianą było „Przywróć”,
+więc wyrocznia „nie zginęła ostatnia zmiana” dalej zgłasza „R5-E1 | W1” i „R5-E1 | W4” (literał `P6E_WYR` bez zmian).
+Klasa R5-E1 (`tests/support/ostatnia-zmiana.mjs`) jest jawnym wyjątkiem „wynik taki jak po pełnej synchronizacji”
+(decyzja 1 z 2026-11-19 i decyzja z 2026-11-20), bez zapowiedzi naprawy: opis „bez naprawy: wynik taki jak po pełnej
+synchronizacji (decyzje właściciela z 2026-11-19 i 2026-11-20)”. Literały p. 6 z przełącznikiem R5-0, R5-E1 i „R5-E1,
+C wysyła tylko zdarzenia”: zdarzenia bez różnicy W1, W4 bez zmian, po jednej kopercie odsyłania ukrytego wpisu
+(`P6E_ZE_STANU`). Bloki p. 6 bez przełącznika: literały bez zmian, w tytule R5-E1 i wariantu C „ZNANA RÓŻNICA bez
+przełącznika odsyłania (z przełącznikiem po samych zdarzeniach bez różnicy, E3-PR0d2)”. „Karta częściowa” w wariancie
+C zostaje (E3-PR0h).
+
+**Flota ze starszą aplikacją.**
+- 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty — po nich odsyłania nie ma, a zdarzeń nie czyta, więc do 221
+  nic nie trafia i obiegu przez 221 nie ma z konstrukcji. Długie przebiegi (ziarna 1–10): 2 odesłania między bieżącymi
+  urządzeniami (ziarna 4 i 5), przypadek zielony. W ziarnie 4 po odesłaniu program idzie inaczej i wyrocznia W1 floty
+  (tylko druk) ma 89 zamiast 85 naruszeń bez klasy; każda encja spoza wspólnego zestawu to zmiana zrobiona ostatnio na
+  urządzeniu 221, która nie dochodzi do pozostałych zdarzeniami — ta sama klasa jest na kodzie bazy, bez żadnego
+  odesłania. Znane ograniczenie starszej wersji (decyzja 2 z 2026-11-16).
+- 276 (zdarzenia, bez odsyłania): jego `snap` może wywołać odesłanie u bieżącego urządzenia z ukrytym wpisem; koperta 276
+  nie ma `lastSavedAtISO` karty, więc warunek nagrobka jest spełniony tak jak w `Le`. Odesłany `stomb` 276 scala swoimi
+  regułami i nie odsyła. Długie przebiegi (ziarna 1–10): 0 odesłań.
+- Literały floty w CI bez zmian: losowe ziarna floty idą bez przełącznika, a scenariusze floty z przełącznikiem mają
+  0 odesłań ukrytego wpisu; koperty liczą się w `S.stat.echo`, więc te literały pilnują też braku takich odesłań.
+
+**Długie przebiegi** (ręcznie, 2026-11-20, kod tego PR i kod bazy `119f0225` na kopiach drzewa, pary bazy i PR naraz,
+CPU dzielone z drugą parą). Z przełącznikiem (`E2_AB_ECHO=1`), baza → PR:
+
+| Przebieg (ziarna) | Koperty `stomb` | Odesłania ukrytego wpisu (ziarna) | Granica: przekroczenia | Ponowne wysłanie | Brak spoczynku, W3, W4 | Punkty W1 z różnicą (w tym R5) | Czerwone przypadki | Czas (s) |
+|---|---|---|---|---|---|---|---|---|
+| CI (cały plik) | 10 → 10 | 0 | 0 | 0 | 0, 0, 0 | 0 → 0 | 22 → 32 (niżej) | 159 / 163 |
+| podstawowy (1–40) | 34 → 35 | 1 (31) | 0 | 0 | 0, 0, 0 | 3 → 1 (2 → 0) | ziarna 1 i 4 / te same (`ZNANE_W1`) | 225 / 226 |
+| „bez połączenia” (101–140) | 58 → 71 | 13 (104: 2, 108: 2, 109: 3, 110, 113, 114, 122: 2, 132) | 0 | 0 | 0, 0, 0 | 3 → 1 (2 → 0) | 104, 128, 132, 137 / te same (W2s „inne”) | 134 / 136 |
+| pełny (1–20) | 34 → 37 | 3 (3: 2, 16) | 0 | 0 | 0, 0, 0 | 7 → 2 (5 → 0) | ziarno 8 / to samo | 135 / 136 |
+| pełny (21–40) | 17 → 19 | 2 (39, 40) | 0 | 0 | 0, 0, 0 | 17 → 7 (10 → 0) | 37, 38, 39 / te same | 138 / 139 |
+| flota 221 (1–10) | 0 → 2 | 2 (4, 5) | 0 | 0 | 0, —, 0 | — | 2, 3 / te same (literały floty) | 31 / 29 |
+| flota 276 (1–10) | 2 → 2 | 0 | 0 | 0 | 0, —, 0 | — | 2 / to samo (literał floty) | 39 / 41 |
+
+- Różnice „wpis Kosza tylko na jednym urządzeniu” znikają: punkty W1 z klasą R5 19 → 0 (ziarna 31; 113, 114; 3, 16;
+  39, 40). Zostają tylko klasy spoza E3-PR0d2 (R4n, nagrobek karty opróżnionej, D7, utrata po „Scal pacjentów”).
+- **Zastrzeżenie:** w każdym ziarnie z odesłaniem dziennik operacji rozchodzi się dokładnie w kroku pierwszego odesłania
+  (inna kolejka, dalej inny program), więc „19 → 0” i „ten sam zbiór czerwonych” porównują tam różne programy. Dowodem
+  zbieżności są testy deterministyczne (p. 6, test wejściowy); długie przebiegi to wsparcie. W ziarnach bez odesłania
+  dziennik jest identyczny z bazą.
+- Nowych naruszeń nie ma: klasy W1, klasy i liczby wyroczni, W3, W4 i brak spoczynku porównane ziarno po ziarnie; bloki
+  błędów czerwonych przypadków identyczne (bez numerów wierszy). W ziarnach z odesłaniem i czerwienią („bez połączenia”
+  104, 132; pełny 39) czerwień ta sama co na bazie, z tym samym zbiorem naruszeń.
+- Koszt: 21 kopert odsyłania ukrytego wpisu na 6 przebiegów długich, 3–18 % kopert `stomb` w profilach; najwyżej
+  1 odesłanie na udane zastosowanie; najwięcej 4 koperty `stomb` jednego klucza w partii („bez połączenia”), zawsze
+  ≤ liczba zdarzeń partii z tą wersją. Odesłania zdarzają się też w ziarnach bez widocznej różnicy W1 na bazie (108,
+  109, 110, 122, 132): ukryty wpis bywa chwilowy w środku partii, a późniejsze zdarzenie i tak by go wyrównało — to
+  część kosztu, nie błąd. Licznik `retencja` 0 wszędzie.
+- CI z `E2_AB_ECHO=1`: 22 czerwone przypadki na obu kodach to bloki opisujące stan bez przełącznika (jak po E3-PR0d);
+  na kodzie PR dochodzi 10 tego samego rodzaju (3 literały bloku p. 6 bez przełącznika, 7 wariantów „przełącznik
+  wyłączony” testu wejściowego — zmienna włącza przełącznik także w nich). W CI bez zmiennej: 0 czerwonych na obu.
+- Tryb ścisły z przełącznikiem (`E2_AB_ECHO=1 E2_AB_SCISLE=1`): naruszenia R5 znikają — podstawowy 2 → 0 (ziarno 31
+  przestaje być czerwone), pełny 1–20 7 → 0 (ziarna 3 i 16), „bez połączenia” 2 → 0 (ziarna 113 i 114); zostaje
+  „nagrobek karty opróżnionej” w pełnym ziarnie 5 (tak samo na bazie). *(2026-11-23, E3-PR0e1, P-SYNC-WLASCICIEL: zostaje też po
+  E3-PR0e1 — wersja przechodzi tam kopertą odsyłania, która nie niesie nagrobka; wpis na końcu pliku.)*
+- Bez przełącznika: każdy rekord wyniku ziarna identyczny z bazą (tabela wyżej), te same czerwone.
+- Po ostatniej poprawce uprzęży (granica liczy tylko koperty zdarzeń) „bez połączenia” i flota 221 z przełącznikiem
+  powtórzone: te same liczby kopert, 0 przekroczeń granicy, 0 „echo sejfu ≠ model”, te same czerwone.
+
+**Testy.** Dane wyłącznie fikcyjne („Pacjent Testowy 1”, „Testowy Jan”, masy 20–45 kg), bez PESEL; prawdziwy
+`vilda_vault.js` w uprzęży (okno z atrapą IndexedDB, bliźniaki, kopia sejfu bez odsyłania).
+- `tests/unit/sync-odsylanie.test.mjs` (121 przypadków, było 92): „Przywróć” po „Usuń pacjenta” — jeden wiersz `stomb` v
+  (wpis 20 kg z treścią, koperta bez kart, emisja z samym identyfikatorem); odbiorca z żywą v po nagrobku karty
+  i odbiorca z tym samym ukrytym wpisem — 0 wierszy; ta sama koperta drugi raz — drugi wiersz; `busy`, `busy`,
+  `apply-error` (między nimi inny wiersz) — 0 po każdej próbie, jeden po udanym ponowieniu; bez odsyłania: karta żywa,
+  wersja nie późniejsza niż Kosz, `busy` przy żywej karcie, wpis pod żywą kartą Q po „Scal pacjentów” (wynik świadomie
+  wpisany); wpis pod kartą Q po „Scal pacjentów” i „Usuń pacjenta” Q — jeden wiersz; nagrobek porządkowania przypiętej
+  wersji (oba rogi); drogi bez odsyłania (pełna kopia, delta, stara delta); „Usuń pacjenta” wstrzymane na zatwierdzeniu
+  nagrobka i na usunięciu karty (`ptomb` P, potem `stomb` v; przypadek czeka na warunek do 5 s, nie na stałą liczbę
+  obrotów — pod obciążeniem 4 pętlami CPU 12 z 12 zielonych); cudzy otwarty krok; błąd odczytu kart (odesłanie
+  kandydatów), błąd odczytu wpisów przed scaleniem przy ukrytym wpisie (klucz v raz), `SYNC_DB_DELETED` w odczycie kart,
+  zmiana sesji w odczycie kart, koszt odczytu kart; funkcje czyste wycięte z kodu sejfu (`Bev_kandydaciUkrytych`,
+  `Bev_wstepUkrytych` — także wersja wygrywająca z jednym elementem wpisu, a z drugim nie, `Bev_echoUkrytych`),
+  `Bev_stanKart` z kodu sejfu z atrapą strzeżonego adaptera (kolejność odczytów, kontrola sesji po każdym, najpóźniejszy
+  nagrobek, zmiana sesji — bez dalszych odczytów), strażnik formy odczytu kart (adapter strzeżony, kontrole sesji, odczyt
+  tylko przy udanym scaleniu); przełącznik wyłączony (równoważność), zamknięta bramka i „Komputer w pracy”. Kopia sejfu
+  tylko w pliku testu ma jednorazowy fikcyjny błąd na początku `Bev_stanKart` (jak dotąd na początku `Bev_stanKosza`).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B; 256 przypadków, było 226; 21 pominiętych): p. 6
+  z przełącznikiem — R5-0, R5-E1, „R5-E1, C wysyła tylko zdarzenia” bez różnicy (`P6E_ZE_STANU`); test wejściowy
+  odsyłania ukrytego wpisu (światy 990 + nr: powtórka tej samej zmiany, trzy urządzenia w 12 kolejnościach, odbiorca
+  z żywą v przed nagrobkiem karty, „Scal pacjentów”, gwiazdka po Koszu z „Usuń pacjenta” i ze „Scal pacjentów”, karta
+  żywa, poprawka z trzeciego urządzenia sprzed Kosza; warianty z wyłączonym przełącznikiem — dzisiejszy wynik); wpis
+  zdjęty późniejszym zdarzeniem tej samej partii (świat 1020: model bez wiersza, sejf bez koperty) i granica w porównaniu
+  partii; ziarno 1 profilu podstawowego i ziarno 8 koalescencji z przełącznikiem — 0 odesłań ukrytego wpisu.
+- `tests/unit/licznik-odsylania.test.mjs` (50, było 38): model odsyłania ukrytego wpisu (wiersz; pusto przy karcie
+  żywej, wersji pod kartą, wersji nie późniejszej niż Kosz, wpisie z dwoma elementami, z których z jednym wersja
+  przegrywa, wpisie pod żywą kartą, elemencie bez poprawnego `patientId`, karcie P bez nagrobka, nagrobku wcześniejszym
+  niż zapis, starej delcie, kopercie `stomb`; retencja z gwiazdką i bez), granica i przypisanie kopert, strażnik
+  „wycięte = sejf”.
+- `tests/unit/sync-zdarzenia-buildery.test.mjs` (reguła „bez zegara”): cztery nowe funkcje części `Bev_`
+  sklasyfikowane jako odsyłanie.
+- `tests/unit/ostatnia-zmiana.test.mjs`: opis klasy R5-E1 bez zapowiedzi naprawy, światy klasy bez zmian.
+- `tests/unit/sync-dziennik-uspienie.test.mjs` i `tests/unit/sync-dziennik-zapis-bazowy.test.mjs` — bez zmian (zielone).
+- e2e `tests/e2e/sync-zdarzenia-drenaz.spec.mjs` (Chromium, 7, było 6): klucz `'1'` — drugi kontekst (B) daje v do Kosza
+  (A dostaje to drenażem), B klika „Przywróć”, A robi „Usuń pacjenta”; kopertę „Przywróć” A stosuje przez
+  `applyEncryptedEvent` (tę samą funkcję, którą woła drenaż; niżej, „Do akceptacji”, punkt 12): w kolejce A za nagrobkiem
+  karty dokładnie jeden wiersz `stomb` v z treścią; B przyjmuje nagrobek i ten wiersz — karta usunięta, wpis ukryty, bez
+  nowego wiersza.
+
+**Czerwone na bazie** (`119f0225`, sejf bez odsyłania ukrytego wpisu, testy i uprząż tego PR): test A ≡ B 20 (każdy
+przypadek z włączonym przełącznikiem, w którym sejf ma odesłać ukryty wpis — z „echo sejfu ≠ model”; zielone z natury:
+warianty z wyłączonym przełącznikiem, karta żywa i poprawka sprzed Kosza z włączonym, pozostałe scenariusze p. 6,
+ziarna 1 i 8, oba nowe przypadki partii — strażniki uprzęży); `sync-odsylanie` 19 z 29
+nowych (zielone z natury: karta żywa, wersja nie późniejsza niż Kosz, `busy` przy żywej karcie, wpis pod żywą kartą Q,
+trzy drogi bez odsyłania, błąd odczytu wpisów przed scaleniem — tam odsyła już E3-PR0d, przełącznik wyłączony, zamknięta
+bramka i „Komputer w pracy”); licznik odsyłania 1 (strażnik wywołania w bloku); buildery 1; e2e drenażu 1 z 1 nowego.
+Model licznika i opis klasy R5-E1 — zielone. Pełny `vitest run` na sejfie bazy z testami sprzed poprawek po przeglądzie: czerwone
+wyłącznie w czterech plikach tego PR (39 przypadków; reszta — 31 838 — zielona).
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu, pliki celu i test A ≡ B z filtrem, część także e2e drenażu): 65 mutantów
+kodu odsyłania ukrytego wpisu, jego otoczenia i uprzęży. Rodziny: warunek „tylko po udanym scaleniu” (bez niego, także
+przy niezmienionym tekście warunku); każdy warunek osobno (bez niego, z odwróconym kwantyfikatorem, z ostrą
+nierównością nagrobka, z pustym zapisem karty, bez wykluczenia żywej karty P, pierwszy zamiast najpóźniejszego
+nagrobka, karty elementów z powtórzeniami, z wersją z ładunku zamiast kopii sprzed scalania, z elementem bez
+`patientId` jak „karty nie ma”, z wyjątkiem rozstrzygnięcia jak „wersja przegrywa”); kandydaci; błędy (błąd odczytu kart
+jako pominięcie w dwóch miejscach, `SYNC_DB_DELETED` jak zwykły błąd, odczyt wersji „po” zawiódł jako pusto); sesja
+i adapter (każda kontrola sesji osobno i wszystkie, bez sprawdzenia strażnika, adapter niestrzeżony, odczyt kart zawsze,
+drugi odczyt przełącznika); bramka i tryb; lista i emisja (osobna lista z trzecim `Bem_zmiana`, kolejność list, bez
+filtra powtórzeń, podwójne odesłanie); zegar w funkcji czystej i w odczycie kart; drogi (stara delta, delta, pełna
+kopia — dwie ostatnie poza blokiem, tylko jako mutanty); uprząż i licznik (model bez reguły albo zawsze pusty, bez
+warunku wygranej, bez porównania z zapisem, bez filtra kluczy E3-PR0d, bez filtra „wpis po całej partii”, granica
+wyłączona albo o jeden za luźna, przypisanie kopert w odwrotnej kolejności, koperta liczona jako „ponowne wysłanie”
+albo poza `S.stat.echo`, licznik bez `ponowne`, opis kolejki bez etykiety, rozstrzygnięcie zawsze fałsz, lista domknięcia
+niepełna, własna deklaracja funkcji domknięcia w liczniku, obca wcześniejsza deklaracja w sejfie, odesłanie podwójne
+z modelem podwójnym i bez granicy). W pierwszym przebiegu przeżyło 8, 2 zabijał tylko przypadek, który okazał się
+niestabilny pod obciążeniem, a 2 tylko strażniki strukturalne — wszystkie dostały testy działania (wersja wygrywa
+z jednym elementem, a z drugim nie; karta P żywa przy wpisie pod inną usuniętą kartą; odczyt kart P z ładunku; adapter
+strzeżony; granica i filtr „wpis po całej partii” w uprzęży; filtr powtórzeń; drogi pełnej kopii i delty; umowa
+`Bev_stanKart` — pierwszy zamiast najpóźniejszego nagrobka, w prawdziwym sklepie równoważny, bo nagrobek pacjenta ma
+jeden rekord na kartę). Wynik: 63 czerwienią co najmniej jeden test CI, 2 przeżywają — oba równoważne: kolejność dwóch
+rozłącznych list w `kol.kosz` (różne encje; kolejność wierszy `stomb` różnych wersji w jednym kroku nie zmienia stanu
+u odbiorcy) i model w uprzęży bez filtra kluczy E3-PR0d (ten sam klucz z obu reguł w jednym zdarzeniu daje tylko błąd
+odczytu wpisów przed scaleniem, którego uprząż A ≡ B nie wywołuje; zachowanie sejfu w tym przypadku pilnuje test
+w oknie). Cztery mutanty strażników dodanych po przeglądzie (kwantyfikator w liczniku, drugi deklarator stałej
+`Bgw_czPam`, granica licząca kopertę jawną katalogu — czerwone z komunikatem testu; inicjalizator stałej ze średnikiem
+— plik testu licznika nie zbiera się do uruchomienia).
+
+**Czas pliku A ≡ B** (lokalnie, sam plik): 152 s na `119f0225` z testami sprzed PR wobec 158 s z kodem i testami tego PR
+(+5 s); para naraz w ustawieniach CI bez przełącznika: 139,7 s wobec 142,6 s (+2,1 %); po poprawkach testów 136,6 s
+wobec 135,4 s (bez różnicy). W CI po E3-PR0d: 114,9 s → szacunek ok. 117–120 s przy celu ok. 180 s.
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie w bloku P-DZIENNIK-ZDARZEN (poza blokiem nic, także komentarze;
+bez nowych wywołań `Bem_`/`Bob_` poza blokiem; literał miejsc poza blokiem bez zmian); fragment natywny i blok trwałych
+wizyt bez zmian, zero nazw `Bem_`/`Bob_`/`Bev_` we fragmencie natywnym. Przeliczone 7 skrótów w 5 plikach: baza
+trwałych wizyt `5318fe8f…` i obraz `5f5ec15f…` (`runtime/durable-visits-v1/manifest.json`,
+`tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `8855e4a1…`,
+`integratedVaultSHA256` `a54d9c62…` i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0d2 w komentarzu); `node tools/visits-vault-delta.mjs`
+i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` i jego piny bez zmian. Sejf się
+zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na
+`audyt`.
+
+**Ograniczenia.**
+- **Cudzy otwarty krok** (wyżej, „Kolejność”): odesłanie wychodzi przed nagrobkiem karty, odbiorca z żywą wersją
+  zdejmuje wpis, potem traci wersję z kartą; przy dwóch urządzeniach różnica do pełnej synchronizacji, jak dziś.
+- **Pozostałe wyjątki kolejności** (wyżej) — w każdym skutek jak dziś. „Odbiorca zawsze czyta nagrobek pierwszy” nie
+  jest prawdą ogólną.
+- **Trzy urządzenia:** zbieżność bez gwarancji ogólnej (dopuszczone decyzją 1).
+- **Zbędne wiadomości:** każde udane powtórne zastosowanie zdarzenia z tą wersją odsyła wpis jeszcze raz (koperta
+  z treścią do ok. 45 KiB); nieudane próby — nic. Koszt duplikatów i rozmiaru — E3-PR0h.
+- **Zdarzenie, które trwale nie wchodzi** (`apply-error` bez końca): wpis nie jest odsyłany — różnica jak dziś, do
+  pełnej synchronizacji.
+- **R5-E1 w wyroczni** zostaje zgłaszany — jawny wyjątek „wynik taki jak po pełnej synchronizacji” (decyzja
+  z 2026-11-20).
+- **Wpis pod żywą kartą Q po „Scal pacjentów”:** reguła słusznie nie odsyła, ale gwiazdka z innego urządzenia ginie tam
+  tak samo jak dziś — E3-PR0e (rodzina E4b). Ziarno 39 profilu pełnego 21–40 zostaje czerwone dla E3-PR0e, choć jego
+  różnice R5 znikają. *(2026-11-23: wpis pod żywą kartą Q — E3-PR0e3; ziarno 39 — E3-PR0f, razem z kolejnością klas
+  wyroczni.)*
+- **Po 30 dniach od Kosza** wpis nie ma już treści: wizyta, która dziś po powrocie karty jest jeszcze w karcie na
+  jednym urządzeniu, po E3-PR0d2 (i po pełnej synchronizacji) jest na wszystkich tylko wpisem bez treści. Po „Scal
+  pacjentów” wizyta jest niewidoczna wszędzie, dopóki karta nie wróci (dziś też).
+- **Nagrobek porządkowania przypiętej wersji pod usuniętą kartą** odsyłany przy każdym udanym zdarzeniu z tą wersją,
+  choć niczego nie wyrównuje; w długich przebiegach 0; koszt ograniczony granicą.
+- **Filtr powtórzeń** w jednym zdarzeniu jest obroną; kolejność dwóch list nie ma skutku (mutant równoważny).
+- **Model z eksportów a sejf z surowych rekordów** (lista nagrobków pacjentów, okno wieku) — rozjazd pokazuje porównanie
+  model = sejf w każdej partii.
+- **Program długich przebiegów** z przełącznikiem rozchodzi się w ziarnach z odesłaniem — porównanie z bazą tylko po
+  klasach i zbiorach czerwonych.
+- **Pełna wysyłka działa do etapu 3**; później takie różnice łapie manifest punktu kontrolnego.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Rozszerzenie decyzji 9 z 2026-10-29.** Odsyłanie ukrytego wpisu Kosza jest dalszą częścią tej samej czwartej drogi
+   ze scalania do kolejki co odsyłanie poprawionych wizyt i wpisów Kosza: po włączeniu odsyłania urządzenie, które po
+   udanym scaleniu zmiany z innego urządzenia ma ukryty wpis Kosza wersji, która przegrała tu z nagrobkiem karty, wyśle
+   ten wpis pozostałym urządzeniom. Reguły scalania bez zmian.
+2. **Zakres:** „Przywróć” albo inna późniejsza zmiana wizyty po Koszu (gwiazdka, poprawka) na jednym urządzeniu,
+   „Usuń pacjenta” albo „Scal pacjentów” na drugim. Wiersz 4a planu wymieniał tylko „Przywróć”, gwiazdkę — „Ograniczenia”
+   wpisu E3-PR0d; skutek jest ten sam co po pełnej synchronizacji (decyzja 1).
+3. **Wynik długich przebiegów spełnia warunek decyzji 1** (różnice znikają, 21 kopert na 6 przebiegów, nowych czerwonych
+   brak, bez przełącznika bez zmian) — bez ponownego pytania.
+4. **Tylko po udanym scaleniu** — zawęża regułę wobec decyzji 1 (nieudane próby nic nie wysyłają), nie rozszerza.
+5. **Kolejność przy cudzym otwartym kroku, pozostałe wyjątki kolejności i trzy urządzenia** — znane ograniczenie,
+   przewidziane decyzją 1; testy przypinają wynik.
+6. **Zbędna druga wiadomość przy powtórce** — przewidziana decyzją 1; najwyżej jedna na udane zastosowanie.
+7. **Wpisy porządkowania pod usuniętą kartą** odsyłane tak samo jak wpisy Kosza, także w rogu „wersja przypięta, nie
+   późniejsza niż przycięcie” (0 takich odesłań w długich przebiegach).
+8. **Błędy odczytu kart:** inny błąd — odesłanie kandydatów wstępu (zasada E3-PR0c i E3-PR0d); usuwanie konta — bez
+   odsyłania; zmiana sesji albo blokada — bez odsyłania.
+9. **Jedna lista `kol.kosz`** i ten sam przełącznik (decyzja 1a z 2026-11-15); forma `Bem_zastosujEcho` bez zmian.
+10. **Krotność warstwy „odesłane” w liczniku** przy jednym kluczu z dwóch reguł w jednej partii — do E3-PR0h (narzędzie
+    testu, nie działanie aplikacji).
+11. **Opis klasy R5-E1 w wyroczni** zmieniony z „naprawa: E3-PR0” na „bez naprawy: wynik taki jak po pełnej
+    synchronizacji (decyzje właściciela z 2026-11-19 i 2026-11-20)”; działanie aplikacji, wynik testu i to, co test
+    zgłasza, bez zmian.
+12. **Test w prawdziwej przeglądarce stosuje kopertę „Przywróć” wprost** (`applyEncryptedEvent` na prawdziwej bazie
+    przeglądarki — ta sama funkcja, którą woła drenaż), bo po „Usuń pacjenta” pobieranie w tej uprzęży wraca do trybu
+    od zera (jedno pełne pobranie, bez listy zmian), także po wysłaniu zmian na serwer; pierwsza zmiana (Kosz) idzie
+    zwykłym drenażem. Samo to zachowanie pobierania jest dzisiejsze i niezależne od tego PR — do osobnego sprawdzenia,
+    czy jest zamierzone.
+13. **Kolejka ścisła:** E3-PR0e może ruszać po scaleniu tego PR (plan, wiersz 5). *(2026-11-23: E3-PR0e = E3-PR0e1–E3-PR0e3;
+    E3-PR0e1 — wpis na końcu pliku.)*
+
+**Wejście do kolejnych PR.**
+- **E3-PR0e:** wpis pod żywą kartą Q po „Scal pacjentów” (gwiazdka z innego urządzenia ginie tak samo jak dziś) i ziarno
+  39 profilu pełnego 21–40 jako wejście, obok ziaren 8, 37 i 38 z wpisu E3-PR0d.
+  *(2026-11-23, decyzje z 2026-11-23: wpis pod żywą kartą Q — E3-PR0e3; ziarno 39 — E3-PR0f; ziarna 8 i 37 — wąski
+  wyjątek wyroczni w E3-PR0e3; ziarno 38 — E3-PR0e2b.)*
+- **E3-PR0h:** krotność warstwy „odesłane” licznika przy jednym kluczu z dwóch reguł w jednej partii (literały
+  `ZNANE_ODSYL`, `STRES_ODSYL`); koszt odesłań ukrytego wpisu w tabeli kosztów (rozmiar, duplikaty); „karta częściowa”
+  w wariancie „R5-E1, C wysyła tylko zdarzenia”.
+- **E3-PR0i:** literały A ≡ B, floty i `ZNANE_W1` przepisane na wynik z odsyłaniem.
+- Każda zmiana buildera `stomb` (np. karta z wizytami w kopercie wpisu) musi powtórzyć dowód braku pętli — opiera się on
+  na tym, że koperta `stomb` nie niesie wersji, że urządzenie z ukrytym wpisem nie wyśle `snap` tej wersji i że nieudane
+  zastosowania nie odsyłają.
+- Każda zmiana `Bkz_wygrywa`, `Bkz_zmiana`, `Bgw_stan` albo ich domknięcia zmienia model i sejf naraz; strażnik
+  „wycięte = sejf” wymaga jednej deklaracji każdej nazwy domknięcia i jednej deklaracji stałej `Bgw_czPam`.
+
+**Cofnięcie** = rewert PR, bez migracji (przy wyłączonym przełączniku nic nie powstaje; wiersze odsyłania to zwykłe
+wiersze `stomb`; rewert cofa też skróty kontroli granicy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, blok P-DZIENNIK-ZDARZEN (6686–10322): część `Bev_` — `Bev_kandydaciUkrytych`,
+`Bev_wstepUkrytych`, `Bev_stanKart`, `Bev_echoUkrytych` (7751–7843), `Bev_zastosujZEchem` (7844–7946: kandydaci,
+wstęp i odczyt kart po udanym scaleniu, `kol.kosz` z ukrytymi wpisami bez powtórzeń); komentarze: nagłówek bloku, opis
+odsyłania wpisów, opis `Bev_zastosujZEchem`, nagłówek części emisji, opis `Bem_zastosuj`. Bez zmian: `Bev_zastosuj`,
+`Bev_kandydaciEcha`, `Bev_stanEcha`, `Bev_echo`, `Bev_stanKosza`, `Bev_echoKosza`, `Bev_stomb`, `Bem_zastosujEcho`,
+`Bem_zmiana`, `Bem_RANGI`, `Bob_plan`, `Bob_bramkaEcha`. Poza blokiem bez zmian.
+
+**Wersje.** `vilda_vault.js` 282 → 283, `vilda_chrome.js` 316 → 317 i `vilda_session_bridge.js` 232 → 233 (wstrzykują
+sejf), SW 1.1.567 → 1.1.568 — `npm run podbij-wersje`; baza `origin/audyt` `c78985fb` (po vildaclinic/vilda-calc#1019;
+sejf, `vilda_sync.js`, `runtime/`, `tools/` i testy synchronizacji bez zmian względem `bc2d88f8`, E3-PR0d; pomiary na
+`119f0225`). Bez nowego pliku w pamięci offline.
+
+## Karta opróżniona przy „Scal pacjentów” zachowuje znany nagrobek scalenia (P-SYNC-WLASCICIEL, E3-PR0e1, SW 1.1.576, `vilda_vault.js` 285, 2026-11-23)
+
+**Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się lista
+usuniętych pacjentów na urządzeniu, z którego stara karta zniknęła przy synchronizacji z urządzeniem, które ją scaliło
+(„Scal pacjentów”), a za nią: zapis z formularza i korekta takiej karty, wynik „Scal kopię konta” dla takiej karty,
+miejsce późniejszej wersji notatki dawnej karty i liczba pełnych wymian potrzebnych do zgodności. Działa od razu
+u wszystkich urządzeń, także przy pełnej synchronizacji, przy obu stanach przełącznika odsyłania (decyzja 1
+z 2026-11-23). Serwer, `vilda_sync.js`, schemat IndexedDB, format ładunku, nagrobków i zdarzeń, API `window.VildaVault`,
+blok P-DZIENNIK-ZDARZEN i fragment natywny bez zmian. Przykład (fikcyjny): komputer w gabinecie i telefon, „Pacjent
+Testowy 1” ma starą kartę X i właściwą kartę Y; wizyta z 3 marca (20 kg) leży w X.
+- Komputer robi „Scal pacjentów” X → Y (8:01): wizyta przechodzi do Y, X dostaje nagrobek.
+- Telefon bez sieci, bez wiedzy o scaleniu, poprawia tę wizytę w X na 21 kg (8:02). Chwila zapisu X jest teraz
+  późniejsza niż scalenie, więc X nie przegrywa na telefonie z nagrobkiem scalenia (decyzja D-4 A). Na telefonie
+  zostaje otwarty formularz karty X.
+- Komputer poprawia tę wizytę już w Y na 22 kg (8:05) i wysyła pełną synchronizację.
+- Telefon scala pełną kopię komputera: wersja z komputera wygrywa przypisanie (najpierw `rev`), wizyta przechodzi do Y,
+  a X bez żadnej wizyty znika z listy.
+- **Dotąd:** X znikała bez nagrobka — telefon nie wiedział, że kartę scalono. „Zapisz dane” w otwartym formularzu X
+  zakładało X od nowa z nowym pomiarem, więc stara karta wracała jako duplikat (do ponownego scalenia); korekta wersji
+  albo pomiaru X kończyła się błędem technicznym; „Scal kopię konta” z plikiem, w którym X ma wizytę nieznaną
+  telefonowi, przywracało X z tą wizytą; nagrobek X telefon dostawał dopiero w następnej wymianie.
+- **Teraz:** X znika razem z nagrobkiem scalenia, który telefon dostał w tej samej pełnej kopii — telefon wie o scaleniu
+  tak jak komputer. „Zapisz dane” w formularzu X kończy się paskiem „Nie zapisano — tego pacjenta scalono z kartą
+  „Pacjent Testowy 1”. Dane w formularzu zostały. Kliknij „Zapisz dane” jeszcze raz, aby dopisać je do tamtej karty.”
+  (komunikat sejfu: „Tego pacjenta scalono z kartą „Pacjent Testowy 1” — nic nie zapisano.”), a drugi klik dopisuje
+  pomiar do Y; korekta wersji i pomiaru X — ta sama odmowa ze wskazaniem Y; „Scal kopię konta” pomija X jako scaloną
+  z Y (wizyta nieznana telefonowi zostaje w pliku, podgląd = wynik); notatka dawnej karty X poprawiona po scaleniu na
+  innym urządzeniu, które o scaleniu nie wie, trafia na telefonie pod Y (dotąd pod X, której nie ma — niewidoczna).
+  Wszystko tak samo, jak dziś na komputerze, który scalał.
+Stara karta wraca jak dotąd, gdy telefon zapisał w niej nową wizytę albo notatkę, której nie ma w karcie scalonej
+(D-4 A bez zmian) — wtedy karta nie zostaje opróżniona i nagrobka nie dostaje.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 5 (E3-PR0e1).
+Decyzja 4a z 2026-11-15 (plan, rozdział 6, „Decyzje z 2026-11-15 (E3-PR0, pytania 1–9)”): stara karta po „Scal
+pacjentów” naprawiana w tym etapie. Decyzje z 2026-11-23 — odpowiedź właściciela („1a, 2a, 3a, 4a”) na pytania projektu
+E3-PR0e, zgodna z rekomendacją; zapis w planie, rozdział 6, blok „Decyzje z 2026-11-23 (E3-PR0e, pytania 1–4 projektu)”
+(dopisany w tym PR): 1 — zmiany etapu działają od razu u wszystkich urządzeń, nie za przełącznikiem odsyłania, każdy PR
+etapu przyjmowany osobno (jak decyzje z 2026-11-10, E2-PR3c2, i z 2026-11-16, E3-PR0b2b); 2 — poprawki i gwiazdki wizyt
+przeniesionych scaleniem trafiają do karty scalonej (E3-PR0e2b); 3 — nowa informacja o chwili przeniesienia scaleniem
+w dwóch wydaniach (E3-PR0e2a, E3-PR0e2b); 4 — „Usuń pacjenta” zwróconej starej karty z nowymi wizytami to świadome
+usunięcie (wąski wyjątek wyroczni w E3-PR0e3). Ten PR wdraża tylko zmianę karty opróżnionej i dwie zmiany wyłącznie
+w testach: scenariusz luki mutantów po przegranym nagrobku karty (wejście z E3-PR0b) i przełącznik odsyłania
+w urządzeniach katalogu kosza testu A ≡ B. Sprawy, których projekt i decyzje nie rozstrzygały, rozstrzygnięto
+wariantem najbezpieczniejszym dla danych — „Do akceptacji właściciela przy PR”.
+
+### E3-PR0e1
+
+**Co było** (`audyt` `a7b2920b`). Faza przeniesień „Scal pacjentów” (`Bsl_przeniesWersje`) przenosi wersję wspólną dwóm
+kartom do karty, która wygrywa przypisanie, także ostatnią wersję karty G; karta G bez wersji znikała w `Bsw_poOddaniu`
+bez nagrobka. Powód z komentarza: nagrobek z datą karty G (np. z poprawki G na tym urządzeniu) mógłby na trzecim
+urządzeniu wygrać z zapisem G, którego tu nie znamy, i usunąć go razem z kartą. Skutek: urządzenie, na którym stara
+karta przeżyła nagrobek scalenia (późniejszy zapis — D-4 A), a potem straciła wszystkie wersje na rzecz karty scalonej,
+nie pamiętało scalenia, choć nagrobek był w tym samym ładunku. Formularz tej karty zapisywał do niej od nowa
+(P-ZAPIS-USUNIETEJ: „Karta nieznana — zapis jak dotąd”), „Scal kopię konta” liczyło jej wersje z pliku jak własne
+(`Bks_powod`, brak tutejszego nagrobka), a pełna wymiana potrzebowała drugiego obiegu, który dopisywał nagrobek
+(ziarno 5 profilu pełnego, krok 165: W4 bez punktu stałego; „miejsce wizyty po „Scal pacjentów”” — dwie pełne wymiany).
+
+**Reguła.** Gdy faza przeniesień zabiera karcie G ostatnią wersję i karta znika, a temu scalaniu znany jest nagrobek G,
+karta znika razem z tym nagrobkiem:
+- **znany nagrobek** — `ctx.Bsw_m[G]`: najpóźniejszy nagrobek G z ładunku i tutejszy, liczony w `Le` przed pętlą kart
+  (`Bsw_m = O && !Bses_imp ? m : null` — w imporcie i bez magazynu nagrobków brak). `Bsw_przenies` podaje go do
+  `Bsw_poOddaniu` szóstym argumentem tylko poza decyzją „zabierz”;
+- **kolejność** — najpierw usunięcie karty (`removePatientForUser`, jak dotąd), potem odczyt tutejszego nagrobka G
+  (`Bpu_nagrobek`) i zapis `{ patientId: G, deletedAtISO: znany }` tylko wtedy, gdy tutejszego nie ma albo jest
+  wcześniejszy; późniejszy tutejszy nagrobek zostaje (jak w `Bsl_usunPacjenta`);
+- **bez nowej chwili** — zapisany nagrobek ma chwilę „Scal pacjentów” z ładunku albo tutejszą, nigdy chwilę karty G ani
+  „teraz”;
+- karta z pozostałymi wersjami — bez zmian (licznik i nagłówek z najnowszej pozostałej wersji, bez nagrobka);
+- bez `Bpc_usunieta` w `Bsw_poOddaniu` — zbiór kart usuniętych dopisuje jak dotąd `Bsl_przeniesWersje`.
+Bez wywołań `Bem_`/`Bob_`: nagrobek zapisuje magazyn, bez wiersza kolejki zdarzeń w chwili scalania (jak nagrobek
+w `Bkz_usunZObcych`).
+
+**Kiedy działa, a kiedy nie.**
+
+| Droga | Zachowanie |
+|---|---|
+| pełna kopia (pełna synchronizacja, `mergeSyncPayload`) niosąca wersję przenoszoną spod G i nagrobek G | karta znika z nagrobkiem |
+| delta nagrobka G z kartą docelową (`Bsw_deltaNagrobka`) przed deltą karty docelowej | karta znika z nagrobkiem |
+| koperta usunięcia karty G z kartą docelową (`ptomb`, E2-PR3c1), gdy wcześniejsza koperta wersji nie doszła | karta znika z nagrobkiem |
+| koperty w kolejności kolejki urządzenia scalającego (wersje, potem usunięcie karty) albo delta karty docelowej przed deltą nagrobka | przy kopercie wersji scalanie nagrobka nie zna — karta znika bez nagrobka, a zaraz potem koperta (delta) nagrobka zapisuje go drogą zbioru N, jak dotąd |
+| koperta nagrobka G, która wcześniej przegrała tu z późniejszym zapisem G, a wersje przyszły potem kopertami bez nagrobka | karta znika bez nagrobka, jak dotąd (klasa różnicy W1 „nagrobek karty opróżnionej” zostaje: ziarno 5 profilu pełnego z przełącznikiem, ziarno 34 profilu pełnego) |
+| koperta odsyłania wersji (E3-PR0c) | nie niesie nagrobków pacjentów — jak wiersz wyżej |
+| decyzja „zabierz” (G w zbiorze N) | bez tej reguły: nagrobek G zapisuje zaraz po fazie `Bsl_usunPacjenta` — ten sam stan jednym zapisem mniej; droga bajt w bajt jak dotąd |
+| drugie wywołanie `Bsw_poOddaniu` (`Bsw_przeniesPrzezyta`) | bez tej reguły: karta przegrywa tam z nagrobkiem, nagrobek stawia `Bsl_usunPacjenta` |
+| import pliku, „Scal kopię konta”, odtworzenie konta | nie dotyczy: `Le` importu nie dostaje kart (`patients: []`), więc faza przeniesień nic nie przenosi, a `Bsw_m` jest puste (strażnik źródła) |
+| przełącznik odsyłania włączony albo wyłączony, „Komputer w pracy” | tak samo (reguła poza dziennikiem zdarzeń) |
+
+W zmianach pojedynczych z kolejki urządzenia scalającego koperty wersji przychodzą przed kopertą nagrobka, więc reguła
+zwykle tam nie zachodzi i niczego nie zmienia; pełne działanie w zmianach pojedynczych daje dopiero E3-PR0e2b (wersja
+przechodzi do karty scalonej już kopertą scalenia).
+
+**Dlaczego dawna obawa tu nie zachodzi.** Zapisany nagrobek nie jest nowy ani z datą karty G: to ten sam nagrobek
+„Scal pacjentów”, który urządzenie scalające już wysłało (kopertą usunięcia karty albo pełną kopią). Na trzecim
+urządzeniu może usunąć tylko to, co usunąłby oryginał; tutaj przegrał już z zapisem G, więc nie wygra z nim ani
+z późniejszym zapisem G: gdy G wróci z nową wersją, powstaje karta, a nagrobek jest zdejmowany (`Bsl_zdejmijNagrobek`
+zostawia przegrany nagrobek tylko wtedy, gdy karty nie ma). Trzecie urządzenie, które zapisało w G nową wizytę
+później niż nagrobek, zachowuje G z tą wizytą po pełnej kopii z tego urządzenia, a gdy jego pełna kopia dojdzie tutaj,
+G wraca z tą wizytą, a nagrobek jest zdejmowany — jak na urządzeniu, które scaliło (test). Data nagrobka jest znana nadawcy, więc nagrobek wygasa po 365
+dniach tak samo jak u nadawcy (test tuż przed granicą i po niej). Jedna różnica wobec dotychczasowego stanu: nagrobek
+może dotrzeć dalej, niż dotarł oryginał — gdy urządzenie scalające już się nie synchronizuje, a pełny eksport tego
+urządzenia zastąpił w chmurze jego ładunek. Wizyta zapisana w starej karcie na trzecim urządzeniu przed scaleniem
+i nieznana urządzeniu scalającemu ginie wtedy tak, jak zginęłaby od oryginału (utrata wersji E1/E1b, wpis
+P-SYNC-WLASCICIEL, „Ograniczenia”; naprawa w E3-PR0f) — dotąd przeżywała tylko w jednej kolejności synchronizacji, i to
+przypadkiem (wystarczyła inna kolejność albo jeszcze jedna synchronizacja urządzenia scalającego). Przykład i wybór —
+„Do akceptacji”, punkt 5.
+
+**Odczyty, zapisy, sesja, blokady, błędy, usuwanie konta.**
+- **Odczyty:** jeden dodatkowy odczyt listy nagrobków pacjentów (`Bpu_nagrobek`) na kartę opróżnioną ze znanym
+  nagrobkiem; żadnego przy karcie z pozostałymi wersjami, przy decyzji „zabierz”, bez znanego nagrobka i w imporcie.
+- **Zapisy:** `removePatientForUser(G)` jak dotąd, potem warunkowy `putTombstoneForUser` znanego nagrobka; licznik
+  zapisów magazynu w `Bsw_poOddaniu` 2 → 3, każdy tuż po sprawdzeniu sesji (strażnik źródła sesji przepisany).
+- **Sesja (P-CHMURA-OPIS):** `Bses_pilnuj(opcje)` przed odczytem tutejszego nagrobka i tuż przed zapisem, bez `await`
+  pomiędzy. Zmiana sesji po usunięciu karty kończy scalanie `SESSION_CHANGED` bez nagrobka i bez żadnego wywołania
+  magazynu w drugim koncie (odczytu ani zapisu); po ponownym zalogowaniu ponowienie tego samego ładunku zapisuje nagrobek
+  drogą zbioru N (karty już nie ma).
+- **Blokady:** `Bsw_poOddaniu` działa pod blokadami obu kart fazy przeniesień. „Usuń pacjenta” G w innej karcie
+  przeglądarki bierze tę samą blokadę G: przed fazą — faza nie ma czego przenieść; po fazie — zapisuje własny, późniejszy
+  nagrobek. Późniejszy tutejszy nagrobek zapisany w trakcie fazy zostaje (test z zapisem nagrobka w magazynie
+  w trakcie usuwania karty).
+- **Błędy** — nie są połykane, jak każdy zapis fazy przeniesień, `Bkz_usunZObcych` i `Bsl_usunPacjenta`. Błąd odczytu
+  albo zapisu nagrobka przerywa scalanie (`busy`/`apply-error` u nadawcy zdarzenia, ponowienie przy następnym
+  drenażu albo następnej synchronizacji); karta jest już usunięta, a jej wersje leżą pod kartą docelową, więc najgorszy
+  stan = dotychczasowy, a ponowienie tego samego ładunku zapisuje nagrobek drogą zbioru N (test). Połknięcie błędu
+  zostawiłoby kartę bez nagrobka do następnego ładunku z tym nagrobkiem i musiałoby przepuszczać `SESSION_CHANGED`
+  i błędy strażnika usuwania konta — nowa gałąź bez zysku dla danych. Błąd usunięcia samej karty (przed nagrobkiem):
+  karta zostaje bez wersji i bez nagrobka, a ponowienie jej nie usuwa (wersji do przeniesienia już nie ma, zapis karty
+  jest późniejszy niż nagrobek) — jak dotąd; znane ograniczenie przypięte testem („Do akceptacji”, punkt 8).
+- **Usuwanie konta:** `PatientClinicalGuard` na wejściu `Bsw_poOddaniu` (jak dotąd) i `PatientClinicalWriteValue` przy
+  zapisie nagrobka — jak przy pozostałych zapisach scalania.
+
+**Kolejka zdarzeń.** Zapis nagrobka nie dopisuje wiersza do kolejki w chwili scalania (test A ≡ B: rejestr łańcucha
+klonu po pierwszej pełnej wymianie bez wpisu `ptomb`). Przegląd kolejki po scaleniu i po przeładowaniu strony daje dla
+nagrobka karty opróżnionej te same wiersze co dla tego samego nagrobka zapisanego tą samą pełną kopią drogą zbioru N
+(test w `sync-dziennik-outbox`: w obu wariantach bez wiersza `ptomb`). Operacje kolejki i kwarantanny sprawdzają sesję
+tak jak zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu. Rozszerzenia decyzji 9 nie ma:
+reguła nie dopisuje nic do kolejki.
+
+**Notatki i plan opieki dawnej karty.**
+- Notatka dawnej karty poprawiona po scaleniu na urządzeniu, które o scaleniu nie wie: po jego pełnej kopii zostaje
+  z poprawką pod kartą scaloną, tak samo jak na urządzeniu, które scaliło (reguła karty notatki z E2-PR3c4: dawna karta
+  jest teraz „martwa” — tutejszy nagrobek i brak karty). Dotąd na urządzeniu z kartą opróżnioną notatka szła pod kartę,
+  której nie ma — niewidoczna.
+- Notatka utworzona w dawnej karcie przed scaleniem (starsza niż nagrobek): zostaje w magazynie pod dawną kartą, bez
+  nagrobka notatki, jak na urządzeniu scalającym i jak dotąd (klasa P6 wyroczni; notatki nie są usuwane).
+- W sekcji notatek tego samego scalenia nic się nie zmienia: znany nagrobek pochodzi z ładunku albo z tutejszych
+  nagrobków z chwili startu, więc już był w zbiorze nagrobków sekcji notatek.
+- Plan z etapami nie może leżeć w karcie, którą to urządzenie opróżnia przy synchronizacji: kontrola przed scaleniem we
+  fragmencie natywnym odmawia wtedy całej synchronizacji („Synchronizacja próbuje usunąć lub połączyć kartę zawierającą
+  plan z etapami. Dane na tym urządzeniu zostały zachowane.”), a „Scal pacjentów” karty z takim planem jest odrzucane —
+  przed zmianą i po niej (z kodu; bez testu w tym PR). Strażnik natywny (`deadNoteCard`) czyta tutejsze nagrobki, więc
+  karta opróżniona z nagrobkiem jest dla niego kartą martwą tak samo jak dla scalania; nagrobek karty, której nie ma,
+  nie wchodzi do jego listy usunięć (bez powtarzanej odmowy). Kod fragmentu natywnego bez zmian.
+- Plan opieki bez etapów utworzony w dawnej karcie zostaje na urządzeniu, które nie scalało, pod kartą, której już nie
+  ma (na urządzeniu scalającym — pod kartą scaloną) — przed zmianą i po niej, niezależnie od tego PR („Do akceptacji”,
+  punkt 7).
+
+**Import pliku i „Scal kopię konta”.**
+- Import pliku starej karty na urządzeniu, z którego karta zniknęła przy synchronizacji: wynik bez zmian — karta z nową
+  wizytą z pliku przeżywa następną pełną synchronizację (import zapisuje kartę z chwilą importu, P-IMPORT-NAGROBEK), tak
+  samo jak na urządzeniu, które scaliło, przed zmianą i po niej; plik z samymi dawnymi wizytami — karta znika przy
+  następnej synchronizacji na obu urządzeniach, jak dotąd.
+- „Scal kopię konta”: `Bks_powod` czyta tutejszy nagrobek (`nagrobekWygrywa`), więc karta opróżniona z nagrobkiem jest
+  pomijana jako scalona — także gdy plik ma w niej wizytę nieznaną temu urządzeniu (zostaje w pliku; lista pominiętych
+  podaje kartę docelową; podgląd = wynik), jak na urządzeniu scalającym. Kopia z wizytą zapisaną w starej karcie po
+  scaleniu — wynik jak na urządzeniu scalającym (D-4 A; test kontrolny).
+
+**Przy wyłączonym przełączniku odsyłania.** Reguła stoi poza blokiem P-DZIENNIK-ZDARZEN i nie czyta przełącznika, więc
+działa tak samo przy obu jego stanach — to zmiana reguły synchronizacji z akceptacją właściciela (decyzja 1
+z 2026-11-23), nie uśpione odsyłanie. Literał miejsc poza blokiem (`MIEJSCA_POZA_BLOKIEM`) bez zmian; wywołania
+`Bem_`/`Bob_` poza blokiem 63 = 63.
+
+**Flota ze starszą aplikacją.** Urządzenia 221 i 276 nie mają tej reguły u siebie (fikstury bez zmian); od bieżącego
+urządzenia dostają nagrobek pełną kopią albo kopertą, tak jak od urządzenia scalającego. Długie przebiegi flot 221 i 276
+(ziarna 1–10, oba stany przełącznika): każdy rekord wyroczni i zbiór czerwonych jak na bazie.
+
+**Uprząż testu A ≡ B: przełącznik odsyłania w urządzeniach katalogu kosza (blok deterministyczny p. 5).** Dotąd
+`E2_AB_ECHO=1` włączało przełącznik tylko w urządzeniach profili (`urzadzenie`), a urządzenia katalogu kosza dostawały
+koperty jawne przez `mergeSyncPayload` (bez odsyłania), bez pola `app` w modelu haków i bez jawnej kopii wpisów kolejki
+— wszystkie dotychczasowe przebiegi katalogu „z przełącznikiem” (E3-PR0c, E3-PR0d, E3-PR0d2 i diagnozy przed tym PR)
+szły bez odsyłania. Teraz, tylko przy `E2_AB_ECHO=1`: `zRejestrem` ustawia w oknie także `VILDA_EVENT_ECHO = true`,
+koperta jawna katalogu idzie przez `applyEncryptedEvent` koperty zaszyfrowanej kluczem odbiorcy (to samo `Le` co
+`mergeSyncPayload`, plus odsyłanie; status inny niż `applied` = błąd testu), wpisy katalogu mają jawną kopię i źródło,
+a model haków liczy odsyłanie także u odbiorcy bez pola `app`. Samokontrola w każdym przebiegu katalogu: przy
+`E2_AB_ECHO=1` każde okno ma `VILDA_EVENT_ECHO === true`, a przebieg E4b-1 (obie kolejności) ma co najmniej jedną kopertę
+odsyłania; bez zmiennej — okna bez pola i zero kopert. Bez zmiennej katalog bez zmian: zrzut `E2_AB_P5` 32/32 przebiegów
+taki sam jak przed zmianą uprzęży (poza polami czasu), literały CI bez zmian. Z `E2_AB_ECHO=1` — na bazie i po zmianie
+tak samo — 7 literałów katalogu spisanych bez przełącznika czerwienieje (E4b-1 K←C,P←K, npret-K K←C,P←K, PRZ0-bez ×2,
+E1-popr-C C←P,C←K, E1-C C←P,C←K) i przypadek zbiorczy „zmiany zachowania wobec świata samych blobów”; tryb ścisły
+katalogu z przełącznikiem: 15 czerwonych (dotąd 14; „widok po zdarzeniach ≠ widok po W4” 5 → 4, npret 5 → 3,
+E1-katalog 4 → 0 — skutek odsyłania w urządzeniach katalogu, „tylko nagrobki pacjentów” 5 = 5).
+
+**Luka mutantów po przegranym nagrobku karty** (wejście z E3-PR0b, „Ograniczenia”): nowy przypadek w
+`tests/unit/polkrata-cien.test.mjs` obok wyścigu nowej wizyty zapisanej w trakcie scalenia z nagrobkiem karty — wersja
+karty poprawiona tu przed chwilą usunięcia na drugim urządzeniu (20 → 41 kg), drugie urządzenie robi „Usuń pacjenta”,
+a w trakcie scalania jego ładunku tu zapisuje się nowa wizyta (33 kg): karta przeżywa nagrobek z poprawioną wersją
+i nową wizytą na obu urządzeniach; kontrola bez wyścigu. Na bazie zielony; mutant, który w karcie, która przeżyła
+nagrobek, usuwa wersje poprawione przed chwilą usunięcia (gałąź `Bsl_usunPacjenta` po haku H1), czerwieni go
+(`P po scaleniu: ['n:33']` zamiast `['n:33', 'v:41']`). Luka zamknięta tylko testem, bez zmiany sejfu.
+
+**Testy.** Dane wyłącznie fikcyjne („Testowy Jan”, „Testowy Pawel”), bez PESEL; prawdziwy
+`vilda_vault.js` w uprzęży (magazyny w pamięci, okna z atrapą IndexedDB, bliźniaki). Nowe przypadki: 46 jednostkowych
+i 1 e2e.
+- `tests/unit/sync-wlasciciel-wersji.test.mjs` (384, było 362; obie kolejności identyfikatorów kart): pełna kopia
+  urządzenia, które scaliło X → Y i poprawiło wizytę pod Y, na urządzeniu, które bez wiedzy o scaleniu poprawiło ją
+  w X — X znika z nagrobkiem z chwilą scalenia, druga wymiana nic nie zmienia; delta nagrobka X z kartą Y przed deltą
+  karty Y; błąd zapisu nagrobka (scalanie zgłasza błąd, ponowienie kończy się nagrobkiem); nagrobek tuż przed granicą
+  365 dni (eksport tego urządzenia = eksport urządzenia scalającego przed granicą i po niej); wizyta zapisana na trzecim
+  urządzeniu w X przed scaleniem, nieznana urządzeniu scalającemu, chmura jak `vilda_sync.js` w kolejnościach B, A, C
+  i B, C, A — ten sam wynik w obu (X znika z tą wizytą i z nagrobkiem na wszystkich trzech, Kosz pusty); kontrole:
+  delta karty Y, potem delta nagrobka X — kolejność zdarzeń urządzenia scalającego (X znika bez nagrobka, delta nagrobka
+  zapisuje go zaraz potem); pozostała wersja (A zapisało w X nową wizytę po scaleniu — D-4 A: dawne wizyty przechodzą
+  pod Y, X zostaje z nową wizytą bez nagrobka na A, na trzecim urządzeniu i na B); trzecie urządzenie zapisało w X nową
+  wizytę po scaleniu, a przed poprawką na A (pełna kopia A zostawia tam X z tą wizytą, a po jego kopii X wraca bez
+  nagrobka na A i na B); późniejszy tutejszy nagrobek zapisany w trakcie fazy (zostaje); błąd usunięcia karty
+  (ponowienie zostawia X pustą kartą bez nagrobka — jak dotąd); „zabierz” (nagrobek zapisany raz, jak dotąd); strażnik
+  źródła importu (`Le` importu bez kart, `Bsw_m` tylko poza importem); strażnik źródła fazy przeniesień przepisany.
+- `tests/unit/sync-scal-pacjentow-zdarzenia.test.mjs` (29, było 25): koperta `ptomb` X z kartą Y z buildera okna, które
+  scaliło, zanim doszły koperty wersji (`applyEncryptedEvent` i `applyEncryptedDelta`) — X znika z nagrobkiem; kontrola:
+  koperty w kolejności kolejki — X znika bez nagrobka przy kopercie wersji, nagrobek zapisuje koperta usunięcia karty.
+- `tests/unit/zapis-usunietej-karty.test.mjs` (29, było 26): zapis z formularza opróżnionej karty po pełnej kopii —
+  odmowa z nazwą karty scalonej, ponowienie z `dolaczPoScaleniu` dopisuje do Y, X nie wraca; korekta wersji i pomiaru —
+  ta sama odmowa; kontrola: karta opróżniona bez znanego nagrobka — zapis jak dotąd.
+- `tests/e2e/zapis-usunietej-karty.spec.mjs` (3, było 2; Chromium, dwa konteksty, kopia profilu): „Zapisz dane”
+  w karcie, która zniknęła przy pełnej synchronizacji z drugim urządzeniem — odmowa z nazwą karty scalonej, drugi klik
+  dopisuje do niej, jedna karta.
+- `tests/unit/kopia-konta-pomija.test.mjs` (24, było 22): kopia konta z X z wizytą nieznaną tutaj, bez karty Y — podgląd
+  i scalenie pomijają X jako scalonego z Y, jak na urządzeniu scalającym; kontrola: wizyta zapisana po scaleniu (D-4 A).
+- `tests/unit/kosz-po-kluczu-sesja.test.mjs` (45, było 43): przełączenie na konto B zaraz po usunięciu opróżnionej X
+  i przy odczycie tutejszego nagrobka X — `SESSION_CHANGED`, po przełączeniu żadnego wywołania magazynu w koncie B,
+  po zalogowaniu A ponowienie zapisuje nagrobek; strażnik sesji zapisów fazy przeniesień przepisany (trzy zapisy
+  w `Bsw_poOddaniu`, każdy tuż po `Bses_pilnuj`).
+- `tests/unit/notatki-karta-po-scaleniu.test.mjs` (15, było 9; obie kolejności): notatka dawnej karty ze starszą wersją
+  w kopii (kontrola), notatka poprawiona po scaleniu na urządzeniu bez wiedzy o nim (pod kartą scaloną, jak na
+  urządzeniu scalającym), notatka utworzona w dawnej karcie przed scaleniem (zostaje pod dawną kartą, bez nagrobka
+  notatki; kontrola).
+- `tests/unit/import-po-usunieciu.test.mjs` (6, było 5): kontrola importu pliku starej karty (wyżej).
+- `tests/unit/sync-dziennik-outbox.test.mjs` (50, było 49): karta opróżniona i karta ze zbioru N znikają z tym samym
+  nagrobkiem z ładunku; wiersze kolejki nagrobka po scaleniu, w przeglądzie i po przeładowaniu te same.
+- `tests/unit/polkrata-cien.test.mjs` (49, było 47): luka mutantów (wyżej).
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (test A ≡ B; 259, było 256; 21 pominiętych): blok „karta opróżniona
+  przy pełnej wymianie” — miejsce wizyty po „Scal pacjentów” w świecie A ≡ B (A: P z x1 20 kg i w 21 kg, Q 30 kg; B
+  scala P → Q i poprawia w pod Q na 31 kg; A bez wiedzy daje gwiazdkę w i poprawia w w P na 41 kg). Świat 1030
+  (przełącznik wyłączony): W1 ten sam przed zmianą i po niej (w pod P na A, pod Q na B — miejsce wizyty), W4 — punkt
+  stały po jednej pełnej wymianie, nagrobek P na obu klonach po pierwszej, bez wpisu `ptomb` w rejestrze łańcucha. Świat
+  1031 (przełącznik włączony, kontrola): odsyłanie przenosi w pod Q już w W1, ale kopertą bez nagrobka P, a nagrobek P
+  zapisuje pierwsza pełna wymiana drogą zbioru N. Uprząż katalogu kosza i samokontrola (wyżej); opis klasy „nagrobek
+  karty opróżnionej” — od E3-PR0e1 tylko, gdy scalanie nagrobka nie znało.
+- `tests/support/licznik-odsylania.mjs` — tylko komentarz (karta opróżniona bez nagrobka, gdy scalanie go nie znało).
+
+**Czerwone na bazie** (`a7b2920b` — sejf, manifesty i skróty z `origin/audyt`, testy tego PR): 20 przypadków z powodem
+„karta opróżniona znika bez nagrobka” — `sync-wlasciciel-wersji` 9 (pełna kopia ×2, delta nagrobka ×2, błąd zapisu
+nagrobka ×2 — na bazie scalanie nie zgłasza błędu, bo nagrobek zapisuje dopiero ponowienie, granica 365 dni,
+wizyta nieznana urządzeniu scalającemu ×2 — w kolejności B, A, C urządzenia A i C mają X z tą wizytą, bez nagrobka),
+`sync-scal-pacjentow-zdarzenia` 2, `zapis-usunietej-karty` 2 (zapis do starej karty zamiast odmowy; błąd techniczny
+korekty), `kopia-konta-pomija` 1 (X wraca z wizytą z pliku), `kosz-po-kluczu-sesja` 1 (odczytu nagrobka nie ma, więc
+przełączenie nie zachodzi), `notatki-karta-po-scaleniu` 2 (notatka pod kartą, której nie ma), `sync-dziennik-outbox` 1,
+test A ≡ B 1 (świat 1030: druga wymiana dopisuje nagrobek P na A), e2e 1 (pasek „Dane zostały zapisane”, dwie karty);
+do tego 2 przepisane strażniki źródła. Żaden nie pada na błędzie składni ani braku funkcji pomocniczej. Zielone z natury
+(strażniki zasad reguły, każdy z mutantem obok): pozostałe przypadki listy wyżej.
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu po kotwicy, pliki celu, test A ≡ B z filtrem nowego bloku, część także
+e2e): 20 mutantów reguły, 4 mutanty uprzęży katalogu i mutant luki — wszystkie czerwienią co najmniej jeden test.
+Reguła: bez reguły (karta znika bez nagrobka — 14 przypadków jednostkowych, test A ≡ B i e2e), nagrobek z chwilą zapisu
+karty G, nagrobek z chwilą „teraz”, zapis bez porównania z tutejszym, nagrobek także przy pozostałych wersjach, reguła
+także w imporcie, bez sprawdzenia sesji przed zapisem, przed odczytem i przed oboma, zapis nagrobka przed usunięciem
+karty (stan po błędzie usunięcia i przełączenie sesji), połknięcie błędu zapisu nagrobka (także z przepuszczeniem
+`SESSION_CHANGED` i błędów strażnika usuwania konta), reguła także przy „zabierz” (kontrola liczby zapisów nagrobka),
+nagrobek karty F zamiast G, reguła tylko przy pełnej kopii, tylko przy kopercie zdarzenia, tylko poza pełną kopią,
+tylko przy delcie, nagrobek „teraz” także bez znanego nagrobka (kontrole „bez znanego nagrobka” i świat 1031), zapis
+nagrobka z wpisem `ptomb` do kolejki (test kolejki i rejestr łańcucha w teście A ≡ B). Uprząż: `zRejestrem` bez
+`VILDA_EVENT_ECHO`, katalog dalej przez `mergeSyncPayload`, model haków bez odsyłania u urządzeń katalogu, wpisy
+katalogu bez jawnej kopii — każdy czerwieni samokontrolę albo model haków przy `E2_AB_ECHO=1`. Reguła także w imporcie
+jest równoważna co do zachowania (`Le` importu bez kart) — łapie ją strażnik źródła importu. Brak sprawdzenia sesji
+przed odczytem tutejszego nagrobka przeżywał najpierw testy działania (łapał go tylko strażnik źródła); test sesji
+sprawdza teraz brak każdego wywołania magazynu w koncie B po przełączeniu i ten mutant czerwieni.
+
+**Długie przebiegi** (ręcznie, 2026-11-23; kod tego PR i baza — ten sam plik testów i uprząż z `vilda_vault.js`,
+manifestami i skrótami z `origin/audyt` — na kopiach drzewa, para kod/baza naraz, te same zmienne; 21 par):
+
+| Przebieg | Przełącznik | Czerwone na bazie | Czerwone po zmianie | Wyrocznia ziarno po ziarnie | Czas baza / kod |
+|---|---|---|---|---|---|
+| CI (cały plik) | nie | 1 (świat 1030) | 0 | 20/20 | 164 / 164 s |
+| CI (cały plik) | tak | 40 | 40 (te same) | 20/20 | 175 / 175 s |
+| podstawowy 1–40 | nie / tak | 0 / ziarna 1, 4 | te same | 40/40, 40/40 | 225 / 225, 231 / 230 s |
+| „dłuższa praca bez połączenia” 101–140 | nie / tak | 104, 123, 128, 132, 137 / 104, 128, 132, 137 | te same | 40/40, 40/40 | 134 / 135, 138 / 139 s |
+| pełny 1–20 | nie | ziarno 5 | **0 — ziarno 5 naprawione** | 20/20 | 138 / 138 s |
+| pełny 1–20 | tak | ziarno 8 | to samo | 20/20 | 152 / 154 s |
+| pełny 21–40 | nie / tak | 21, 37, 38, 39 / 37, 38, 39 | te same | 20/20, 20/20 | 140 / 140, 150 / 151 s |
+| flota 221, ziarna 1–10 | nie / tak | 0 / ziarna 2, 3 | te same | 10/10, 10/10 | 30 / 30, 34 / 34 s |
+| flota 276, ziarna 1–10 | nie / tak | 0 / ziarno 2 | te same | 10/10, 10/10 | 38 / 37, 43 / 43 s |
+| katalog kosza, tryb ścisły | nie / tak | 14 / 15 | te same („tylko nagrobki pacjentów” 5 = 5) | — | 24 / 24, 26 / 26 s |
+| pełny 1–20, tryb ścisły | tak | ziarna 5, 8 | te same | 20/20 | 155 / 154 s |
+| blok znanych usterek | nie / tak | 5 / 5 | te same | — | 6 / 6, 7 / 7 s |
+
+- Jedyna zmiana czerwieni: **ziarno 5 profilu pełnego bez przełącznika** (krok 165: W4 bez punktu stałego, nagrobek
+  karty tylko po jednej stronie) — zielone. Wszystkie pozostałe zbiory czerwonych przypadków te same co na bazie; bloki
+  błędów czerwonych przypadków identyczne (bez numerów wierszy i czasów).
+- Wyrocznia ziarno po ziarnie identyczna z bazą w 340 podsumowaniach ziaren: te same liczby naruszeń, klasy z liczbami
+  (także P6), liczba mutacji i czerwone punkty; zrzuty katalogu kosza i p. 6 równe przy obu stanach przełącznika.
+- Tryb ścisły profilu pełnego z przełącznikiem: „nagrobek karty opróżnionej” ziarna 5 (W1, kroki 165 i 176) zostaje,
+  2 = 2 — wersja przechodzi tam kopertą odsyłania, która nie niesie nagrobka, a koperta nagrobka przegrała wcześniej
+  z późniejszym zapisem starej karty (wiersz „Kiedy działa”).
+- Licznik „utraty bez nośnika” po zdarzeniach bez zmian (pełny 1–20: 30 bez przełącznika, 31 z nim — karty opróżnione
+  kopertą wersji przed kopertą nagrobka tej samej partii, nic nie ginie; licznik do poprawki w E3-PR0h); w pół wymiany
+  ziarna 5 bez przełącznika 1 karta i 1 nagrobek „bez śladu” → 0.
+- Jedyne inne różnice to charakterystyka W2s (klon po zdarzeniach wobec klonu po pełnej kopii; tylko druk, nie
+  warunek): ziarna 18 i 19 profilu pełnego — różnica znika (pełna kopia zapisuje nagrobek z ładunku); ziarno 34 i ziarno
+  5 z przełącznikiem — różnica „nagrobek tylko po pełnej kopii”, bo w zdarzeniach koperta wersji opróżnia kartę bez
+  znanego nagrobka (wiersz „Kiedy działa”); W1, W4, wyrocznia i dziennik tych ziaren jak na bazie.
+- Wierność odniesień: baza z nową uprzężą = logi bazy z diagnozy w każdym rekordzie wyników i wyroczni (14 przebiegów
+  profili i flot obu stanów, CI bez przełącznika, blok znanych usterek); różnice tylko tam, gdzie uprząż zmieniła się
+  celowo (katalog kosza i CI z przełącznikiem).
+
+**Czas pliku A ≡ B** (lokalnie, sam plik, bez zmiennych, po kolei, bez innego obciążenia): `a7b2920b` 155,0 s i 160,1 s,
+po zmianie 153,8 s i 151,9 s (259 przypadków zamiast 256; przyrost w granicach szumu). W CI na `a7b2920b` 99,97 s
+i 164,36 s — szacunek po PR bez zmian (nowy blok ≈ 1 s) przy celu ok. 180 s.
+
+**Kontrola granicy obrazu sejfu.** Zmiana stoi wyłącznie poza blokiem P-DZIENNIK-ZDARZEN i poza fragmentem natywnym:
+`Bsw_przenies`, `Bsw_poOddaniu` i komentarze; blok P-DZIENNIK-ZDARZEN, fragment natywny i teksty 41 haków trwałych wizyt
+bajt w bajt (zakresy porównane z `origin/audyt`); zero nazw `Bem_`/`Bob_`/`Bev_` we fragmencie natywnym; bez nowych
+wywołań `Bem_`/`Bob_`. Przeliczone skróty: baza trwałych wizyt `3e7bcd5a…` i obraz `3f647b80…`
+(`runtime/durable-visits-v1/manifest.json`, `tools/visits-vault-delta.mjs`, `tests/unit/visits-vault-boundary.test.mjs`)
+oraz `baseVaultSHA256` `75fa66c9…`, `integratedVaultSHA256` `32f10871…` i `BASE` natywnej przestrzeni klinicznej
+(`runtime/clinical-workspace-v1/manifest.json`, `tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0e1
+w komentarzu); `fragmentSHA256` bez zmian. `node tools/visits-vault-delta.mjs` i
+`node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` bez zmian. Sejf się zmienił — przy
+następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
+
+**Ograniczenia.**
+- **Wersja bez nagrobka w tej samej kopercie albo delcie** (koperty wersji z kolejki urządzenia scalającego, delta karty
+  docelowej przed deltą nagrobka, koperta odsyłania wersji): karta znika bez nagrobka, a nagrobek dopisuje zaraz koperta
+  albo delta nagrobka drogą zbioru N — jak dotąd. Gdy koperta nagrobka przegrała tu wcześniej z późniejszym zapisem
+  starej karty, karta zostaje bez nagrobka do pełnej wymiany (klasa „nagrobek karty opróżnionej”; ziarno 5 profilu
+  pełnego z przełącznikiem, ziarno 34). Pełne działanie w zmianach pojedynczych — E3-PR0e2b.
+- **Import pliku** — reguła nie działa w imporcie z budowy (bez kart w `Le`), wynik importu bez zmian.
+- **„Tylko lista usuniętych pacjentów”** (tryb ścisły katalogu kosza, 5 przebiegów) — bez zmian; różnica nie jest
+  niewidoczna (stara kopia może później zwrócić starą kartę na urządzeniu bez nagrobka), a naprawia ją E3-PR0e2b razem
+  z tą regułą.
+- **Wizyta nieznana urządzeniu scalającemu** ginie teraz w każdej kolejności synchronizacji, także tam, gdzie dotąd
+  przypadkiem przeżywała w zwróconym duplikacie (wyżej, „Dlaczego dawna obawa tu nie zachodzi”) — E3-PR0f.
+- **Błąd usunięcia pustej karty** zostawia kartę bez wersji i bez nagrobka także po ponowieniu — jak dotąd.
+- **Plan opieki bez etapów dawnej karty** zostaje na urządzeniu, które nie scalało, pod kartą, której nie ma — jak
+  dotąd, niezależnie od tego PR.
+- **Stara karta po „Scal pacjentów”** (E4b, „Usuń pacjenta” duplikatu) — bez zmian do E3-PR0e2b; zalecenie: duplikat
+  karty po „Scal pacjentów” scalać ponownie („Scal pacjentów”), nie usuwać („Usuń pacjenta”).
+- **Starsza aplikacja** (221, 276) — bez reguły u siebie; znane ograniczenie starszej wersji.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Zmiana reguły synchronizacji działająca od razu** u wszystkich urządzeń, przy obu stanach przełącznika (decyzja 1
+   z 2026-11-23). Skutki widoczne na urządzeniu, z którego stara karta zniknęła przy synchronizacji: odmowa zapisu
+   z formularza i korekty takiej karty z komunikatem i ponowienie do karty scalonej zamiast powrotu duplikatu; „Scal
+   kopię konta” pomija taką kartę jako scaloną (wizyta nieznana temu urządzeniu zostaje w pliku); późniejsza wersja
+   notatki dawnej karty trafia pod kartę scaloną; pełna wymiana dochodzi do zgodności po jednej wymianie (ziarno 5
+   profilu pełnego naprawione). Długie przebiegi — poza tym wszystko jak na bazie.
+2. **Ograniczenie do decyzji innej niż „zabierz”.** Przy „zabierz” karta jest w zbiorze N, a nagrobek zapisuje zaraz po
+   fazie `Bsl_usunPacjenta` — ten sam stan; droga „zabierz” zostaje bajt w bajt, jeden zapis nagrobka (test).
+3. **Błąd zapisu nagrobka nie jest połykany** — przerywa scalanie jak każdy zapis tej fazy; ponowienie tego samego
+   ładunku zapisuje nagrobek (test). Połknięcie zostawiłoby kartę bez nagrobka do następnego ładunku z nim.
+4. **Kolejność: usunięcie karty, odczyt tutejszego nagrobka, zapis** — jak `Bkz_usunZObcych` i `Bsl_usunPacjenta`;
+   błąd w środku zostawia stan dotychczasowy.
+5. **Wizyta nieznana urządzeniu scalającemu ginie teraz także w kolejności, w której dotąd przypadkiem przeżywała.**
+   Przykład (fikcyjny): laptop, komputer i telefon mają karty „Fikcyjna Ola” i „Fikcyjna Ewa”. Telefon bez sieci dopisuje
+   do „Fikcyjnej Oli” wizytę (122 cm). Komputer robi „Scal pacjentów” Ola → Ewa, poprawia jedną z dawnych wizyt Oli już
+   w karcie Ewy, wysyła dane raz i więcej się nie synchronizuje; laptop bez wiedzy o scaleniu poprawia tę wizytę
+   w starej karcie; potem synchronizują się na zmianę laptop i telefon. Dotąd: gdy po komputerze pierwszy był laptop,
+   „zapominał” scalenie (karta znikała u niego bez nagrobka), a jego pełne dane zastępowały w chmurze dane komputera —
+   wizyta 122 cm zostawała w zwróconym duplikacie „Fikcyjna Ola”; gdy pierwszy był telefon albo komputer zsynchronizował
+   się jeszcze raz — ginęła razem z kartą. Teraz ginie w obu kolejnościach, tak jak od informacji z komputera. Wybrane:
+   zostawić regułę (ocalenie było przypadkowe i nietrwałe; tak samo przyjęto dla karty, która znika przez zdjęty wyjątek
+   ostatniej wersji w scalaniu Kosza, P-KOSZ-PO-KLUCZU; bez reguły wracają duplikaty i rozjazdy, które ta zmiana usuwa).
+   Właściwa naprawa — E3-PR0f (utrata wersji E1/E1b, decyzja 9a z 2026-11-15). Druga możliwość: wstrzymać E3-PR0e1 do
+   E3-PR0f.
+6. **Import pliku starej karty** — sprawdzone testem: wynik ten sam przed zmianą i po niej (wcześniejsze przypuszczenie
+   z kodu, że karta z pliku przeżyje teraz synchronizację, a dotąd nie, nie potwierdziło się — przeżywała i dotąd).
+7. **Plan opieki dawnej karty pod kartą, której nie ma** — na urządzeniu, które nie scalało, po zwykłym „Scal pacjentów”
+   na drugim urządzeniu i pełnej kopii: notatki idą pod kartę scaloną, a rekord planu zostaje pod dawną kartą (dane
+   planu nie giną). Niezależne od tego PR (ten sam wynik przed zmianą i po niej); w tym PR bez zmian w obsłudze planów —
+   propozycja osobnego zadania (gałąź planu opieki w scalaniu i fragment natywny).
+8. **Błąd usunięcia pustej karty** (np. brak miejsca w magazynie w chwili usuwania) — pusta karta zostaje na liście bez
+   wizyt i bez nagrobka, także po ponowieniu; nic nie ginie. Niezależne od tego PR; przypięte testem jako znane
+   ograniczenie, komentarz w kodzie poprawiony; propozycja osobnego zadania.
+9. **Plan z etapami w starej karcie** — z kodu: synchronizacja, która opróżniłaby kartę z takim planem, jest odmawiana
+   w całości przed zmianą i po niej, a „Scal pacjentów” takiej karty jest odrzucane; przypadek nie powstaje. Bez testu
+   w tym PR (plan z etapami istnieje tylko w e2e z modułami natywnymi).
+10. **Uprząż katalogu kosza z przełącznikiem** — wcześniejsze przebiegi katalogu z `E2_AB_ECHO=1` nie obejmowały
+    odsyłania; z poprawioną uprzężą CI z przełącznikiem ma 40 czerwonych przypadków zamiast 32 (literały spisane bez
+    przełącznika; na bazie tak samo), CI bez zmiennej — bez zmian.
+
+**Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
+- **E3-PR0e2a:** nowa informacja w rekordzie wersji „kiedy wizytę przeniesiono przez „Scal pacjentów”” —
+  przechowywana, zachowywana przy każdym zapisie (późniejsza z obu kopii), przesyłana (eksport, importy, koperta
+  zdarzenia z listą pól wersji), porównywana, gdy jest; nikt jej nie zapisuje — bez zmiany działania.
+- **E3-PR0e3:** zmiana wizyty po Koszu na innym urządzeniu wraca do karty wpisu po „Scal pacjentów” (wpis pod żywą
+  kartą; dziś gwiazdka albo poprawka ginie) oraz wąski wyjątek wyroczni z decyzji 4 z 2026-11-23 dla „Usuń pacjenta”
+  zwróconej starej karty z nowymi wizytami (świat 885 do CI, ziarna 8 i 37 profilu pełnego) — test, nie zmiana sejfu.
+- **E3-PR0e2b** (dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają E3-PR0e2a): „Scal pacjentów”
+  zapisuje nową informację; poprawki i gwiazdki wizyt przeniesionych scaleniem zostają w karcie scalonej (D-4 A i PD-1
+  dla nich zmienione decyzją 2 z 2026-11-23); wejścia: E4b, „Usuń pacjenta” duplikatu (światy 881–884), „tylko lista
+  usuniętych pacjentów”, „miejsce wizyty po „Scal pacjentów”” w W1, ziarno 38 profilu pełnego; sprawdzić, czy znika
+  klasa „nagrobek karty opróżnionej” w zdarzeniach.
+- **E3-PR0f:** wizyta nieznana urządzeniu scalającemu (E1/E1b, także w zwróconej starej karcie i w przypadku
+  z „Do akceptacji”, punkt 5), ziarno 39 profilu pełnego razem z kolejnością klas wyroczni, świat 885 poza wyjątkiem,
+  „Usuń pacjenta” właściwej karty przed dotarciem poprawki ze starej karty, wpis Kosza pod kartą, której nie ma albo
+  scaloną dalej; do rozważenia ostrzeżenie w oknie „Usuń pacjenta” zwróconej starej karty (gdy powstanie pamięć,
+  dokąd scalono kartę).
+- **E3-PR0h:** licznik kart opróżnionych w teście A ≡ B — karta, której nagrobek dochodzi w tej samej albo następnej
+  dostawie, nie jest utratą bez nośnika (30 przypadków w 20 ziarnach profilu pełnego).
+- Osobne zadania: plan opieki dawnej karty pod kartą, której nie ma; błąd usunięcia pustej karty w fazie przeniesień.
+
+**Cofnięcie** = rewert PR, bez migracji. Nagrobki zapisane regułą zostają — są takie same jak te, które dopisuje droga
+zbioru N przy następnym ładunku z nimi; rewert cofa też skróty kontroli granicy.
+
+**Gdzie w kodzie.** `vilda_vault.js`, poza blokiem P-DZIENNIK-ZDARZEN (6725–10361) i fragmentem natywnym (13356–14730):
+`Bsw_przenies` (4424–4435, wywołanie `Bsw_poOddaniu` z nagrobkiem znanym scalaniu poza „zabierz”, 4434),
+`Bsw_poOddaniu` (4524–4537: po usunięciu pustej karty odczyt tutejszego nagrobka i warunkowy zapis znanego, oba po
+`Bses_pilnuj`); komentarze: nagłówek P-SYNC-WLASCICIEL (3662–3669), `Bsl_przeniesWersje` (4217–4222), powód nagrobka nad
+`Bsw_przenies` (4390–4407), opis szóstego argumentu nad `Bsw_poOddaniu` (4511–4523), P-ZAPIS-USUNIETEJ (4563–4567).
+Bez zmian: `Le`, `Bsw_przeniesPrzezyta`, `Bsw_doF`, `Bpu_nagrobek`, `Bsl_usunPacjenta`, `Bsl_zdejmijNagrobek`,
+`Bzu_odmowa`, `Bks_powod`, `Bkz_usunZObcych`, strażnik natywny.
+
+**Wersje.** `vilda_vault.js` 284 → 285, `vilda_chrome.js` 321 → 322 i `vilda_session_bridge.js` 237 → 238 (wstrzykują
+sejf), SW 1.1.575 → 1.1.576 — `npm run podbij-wersje`; baza `origin/audyt` `77cb60dc` (po vildaclinic/vilda-calc#1040;
+sejf, `vilda_sync.js`, `runtime/` i `tools/` bez zmian od `a7b2920b`, więc czerwone na bazie i piny granicy
+liczone na `a7b2920b` są ważne).
+Bez nowego pliku w pamięci offline.
+
+## P-STATUS-KAFLE-ROWNE — Karta pacjenta: kafelki „Statusu” jednego rozmiaru, krótkie podpisy Tempa i SDS tempa (SW 1.1.578, `vilda_auth_ui.js` 583, `vilda_auth_ui.css` 91, 2026-11-23)
+
+**Zmiana kliniczna: NIE.** Liczby, jednostki, okna oceny (tempo: 6–15 mies.; SDS tempa: zakres odstępów normy, DONALD
+6–18 mies.), progi, flagi ostrzegawcze i decyzja „nie policzono” — bez zmian. Zmienia się układ siatki kafelków i długość
+podpisów na kafelkach. Pełne wyjaśnienia zostają: w panelu pod siatką (po strzałce ▾), w zakładce trajektorii, w opisie
+pacjenta, w podsumowaniu wyników i w schowku (`opisPowodu` bez zmian treści).
+
+**Decyzja właściciela.** Zgłoszenie 2026-11-23 ze zrzutem zakładki „Status”: kafelki sekcji „Pomiar” szersze od kafelków
+„Wzrastanie i genetyka rodzinna”, a kafelki „Tempo wzrastania” i „SDS tempa” długimi opisami wydłużały cały rząd.
+Makieta (desktop i telefon, dwa układy, po trzy wersje podpisów); właściciel wybrał układ A, podpisy A dla obu kafelków
+i samą strzałkę ▾ zamiast dopisku „kliknij, aby rozwinąć”.
+
+**Przyczyna.** Obie sekcje miały `repeat(auto-fit, minmax(150px, 1fr))`. Przy karcie ok. 790 px mieści się 5 kolumn;
+„Pomiar” z 4 kafelkami zwijał pustą kolumnę i rozciągał kafelki, „Wzrastanie” z 6 kafelkami dostawał 5 węższych kolumn.
+Rząd siatki przyjmuje wysokość najwyższego kafelka: Tempo miało cały opis w polu wartości („6,0 cm/rok (z 34 mies., poza
+oknem oceny normy)” dużą czcionką), a SDS tempa — trzy zdania powodu odmowy.
+
+**Reguła.**
+1. Siatka `.vilda-patient-stats-grid` (`vilda_auth_ui.css`): `repeat(auto-fill, minmax(max(160px, (100% − 3 odstępy) / 4),
+   1fr))` — najwyżej 4 kolumny, mniej dopiero, gdy kafelek byłby węższy niż 160 px; puste kolumny zostają (`auto-fill`,
+   nie `auto-fit`), więc szerokość kafelka nie zależy od ich liczby w sekcji; `grid-auto-rows: 1fr`; kafelek w siatce
+   `min-height: 124px`. Karta ma 880 px (okno ≥ 1280 px) albo 675 px (okno 768–1279 px, m.in. iPad poziomo) — w obu
+   4 kolumny; telefon (≤ 480 px) — dwie kolumny jak dotąd. Wariant z samym minimum 180 px odrzucony w trakcie pracy:
+   karta 675 px dostawała 3 kolumny i kafelki „Wskaźnik Cole'a” i SGA stały same w rzędzie.
+2. Kafelek „Tempo wzrastania”: w wartości sama liczba („6,0 cm/rok”), odstęp w podpisie: „z 34 mies. · poza oknem oceny
+   normy”, w oknie — „z 11 mies.”. Flaga („⚠ deceleracja wzrastania”, „⚠ tempo poniżej normy”, „⚠ do oceny”) zostaje;
+   przy podpisie z odstępem stoi pod nim. Rekord bez zapisanego modelu tempa — jak dotąd sama liczba i flaga.
+3. Kafelek „SDS tempa” przy odmowie: „—” i „nie policzono — ” + krótki powód (`OPIS_POWODU_KROTKI`
+   w `vilda_height_velocity.js`, pole wyniku `opisPowoduKrotki`; wynik policzony ma `null`). Kafelek rozwija się
+   strzałką ▾ jak wynik policzony; panel pod siatką: pełny powód (`opisPowodu`), przy odstępie poza zakresem — „Odstęp
+   pomiarów: N mies. Zakres odstępów tej normy: a–b mies.” (z danych normy: `oknoMiesMin`, `oknoMiesMax`) i cytowanie
+   z PMID. Kafelek odmowy zostaje przygaszony (`opacity: .78`, klasa `vhv-odm` w arkuszu bloku — nie styl na elemencie,
+   P-STYLE), bez koloru „ok”.
+4. Bez dopisku „kliknij, aby rozwinąć” na kafelkach „SDS tempa” i „Walidacja prognoz”; kafelek SDS tempa ma
+   `aria-expanded`.
+5. „Walidacja prognoz”: liczba punktów odmieniona („1 punkt”, „2 punkty”, „5 punktów”, „22 punkty”); dotąd zawsze
+   „punktów”.
+
+| Powód (`powod`) | Na kafelku (po „nie policzono — ”) |
+|---|---|
+| `okno-poza-zakresem` | odstęp poza zakresem norm |
+| `wiek-powyzej-zakresu` | wiek powyżej zakresu norm |
+| `wiek-ponizej-zakresu` | wiek poniżej zakresu norm |
+| `brak-danych` | brak danych |
+| `brak-plci` | brak płci pacjenta |
+| `nieznane-zrodlo` | nieznane źródło norm |
+
+**Strażnicy.** `tests/unit/status-kafle-rowne.test.mjs` (nowy: komplet krótkich powodów, odmowa i wynik policzony
+w prawdziwym silniku, `hvSdsKafelek()` wycięty z pliku produkcyjnego na prawdziwych normach — odstęp 34 mies. i wiek
+powyżej normy, odmiana punktów, reguły siatki); `tests/e2e/status-kafle-rowne.spec.mjs` (nowy: pacjentka 6 lat, tempo
+z 34 mies., MPH, SGA; okno 1440 px i 1180 px — 4 kolumny, telefon 390 px — 2; wszystkie kafelki obu sekcji jednego
+rozmiaru, podpisy,
+rozwinięcie nie zmienia rozmiaru kafelków, bez przewijania w bok); `tests/unit/tempo-hv-sds-karta.test.mjs` (strażnik
+„podpis źródła nie stoi na kafelku” wycina teraz blok kafelka kotwicami zamiast okna ±1500 znaków, które pękało przy
+dopiskach w bloku).
+
+**Wersje.** `vilda_auth_ui.js` 582 → 583, `vilda_auth_ui.css` 90 → 91, `vilda_trajectory_analysis.js` 48 → 49,
+`vilda_height_velocity.js` 3 → 4, `vilda_growth_prediction_validation.js` 14 → 15, `vilda_chrome.js` 322 → 323
+i `vilda_session_bridge.js` 238 → 239 (wstrzykują pliki z nowym `?v=`), SW 1.1.577 → 1.1.578 — `npm run podbij-wersje`. Łatka zminifikowanych miejsc: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-STATUS-KAFLE-ROWNE”.
+Bez nowego pliku w pamięci offline.
+
+## P-SGA-KAFEL-NORMY — Karta pacjenta: kafel SGA nie chowa wyniku dodatniego według części norm (SW 1.1.579, `vilda_patient_sga_model.js` 2, 2026-11-23)
+
+**Zmiana kliniczna: TAK — zmienia się wniosek pokazany na kafelku SGA (i w oknie szczegółów oraz w kopiowanym
+podsumowaniu), gdy wybrane normy oceniają różnie.** Obliczenia SDS, tabele norm, próg **< −2 SDS** (ostry) i ocena
+każdej normy osobno (`summary` silnika urodzeniowego `sga_birth_module.js`) — bez zmian. Zmienia się tylko łączenie
+ocen kilku norm w jeden napis na kafelku.
+
+**Zgłoszenie i decyzja właściciela (2026-11-23).** Pacjent z samą masą urodzeniową, SGA według Malewskiego; kafel
+pokazywał „Do oceny / Niepełna ocena dla części norm”. Właściciel wybrał: gdy co najmniej jedna z wybranych norm daje
+SGA, kafel jest czerwony, „Tak”, a podpis nazywa normy z wynikiem dodatnim i parametr — także gdy inna norma SGA
+wyklucza (dotąd bursztynowe „Różne oceny”, GROWTH-BIRTH-STATUS).
+
+**Źródło.** Definicja SGA: masa i/lub długość urodzeniowa co najmniej 2 SD poniżej średniej dla wieku ciążowego —
+Clayton PE i wsp. Management of the child born small for gestational age through to adulthood: a consensus statement
+of the International Societies of Pediatric Endocrinology and the Growth Hormone Research Society. J Clin Endocrinol
+Metab 2007;92(3):804–810, PMID 17200164, DOI 10.1210/jc.2006-2017. Ta sama reguła („TAK” po masie albo długości daje
+wynik dodatni) była już stosowana dla każdej normy osobno (`sourceVerdict`); teraz obowiązuje też między normami.
+Normy, populacje i jednostki bez zmian: Niklasson/Albertsson-Wikland 2008, INTERGROWTH-21st (Villar i wsp. 2014/2016),
+Malewski i wsp. (polska populacja 1986–1994, 22–43 tyg., tylko masa); masa w gramach, długość w centymetrach, pełne
+tygodnie i dni ciąży.
+
+**Przyczyna.** `build()` w `vilda_patient_sga_model.js` łączył werdykty norm (`yes` / `no` / `partial`): „Tak” tylko
+przy `yes` we wszystkich normach, „Różne oceny” przy `yes` + `no`, a `yes` + `partial` (np. Malewski TAK, inna norma:
+masa NIE i brak długości) spadało do „Do oceny / Niepełna ocena dla części norm”. Przy samej masie inne normy są
+zawsze `partial` (długość „Brak danych”), a u Malewskiego długość jest zawsze „Niedostępne w tym źródle”.
+
+**Reguła (kolejność gałęzi).**
+1. Wszystkie normy `yes` — „Tak”, czerwony, podpis jak dotąd („Masa poniżej −2 SDS” / „Wynik według N źródeł”).
+2. Co najmniej jedna `yes` — „Tak”, czerwony, podpis „wg K z N norm: ” + normy z wynikiem dodatnim, każda z parametrem
+   w nawiasie: „masa”, „długość” albo „masa i długość” (nazwy: Niklasson, INTERGROWTH-21st, Malewski).
+3. Wszystkie `no` — „Nie”, turkusowy (bez zmian).
+4. `no` + `partial` — „Do oceny / Niepełna ocena dla części norm” (bez zmian).
+5. Same `partial` — „Do oceny / Niepełne dane do oceny SGA” (bez zmian).
+
+**Przypadki syntetyczne (prawdziwy kalkulator, `tests/support/sga-birth-runtime.mjs`).**
+- dziewczynka 33+0 tyg., 1150 g, bez długości; INTERGROWTH + Malewski → INTERGROWTH SDS −2,00 (NIE, próg ostry),
+  Malewski −3,46 (TAK) → dotąd „Do oceny / Niepełna ocena dla części norm”, teraz „Tak / wg 1 z 2 norm: Malewski (masa)”;
+- to samo z trzema normami → Niklasson −4,51 TAK, INTERGROWTH NIE, Malewski TAK → „Tak / wg 2 z 3 norm: Niklasson
+  (masa), Malewski (masa)”;
+- chłopiec 34+2 tyg., 1500 g / 48 cm; Niklasson + INTERGROWTH → Niklasson masa TAK, INTERGROWTH NIE/NIE → dotąd
+  „Różne oceny”, teraz „Tak / wg 1 z 2 norm: Niklasson (masa)”;
+- chłopiec 34+2 tyg., 1650 g / 41 cm, trzy normy → „Tak / wg 2 z 3 norm: Niklasson (masa i długość), INTERGROWTH-21st
+  (długość)”;
+- chłopiec 34+2 tyg., 2700 g / 48 cm, trzy normy → bez wyniku dodatniego, jak dotąd „Do oceny / Niepełna ocena dla
+  części norm”.
+
+**Strażnicy.** `tests/unit/patient-sga-model.test.mjs` (dwa testy dawnej reguły przepisane na decyzję właściciela,
+dwa nowe; nowe przypadki czerwone na modelu sprzed zmiany: 3 z 4, czwarty to kontrola bez wyniku dodatniego);
+`tests/e2e/karta-pacjenta-sga.spec.mjs` (nowy: prawdziwy formularz, zapis i Karta — kafel „Tak”, podpis
+„wg 1 z 2 norm: Malewski (masa)”, czerwony, ten sam wniosek w oknie szczegółów).
+
+## P-WALIDACJA-KAFEL-KROTKO — Karta pacjenta: krótki podpis kafla „Walidacja prognoz” bez prognoz (SW 1.1.579, `vilda_growth_prediction_validation.js` 16, 2026-11-23)
+
+**Zmiana kliniczna: NIE.** Warunek pokazania kafla (żaden punkt nie ma wartości żadnej metody) bez zmian. Podpis
+„za mało danych do prognoz — uzupełnij wiek kostny i/lub wzrost rodziców” zastąpiony krótszym „uzupełnij wiek kostny lub
+wzrost rodziców” (decyzja właściciela 2026-11-23), żeby kafel nie wydłużał rzędu w Statusie (P-STATUS-KAFLE-ROWNE).
+Łatka zminifikowanego miejsca: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-WALIDACJA-KAFEL-KROTKO”. Strażnik:
+`tests/unit/status-kafle-rowne.test.mjs`.
+
+**Wersje (P-SGA-KAFEL-NORMY i P-WALIDACJA-KAFEL-KROTKO, jeden PR).** `vilda_patient_sga_model.js` 1 → 2,
+`vilda_growth_prediction_validation.js` 15 → 16, `vilda_chrome.js` 323 → 324 i `vilda_session_bridge.js` 239 → 240
+(wstrzykują pliki z nowym `?v=`), SW 1.1.578 → 1.1.579 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 1 — Baza pacjentów: widok „Statystyki” (wiek, płeć, kompletność danych) (SW 1.1.580, `vilda_patients_list.js` 6, `vilda_patients_list.css` 5, 2026-11-23)
+
+**Zmiana kliniczna: NIE.** Statystyki opisowe własnej bazy: liczebności, średnia i mediana wieku, podział na płeć
+i kompletność danych. Bez norm, progów i interpretacji; żaden wynik pacjenta, zapis karty ani sejf się nie zmienia.
+Widok tylko czyta.
+
+**Decyzja właściciela (2026-11-23).** Makieta (komputer, telefon, lista po kliknięciu słupka) i plan etapów: (1) wiek,
+płeć i kompletność danych, (2) leczenie GH — główna liczba: tempo wzrastania w 1. roku leczenia, (3) leczenie otyłości —
+zmiana masy po 12 tygodniach i 6 miesiącach, (4) eksport i raport PDF. Przedziały wieku: 0–2, 3–5, 6–9, 10–13, 14–17, 18+.
+Pole „rozpoznanie” w karcie — osobna zmiana (zapis karty).
+
+**Skąd dane.**
+- **Wiek i płeć — z nagłówków kart** (`listPatientDirectory`, te same rekordy, które rysuje lista): bez odszyfrowania
+  zapisów, liczone od razu po otwarciu widoku.
+- **Kompletność kart — z najnowszego zapisu każdego pacjenta** (`getLatestSnapshot`), dopiero po „Sprawdź karty (N)”:
+  po kolei, z licznikiem „Sprawdzanie kart… k z N”. Wyjście z widoku przerywa przebieg. Wynik zostaje w pamięci widoku
+  do końca odblokowanej sesji i jest odrzucany, gdy zmieni się zestaw kart albo czas ostatniego zapisu którejkolwiek.
+
+**Reguły (model: `demographics`, `cardCompleteness` w `vilda_patients_list.js`).**
+1. Liczą się wyłącznie pacjenci z bazy; osoby „spoza bazy” nie mają kart i nie wchodzą do żadnej liczby.
+2. **Wiek = wiek na dziś z pełnej daty urodzenia**, w pełnych miesiącach na dobę lokalną (`calcAgeFromDOB` sejfu,
+   DOB-AGE-1). Ta sama zasada, co w wierszu listy: wiek z zapisu pomiaru ani sam rok urodzenia nie udają wieku bieżącego.
+   Pacjent bez daty urodzenia (albo z datą błędną lub przyszłą) nie wchodzi do średniej, mediany ani przedziałów i jest
+   wykazany („Bez daty urodzenia: n (poza wiekiem)”, wiersz kompletności „Data urodzenia”).
+3. Średnia i mediana z miesięcy; zapis: poniżej roku „N mies.”, dalej lata z jednym miejscem po przecinku („10,5 roku”).
+   Przedziały w pełnych latach (2 lata i 11 mies. to „0–2”, 3 lata to „3–5”).
+4. Płeć: `M` — chłopcy, `F` i `K` — dziewczęta, pozostałe — „płeć nieznana” (osobna pozycja legendy i wiersz kompletności).
+   Odsetki od wszystkich pacjentów z bazy.
+5. „Z zapisem w ostatnich 12 mies.” — `lastSavedAtISO` karty nie starszy niż rok (ostatni zapis, nie data wizyty).
+6. Kompletność karty: **co najmniej 2 pomiary wzrostu** w różnym wieku (wiersze historii `advanced.data.measurements`
+   i `growthBasic.data.measurements`, punkty `ghTherapyPoints` i `obesityTherapyPoints`, bieżący pomiar z formularza;
+   ten sam wiek w miesiącach liczy się raz), **wzrost obojga rodziców** (`advanced.motherHeight` i `fatherHeight` > 0),
+   **masa urodzeniowa** (`birth.weight` albo `perinatal.birthWeightG` > 0). Karta, której nie udało się odczytać, jest
+   wykazana osobno i nie wchodzi do mianownika.
+7. Kliknięcie przedziału wieku, kafla płci albo „Brakuje: n” otwiera zwykłą listę zawężoną do tych pacjentów (pasek
+   „Grupa ze statystyk: …” z powrotem do statystyk i „Pokaż wszystkich”); wyszukiwanie działa wewnątrz grupy.
+
+**Rysowanie.** Słupki to SVG z atrybutami geometrii (szerokości w jednostkach `viewBox`), więc widok nie ustawia stylów
+wprost na elementach (P-STYLE krok 5b bez zmian fixture). Kolory serii: chłopcy `#2a78d6`, dziewczęta `#eb6834`
+(para sprawdzona pod kątem rozróżnialności przy zaburzeniach widzenia barw), z legendą i liczbami tekstem. Bez nowych
+plików ładowanych przez strony: model i widok są w `vilda_patients_list.js`, style w `vilda_patients_list.css`
+(instalacja offline ma limit 600 żądań).
+
+**Przypadek syntetyczny (zegar 17.06.2026; `tests/support/baza-pacjentow-statystyki.mjs`).** 8 pacjentów z bazy
+(daty urodzenia 2024-12-01, 2021-06-17, 2018-01-10, 2014-03-20, 2010-09-01, 2005-05-05, jeden bez daty, 2016-06-18 bez
+płci) i 1 osoba spoza bazy → „Pacjenci w bazie 8”, średni wiek 10,5 roku, mediana 9,9 roku, od 1,5 roku do 21,1 roku,
+chłopcy 4 (50%, średnio 9,7 roku), dziewczęta 3 (38%, średnio 11,6 roku), przedziały 1/1/2/1/1/1, data urodzenia 7/8,
+płeć 7/8; po sprawdzeniu kart: pomiary 2/8, rodzice 1/8, masa urodzeniowa 2/8.
+
+**Strażnicy.** `tests/unit/baza-statystyki.test.mjs` (12: osoby spoza bazy, płeć, dzień przed urodzinami, granice
+przedziałów, średnia/mediana, brak i błąd daty urodzenia, ostatni zapis, pusta baza, kompletność karty, zapis wieku —
+model z pliku produkcyjnego); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (4: liczby i szerokości słupków na
+prawdziwym sejfie; grupy z wykresu i z „Brakuje”; karty odszyfrowywane dopiero na prośbę — 0 odczytów przy otwarciu,
+8 po przycisku, 0 po powrocie; telefon 390 px — dwie kolumny, cel dotyku ≥ 44 px, bez przewijania w bok).
+
+**Wersje.** `vilda_patients_list.js` 5 → 6, `vilda_patients_list.css` 4 → 5, `vilda_chrome.js` 324 → 325
+i `vilda_session_bridge.js` 240 → 241 (wstrzykują pliki z nowym `?v=`), SW 1.1.579 → 1.1.580 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 2 — Baza pacjentów: statystyki leczenia hormonem wzrostu (SW 1.1.581, `vilda_patients_list.js` 7, `vilda_patients_list.css` 6, 2026-11-24)
+
+**Zmiana kliniczna: MOŻLIWA — nowa statystyka opisowa bazy (średnie tempo wzrastania i zmiana hSDS u leczonych GH).**
+Wynik pojedynczego pacjenta, zapis karty, wzory, normy i progi — bez zmian. Model nie ma własnego wzoru: tempo liczy
+`VildaTempoWzrastania.odcinek` (P-TEMPO), kursy dzieli `VildaTrajectoryAnalysis.ghKursy` (P-GH-WZNOWIENIE), hSDS liczy
+`VildaSdsWzrostu.policz` (P-SDS). Nowe są wyłącznie definicje doboru par pomiarów i uśrednienie po pacjentach — do
+akceptacji właściciela.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów; etap 2 — leczenie GH, główna liczba: tempo wzrastania w 1. roku
+leczenia. 2026-11-24: „jako etap 2 ruszaj z leczeniem GH”.
+
+**Źródła i jednostki.** Wzór tempa (cm/rok): (h2 − h1) / ((m2 − m1) / 12), jak w całej aplikacji (P-TEMPO-1). Okno roczne
+9–15 mies. z celem 12 mies. — stałe silnika tempa `P.ROCZNE_OKNO_MIN_M`, `P.ROCZNE_OKNO_MAX_M`, `P.ROCZNE_CEL_M`
+(model czyta je z silnika, nie ma własnych liczb). hSDS: siatka zapisana w karcie (`zscore.dataSource`; bez niej — bieżące
+źródło strony), populacja z karty (`clinical.downSyndrome` → siatki zespołu Downa), reguły siatek jak w P-SDS. Wiek punktu
+leczenia: lata × 12 + miesiące (jak w Karcie i monitorze terapii).
+
+**Definicje (model: `ghPatient`, `ghCohort` w `vilda_patients_list.js`).**
+1. **Leczony** — karta ma co najmniej jeden punkt leczenia GH (`ghTherapyPoints`: Włączenie, Kontynuacja, Zakończenie).
+   Program IGF-1 (mekasermina) jest wykazany jako osobny program.
+2. **Kurs** — liczy się pierwszy kurs z punktem Włączenia. Leczenie wznowione po Zakończeniu to osobny kurs i nie wchodzi
+   do „pierwszego roku”.
+3. **Odcinek roczny** — dwa pomiary odległe o 9–15 mies., najbliżej 12; przy równej odległości od 12 — bliższy w czasie.
+4. **Tempo w 1. roku leczenia** — od Włączenia (ze wzrostem) do kontroli z odcinka rocznego. **Kolejne lata** — łańcuchem:
+   2. rok od kontroli 1. roku do następnej kontroli z okna itd. (pokazywane do 4. roku).
+5. **Tempo przed leczeniem** — pomiar 9–15 mies. przed Włączeniem (najbliżej 12) → Włączenie. Pomiary sprzed leczenia:
+   wiersze historii (`advanced.data.measurements`, `growthBasic.data.measurements`) i punkty leczenia o wcześniejszym wieku.
+   Para „przed → 1. rok” liczy tylko pacjentów, którzy mają obie wartości (ci sami pacjenci po obu stronach).
+6. **Zmiana hSDS w 1. roku** — hSDS kontroli 1. roku − hSDS Włączenia. Bez płci albo bez siatki dla wieku pacjent nie
+   wchodzi do średniej. Tablice siatek wzrostu ładują strony Start, DocPro i Klirens; na pozostałych kafel mówi, że
+   siatki nie są wczytane (tempo liczy się wszędzie).
+7. **Kto nie wchodzi do średniej** (wykazany z powodem i listą pacjentów): „brak Włączenia ze wzrostem”, „brak kontroli po
+   9–15 mies.” (są późniejsze punkty, ale żaden w oknie), „leczenie krótsze niż 9 mies.”.
+8. **Uśrednianie** — średnia arytmetyczna i mediana po pacjentach (każdy pacjent raz). „Wg programu”: program punktu
+   Włączenia (bez niego — pierwszy program w kursie; brak — „bez programu”). Grupa z mniej niż 5 pacjentami z tempem jest
+   oznaczona „mała grupa”.
+
+**Jeden przebieg po kartach.** Kompletność danych (etap 1) i leczenie GH liczą się z tego samego odczytu najnowszego
+zapisu każdej karty — po „Policz z kart (N)” (dotąd „Sprawdź karty”); pasek pokazuje postęp, a potem godzinę policzenia.
+
+**Rysowanie.** Hantla „przed → 1. rok” i słupki lat to SVG z atrybutami geometrii; kropki mają stały rozmiar przez
+`vector-effect: non-scaling-stroke` w arkuszu (bez stylów na elementach). Kliknięcie programu, kafla tempa albo powodu
+braku otwiera listę tych pacjentów.
+
+**Przypadki syntetyczne (prawdziwe silniki).**
+- dziewczynka, SNP: 5 l. 0 mies. 105,0 cm (historia); Włączenie 6 l. 0 mies. 109,2 cm; kontrole 6 l. 6 mies. 114,5 ·
+  7 l. 0 mies. 118,8 · 8 l. 1 mies. 126,4 → przed 4,2; 1. rok 9,6 (kontrola po 6 mies. pominięta); 2. rok 7,6 / (13/12) = 7,0;
+- chłopiec, SGA: Włączenie 5 l. 0 mies. 100,0 cm; kontrole po 10 mies. 106,0 i po 15 mies. 108,4 → 1. rok 6,0 / (10/12) = 7,2
+  (10 mies. bliżej celu niż 15);
+- Włączenie i kontrola po 6 mies. → „leczenie krótsze niż 9 mies.”; Włączenie i kontrola po 20 mies. → „brak kontroli po
+  9–15 mies.”; same Kontynuacje → „brak Włączenia ze wzrostem”;
+- Włączenie 5 l. 100 cm, Zakończenie 6 l. 108,4 cm, ponowne Włączenie 8 l. → 1. rok 8,4 z pierwszego kursu, program
+  pierwszego kursu.
+
+**Strażnicy.** `tests/unit/baza-statystyki-gh.test.mjs` (11: model na prawdziwym silniku tempa i `ghKursy` — okno
+z silnika, 1. rok i łańcuch lat, remis, powody braku, wznowienie, zapis pusty, brak silnika, hSDS z siatką i populacją
+z karty, kohorta, programy, mała grupa); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (5; nowy test leczenia GH na
+prawdziwym sejfie: 4 leczonych, 1. rok 8,4 cm/rok, para 4,5 → 9,4, zmiana hSDS równa wynikowi silnika siatek strony, programy,
+lata, grupy pacjentów; telefon — bez przewijania w bok, kropki 12 px).
+
+**Wersje.** `vilda_patients_list.js` 6 → 7, `vilda_patients_list.css` 5 → 6, `vilda_chrome.js` 325 → 326
+i `vilda_session_bridge.js` 241 → 242 (wstrzykują pliki z nowym `?v=`), SW 1.1.580 → 1.1.581 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 3 — Baza pacjentów: statystyki leczenia otyłości (SW 1.1.582, `vilda_patients_list.js` 8, `vilda_patients_list.css` 7, 2026-11-24)
+
+**Zmiana kliniczna: MOŻLIWA — nowa statystyka opisowa bazy (zmiana masy ciała i BMI u leczonych z powodu otyłości).**
+Wynik pojedynczego pacjenta, zapis karty, dziennik leczenia, kryteria ChPL, normy i progi — bez zmian. Model nie zna reguł
+leczenia: cykle dzieli `VildaCykleLeczenia.podziel` (P-OTYLOSC-CYKLE), tygodnie leczenia liczy
+`ObesityResponseCriteria.tygodnieOceny` (jak Karta pacjenta), BMI i BMI-SDS liczy `VildaBmi` (P-BMI), granicę
+dziecko/dorosły daje `VildaBmi.dorosly`, a punkty leczenia składa `VildaDziennikOtylosci.wczytaj` (P-OTYLOSC-DZIENNIK).
+Nowe są definicje okien pomiaru, dwie proste wielkości (zmiana masy w % i tempo w kg/mies.) oraz uśrednienie po pacjentach
+— do akceptacji właściciela.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów; etap 3 — leczenie otyłości, okna „po 12 tygodniach i po 6 miesiącach”.
+2026-11-24: „rób etap 3 — leczenie otyłości”.
+
+**Źródła i jednostki.** Masa w kg, wzrost w cm. Tygodnie leczenia: z dat obu punktów (zaokrąglone do pełnych tygodni),
+a bez dat — z różnicy wieku (miesiące × 4,345) — funkcja silnika kryteriów, bez własnego liczenia. BMI punktu: z masy
+i wzrostu (`VildaBmi.bmi`), a bez nich z zapisanego BMI — jak w Karcie pacjenta. BMI-SDS: siatka zapisana w karcie
+(`zscore.dataSource`; bez niej — bieżące źródło strony), populacja z karty (`clinical.downSyndrome` → siatki zespołu Downa),
+reguły siatek jak w P-BMI. Progi „redukcja o co najmniej X%” nie są wpisane w model: to szczeble wspólne wszystkim drabinkom
+pasm aplikacji z pliku danych `vilda_postepy_doroslego_dane.js` (P-POSTEPY) — dziś 5 i 10%; są drabinką prezentacyjną, nie
+kryterium odstawienia leku (to ma jedno miejsce: `obesity_response_criteria.js`).
+
+**Definicje (model: `obesityPatient`, `obesityCohort`, `obesityThresholds` w `vilda_patients_list.js`).**
+1. **Leczony** — pacjent ma co najmniej jeden punkt leczenia otyłości (Włączenie, Kontynuacja, Zakończenie): wizyty z zapisu
+   karty (`obesityTherapyPoints`) razem z wpisami między wizytami z dziennika leczenia (notatki pacjenta kategorii
+   `leczenie-otylosci`) — ta sama projekcja, którą pokazuje Karta pacjenta.
+2. **Cykl** — liczy się pierwszy cykl z punktem Włączenia; masa Włączenia jest punktem odniesienia. Kolejny cykl (np. po
+   zmianie leku) nie wchodzi do wyniku, bo jego masa wyjściowa jest już skutkiem wcześniejszego leczenia.
+3. **Okna** — „po 12 tyg.”: pomiar masy z 9–15 tyg. od Włączenia, najbliższy 12. tygodnia; „po 6 mies.”: pomiar z 20–32 tyg.,
+   najbliższy 26. tygodnia. Przy równej odległości od celu — wcześniejszy. Szerokość okna ±25%, jak okno roczne tempa
+   wzrastania (9–15 mies. dla 12).
+4. **Zmiana masy %** = (masa − masa Włączenia) / masa Włączenia × 100; ujemna = ubytek (ta sama wielkość, co `zmianaMasyPct`
+   w P-POSTEPY). **Tempo** = zmiana w kg / (tygodnie / 4,348), w kg/mies. (miesiąc = 365,25 / 12 dni).
+5. **Dziecko** — wiek przy Włączeniu poniżej granicy dorosłości silnika BMI (18 lat; zespół Downa 20 lat). U dziecka masa rośnie
+   ze wzrostem, dlatego dodatkowo liczy się **zmiana BMI %** i **zmiana BMI-SDS**: z najbliższego celowi pomiaru w tym samym
+   oknie, który ma BMI (wpis z samą masą nie ma BMI — wtedy bierze się wizytę ze wzrostem z tego okna). BMI-SDS wymaga płci
+   i siatki; tablice siatek ładują strony Start, DocPro i Klirens — na pozostałych kafel mówi, skąd otworzyć Bazę.
+6. **Redukcja o co najmniej próg** — zmiana masy ≤ −próg (z zapasem na zaokrąglenie dzielenia); liczona w dłuższym oknie,
+   a gdy nikt go jeszcze nie ma — w krótszym. To samo okno pokazują kafel BMI dzieci i wykres pacjentów.
+7. **Kto nie wchodzi do średniej** (osobno dla każdego okna, z listą pacjentów): „brak Włączenia z masą”, „brak pomiaru
+   w 9–15 tyg.” / „w 20–32 tyg.” (są późniejsze pomiary, ale żaden w oknie), „leczenie krótsze niż 9 tyg.” / „niż 20 tyg.”.
+8. **Uśrednianie** — średnia arytmetyczna i mediana po pacjentach (każdy pacjent raz). „Wg leku”: krótka nazwa leku punktu
+   Włączenia (`VildaCykleLeczenia.nazwaLeku`; bez niej — pierwsza nazwa w cyklu; brak — „bez leku”). Grupa z mniej niż 5
+   pacjentami z wynikiem jest oznaczona „mała grupa”.
+
+**Jeden przebieg po kartach.** „Policz z kart (N)” czyta dla każdego pacjenta najnowszy zapis karty i — nowe w tym etapie —
+jego wpisy między wizytami (jeden odczyt notatek pacjenta). Gdy wpisów nie da się odczytać, pacjent liczy się z punktów
+zapisu wizyty, a notka pod sekcją podaje, u ilu pacjentów tak było.
+
+**Rysowanie.** „Wg leku”: hantla „po 12 tyg. → po 6 mies.” na skali od zera (albo od przyrostu) do największej redukcji,
+w trzech równych krokach. „Każdy pacjent”: jeden słupek to jeden pacjent, od najmniejszej do największej redukcji; przyrost
+masy nad linią zera w innym kolorze. Słupki to SVG rozciągnięty na szerokość, a podziałka — osobny SVG w skali 1:1, żeby
+liczby się nie rozciągały. Bez stylów na elementach (geometria w atrybutach SVG i klasach arkusza). Kliknięcie kafla, leku
+albo powodu braku otwiera listę tych pacjentów.
+
+**Przypadki syntetyczne (prawdziwe silniki).**
+- dorosła, Wegovy: Włączenie 01.10.2025 100,0 kg; 24.12.2025 (12 tyg.) 94,0 kg → −6,0%; 01.04.2026 (26 tyg.) 88,0 kg → −12,0%,
+  tempo −12 / (26 / 4,348) = −2,0 kg/mies.;
+- dziecko 11 l. 5 mies., Saxenda: Włączenie 60,0 kg / 145 cm; po 13 tyg. 58,2 / 146 → −3,0%; po 26 tyg. 57,0 / 147 → −5,0%,
+  BMI 28,54 → 26,38 = −7,57%;
+- dziecko, wpis z samą masą w 12. tyg. (77,6 kg) i wizyta ze wzrostem w 14. tyg. (77,0 kg / 161 cm) po Włączeniu 80,0 / 160
+  → masa −3,0% z 12. tyg., BMI z 14. tyg.;
+- pomiary w 9., 13. i 15. tyg. → wybrany 13.; w 10. i 14. → wybrany 10.; w 19., 22., 31. i 33. tyg. → okno 6 mies. bierze 22.;
+- tylko pomiar w 6. tyg. → „leczenie krótsze niż…” w obu oknach; tylko w 18. tyg. → „brak pomiaru w 9–15 tyg.” i „leczenie
+  krótsze niż 20 tyg.”; tylko w 40. tyg. → „brak pomiaru” w obu; sama Kontynuacja albo Włączenie bez masy → „brak Włączenia
+  z masą”;
+- Włączenie, pomiar w 12. tyg. (−4,0%), Zakończenie w 17. tyg., potem nowe Włączenie innym lekiem → wynik i lek z pierwszego
+  cyklu, okno 6 mies. bez wyniku;
+- 95,0 → 90,25 kg w 26. tyg. (dokładnie −5%) → próg 5% osiągnięty.
+
+**Strażnicy.** `tests/unit/baza-statystyki-otylosc.test.mjs` (12: model na prawdziwych silnikach cykli, tygodni i BMI —
+dorosła i dziecko, wybór pomiaru w oknie, BMI z innej wizyty niż masa, punkty bez dat, powody braku, pierwszy cykl, brak
+silników, progi z pliku pasm, kohorta, leki, mała grupa, próg dokładnie osiągnięty);
+`tests/e2e/baza-pacjentow-statystyki.spec.mjs` (6; nowy test na prawdziwym sejfie: 5 leczonych, pomiar po 6 mies. u jednej
+pacjentki tylko we wpisie dziennika, średnie −2,8% i −4,7%, progi 2 z 3, BMI dzieci −4,5% i BMI-SDS równy wynikowi silnika
+BMI strony, leki, wykres pacjentów, grupy; jeden odczyt wpisów na pacjenta dopiero po przycisku; telefon — jedna kolumna
+kafli, podziałka 1:1, bez przewijania w bok).
+
+**Wersje.** `vilda_patients_list.js` 7 → 8, `vilda_patients_list.css` 6 → 7, `vilda_chrome.js` 326 → 327
+i `vilda_session_bridge.js` 242 → 243 (wstrzykują pliki z nowym `?v=`), SW 1.1.581 → 1.1.582 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 4 — Baza pacjentów: raport PDF i plik dla Excela (SW 1.1.583, `vilda_patients_list.js` 9, `vilda_patients_list.css` 8, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — te same liczby, co na ekranie „Statystyki”, zapisane do pliku.** Żadnego nowego wzoru, progu ani
+definicji: model raportu (`statsReport`) czyta gotowe obiekty z etapów 1–3 (`demographics`, `ghCohort`, `obesityCohort`,
+kompletność kart) i niczego nie liczy od nowa. Wynik pojedynczego pacjenta, zapis karty i sejf — bez zmian.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów (etap 4 — eksport i raport PDF; na makiecie przyciski „Eksport do Excela”
+i „Raport PDF”). 2026-11-24: „zrób etap 4 — eksport i raport PDF”.
+
+**Co powstaje.** Po „Policz z kart” pasek nad sekcjami dostaje dwa przyciski:
+- **Raport PDF** — A4, sekcje jak na ekranie: Pacjenci (kafle, tabela „Wiek i płeć” ze słupkami), Leczenie hormonem wzrostu
+  (kafle, „Wg programu”, „Kolejne lata leczenia”, „Bez tempa w 1. roku”), Leczenie otyłości (kafle, „Zmiana masy ciała”,
+  „Dzieci: zmiana BMI”, „Wg leku”, „Bez wyniku”, wykres „Każdy pacjent”), Kompletność danych; pod sekcjami te same teksty
+  definicji, co na ekranie, na końcu zastrzeżenie o charakterze opisowym. Stopka: numer strony.
+- **Eksport do Excela** — prawdziwy plik `.xlsx` z dwoma arkuszami: „Podsumowanie” (te same sekcje i tabele; liczby jako
+  liczby, żeby Excel mógł z nich liczyć dalej) i „Pacjenci” (jeden wiersz na pacjenta z bazy: płeć, wiek, przedział wieku,
+  kompletność karty, program i tempa GH, zmiana hSDS, lek i wyniki leczenia otyłości w obu oknach, powód braku wyniku).
+
+**Jeden model dla obu plików.** `statsReport(wejście)` → `{ title, stamp, total, sections[], closing, people }`; sekcja niesie
+`facts` (etykieta, wartość liczbowa, jednostka, napis, dopisek), `tables` (kolumny z rodzajem `text`/`int`/`num`/`bar`
+i surowe wartości), `notes` i opcjonalny `chart`. Z niego `statsDocument` buduje dokument pdfmake, a `statsWorkbook` arkusze
+— liczby w plikach i na ekranie pochodzą z tych samych obiektów. Teksty definicji mają jedno źródło (`ghNote`, `obesityNote`,
+`footNote`), wspólne z ekranem. Znacznik czasu i data w nazwie pliku to chwila policzenia kart.
+
+**Prywatność (do akceptacji właściciela).**
+1. Pliki nie zawierają nazwisk, imion, dat urodzenia, PESEL ani identyfikatorów kart. Raport PDF to wyłącznie liczby zbiorcze.
+2. Arkusz „Pacjenci” ma wiersze bez danych osobowych: płeć, wiek w latach z jednym miejscem po przecinku i wyniki leczenia.
+   Kolejność wierszy wg wieku (potem płci), nie wg nazwiska, żeby numer wiersza nie zdradzał pozycji na liście alfabetycznej.
+3. Nazwa pliku: `statystyki-bazy-pacjentow-RRRR-MM-DD.pdf` / `.xlsx` — bez nazwy gabinetu i bez danych pacjentów.
+4. Pliki powstają na urządzeniu; nic nie jest wysyłane. Biblioteki są lokalne (niżej), więc eksport działa offline.
+
+**Biblioteki — bez nowych plików i bez sieci.** PDF składa pdfmake z lokalnych plików `pdfmake.min.js?v=1`
+i `pdfmake_vfs_fonts.js?v=1` (czcionka Roboto z polskimi znakami), wczytywanych tą samą funkcją, co wydruk postępów dorosłego
+(`VildaPostepyDoroslegoWydruk.zapewnijPdfmake`, moduł obecny na tych samych 8 stronach przed listą pacjentów). Strzałek w tej
+czcionce nie ma, więc w PDF zastępuje je „»” — ta sama podmiana, co w tamtym wydruku. Plik `.xlsx` to pakiet Office Open XML
+złożony przez `xlsxParts` (typy, relacje, skoroszyt, style, arkusze; teksty jako `inlineStr`, styl 1 = pogrubienie, przypięty
+wiersz nagłówka w „Pacjenci”) i spakowany lokalną biblioteką `jszip.min.js?v=1`. Wszystkie trzy pliki są od dawna w pamięci
+offline service workera; SheetJS z CDN nie jest używany.
+
+**Zapis pliku.** Zwykłe pobranie; na iPhonie w trybie aplikacji (gdzie pobranie nie działa) arkusz udostępniania — ta sama
+reguła i to samo rozpoznanie platformy, co w wydruku postępów (`mozliwosci().iosStandalone`). Zamknięcie arkusza udostępniania
+nie jest błędem. Komunikat pod przyciskami mówi, co zapisano, albo dlaczego się nie udało; kolejne kliknięcie może spróbować
+ponownie.
+
+**Rysowanie w PDF.** Wykresy to SVG z samych kształtów (bez tekstu, więc bez zależności od czcionek SVG): słupki w tabelach
+„Wiek i płeć” i „Kolejne lata leczenia” oraz wykres „Każdy pacjent” z tą samą skalą, co na ekranie (`fallScale`). Nagłówek
+sekcji idzie na stronę razem z pierwszą tabelą, żeby nie zostawał sam na dole strony.
+
+**Sprawdzenie plików.** Wygenerowany `.xlsx` otwierają bez ostrzeżeń dwa niezależne czytniki (openpyxl i LibreOffice);
+PDF obejrzany strona po stronie (polskie znaki, „≥”, „−”, „»”, tabele, wykresy).
+
+**Strażnicy.** `tests/unit/baza-statystyki-eksport.test.mjs` (15: model raportu na prawdziwych modelach etapów 1–3 — liczby
+jak na ekranie, raport bez policzonych kart, puste grupy; arkusze — liczby jako liczby, kolejność wg wieku, karta nieodczytana,
+BRAK nazwisk, dat urodzenia i identyfikatorów; pakiet `.xlsx` — komplet części, poprawny XML, znaki specjalne, nazwy arkuszy,
+archiwum z lokalnego JSZip otwierane z powrotem; dokument PDF — A4, sekcje, liczby, podmiana strzałek, SVG bez tekstu,
+nagłówek z tabelą, brak danych osobowych; nazwa pliku; biblioteki lokalne i w pamięci offline, moduł wydruku przed listą na
+8 stronach); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (7; nowy test: sieć zewnętrzna odcięta, prawdziwe pobranie PDF
+i `.xlsx`, w arkuszu te same liczby, co na ekranie, osiem wierszy pacjentów bez danych osobowych, biblioteki z plików aplikacji;
+telefon — przyciski w pasku z celem dotyku co najmniej 44 px).
+
+**Wersje.** `vilda_patients_list.js` 8 → 9, `vilda_patients_list.css` 7 → 8, `vilda_chrome.js` 327 → 328
+i `vilda_session_bridge.js` 243 → 244 (wstrzykują pliki z nowym `?v=`), SW 1.1.582 → 1.1.583 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-NAGLOWEK-LINIA — Baza pacjentów: przełącznik Lista/Statystyki w jednej linii z „Dodaj pacjenta” (SW 1.1.584, `vilda_patients_list.js` 10, `vilda_patients_list.css` 9, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — układ nagłówka.** Zgłoszenie właściciela 2026-11-24: przełącznik Lista/Statystyki ma leżeć
+w jednym wierszu z „Dodaj pacjenta” i mieć tę samą wysokość.
+
+**Przyczyna.** Przełącznik miał własny górny margines 24 px (przycisk „Dodaj pacjenta” już nie) i wysokość 50 px wobec 46 px
+przycisku — stał 10 px niżej i był o 4 px wyższy.
+
+**Naprawa.** Przełącznik i przycisk są w jednej grupie `.pt-head-actions` (flex, `align-items: stretch`), więc stoją w jednej
+linii i mają wysokość wyższego z nich (46 px), niezależnie od reguł, które ustalają wysokość przycisku. Na telefonie grupa
+znika z układu (`display: contents`) i zostaje dotychczasowy układ: „Dodaj” obok tytułu, przełącznik na całą szerokość pod
+tytułem z celem dotyku 44 px.
+
+**Pomiar w aplikacji (1440 px):** przed — przycisk 76–122 px, przełącznik 86–136 px; po — oba 72,5–118,5 px.
+
+**Strażnik.** `tests/e2e/baza-pacjentow-statystyki.spec.mjs`, test „komputer…”: ta sama górna krawędź i wysokość przełącznika
+i przycisku (tolerancja 0,6 px); test telefonu bez zmian (przełącznik pod tytułem, cel dotyku ≥ 44 px).
+
+**Wersje.** `vilda_patients_list.js` 9 → 10, `vilda_patients_list.css` 8 → 9, `vilda_chrome.js` 328 → 329
+i `vilda_session_bridge.js` 244 → 245, SW 1.1.583 → 1.1.584 — `npm run podbij-wersje`.
+
+## P-BAZA-SZYBKIE — Baza pacjentów: statystyki liczą się same i czytają tylko to, co potrzebne (SW 1.1.585, `vilda_patients_list.js` 11, `vilda_vault.js` 286, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — te same liczby, liczone szybciej; jedna poprawka świeżości.** Żadnego nowego wzoru, progu ani
+definicji: modele etapów 1–4 bez zmian. Poprawka świeżości (niżej, punkt 4) usuwa sytuację, w której ekran pokazywał wynik
+sprzed dopisania wpisu między wizytami.
+
+**Decyzja właściciela.** 2026-11-24, po analizie: „zrób A i B razem, liczenie samo przy wejściu w Statystyki”. Krok C
+(szyfrowana pamięć wyników na urządzeniu i liczenie w tle) — odłożony do oceny czasu na prawdziwej bazie.
+
+**Co było wolne (pomiar na fikcyjnej bazie w prawdziwej aplikacji).** Przy 300 kartach po 8 wersji i 1650 notatkach
+dotychczasowe liczenie trwało 9,7 s, z czego 8,8 s to notatki. Dwie przyczyny:
+1. `getLatestSnapshot` odszyfrowuje nagłówek i każdą wersję karty (retencja trzyma ich do 40), a potrzebna jest najnowsza;
+2. wpisy między wizytami czytał `listPatientNotesForPatient` — przy każdym pacjencie wczytuje koperty notatek całego
+   konta, więc koszt rósł z kwadratem bazy.
+
+Listy pacjentów nie mają zapisanego indeksu leczonych: przy każdym otwarciu odszyfrowują najnowszą wersję każdej karty.
+Zawężenie liczenia do „20 leczonych” nie jest więc możliwe bez tego samego odczytu — ale ten odczyt jest tani.
+
+**Co się zmienia.**
+1. **Najnowsza wersja karty** — nowy odczyt sejfu `getNewestSnapshot(patientId, opcje)`. Porządek wersji (`yr`) zależy
+   tylko od jawnych pól koperty, więc najnowszą wskazuje się przed odszyfrowaniem i odszyfrowuje tylko ją. Wynik jest tym
+   samym obiektem, co z `getLatestSnapshot`.
+2. **Wpisy między wizytami jednym odczytem** — nowy odczyt sejfu `listPatientNotesByCategory(kategoria, opcje)`: koperta
+   notatki niesie kategorię jawnie, więc odszyfrowują się tylko wpisy dziennika leczenia otyłości (`leczenie-otylosci`),
+   raz dla całej bazy. Punkty pacjenta składa jak dotąd `VildaDziennikOtylosci.zloz` (ta sama projekcja, co w Karcie).
+3. **Liczenie przyrostowe** — wynik każdej karty zostaje w pamięci widoku (`state.cardCache`); kolejne liczenie czyta
+   tylko karty nowe i zmienione (`cardsPlan`). Karty czytane są po cztery naraz (pomiar: około 2× szybciej niż po kolei).
+4. **Świeżość po wpisie między wizytami** — dopisanie wpisu nie zmienia chwili zapisu karty, więc dotychczasowy znacznik
+   aktualności (`patientId@lastSavedAtISO`) go nie widział i ekran pokazywał „Karty policzone” ze starym wynikiem. Teraz
+   karta jest „ta sama” tylko wtedy, gdy nie zmieniła się chwila jej zapisu ANI znacznik jej wpisów (identyfikatory
+   i chwile zmiany wpisów, `journalIndex`). Widzi to także leczenie rozpoczęte wyłącznie wpisami, bez punktu w zapisie wizyty.
+5. **Liczenie rusza samo** przy wejściu w „Statystyki” (raz na wejście). Gdy wynik już jest, zostaje na ekranie, a pasek
+   pokazuje „Sprawdzam zmiany w kartach…”; przyciski czekają na koniec. „Policz ponownie” czyta wszystko od nowa.
+   Pliki (raport PDF, Excel) są dostępne po zakończeniu liczenia.
+
+**Pomiar po zmianie (ta sama fikcyjna baza, prawdziwy interfejs).** Pierwsze wejście w Statystyki 1,7 s (z rysowaniem),
+ponowne wejście 0,13 s, „Policz ponownie” 1,5 s. Na 200 kartach po 8 wersji z kartą około 8 kB: wszystkie wersje 1,74 s,
+najnowsza po kolei 0,36 s, cztery naraz 0,19 s. Pozostały czas to odczyt kopert wersji z magazynu (magazyn oddaje wszystkie
+koperty pacjenta, żeby wskazać najnowszą) — rośnie z liczbą wersji, ale bez ich odszyfrowania.
+
+**Cykl życia pamięci wyników (analiza wymagana przy danych pochodnych).** `state.cardCache` to wyniki pochodne kart
+(kompletność, wynik leczenia GH i otyłości) — tego samego rodzaju i w tym samym miejscu, co `state.cards` z etapów 1–4:
+wyłącznie pamięć RAM widoku Bazy, przekazywana przy powrocie do Bazy w tej samej sesji (`read()` → `initialState`),
+czyszczona z blokadą sejfu i zamknięciem karty przeglądarki. Nic nie trafia do `localStorage`, `sessionStorage`, IndexedDB,
+kopii ani synchronizacji. Pamięć jest związana z zestawem wczytanych silników (tempo, siatki, pasma) — inna strona
+z innym zestawem liczy od nowa. Wynik nieodczytanej karty ani wynik policzony bez wpisów (błąd odczytu) nie jest pamiętany
+jako ostateczny.
+
+**Zgodność wstecz.** Starszy sejf bez nowych odczytów (testy floty) liczy po staremu: `getLatestSnapshot` i wpisy przez
+`VildaDziennikOtylosci.wczytaj`. Listy pacjentów bez zmian — nadal liczą tylko punkty z wizyt, więc liczba leczonych
+na liście może się nieznacznie różnić od statystyk, które widzą także wpisy między wizytami.
+
+**Sejf.** Zmiana `vilda_vault.js` poza blokiem natywnym: dwie funkcje tylko do odczytu i dwa wpisy mapy eksportu; nic
+istniejącego nie zostało zmienione. Baza sejfu przeliczona w tym PR (7 skrótów w 5 plikach) — opis łatki i wartości:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-BAZA-SZYBKIE”. **Sejf się zmienił — przy następnej pracy w `vilda-source` weź nową
+bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.**
+
+**Strażnicy.** `tests/unit/sejf-odczyt-najnowszej.test.mjs` (5, prawdziwy sejf: `getNewestSnapshot` = `getLatestSnapshot`
+przy jednym odszyfrowaniu zamiast sześciu, także po poprawce, przypięciu i przywróceniu wersji; `listPatientNotesByCategory`
+odszyfrowuje tylko notatki kategorii; odczyt ścisły; blokada); `tests/unit/baza-statystyki-otylosc.test.mjs` (+3: znacznik
+wpisów, plan odczytu kart, wynik zbiorczy); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (8: liczenie rusza samo, jeden
+odczyt najnowszej wersji na pacjenta i zero odczytów wszystkich wersji; ponowne wejście nie czyta kart; leczenie rozpoczęte
+samymi wpisami i nowa wersja karty czytają po jednej karcie; jeden odczyt wpisów na przebieg i zero odczytów notatek przy
+pacjencie); `tests/unit/visits-vault-boundary.test.mjs` i narzędzia granic sejfu z nowymi skrótami.
+
+**Wersje.** `vilda_patients_list.js` 10 → 11, `vilda_vault.js` 285 → 286, `vilda_chrome.js` 329 → 330
+i `vilda_session_bridge.js` 245 → 246, SW 1.1.584 → 1.1.585 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.

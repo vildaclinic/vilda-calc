@@ -28,6 +28,32 @@
 // z jawnym krokiem; po każdej operacji emissionsSettled() i cisza okna. Wiersze echa = wiersze kolejki od znacznika
 // (seqLocal), treść — decryptPayloadForCurrentUser. Dane WYŁĄCZNIE FIKCYJNE („Testowy Jan…”, masy 15–45 kg), bez PESEL.
 //
+// E3-PR0d (P-ZBIEZNOSC-ZDARZEN, odsyłanie wpisów Kosza; ten sam przełącznik): po zastosowaniu koperty zdarzenia do
+// kolejki trafia także stomb każdej wersji z ładunku (te same identyfikatory kandydatów), której wpis Kosza scalanie
+// zapisało inaczej, niż był przed scaleniem i niż przyszedł: po scaleniu jest wpis tej wersji; surowe elementy listy
+// Kosza w metadanych konta przed ≠ po (inaczej bez odszyfrowania); wpis w postaci wysyłkowej (Bev_wpisKosza) po kanonie —
+// bez opisu (rev, updatedAtISO, zmianaISO, koszISO, revPary), seq i postaci gwiazdki w treści (payload._pinned,
+// payload._pinnedState), lista posortowana — przed ≠ po i nie samo wygaśnięcie treści (po bez treści tam, gdzie przed ją
+// miał, a poza tym równy); wpisu nie ma w ładunku albo po regule pola (bez visitIdentity i payload.visit nieobecnych
+// w elemencie ładunku tej samej karty) ≠ wpis z ładunku i nie samo wygaśnięcie względem ładunku. Emisja po odsyłaniu
+// wersji: Bem_zmiana('stomb', identyfikatory wersji, sesja scalania). Odczyt wpisów przez strzeżony adapter po odczycie
+// wersji i jego kontrolach („przed”) oraz po odczycie wersji „po”; sesja zastosowania sprawdzana przed odczytem i po nim;
+// SYNC_DB_DELETED i PATIENT_AUTHORITY_UNAVAILABLE z odczytu „przed” — jak z odczytu wersji; SYNC_DB_DELETED w odczycie
+// „po” — bez odsyłania wersji i wpisów; błędy osobno dla każdego kandydata (stan przed nieznany — porównanie z ładunkiem;
+// nieczytelna tożsamość „po” — odesłanie, dopisanie odmawia z kodem; cały odczyt „po” zawodzi — każdy kandydat).
+// Przypadki E3-PR0d na końcu listy niżej.
+//
+// E3-PR0d2 (P-ZBIEZNOSC-ZDARZEN, odsyłanie ukrytego wpisu Kosza karty usuniętej; ten sam przełącznik i ta sama lista
+// wpisów do odesłania): wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo
+// karta jest tu usunięta. Po UDANYM zastosowaniu koperty zdarzenia (scalanie bez wyjątku) do kolejki trafia stomb każdej
+// wersji, którą ładunek niósł pod kartą P, a której po scaleniu nie ma pod żadną kartą, choć jest jej wpis Kosza,
+// z którym ta wersja by wygrała (to samo rozstrzygnięcie co przy wersji z ładunku pod kartą usuniętą w scalaniu), karty
+// żadnego elementu wpisu nie ma, a karta P przegrała tu z nagrobkiem pacjenta (najpóźniejszy nagrobek P nie wcześniejszy
+// niż zapis karty P w ładunku; brak zapisu — jak spełnione). Odczyt istnienia kart i listy nagrobków pacjentów
+// (Bev_stanKart) przez strzeżony adapter, bez odszyfrowania, tylko przy udanym scaleniu i niepustym wstępie; błąd
+// odczytu — odesłanie kandydatów wstępu; SYNC_DB_DELETED — bez odsyłania wersji i wpisów; zmiana sesji — bez kolektora.
+// Przypadki E3-PR0d2 na końcu listy niżej.
+//
 // HIGIENA: po przypadku cisza każdego okna, zero otwartych połączeń baz kolejki, zero transakcji atrapy w toku, każde
 // wstrzymanie zwolnione.
 //
@@ -84,7 +110,7 @@
 //   busy z fazy Kosza po zapisie wersji — echo przy pierwszej próbie, ponowienie bez duplikatu (czerwony na bazie);
 //   apply-error z Le po zapisie wersji — echo (czerwony na bazie); błąd przed zapisem — 0 (zielony z natury);
 //   zmiana sesji w trakcie Le (blokada albo ponowne odblokowanie A) i zablokowany sejf — locked albo session-changed,
-//        bez emisji odsyłania, 0 (zielony z natury); w trakcie odczytu stanu „przed” (blokada albo ponowne odblokowanie
+//        bez emisji odsyłania wersji i wpisów Kosza, 0 (zielony z natury); w trakcie odczytu stanu „przed” (blokada albo ponowne odblokowanie
 //        A) — Le nie rusza ani w nowej sesji (czerwony na bazie); blokada przy odczycie pierwszego z trzech kandydatów
 //        — bez dalszych odczytów sklepu wersji (czerwony na bazie); w trakcie odczytu stanu „po” — applied, bez emisji
 //        odsyłania, 0 (zielony z natury);
@@ -106,15 +132,63 @@
 //        ścieżka błędu porównania; emisja odsyłania z samymi identyfikatorami wersji; console, localStorage,
 //        sessionStorage) (czerwony na bazie bez emisji odsyłania);
 //   samokontrola kopii bez odsyłania (bezOdsylania na tekstach syntetycznych) (zielony z natury).
+// PRZYPADKI E3-PR0d (odsyłanie wpisów Kosza):
+//   gwiazdka spoza ładunku (koperta snap z gwiazdką sprzed Kosza) i w ładunku (koperta stomb bez tutejszej gwiazdki),
+//        poprawka spoza ładunku i w ładunku — jeden wiersz stomb v z wpisem złożonym (czerwony na bazie);
+//   sam opis wpisu (wyższy rev, inne seq), sama postać gwiazdki w treści, koperta starszej aplikacji bez pola gwiazdka
+//        i bez rejestru w treści — bez _pinned albo z samym _pinned: true, przy przypiętym i przy odpiętym rejestrze
+//        wpisu (dowód widoku: okno Kosza i „Przywróć” równe), koperta bez tożsamości wizyty, powtórka zdarzenia (bez
+//        odszyfrowania), ładunek równy stanowi, wpis z ładunku przyjęty bez zmian także przy odwrotnej kolejności
+//        kluczy, zmiana samych składników lokalnych wpisu, wpis zdjęty scaleniem — 0 wierszy stomb (zielony z natury);
+//   wersja i wpis zmienione w jednym scaleniu — snap, potem stomb; łączenie wpisów kolejki; busy po zapisie listy Kosza
+//        (czerwony na bazie);
+//   zmiana sesji w odczycie wpisów „przed” (zielony z natury); zmiana sesji w odczycie wersji „przed” bez wejścia do
+//        odczytu wpisów, zmiana sesji w porównaniu „po”, kody z odczytu wpisów „przed” i „po”, removeUser tego konta
+//        w toku w chwili wznowienia odczytu wpisów „przed” (session-changed, scalanie nie rusza) i „po” (applied, bez
+//        odsyłania wersji i wpisów), strażnik formy odczytu (czerwony na bazie);
+//   błędy osobno dla każdego kandydata: nieczytelna tożsamość „po”, nieczytelna tożsamość „przed” (porównanie tylko
+//        z ładunkiem), cały odczyt „przed”, cały odczyt „po”, oba (czerwony na bazie);
+//   stałe wpisu Kosza równe licznikowi; kanon, reguła pola (para elementów po karcie, nie po kolejności) i samo
+//        wygaśnięcie z kodu sejfu (czerwony na bazie);
+//   notatka, stara delta, delta, pełna kopia — 0 wierszy stomb; przełącznik wyłączony przy kopertach wpisów — jak
+//        sejf bez odsyłania; zamknięta bramka i „Komputer w pracy” (zielony z natury);
+//   wartownik treści — emisja odsyłania wpisu z samym identyfikatorem (czerwony na bazie);
+//   odbiorca odesłanego wpisu po „Usuń pacjenta” (czerwony na bazie); samo wygaśnięcie treści przy kopercie bez
+//        nowości (zielony z natury) a Kosz połączony z późniejszym przycięciem (czerwony na bazie);
+//   zegar: granica 30 dni (− 1 ms, = granica, + 1 ms), granica w trakcie scalania, okno nagrobków 365 dni, rozjazd
+//        zegarów (czerwony na bazie); odbiorca po granicy bez innej różnicy — 0 (zielony z natury).
+// PRZYPADKI E3-PR0d2 (odsyłanie ukrytego wpisu Kosza karty usuniętej):
+//   „Usuń pacjenta” na A, potem koperta „Przywróć” z B — jeden wiersz stomb v z wpisem pod P (koperta bez kart),
+//        emisja z samym identyfikatorem; odbiorcy: B z żywą v po nagrobku karty i kopia A z tym samym ukrytym wpisem —
+//        wpis ukryty, 0 wierszy; ta sama koperta drugi raz — odesłanie jeszcze raz; busy, busy i apply-error na wejściu
+//        scalania — 0 wierszy, udane ponowienie — jeden; nagrobek porządkowania przypiętej wersji pod usuniętą kartą —
+//        odesłany; wpis pod kartą Q po „Scal pacjentów” P → Q i „Usuń pacjenta” Q — odesłany (czerwony na bazie);
+//   karta żywa, wersja nie późniejsza niż Kosz, busy przy żywej karcie, wpis pod żywą kartą Q po „Scal pacjentów” —
+//        0 wierszy stomb; „Przywróć” po „Usuń pacjenta” pełną kopią, deltą i starą deltą — 0 (zielony z natury);
+//   „Usuń pacjenta” wstrzymane na zatwierdzeniu nagrobka i na usunięciu karty — ptomb P, potem stomb v, odbiorca z żywą
+//        v: wpis ukryty; cudzy otwarty krok — stomb v, stomb q, ptomb P (ranga), odbiorca z żywą v bez wpisu (znane
+//        ograniczenie) (czerwony na bazie);
+//   błąd odczytu kart, SYNC_DB_DELETED i zmiana sesji w odczycie kart (kopia z usterką na początku Bev_stanKart —
+//        na bazie kotwicy nie ma), błąd odczytu wpisów Kosza przed scaleniem (obie reguły wskazują v — klucz raz),
+//        koszt odczytu kart (koperta wersji żywej karty — bez transakcji ponad przełącznik wyłączony; ukryty wpis —
+//        lista nagrobków i karta), funkcje czyste z kodu sejfu (Bev_kandydaciUkrytych, Bev_wstepUkrytych,
+//        Bev_echoUkrytych), Bev_stanKart z kodu sejfu z atrapą adaptera (karty, nagrobki, sesja) i strażnik formy
+//        odczytu kart (czerwony na bazie);
+//   przełącznik wyłączony przy kopertach ukrytego wpisu — jak sejf bez odsyłania; zamknięta bramka i „Komputer
+//        w pracy” (zielony z natury).
 // Kopia sejfu tylko w tym pliku (busy, apply-error i błąd odczytu stanu): wstawka na początku Bkz_scalKoniec (faza Kosza,
 // po zapisie wersji w Le), na początku Le albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd
 // z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza wymaga limitu blokady; strażnik osiągalności: Le
-// ponownie rzuca vildaMergeBusy i VISIT_IDENTITY_CONFLICT z fazy Kosza.
+// ponownie rzuca vildaMergeBusy i VISIT_IDENTITY_CONFLICT z fazy Kosza. E3-PR0d: ta sama wstawka także na początku
+// Bkz_obceKarty (wyszukanie wersji pod innymi kartami w fazie Kosza) i Bev_stanKosza (odczyt wpisów Kosza kandydatów);
+// wariant z listą window.__fikcyjneBledy rzuca przy kolejnych wejściach (null — wejście bez błędu; lista z własnym
+// shift() — znacznik wejścia bez błędu). E3-PR0d2: ta sama wstawka na początku Bev_stanKart (odczyt istnienia kart
+// i nagrobków pacjentów).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SKRYPTY_PUNKTU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
-import { naglowek } from './sesja-zapisu-uprzaz.mjs';
+import { naglowek, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { ZRODLO_SEJFU, bezOdsylania, licznikEmisji } from '../support/sejf-bez-wstawek.mjs';
-import { POLA_ZAWSZE, odcisk } from '../support/licznik-odsylania.mjs';
+import { POLA_D7, POLA_ZAWSZE, POSTAC_GWIAZDKI, STALE_WYGRYWA, WYGRYWA_Z_SEJFU, odcisk, stalaZKodu } from '../support/licznik-odsylania.mjs';
 
 const START = Date.parse('2026-03-02T08:00:00.000Z');
 const MIN = 60_000;
@@ -892,6 +966,9 @@ describe('wiersz echa w łańcuchu dopisań — krok, przegląd, odbiorcy, łąc
     await o.gotowe();
     const nowe = wierszeOd(o, s0).filter((w) => w.kind === 'snap');
     expect(nowe.map(opis), 'po końcu kroku: jeden wiersz echa').toEqual([['snap', `${s.P}/${s.v}`, 'pending']]);
+    // E3-PR0d: jedyny wiersz stomb to własny Kosz wersji karty Q z tego kroku (kandydatem koperty jest tylko v, której
+    // wpisu Kosza nie ma) — bez odsyłania wpisu.
+    expect(wierszeOd(o, s0).filter((w) => w.kind === 'stomb').map(opis), 'po końcu kroku: wiersz stomb tylko z własnego Kosza').toEqual([['stomb', kq.w[0], 'pending']]);
   }, CZAS);
 
   it('wpis echa wstrzymany w bazie kolejki (dodanie wiersza) — applyEncryptedEvent rozstrzyga się przed wpisem; wiersz echa po zwolnieniu', async () => {
@@ -1006,6 +1083,21 @@ const KOTWICA_KOSZA = 'async function Bkz_scalKoniec(';
 const KOTWICA_LE = 'async function Le(t,e){';
 // Kopia z usterką odczytu stanu kandydatów (błąd na początku Bev_stanEcha — cały odczyt „przed” albo „po” zawodzi).
 const KOTWICA_STANU = 'async function Bev_stanEcha(';
+// E3-PR0d: kopia z usterką na początku wyszukania wersji pod innymi kartami w fazie Kosza (Bkz_obceKarty — w try, po
+// błędzie lista Kosza i tak jest zapisana, potem błąd idzie dalej) i na początku odczytu wpisów Kosza kandydatów
+// (Bev_stanKosza — odczyt „przed” albo „po” zawodzi). Na sejfie bez odsyłania wpisów kotwicy Bev_stanKosza nie ma —
+// kopia rzuca w przypadku (czerwień przypadku, nie pliku).
+const KOTWICA_OBCE = 'async function Bkz_obceKarty(';
+const KOTWICA_STANU_KOSZA = 'async function Bev_stanKosza(';
+// Kopia z usterką rzucającą przy kolejnych wejściach: window.__fikcyjneBledy — lista (null = wejście bez błędu).
+function zUsterkaKolejna(kotwica) {
+  const ile = ZRODLO_SEJFU.split(kotwica).length - 1;
+  if (ile !== 1) throw new Error(`kopia z usterką: kotwica nie dokładnie raz: ${kotwica}`);
+  const i = ZRODLO_SEJFU.indexOf(kotwica);
+  const j = ZRODLO_SEJFU.indexOf('{', i + kotwica.length - 1) + 1;
+  const wstawka = 'if (Array.isArray(window.__fikcyjneBledy) && window.__fikcyjneBledy.length) { const Bx_e = window.__fikcyjneBledy.shift(); if (Bx_e) throw Bx_e; }';
+  return ZRODLO_SEJFU.slice(0, j) + wstawka + ZRODLO_SEJFU.slice(j);
+}
 function zUsterka(kotwica) {
   const ile = ZRODLO_SEJFU.split(kotwica).length - 1;
   if (ile !== 1) throw new Error(`kopia z usterką: kotwica nie dokładnie raz: ${kotwica}`);
@@ -1046,7 +1138,7 @@ describe('busy, apply-error, zmiana sesji i błąd odczytu', () => {
     }
   }, 2 * CZAS);
 
-  it('zmiana sesji w trakcie Le (blokada sejfu albo ponowne odblokowanie A przy szyfrowaniu rekordu złożonego) i zablokowany sejf przed zastosowaniem — wynik jak dziś (locked, przy ponownym odblokowaniu session-changed), bez emisji odsyłania, 0 wierszy (także w nowej sesji)', async () => {
+  it('zmiana sesji w trakcie Le (blokada sejfu albo ponowne odblokowanie A przy szyfrowaniu rekordu złożonego) i zablokowany sejf przed zastosowaniem — wynik jak dziś (locked, przy ponownym odblokowaniu session-changed), bez emisji odsyłania wersji i wpisów Kosza, 0 wierszy (także w nowej sesji)', async () => {
     for (const [nazwa, oczek] of [['blokada w trakcie Le', 'locked'], ['ponowne odblokowanie A w trakcie Le', 'session-changed'], ['sejf zablokowany', 'locked']]) {
       const o = await okno({ bramka: true, echo: true });
       await o.zaloguj('A');
@@ -1069,6 +1161,7 @@ describe('busy, apply-error, zmiana sesji i błąd odczytu', () => {
       await o.cisza();
       expect(r, `${nazwa}: wynik`).toEqual({ status: oczek });
       expect(emisjeSnap(o, e0), `${nazwa}: emisje odsyłania`).toEqual([]);
+      expect(o.l.emisje.slice(e0).filter((x) => x.sesja), `${nazwa}: emisje odsyłania wersji i wpisów Kosza w sesji scalania`).toEqual([]);
       if (oczek === 'locked') await o.zaloguj('A');
       await o.gotowe();
       expect(wierszeOd(o, s0).map(opis), `${nazwa}: wiersze echa`).toEqual([]);
@@ -1383,3 +1476,1740 @@ describe('wartownik treści przy włączonym przełączniku; samokontrola kopii 
     expect(bezOdsylania().jest, 'sejf z repozytorium: kopia różni się dokładnie wtedy, gdy sejf ma odsyłanie').toBe(MA_ECHO);
   });
 });
+
+// ══ Odsyłanie wpisów Kosza (E3-PR0d, P-ZBIEZNOSC-ZDARZEN) ═══════════════════════════════════════════════════════════
+// Scenariusz podstawowy: A — karta P z wersjami v (20 kg) i w (21 kg) (Kosz nie przyjmuje ostatniej wersji karty);
+// bliźniak B (koperty z builderów, bez bramki). Wiersze odsyłania wpisów — stomb od znacznika; emisje odsyłania — wywołania
+// Bem_zmiana rodzaju stomb z sesją scalania (własny Kosz emituje bez podanej sesji). Treść wiersza stomb: wpisy koperty
+// (karta, masa, gwiazdka rejestru, z treścią albo bez).
+const doKosza = async (o, P, sid) => { await o.v.moveSnapshotToTrash(P, sid, { odepnij: true }); tik(); };
+const wierszeKosza = (o, od) => wierszeOd(o, od).filter((w) => w.kind === 'stomb');
+const emisjeKosza = (o, e0) => o.l.emisje.slice(e0).filter((x) => x.kind === 'stomb' && x.sesja);
+// Wpisy Kosza wersji sid w eksporcie (kształt wysyłkowy, bez seq).
+const wpisyEksportu = async (o, sid) => ((await o.v.exportSyncPayload()).snapshotTombstones || []).filter((e) => e.snapshotId === sid).map(({ seq: _s, ...e }) => e);
+const faktWpisu = (e) => ({ masa: e.payload ? e.payload.user.weight : null, gwiazdka: !!(e.gwiazdka && e.gwiazdka.pin), tresc: !!e.payload });
+async function trescWierszaKosza(o, w) {
+  const k = await odszyfruj(o, w.env);
+  return { kind: k.event.kind, key: k.event.key, wpisy: (k.snapshotTombstones || []).map((e) => ({ karta: e.patientId, ...faktWpisu(e) })) };
+}
+// Odszyfrowania w porównaniu wpisów (Bev_echoKosza) w oknie o od chwili wywołania.
+function odszKosza(o) {
+  const n = { ile: 0 };
+  o.krypto.obserwuj((metoda, _argumenty, stos) => { if (metoda === 'decrypt' && String(stos).includes('Bev_echoKosza')) n.ile += 1; });
+  return n;
+}
+// Transakcje atrapy na sklepie metadanych bazy sejfu od znacznika (odczyty listy Kosza).
+const txMeta = (o, z) => o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && String(w[2]).includes('meta') && w[4] === 'start').length;
+// Transakcje zapisu sklepu metadanych bazy sejfu od znacznika (zapis listy Kosza).
+const zapisyMeta = (o, z) => o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && w[3] === 'readwrite' && String(w[2]).includes('meta')).length;
+// Okno na niezależnej kopii baz atrapy okna X (to samo konto), bez emisji — do dowodu widoku i „Przywróć”.
+async function klonOkna(o, X) {
+  const K = await oknoMagazynu({
+    idb: X.idb.__atrapa.klonuj(), istniejace: { A: o.A, B: o.B }, bramka: false, konta: 'A', zaloguj: 'A', skrypty: SKRYPTY_PUNKTU, emisja: true,
+  });
+  OKNA.push(K);
+  return K;
+}
+// Widok wpisu sid w oknie Kosza (listTrashedSnapshots: gwiazdka widoku, treść bez postaci gwiazdki, karta) i wynik
+// „Przywróć” (masa i gwiazdka wersji po przywróceniu) na klonach obu okien.
+async function widokKoszaObu(o, X, Y, P, sid) {
+  const wiersz = async (U) => {
+    const e = (await U.v.listTrashedSnapshots()).find((x) => x.snapshotId === sid);
+    if (!e) return null;
+    const { _pinned: _p, _pinnedState: _s, ...tresc } = e.payload || {};
+    return JSON.stringify({ pinned: e.pinned, patientExists: e.patientExists, deletedAtISO: e.deletedAtISO, tresc });
+  };
+  const wynik = {};
+  for (const [nazwa, U] of [['X', X], ['Y', Y]]) {
+    const K = await klonOkna(o, U);
+    const w = await wiersz(K);
+    let przywroc = null;
+    if (w) {
+      await K.v.restoreTrashedSnapshot(P, sid);
+      await K.cisza();
+      przywroc = await stanWersji(K, P, sid);
+      if (przywroc) delete przywroc.rev;
+    }
+    wynik[nazwa] = { wiersz: w, przywroc };
+  }
+  return wynik;
+}
+// Ten sam scenariusz bazowy: A — karta P [v 20 kg, w 21 kg], bliźniak B po bazie.
+async function bazaKosza(o) {
+  const k = await karta(o, 1, [20, 21]);
+  await o.gotowe();
+  const B = await blizniak(o);
+  return { P: k.P, v: k.w[0], w: k.w[1], B };
+}
+// Gwiazdka spoza ładunku: B daje v gwiazdkę (koperta snap B), A — później, bez wiedzy o gwiazdce — daje v do Kosza.
+async function gwiazdkaSpoza(o) {
+  const s = await bazaKosza(o);
+  tik(MIN);
+  await gwiazdka(s.B, s.P, s.v);
+  const kB = await kopertaSnap(s.B, s.P, s.v);
+  tik(MIN);
+  await doKosza(o, s.P, s.v);
+  await o.gotowe();
+  return { ...s, kB };
+}
+
+describe('odsyłanie wpisów Kosza: wpis, który scalanie zapisało inaczej, niż był i niż przyszedł', () => {
+  it('gwiazdka spoza ładunku — v w Koszu A (Kosz później), koperta snap B z gwiazdką sprzed Kosza: jeden wiersz stomb v (wpis z treścią 20 kg i gwiazdką), bez wiersza snap', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, s.kB.env)).status).toBe('applied');
+    expect([await wersja(o, s.P, s.v), (await wpisyEksportu(o, s.v)).map(faktWpisu)], 'kontrola: v zostaje w Koszu A, wpis z gwiazdką z ładunku').toEqual([null, [{ masa: 20, gwiazdka: true, tresc: true }]]);
+    const nowe = wierszeOd(o, s0);
+    expect(nowe.map(opis), 'wiersze odsyłania').toEqual([['stomb', s.v, 'pending']]);
+    expect(await trescWierszaKosza(o, nowe[0]), 'treść wiersza stomb').toEqual({ kind: 'stomb', key: s.v, wpisy: [{ karta: s.P, masa: 20, gwiazdka: true, tresc: true }] });
+  }, CZAS);
+
+  it('gwiazdka w ładunku — wpis Kosza z innego urządzenia bez gwiazdki, tutejsza gwiazdka sprzed Kosza: jeden wiersz stomb v z gwiazdką', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    tik(MIN);
+    await gwiazdka(o, s.P, s.v);
+    await o.gotowe();
+    tik(MIN);
+    await doKosza(s.B, s.P, s.v);
+    const kB = await koperta(s.B, await s.B.ev.buildSnapshotTombstoneEvent(s.v, null));
+    expect(kB.k.snapshotTombstones.map(faktWpisu), 'kontrola: wpis B bez gwiazdki').toEqual([{ masa: 20, gwiazdka: false, tresc: true }]);
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, kB.env)).status).toBe('applied');
+    expect(await wersja(o, s.P, s.v), 'kontrola: v w Koszu A').toBe(null);
+    const nowe = wierszeOd(o, s0);
+    expect(nowe.map(opis), 'wiersze odsyłania').toEqual([['stomb', s.v, 'pending']]);
+    expect(await trescWierszaKosza(o, nowe[0]), 'treść wiersza stomb').toEqual({ kind: 'stomb', key: s.v, wpisy: [{ karta: s.P, masa: 20, gwiazdka: true, tresc: true }] });
+  }, CZAS);
+
+  it('poprawka spoza ładunku — koperta snap B z późniejszą treścią (40 kg) sprzed Kosza A: jeden wiersz stomb v z wpisem 40 kg', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    tik(MIN);
+    await popraw(s.B, s.P, s.v, 40);
+    const kB = await kopertaSnap(s.B, s.P, s.v);
+    tik(MIN);
+    await doKosza(o, s.P, s.v);
+    await o.gotowe();
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, kB.env)).status).toBe('applied');
+    expect((await wpisyEksportu(o, s.v)).map(faktWpisu), 'kontrola: wpis Kosza A z poprawką B').toEqual([{ masa: 40, gwiazdka: false, tresc: true }]);
+    const nowe = wierszeOd(o, s0);
+    expect(nowe.map(opis), 'wiersze odsyłania').toEqual([['stomb', s.v, 'pending']]);
+    expect(await trescWierszaKosza(o, nowe[0]), 'treść wiersza stomb').toEqual({ kind: 'stomb', key: s.v, wpisy: [{ karta: s.P, masa: 40, gwiazdka: false, tresc: true }] });
+  }, CZAS);
+
+  it('poprawka w ładunku — wpis Kosza B (20 kg), tutejsza poprawka sprzed Kosza (40 kg): jeden wiersz stomb v z poprawioną masą', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    tik(MIN);
+    await popraw(o, s.P, s.v, 40);
+    await o.gotowe();
+    tik(MIN);
+    await doKosza(s.B, s.P, s.v);
+    const kB = await koperta(s.B, await s.B.ev.buildSnapshotTombstoneEvent(s.v, null));
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, kB.env)).status).toBe('applied');
+    const nowe = wierszeOd(o, s0);
+    expect(nowe.map(opis), 'wiersze odsyłania').toEqual([['stomb', s.v, 'pending']]);
+    expect(await trescWierszaKosza(o, nowe[0]), 'treść wiersza stomb').toEqual({ kind: 'stomb', key: s.v, wpisy: [{ karta: s.P, masa: 40, gwiazdka: false, tresc: true }] });
+  }, CZAS);
+});
+
+// Surowe elementy listy Kosza wersji sid w metadanych konta (atrapa IndexedDB, bez odszyfrowania).
+const surowyKosz = (o, sid) => {
+  const m = o.idb.__atrapa.bazy()[bazaSejfu(o)].sklepy.meta.wiersze.find((r) => r && Array.isArray(r.snapshotTombstones)) || { snapshotTombstones: [] };
+  return JSON.stringify(m.snapshotTombstones.filter((e) => e.snapshotId === sid));
+};
+// Stan po scaleniu koperty z gwiazdką spoza ładunku: wpis v w Koszu A z gwiazdką z ładunku.
+async function wpisZGwiazdka(o) {
+  const s = await gwiazdkaSpoza(o);
+  expect((await zastosuj(o, s.kB.env)).status, 'kontrola: wpis z gwiazdką').toBe('applied');
+  tik(MIN);
+  await o.gotowe();
+  return s;
+}
+// Koperta stomb wpisu sid okna X z jawną zmianą elementów (zmien(e) — kopia elementu), jak od innej wersji aplikacji.
+async function kopertaKoszaZ(X, sid, zmien) {
+  const k = JSON.parse(JSON.stringify(await X.ev.buildSnapshotTombstoneEvent(sid, null)));
+  k.snapshotTombstones = k.snapshotTombstones.map((e) => zmien(JSON.parse(JSON.stringify(e))));
+  return zTresci(X, k);
+}
+const pozniej = (iso, ms) => new Date(Date.parse(iso) + ms).toISOString();
+
+describe('odsyłanie wpisów Kosza: bez odsyłania — opis wpisu, postać gwiazdki, tożsamość wizyty, powtórka, stan równy', () => {
+  it('sam opis wpisu inny (wyższy rev i inne seq — koperta spoza buildera; scalanie zapisuje rev) — 0 wierszy i 0 emisji stomb; widok Kosza i „Przywróć” takie same na urządzeniu po scaleniu i bez niego', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    await wpisZGwiazdka(o);
+    const s = { P: (await o.v.listTrashedSnapshots())[0].patientId, v: (await o.v.listTrashedSnapshots())[0].snapshotId };
+    const Y = await klonOkna(o, o);
+    const przed = surowyKosz(o, s.v);
+    const k = await kopertaKoszaZ(o, s.v, (e) => ({ ...e, rev: (e.rev || 0) + 3, seq: 917 }));
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    expect((await zastosuj(o, k.env)).status).toBe('applied');
+    expect(surowyKosz(o, s.v) !== przed, 'kontrola: scalanie zapisało opis wpisu').toBe(true);
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+    expect(emisjeKosza(o, e0), 'emisje odsyłania wpisów').toEqual([]);
+    const w = await widokKoszaObu(o, o, Y, s.P, s.v);
+    expect(w.X.wiersz, 'kontrola: wiersz okna Kosza').toBeTruthy();
+    expect(w.X, 'widok Kosza i „Przywróć”: urządzenie po scaleniu = urządzenie bez scalenia').toEqual(w.Y);
+  }, CZAS);
+
+  it('sama postać gwiazdki w treści wpisu (R4n: koperta z treścią bez _pinned i z wcześniejszym, odpiętym _pinnedState; rejestr gwiazdki ten sam) — 0 wierszy; widok Kosza i „Przywróć” takie same', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    await wpisZGwiazdka(o);
+    const [e0w] = await o.v.listTrashedSnapshots();
+    const s = { P: e0w.patientId, v: e0w.snapshotId };
+    const Y = await klonOkna(o, o);
+    const przed = surowyKosz(o, s.v);
+    const k = await kopertaKoszaZ(o, s.v, (e) => {
+      const p = { ...e.payload, _pinnedState: { pin: false, at: pozniej(e.savedAtISO, 30_000) } };
+      delete p._pinned;
+      return { ...e, payload: p };
+    });
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    expect((await zastosuj(o, k.env)).status).toBe('applied');
+    const [po] = await wpisyEksportu(o, s.v);
+    expect([surowyKosz(o, s.v) !== przed, !!po.payload._pinned, !!(po.gwiazdka && po.gwiazdka.pin)], 'kontrola: scalanie zapisało inną postać gwiazdki w treści, rejestr wpisu bez zmian').toEqual([true, false, true]);
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+    expect(emisjeKosza(o, e0), 'emisje odsyłania wpisów').toEqual([]);
+    const w = await widokKoszaObu(o, o, Y, s.P, s.v);
+    expect(w.X, 'widok Kosza i „Przywróć”').toEqual(w.Y);
+  }, CZAS);
+
+  it('koperta starszej aplikacji (wpis bez pola gwiazdka, treść bez rejestru — bez _pinned albo z samym _pinned: true; późniejsza chwila zmiany wpisu, wyższy rev) przy równym rejestrze gwiazdki — 0 wierszy; zapisany widok Kosza i „Przywróć” obu urządzeń taki sam (gwiazdka widoczna na obu)', async () => {
+    for (const przypieta of [false, true]) {
+      const nazwa = przypieta ? 'treść z _pinned: true' : 'treść bez _pinned';
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      await wpisZGwiazdka(o);
+      const [e0w] = await o.v.listTrashedSnapshots();
+      const s = { P: e0w.patientId, v: e0w.snapshotId };
+      const Y = await klonOkna(o, o);
+      const k = await kopertaKoszaZ(o, s.v, (e) => {
+        const p = { ...e.payload };
+        delete p._pinned; delete p._pinnedState;
+        if (przypieta) p._pinned = true;
+        const x = { ...e, payload: p, rev: (e.rev || 0) + 2, updatedAtISO: pozniej(e.deletedAtISO, -10_000) };
+        delete x.gwiazdka;
+        return x;
+      });
+      expect(k.k.snapshotTombstones.map((e) => [e.gwiazdka, e.payload._pinned, e.payload._pinnedState, e.updatedAtISO > e0w.deletedAtISO]), `${nazwa}: kontrola — koperta starszej aplikacji`).toEqual([[undefined, przypieta || undefined, undefined, false]]);
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, k.env)).status, `${nazwa}: wynik`).toBe('applied');
+      const [po] = await wpisyEksportu(o, s.v);
+      expect([!!(po.gwiazdka && po.gwiazdka.pin), po.payload._pinnedState === undefined], `${nazwa}: kontrola — rejestr wpisu bez zmian, treść bez rejestru`).toEqual([true, true]);
+      expect(wierszeKosza(o, s0).map(opis), `${nazwa}: wiersze stomb`).toEqual([]);
+      const w = await widokKoszaObu(o, o, Y, s.P, s.v);
+      expect(JSON.parse(w.X.wiersz).pinned, `${nazwa}: gwiazdka w oknie Kosza po scaleniu`).toBe(true);
+      expect(w.X, `${nazwa}: widok Kosza i „Przywróć” — urządzenie po scaleniu = urządzenie bez scalenia`).toEqual(w.Y);
+    }
+  }, 2 * CZAS);
+
+  it('koperta starszej aplikacji z samym _pinned: true w treści (bez pola gwiazdka i bez rejestru w treści) przy odpiętym rejestrze wpisu (gwiazdka, potem „Odepnij i usuń” na A), chwila zmiany wpisu po chwili odpięcia albo przed nią — 0 wierszy; widok Kosza i „Przywróć” takie same jak bez scalenia (gwiazdka niewidoczna)', async () => {
+    for (const [nazwa, przes] of [['chwila zmiany wpisu po chwili odpięcia', 20_000], ['chwila zmiany wpisu przed chwilą odpięcia', -20_000]]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await bazaKosza(o);
+      tik(MIN);
+      await gwiazdka(o, s.P, s.v);
+      tik(MIN);
+      await doKosza(o, s.P, s.v);
+      await o.gotowe();
+      tik(MIN);
+      const [e0w] = await wpisyEksportu(o, s.v);
+      expect(e0w.gwiazdka && e0w.gwiazdka.pin, `${nazwa}: kontrola — rejestr wpisu odpięty`).toBe(false);
+      const Y = await klonOkna(o, o);
+      const k = await kopertaKoszaZ(o, s.v, (e) => {
+        const p = { ...e.payload, _pinned: true };
+        delete p._pinnedState;
+        const x = { ...e, payload: p, rev: (e.rev || 0) + 2, updatedAtISO: pozniej(e.gwiazdka.at, przes) };
+        delete x.gwiazdka;
+        return x;
+      });
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, k.env)).status, `${nazwa}: wynik`).toBe('applied');
+      const [po] = await wpisyEksportu(o, s.v);
+      expect(po.gwiazdka, `${nazwa}: kontrola — rejestr wpisu bez zmian`).toEqual(e0w.gwiazdka);
+      expect(wierszeKosza(o, s0).map(opis), `${nazwa}: wiersze stomb`).toEqual([]);
+      const w = await widokKoszaObu(o, o, Y, s.P, s.v);
+      expect([JSON.parse(w.X.wiersz).pinned, w.X.przywroc && w.X.przywroc.gwiazdka], `${nazwa}: gwiazdka w oknie Kosza i po „Przywróć”`).toEqual([false, false]);
+      expect(w.X, `${nazwa}: widok Kosza i „Przywróć” — urządzenie po scaleniu = urządzenie bez scalenia`).toEqual(w.Y);
+    }
+  }, 2 * CZAS);
+
+  it('koperta stomb bez visitIdentity i payload.visit (jak od starszej aplikacji) — scalanie dopisuje oba: 0 wierszy (reguła pola)', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    tik(MIN);
+    await doKosza(s.B, s.P, s.v);
+    const k = await kopertaKoszaZ(s.B, s.v, (e) => { const p = { ...e.payload }; delete p.visit; const x = { ...e, payload: p }; delete x.visitIdentity; return x; });
+    expect(k.k.snapshotTombstones.map((e) => [!!e.visitIdentity, !!e.payload.visit]), 'kontrola: koperta bez tożsamości wizyty').toEqual([[false, false]]);
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, k.env)).status).toBe('applied');
+    expect((await wpisyEksportu(o, s.v)).map((e) => [!!e.visitIdentity, !!(e.payload && e.payload.visit)]), 'kontrola: wpis A z tożsamością wizyty').toEqual([[true, true]]);
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+  }, CZAS);
+
+  it('to samo zdarzenie drugi raz — 0 wierszy stomb, bez odszyfrowania w porównaniu wpisów (surowy zapis przed = po)', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    expect((await zastosuj(o, s.kB.env)).status).toBe('applied');
+    tik();
+    const s0 = ostatni(o);
+    const n = odszKosza(o);
+    expect((await zastosuj(o, s.kB.env)).status).toBe('applied');
+    expect(wierszeOd(o, s0).map(opis), 'wiersze po powtórce').toEqual([]);
+    expect(n.ile, 'bez odszyfrowania w porównaniu wpisów').toBe(0);
+  }, CZAS);
+
+  it('ładunek równy stanowi (koperta stomb tego samego wpisu u bliźniaka z tym samym stanem) — 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await wpisZGwiazdka(o);
+    const X = await klonA(o, ZRODLO_SEJFU, true);
+    const k = await koperta(o, await o.ev.buildSnapshotTombstoneEvent(s.v, null));
+    const s0 = ostatni(X);
+    expect((await zastosuj(X, k.env)).status).toBe('applied');
+    expect(wierszeOd(X, s0).map(opis), 'wiersze').toEqual([]);
+  }, CZAS);
+
+  it('wpis z ładunku przyjęty bez zmian (B: v gwiazdka, potem „Odepnij i usuń”) — koperta w kolejności kluczy buildera i ta sama koperta z odwrotną kolejnością kluczy elementu, treści, rejestru gwiazdki i tożsamości wizyty (jak od innej wersji aplikacji): 0 wierszy stomb w obu', async () => {
+    const odwroc = (x) => (Array.isArray(x) ? x.map(odwroc) : x && typeof x === 'object' ? Object.fromEntries(Object.entries(x).reverse().map(([n, w]) => [n, odwroc(w)])) : x);
+    for (const odwrocona of [false, true]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await bazaKosza(o);
+      tik(MIN);
+      await gwiazdka(s.B, s.P, s.v);
+      tik(MIN);
+      await doKosza(s.B, s.P, s.v);
+      const k = await kopertaKoszaZ(s.B, s.v, (e) => (odwrocona ? odwroc(e) : e));
+      const [e] = k.k.snapshotTombstones;
+      expect([Object.keys(e).at(odwrocona ? -1 : 0), !!e.visitIdentity, !!e.gwiazdka], 'kontrola: kolejność kluczy elementu, tożsamość wizyty i rejestr gwiazdki w kopercie').toEqual(['patientId', true, true]);
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, k.env)).status, `${odwrocona ? 'odwrotna' : 'zwykła'} kolejność: wynik`).toBe('applied');
+      expect([await wersja(o, s.P, s.v), (await wpisyEksportu(o, s.v)).map(faktWpisu)], `${odwrocona ? 'odwrotna' : 'zwykła'} kolejność: kontrola — v w Koszu A z wpisem z ładunku`).toEqual([null, [{ masa: 20, gwiazdka: false, tresc: true }]]);
+      expect(wierszeKosza(o, s0).map(opis), `${odwrocona ? 'odwrotna' : 'zwykła'} kolejność kluczy: wiersze stomb`).toEqual([]);
+    }
+  }, 2 * CZAS);
+
+  it('zmiana samych składników lokalnych wpisu (koperta snap v bez nowości, wersja przegrywa z Koszem) — surowy zapis wpisu zmieniony, 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    const kB = await kopertaSnap(s.B, s.P, s.v);
+    tik(MIN);
+    await doKosza(o, s.P, s.v);
+    await o.gotowe();
+    const przed = surowyKosz(o, s.v);
+    const eksport = await wpisyEksportu(o, s.v);
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, kB.env)).status).toBe('applied');
+    expect([surowyKosz(o, s.v) !== przed, JSON.stringify(await wpisyEksportu(o, s.v)) === JSON.stringify(eksport)], 'kontrola: surowy zapis zmieniony, eksport wpisu ten sam').toEqual([true, true]);
+    expect(wierszeOd(o, s0).map(opis), 'wiersze').toEqual([]);
+  }, CZAS);
+
+  it('wpis przegrywa z późniejszą wersją z ładunku (poprawka B po Koszu A — wpis zdjęty scaleniem) — 0 wierszy stomb i 0 emisji stomb; wersja przyjęta bez zmian — 0 wierszy snap (jak w odsyłaniu wersji)', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    tik(MIN);
+    await doKosza(o, s.P, s.v);
+    await o.gotowe();
+    tik(MIN);
+    await popraw(s.B, s.P, s.v, 40);
+    const kB = await kopertaSnap(s.B, s.P, s.v);
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    expect((await zastosuj(o, kB.env)).status).toBe('applied');
+    expect([(await stanWersji(o, s.P, s.v) || {}).masa, (await wpisyEksportu(o, s.v)).length], 'kontrola: v wraca do karty z poprawką, wpisu nie ma').toEqual([40, 0]);
+    expect(emisjeKosza(o, e0), 'emisje odsyłania wpisów').toEqual([]);
+    expect(wierszeOd(o, s0).map(opis), 'wiersze').toEqual([]);
+  }, CZAS);
+});
+
+describe('odsyłanie wpisów Kosza: kolejność z odsyłaniem wersji, łączenie wpisów kolejki, busy', () => {
+  it('wersja i wpis zmienione w jednym scaleniu (koperta spoza buildera: snap w z poprawką B i wpis Kosza v z B bez gwiazdki; A dało w i v gwiazdki) — wiersze snap P/w i stomb v, w tej kolejności', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const k = await karta(o, 1, [20, 21, 22]);
+    const [v, w] = k.w;
+    await o.gotowe();
+    const B = await blizniak(o);
+    tik(MIN);
+    await popraw(B, k.P, w, 17.2);
+    const ks = await kopertaSnap(B, k.P, w);
+    tik(MIN);
+    await gwiazdka(o, k.P, v);
+    await gwiazdka(o, k.P, w);
+    await o.gotowe();
+    tik(MIN);
+    await doKosza(B, k.P, v);
+    const kx = await koperta(B, await B.ev.buildSnapshotTombstoneEvent(v, null));
+    const c = await B.v.encryptPayloadForCurrentUser({ ...ks.k, snapshotTombstones: kx.k.snapshotTombstones });
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, { iv: c.iv, data: c.data })).status).toBe('applied');
+    expect(wierszeOd(o, s0).map((x) => [x.kind, x.entityKey]), 'wiersze odsyłania (wersja, potem wpis)').toEqual([['snap', `${k.P}/${w}`], ['stomb', v]]);
+    const nowe = wierszeOd(o, s0);
+    expect(await trescWiersza(o, nowe[0]), 'treść wiersza snap').toEqual({ kind: 'snap', key: `${k.P}/${w}`, ...(await stanWersji(o, k.P, w)) });
+    expect((await trescWierszaKosza(o, nowe[1])).wpisy, 'treść wiersza stomb').toEqual([{ karta: k.P, masa: 20, gwiazdka: true, tresc: true }]);
+  }, CZAS);
+
+  it('łączenie wpisów kolejki — odesłanie wpisu po własnym czekającym stomb v zastępuje go; własne „Przywróć” i ponowny Kosz v po odesłaniu — odesłanie zostaje (wiersz snap P/v między nimi), własny wiersz za nim; odesłanie z wierszem innej encji za własnym stomb v — oba zostają', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const tegoWpisu = () => o.kolejka('A').filter((x) => x.kind === 'stomb' && x.entityKey === s.v);
+    const wlasny = tegoWpisu();
+    expect(wlasny.map((x) => x.state), 'kontrola: czekający własny wiersz Kosza v').toEqual(['pending']);
+    await zastosuj(o, s.kB.env);
+    const poOdeslaniu = tegoWpisu();
+    expect([poOdeslaniu.length, poOdeslaniu[0].seqLocal > wlasny[0].seqLocal, (await trescWierszaKosza(o, poOdeslaniu[0])).wpisy[0].gwiazdka], '(a) odesłanie zastąpiło czekający własny wiersz').toEqual([1, true, true]);
+    tik(MIN);
+    await o.v.restoreTrashedSnapshot(s.P, s.v);
+    tik();
+    await doKosza(o, s.P, s.v);
+    await o.gotowe();
+    // Własny stomb v jest możliwy dopiero po powrocie v do karty: wiersz snap P/v z „Przywróć” stoi między odesłaniem
+    // a własnym stomb v, więc odesłanie zostaje (reguła ogona), a własny wiersz idzie za nim.
+    const poWlasnym = tegoWpisu();
+    const miedzy = o.kolejka('A').filter((x) => x.seqLocal > poOdeslaniu[0].seqLocal && x.seqLocal < poWlasnym[poWlasnym.length - 1].seqLocal).map((x) => [x.kind, x.entityKey]);
+    expect([poWlasnym.map((x) => x.seqLocal), miedzy], '(b) odesłanie zostaje, własny wiersz za wierszem „Przywróć”').toEqual([[poOdeslaniu[0].seqLocal, poWlasnym[1].seqLocal], [['snap', `${s.P}/${s.v}`]]]);
+    // (c) nowy przebieg: własny stomb v, za nim wiersz innej encji (nowa wersja karty Q), potem odesłanie wpisu v.
+    const o2 = await okno({ bramka: true, echo: true });
+    await o2.zaloguj('A');
+    const s2 = await gwiazdkaSpoza(o2);
+    await karta(o2, 2, [30]);
+    await o2.gotowe();
+    await zastosuj(o2, s2.kB.env);
+    expect(o2.kolejka('A').filter((x) => x.kind === 'stomb' && x.entityKey === s2.v).length, '(c) oba wiersze stomb v zostają').toBe(2);
+  }, 2 * CZAS);
+
+  it('busy z fazy Kosza po zapisie listy Kosza (błąd w wyszukaniu wersji pod innymi kartami) — status busy jak dziś, odesłanie wpisu przy pierwszej próbie; ponowienie (applied) bez duplikatu', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_OBCE) });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const przed = JSON.stringify(await wpisyEksportu(o, s.v));
+    const s0 = ostatni(o);
+    o.win.__fikcyjnyBlad = blad({ vildaMergeBusy: true, code: 'PATIENT_LOCK_TIMEOUT' });
+    const r = await zastosuj(o, s.kB.env);
+    expect([r.status, r.code, o.win.__fikcyjnyBlad], 'kontrola: busy z fazy Kosza').toEqual(['busy', 'PATIENT_LOCK_TIMEOUT', null]);
+    expect(JSON.stringify(await wpisyEksportu(o, s.v)) !== przed, 'kontrola: lista Kosza zapisana przed błędem').toBe(true);
+    expect(wierszeOd(o, s0).map(opis), 'odesłanie przy pierwszej próbie').toEqual([['stomb', s.v, 'pending']]);
+    const s1 = ostatni(o);
+    expect((await zastosuj(o, s.kB.env)).status, 'ponowienie').toBe('applied');
+    expect(wierszeOd(o, s1).map(opis), 'ponowienie bez duplikatu').toEqual([]);
+  }, CZAS);
+});
+
+describe('odsyłanie wpisów Kosza: zmiana sesji, usuwanie konta, strażnik tożsamości', () => {
+  it('zmiana sesji w odczycie wpisów Kosza „przed” (blokada sejfu albo ponowne odblokowanie A przy odczycie metadanych konta po odczycie wersji) — locked albo session-changed, scalanie nie rusza (bez zapisu listy Kosza), 0 wierszy', async () => {
+    for (const [nazwa, oczek] of [['blokada', 'locked'], ['ponowne odblokowanie A', 'session-changed']]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await gwiazdkaSpoza(o);
+      const przed = surowyKosz(o, s.v);
+      const s0 = ostatni(o);
+      const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'meta', metoda: 'get' });
+      const p = o.ev.applyEncryptedEvent(s.kB.env);
+      const stan = await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]);
+      expect(stan, `${nazwa}: kontrola — odczyt metadanych konta wstrzymany`).toBe('wstrzymane');
+      let prz = null;
+      if (nazwa === 'blokada') o.zablokuj();
+      else { prz = o.przelaczWTle('A'); await prz.sesja; }
+      h.zwolnij();
+      const r = await p;
+      if (prz) await prz.koniec;
+      await o.cisza();
+      expect(r, `${nazwa}: wynik`).toEqual({ status: oczek });
+      if (oczek === 'locked') await o.zaloguj('A');
+      await o.gotowe();
+      expect(surowyKosz(o, s.v), `${nazwa}: lista Kosza bez zapisu (v bez gwiazdki)`).toBe(przed);
+      // Przegląd kolejki przy ponownym odblokowaniu dopisuje wiersz karty P (Kosz zmienił kartę bez nowej wersji) —
+      // jak dziś; odsyłanie wpisu sprawdzają wiersze stomb.
+      expect(wierszeKosza(o, s0).map(opis), `${nazwa}: wiersze stomb`).toEqual([]);
+    }
+  }, 2 * CZAS);
+
+  it('zmiana sesji w odczycie wersji „przed” (ponowne odblokowanie A przy odczycie sklepu wersji) — session-changed, bez wejścia do odczytu wpisów Kosza w nowej sesji (znacznik na początku Bev_stanKosza nietknięty) i bez zapisu listy Kosza', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_STANU_KOSZA) });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const przed = surowyKosz(o, s.v);
+    const znak = blad({ name: 'UnknownError' });
+    o.win.__fikcyjnyBlad = znak;
+    const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'snapshots', metoda: 'get' });
+    const p = o.ev.applyEncryptedEvent(s.kB.env);
+    expect(await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt wersji „przed” wstrzymany').toBe('wstrzymane');
+    const prz = o.przelaczWTle('A');
+    await prz.sesja;
+    h.zwolnij();
+    const r = await p;
+    await prz.koniec;
+    await o.cisza();
+    expect(r, 'wynik').toEqual({ status: 'session-changed' });
+    expect(o.win.__fikcyjnyBlad, 'bez wejścia do odczytu wpisów Kosza').toBe(znak);
+    o.win.__fikcyjnyBlad = null;
+    expect(surowyKosz(o, s.v), 'lista Kosza bez zapisu').toBe(przed);
+  }, CZAS);
+
+  it('zmiana sesji w porównaniu wpisów „po” (blokada sejfu przy odszyfrowaniu wpisu po scaleniu) — applied jak dziś (scalanie skończone), bez emisji odsyłania wpisów, 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    const h = o.krypto.wstrzymaj({ metoda: 'decrypt', wStosie: 'Bev_echoKosza' });
+    const p = o.ev.applyEncryptedEvent(s.kB.env);
+    const stan = await Promise.race([h.osiagnieta.then(() => 'wstrzymane'), p.then(() => 'koniec')]);
+    if (stan !== 'wstrzymane') h.zwolnij();
+    expect(stan, 'kontrola: odszyfrowanie wpisu po scaleniu (porównanie „po”)').toBe('wstrzymane');
+    o.zablokuj();
+    h.zwolnij();
+    const r = await p;
+    await o.cisza();
+    expect(r.status, 'wynik').toBe('applied');
+    expect(emisjeKosza(o, e0), 'bez emisji odsyłania wpisów').toEqual([]);
+    await o.zaloguj('A');
+    await o.gotowe();
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+  }, CZAS);
+
+  it('usuwanie konta (SYNC_DB_DELETED) albo strażnik tożsamości niedostępny (PATIENT_AUTHORITY_UNAVAILABLE) w odczycie wpisów Kosza „przed” — session-changed albo busy z kodem, scalanie nie rusza, 0 wierszy', async () => {
+    for (const [kod, oczek] of [['SYNC_DB_DELETED', { status: 'session-changed' }], ['PATIENT_AUTHORITY_UNAVAILABLE', { status: 'busy', code: 'PATIENT_AUTHORITY_UNAVAILABLE' }]]) {
+      const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_STANU_KOSZA) });
+      await o.zaloguj('A');
+      const s = await gwiazdkaSpoza(o);
+      const przed = surowyKosz(o, s.v);
+      const s0 = ostatni(o);
+      o.win.__fikcyjnyBlad = blad({ code: kod });
+      expect(await zastosuj(o, s.kB.env), `${kod}: wynik`).toEqual(oczek);
+      expect(o.win.__fikcyjnyBlad, `${kod}: kontrola — błąd odczytu użyty`).toBe(null);
+      expect(surowyKosz(o, s.v), `${kod}: scalanie nie rusza`).toBe(przed);
+      expect(wierszeOd(o, s0).map(opis), `${kod}: wiersze`).toEqual([]);
+    }
+  }, 2 * CZAS);
+
+  it('usuwanie konta (SYNC_DB_DELETED) w odczycie wpisów Kosza „po” przy udanym odczycie wersji „po” — applied, bez odsyłania wersji i wpisów (rekord złożony bez wiersza snap)', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_STANU_KOSZA) });
+    await o.zaloguj('A');
+    const s = await rekordZlozony(o);
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    o.win.__fikcyjneBledy = [null, blad({ code: 'SYNC_DB_DELETED' })];
+    expect((await zastosuj(o, s.kB.env)).status, 'wynik').toBe('applied');
+    expect(o.win.__fikcyjneBledy, 'kontrola: odczyt „przed” bez błędu, odczyt „po” z odmową').toEqual([]);
+    expect((await stanWersji(o, s.P, s.v)).masa, 'kontrola: rekord złożony zapisany').toBe(17.2);
+    expect(o.l.emisje.slice(e0).filter((x) => x.sesja), 'bez emisji odsyłania wersji i wpisów').toEqual([]);
+    expect(wierszeOd(o, s0).map(opis), 'wiersze').toEqual([]);
+  }, CZAS);
+
+  it('removeUser tego konta w toku (konto oznaczone, sejf jeszcze odblokowany) w chwili wznowienia odczytu wpisów Kosza „przed” — session-changed, scalanie nie rusza (bez zapisu metadanych i sklepu wersji, lista Kosza bez zmian), bez emisji odsyłania; potem konto usunięte', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const przed = surowyKosz(o, s.v);
+    const e0 = o.l.emisje.length;
+    const hw = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'snapshots', metoda: 'get' });
+    const p = o.ev.applyEncryptedEvent(s.kB.env);
+    expect(await Promise.race([hw.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt wersji „przed” wstrzymany').toBe('wstrzymane');
+    const h = wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'meta', metoda: 'get' });
+    hw.zwolnij();
+    expect(await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt wpisów Kosza „przed” wstrzymany').toBe('wstrzymane');
+    // removeUser oznacza konto przed pierwszym oczekiwaniem; wstrzymane na wyprowadzeniu powiązania lokalnego (przed blokadą sejfu).
+    const k = o.krypto.wstrzymaj((_metoda, _argumenty, stos) => String(stos).includes('deriveLocalBinding'));
+    const usuwanie = o.v.removeUser(o.A.userId, o.A.haslo).then(() => 'usunięte', (x) => `błąd ${x && x.code}`);
+    await k.osiagnieta;
+    expect(o.v.isUnlocked(), 'kontrola: sejf odblokowany w chwili wznowienia odczytu').toBe(true);
+    const z = o.znacznik();
+    h.zwolnij();
+    const r = await p;
+    const zapisy = [zapisyMeta(o, z), zapisyWersji(o, z).length, surowyKosz(o, s.v) === przed];
+    const emisje = o.l.emisje.slice(e0).filter((x) => x.sesja);
+    k.zwolnij();
+    expect(await usuwanie, 'removeUser').toBe('usunięte');
+    await o.cisza();
+    expect(r, 'wynik').toEqual({ status: 'session-changed' });
+    expect(zapisy, 'scalanie nie rusza: transakcje zapisu metadanych, transakcje zapisu sklepu wersji, lista Kosza bez zmian').toEqual([0, 0, true]);
+    expect(emisje, 'bez emisji odsyłania wersji i wpisów').toEqual([]);
+  }, CZAS);
+
+  it('removeUser tego konta w toku (konto oznaczone, sejf jeszcze odblokowany) w chwili wznowienia odczytu wpisów Kosza „po” — applied (scalanie skończone, lista Kosza zapisana), bez odsyłania wersji i wpisów; potem konto usunięte', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_STANU_KOSZA) });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const przed = surowyKosz(o, s.v);
+    const e0 = o.l.emisje.length;
+    // Wstawka na początku Bev_stanKosza woła shift() listy przy każdym wejściu: przy drugim (odczyt „po”) — wstrzymanie
+    // następnego odczytu metadanych konta (getUserMeta tego odczytu), bez błędu.
+    let uzbrojone;
+    const wstrzymanie = new Promise((r) => { uzbrojone = r; });
+    o.win.__fikcyjneBledy = Object.assign([null, null], {
+      shift() {
+        if (this.length === 1) uzbrojone(wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'meta', metoda: 'get' }));
+        return [].shift.call(this);
+      },
+    });
+    const p = o.ev.applyEncryptedEvent(s.kB.env);
+    const h = await Promise.race([wstrzymanie, p.then(() => null)]);
+    expect(!!h, 'kontrola: drugie wejście do odczytu wpisów Kosza (odczyt „po”)').toBe(true);
+    expect(await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt wpisów Kosza „po” wstrzymany').toBe('wstrzymane');
+    const k = o.krypto.wstrzymaj((_metoda, _argumenty, stos) => String(stos).includes('deriveLocalBinding'));
+    const usuwanie = o.v.removeUser(o.A.userId, o.A.haslo).then(() => 'usunięte', (x) => `błąd ${x && x.code}`);
+    await k.osiagnieta;
+    expect(o.v.isUnlocked(), 'kontrola: sejf odblokowany w chwili wznowienia odczytu').toBe(true);
+    h.zwolnij();
+    const r = await p;
+    const lista = surowyKosz(o, s.v) !== przed;
+    const emisje = o.l.emisje.slice(e0).filter((x) => x.sesja);
+    k.zwolnij();
+    expect(await usuwanie, 'removeUser').toBe('usunięte');
+    await o.cisza();
+    expect([r.status, lista, o.win.__fikcyjneBledy.length], 'wynik, lista Kosza zapisana scaleniem, oba wejścia do odczytu wpisów').toEqual(['applied', true, 0]);
+    expect(emisje, 'bez emisji odsyłania wersji i wpisów').toEqual([]);
+  }, CZAS);
+
+  it('strażnik formy: odczyt wpisów Kosza kandydatów sprawdza sesję zastosowania przed strzeżonym adapterem i po odczycie metadanych konta', async () => {
+    const { parse } = await import('acorn');
+    const m = ZRODLO_SEJFU.match(/\nasync function Bev_stanKosza\(([^)]*)\) \{[\s\S]*?\n\}/);
+    expect(m, 'funkcja Bev_stanKosza w części Bev_').toBeTruthy();
+    const f = parse(m[0], { ecmaVersion: 'latest', sourceType: 'script' }).body[0];
+    const s = f.params[1] && f.params[1].name;
+    expect(s, 'drugi parametr — sesja zastosowania').toBeTruthy();
+    const tekst = (n) => m[0].slice(n.start, n.end);
+    const instr = f.body.body.map(tekst);
+    const i0 = instr.findIndex((t) => /Bev_start\(/.test(t));
+    const iMeta = instr.findIndex((t) => /await c\.a\.getUserMeta\(/.test(t));
+    expect([instr[0], i0 > 0, iMeta > i0, instr[iMeta + 1]], 'Bses_pilnuj(sesja) przed Bev_start i zaraz po getUserMeta').toEqual([`Bses_pilnuj(${s});`, true, true, `Bses_pilnuj(${s});`]);
+  });
+});
+
+describe('odsyłanie wpisów Kosza: błędy osobno dla każdego kandydata', () => {
+  it('nieczytelna tożsamość wpisu „po” (odszyfrowanie tożsamości usuniętej wizyty zawodzi w porównaniu i w builderze) — emisja odsyłania v, dopisanie odmawia bez wiersza; tak samo własny Kosz takiego wpisu', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const q = await karta(o, 2, [30, 31]);
+    await o.gotowe();
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    const h = o.krypto.blad({ metoda: 'decrypt', gdy: (_m, _a, stos) => String(stos).includes('Bvisit_deletedIdentity') && (String(stos).includes('Bev_echoKosza') || String(stos).includes('Bev_stomb')) }, { kod: 'OperationError', staly: true });
+    expect((await zastosuj(o, s.kB.env)).status, 'wynik').toBe('applied');
+    expect(emisjeKosza(o, e0).map((x) => x.klucze), 'emisja odsyłania wpisu v').toEqual([[s.v]]);
+    expect(wierszeKosza(o, s0).map(opis), 'bez wiersza stomb (odmowa dopisania)').toEqual([]);
+    await doKosza(o, q.P, q.w[0]);
+    await o.gotowe();
+    expect(wierszeKosza(o, s0).map(opis), 'kontrola: własny Kosz takiego wpisu — też bez wiersza').toEqual([]);
+    h.rozbroj();
+  }, CZAS);
+
+  it('nieczytelna tożsamość wpisu „przed” (odszyfrowanie tożsamości przy porównaniu stanu przed zawodzi, stan po czytelny) — bez porównania z przed, porównanie tylko z ładunkiem: koperta snap z gwiazdką spoza ładunku — jeden wiersz stomb v z gwiazdką', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const s0 = ostatni(o);
+    // W porównaniu wpisów najpierw odszyfrowanie wpisu po scaleniu, potem wpisu przed — błąd przy drugim.
+    const h = o.krypto.blad({ metoda: 'decrypt', ktory: 2, gdy: (_m, _a, stos) => String(stos).includes('Bvisit_deletedIdentity') && String(stos).includes('Bev_echoKosza') }, { kod: 'OperationError' });
+    expect((await zastosuj(o, s.kB.env)).status, 'wynik').toBe('applied');
+    expect(h.zrobione, 'kontrola: odszyfrowanie tożsamości wpisu „przed” zawiodło').toBe(true);
+    const nowe = wierszeKosza(o, s0);
+    expect(nowe.map(opis), 'wiersze stomb').toEqual([['stomb', s.v, 'pending']]);
+    expect(await trescWierszaKosza(o, nowe[0]), 'treść wiersza stomb').toEqual({ kind: 'stomb', key: s.v, wpisy: [{ karta: s.P, masa: 20, gwiazdka: true, tresc: true }] });
+  }, CZAS);
+
+  it('cały odczyt wpisów Kosza „przed” zawodzi — porównanie tylko z ładunkiem: koperta stomb inna niż wpis po scaleniu — wiersz stomb v; koperta równa stanowi — 0', async () => {
+    for (const [nazwa, wiersze] of [['koperta bez gwiazdki, tutejsza gwiazdka', 1], ['koperta równa stanowi', 0]]) {
+      const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_STANU_KOSZA) });
+      await o.zaloguj('A');
+      let env;
+      let v;
+      if (wiersze) {
+        const s = await bazaKosza(o);
+        v = s.v;
+        tik(MIN);
+        await gwiazdka(o, s.P, s.v);
+        await o.gotowe();
+        tik(MIN);
+        await doKosza(s.B, s.P, s.v);
+        env = (await koperta(s.B, await s.B.ev.buildSnapshotTombstoneEvent(s.v, null))).env;
+      } else {
+        const s = await wpisZGwiazdka(o);
+        v = s.v;
+        env = (await koperta(o, await o.ev.buildSnapshotTombstoneEvent(s.v, null))).env;
+      }
+      const s0 = ostatni(o);
+      o.win.__fikcyjnyBlad = blad({ name: 'UnknownError' });
+      expect((await zastosuj(o, env)).status, `${nazwa}: wynik`).toBe('applied');
+      expect(o.win.__fikcyjnyBlad, `${nazwa}: kontrola — błąd odczytu użyty`).toBe(null);
+      expect(wierszeOd(o, s0).map(opis), `${nazwa}: wiersze`).toEqual(wiersze ? [['stomb', v, 'pending']] : []);
+    }
+  }, 2 * CZAS);
+
+  it('cały odczyt wpisów Kosza „po” zawodzi — emisja odsyłania każdego kandydata (pełna karta: v w Koszu A, w i x w karcie), wiersz tylko dla v (klucz bez wpisu — bez wiersza); oba odczyty zawodzą przy kopercie snap z gwiazdką — wiersz stomb v', async () => {
+    {
+      const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_STANU_KOSZA) });
+      await o.zaloguj('A');
+      const k = await karta(o, 1, [20, 21, 22]);
+      const [v, w, x] = k.w;
+      await o.gotowe();
+      const B = await blizniak(o);
+      tik(MIN);
+      await popraw(B, k.P, w, 30);
+      const porcje = await B.ev.buildPatientFullEvents(k.P, null);
+      expect(porcje.length, 'kontrola: jedna porcja').toBe(1);
+      const kB = await koperta(B, porcje[0]);
+      tik(MIN);
+      await doKosza(o, k.P, v);
+      await o.gotowe();
+      const s0 = ostatni(o);
+      const e0 = o.l.emisje.length;
+      o.win.__fikcyjneBledy = [null, blad({ name: 'UnknownError' })];
+      expect((await zastosuj(o, kB.env)).status, 'odczyt „po”: wynik').toBe('applied');
+      expect(o.win.__fikcyjneBledy, 'kontrola: błąd odczytu „po” użyty').toEqual([]);
+      expect(emisjeKosza(o, e0).map((q) => [...q.klucze].sort()), 'odczyt „po”: emisja każdego kandydata').toEqual([[v, w, x].sort()]);
+      expect(wierszeKosza(o, s0).map(opis), 'odczyt „po”: wiersz tylko dla wpisu, który jest').toEqual([['stomb', v, 'pending']]);
+    }
+    {
+      const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_STANU_KOSZA) });
+      await o.zaloguj('A');
+      const s = await gwiazdkaSpoza(o);
+      const s0 = ostatni(o);
+      o.win.__fikcyjneBledy = [blad({ name: 'UnknownError' }), blad({ name: 'UnknownError' })];
+      expect((await zastosuj(o, s.kB.env)).status, 'oba odczyty: wynik').toBe('applied');
+      expect(o.win.__fikcyjneBledy, 'kontrola: oba błędy użyte').toEqual([]);
+      expect(wierszeOd(o, s0).map(opis), 'oba odczyty: wiersze').toEqual([['stomb', s.v, 'pending']]);
+    }
+  }, 2 * CZAS);
+});
+
+describe('odsyłanie wpisów Kosza: stałe, kanon, reguła pola i samo wygaśnięcie z kodu sejfu', () => {
+  it('stałe wpisu Kosza w części Bev_ równe licznikowi odsyłania: pola zawsze zapisywane = POLA_ZAWSZE.stomb; ścieżki kanonu = POLA_D7 + seq + postać gwiazdki w treści', () => {
+    const z = ZRODLO_SEJFU.match(/const Bev_ECHO_ZAWSZE_KOSZA = Object\.freeze\((\[[^\]]*\])\);/);
+    const k = ZRODLO_SEJFU.match(/const Bev_KANON_KOSZA = Object\.freeze\((\[[^\]]*\])\);/);
+    expect([!!z, !!k], 'stałe Bev_ECHO_ZAWSZE_KOSZA i Bev_KANON_KOSZA w sejfie').toEqual([true, true]);
+    const lista = (x) => JSON.parse(x[1].replace(/'/g, '"').replace(/\s+/g, ''));
+    expect(lista(z)).toEqual([...POLA_ZAWSZE.stomb]);
+    expect(lista(k)).toEqual([...POLA_D7, 'seq', ...POSTAC_GWIAZDKI.map((p) => `payload.${p}`)]);
+  });
+
+  it('kanon, reguła pola i samo wygaśnięcie — Bev_kanonKosza, Bev_echoKoszaT i Bev_samoWygasniecie z kodu sejfu', () => {
+    const stale = ['Bev_ECHO_ZAWSZE_KOSZA', 'Bev_KANON_KOSZA'].map((n) => { const m = ZRODLO_SEJFU.match(new RegExp(`\\nconst ${n} = [^;]*;`)); expect(m, `stała ${n}`).toBeTruthy(); return m[0]; });
+    const NAZWY = ['Bev_obiekt', 'Bev_ma', 'Bev_kopia', 'Bgw_kanon', 'Bev_pole', 'Bev_bezPola', 'Bev_json', 'Bev_kanonKosza', 'Bev_samoWygasniecie', 'Bev_echoKoszaT'];
+    const f = new Function(`${stale.join('\n')}\n${NAZWY.map(wytnij).join('\n')}\nreturn { kanon: Bev_kanonKosza, samo: Bev_samoWygasniecie, T: Bev_echoKoszaT, json: Bev_json };`)();
+    const T0 = '2026-03-02T08:00:00.000Z', T1 = '2026-03-02T08:05:00.000Z';
+    const e = (pid, o = {}) => ({ patientId: pid, snapshotId: 'v', deletedAtISO: T1, savedAtISO: T0, rev: 1, updatedAtISO: T0, gwiazdka: { pin: true, at: T0 }, visitIdentity: { version: 1, visitId: 'w-1' }, payload: { user: { weight: 20 }, visit: { visitId: 'w-1' }, _pinned: true, _pinnedState: { pin: true, at: T0 } }, ...o });
+    const kl = (l) => f.json(f.kanon(l));
+    // kanon: kolejność kluczy i elementów bez znaczenia
+    const odwr = (x) => Object.fromEntries(Object.entries(x).reverse());
+    expect(kl([e('P'), e('Q')]), 'kolejność elementów i kluczy').toBe(kl([odwr(e('Q')), odwr(e('P'))]));
+    expect(kl([e('P')]), 'tylko opis (rev, updatedAtISO, zmianaISO, koszISO, revPary, seq)').toBe(kl([e('P', { rev: 7, updatedAtISO: T1, zmianaISO: T1, koszISO: T1, revPary: [[1, 2]], seq: 9 })]));
+    expect(kl([e('P')]), 'tylko postać gwiazdki w treści').toBe(kl([e('P', { payload: { user: { weight: 20 }, visit: { visitId: 'w-1' }, _pinnedState: { pin: false, at: T1 } } })]));
+    expect(kl([e('P')]), 'pole gwiazdka w kanonie').not.toBe(kl([e('P', { gwiazdka: { pin: false, at: T1 } })]));
+    expect(kl([e('P')]), 'treść w kanonie').not.toBe(kl([e('P', { payload: { user: { weight: 40 }, visit: { visitId: 'w-1' } } })]));
+    // samo wygaśnięcie: tylko zdjęta treść
+    const bezTresci = (x) => { const { payload: _p, ...r } = x; return r; };
+    expect(f.samo(f.kanon([e('P')]), f.kanon([bezTresci(e('P'))])), 'zdjęta tylko treść').toBe(true);
+    expect(f.samo(f.kanon([e('P')]), f.kanon([bezTresci(e('P', { gwiazdka: { pin: false, at: T1 } }))])), 'zdjęta treść i inna gwiazdka').toBe(false);
+    expect(f.samo(f.kanon([e('P')]), f.kanon([e('P')])), 'nic nie zdjęto').toBe(false);
+    expect(f.samo(f.kanon([e('P')]), f.kanon([bezTresci(e('Q'))])), 'element innej karty').toBe(false);
+    expect(f.samo(f.kanon([e('P'), e('Q')]), f.kanon([bezTresci(e('P')), e('Q')])), 'dwie karty, treść zdjęta w jednej').toBe(true);
+    // reguła pola: bez visitIdentity i payload.visit nieobecnych w elemencie ładunku tej samej karty
+    const bezTozsamosci = (x) => { const { visitIdentity: _v, payload: { visit: _w, ...p }, ...r } = x; return { ...r, payload: p }; };
+    expect(f.json(f.T(f.kanon([e('P')]), [bezTozsamosci(e('P'))])), 'ładunek bez tożsamości: równe ładunkowi').toBe(kl([bezTozsamosci(e('P'))]));
+    expect(f.json(f.T(f.kanon([e('P')]), [e('P')])), 'ładunek z tożsamością: bez zmian').toBe(kl([e('P')]));
+    expect(f.json(f.T(f.kanon([e('P'), e('Q')]), [bezTozsamosci(e('P'))])), 'element innej karty bez pary w ładunku — bez zmian').toBe(kl([bezTozsamosci(e('P')), e('Q')]));
+    // para po karcie (patientId), nie po kolejności elementów: ładunek w obu kolejnościach
+    for (const P of [[e('Q'), bezTozsamosci(e('P'))], [bezTozsamosci(e('P')), e('Q')]]) {
+      expect(f.json(f.T(f.kanon([e('P'), e('Q')]), P)), `para po karcie, ładunek ${P.map((x) => x.patientId).join(', ')}`).toBe(kl([bezTozsamosci(e('P')), e('Q')]));
+    }
+    expect(f.json(f.T(f.kanon([e('P')]), [{ ...bezTozsamosci(e('P')), gwiazdka: null }])), 'inne pole nieobecne w ładunku zostaje').not.toBe(kl([{ ...bezTozsamosci(e('P')), gwiazdka: null }]));
+  });
+});
+
+// Zestaw kopert z czterech przypadków odsyłania wpisów (gwiazdka i poprawka, w ładunku i spoza) na jednej karcie P
+// [v, w, x, y, z]: B — gwiazdka v, poprawka x (40 kg), Kosz w i y; A — wcześniej gwiazdka w i poprawka y (40 kg),
+// później Kosz v i x. Koperty: snap v, stomb w, snap x, stomb y.
+async function zestawKosza(o) {
+  const k = await karta(o, 1, [20, 21, 22, 23, 24]);
+  const [v, w, x, y] = k.w;
+  await o.gotowe();
+  const B = await blizniak(o);
+  tik(MIN);
+  await gwiazdka(o, k.P, w);
+  await popraw(o, k.P, y, 40);
+  await o.gotowe();
+  tik(MIN);
+  await gwiazdka(B, k.P, v);
+  await popraw(B, k.P, x, 40);
+  await doKosza(B, k.P, w);
+  await doKosza(B, k.P, y);
+  const koperty = [(await kopertaSnap(B, k.P, v)).env, (await koperta(B, await B.ev.buildSnapshotTombstoneEvent(w, null))).env,
+    (await kopertaSnap(B, k.P, x)).env, (await koperta(B, await B.ev.buildSnapshotTombstoneEvent(y, null))).env];
+  tik(MIN);
+  await doKosza(o, k.P, v);
+  await doKosza(o, k.P, x);
+  await o.gotowe();
+  return { P: k.P, v, w, x, y, B, koperty };
+}
+
+describe('odsyłanie wpisów Kosza: drogi bez odsyłania, przełącznik wyłączony, bramka i tryb', () => {
+  it('notatka pacjenta, stara delta, delta i pełna kopia z różnicą wpisu Kosza (gwiazdka B dla v w Koszu A) — 0 wierszy stomb; wpis przyjmuje gwiazdkę', async () => {
+    for (const droga of ['notatka pacjenta (pnote)', 'stara delta przez applyEncryptedEvent', 'delta (applyEncryptedDelta)', 'pełna kopia (mergeSyncPayload)']) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await gwiazdkaSpoza(o);
+      const s0 = ostatni(o);
+      if (droga.startsWith('notatka')) {
+        const n = (await s.B.v.savePatientNote({ patientId: s.P, title: 'Fikcyjna notatka', body: 'Fikcyjna treść.', category: 'inne' })).id;
+        tik();
+        expect((await zastosuj(o, (await koperta(s.B, await s.B.ev.buildPatientNoteEvent(n, null))).env)).status, `${droga}: kontrola`).toBe('applied');
+      } else if (droga.startsWith('pełna')) await o.v.mergeSyncPayload(await s.B.v.exportSyncPayload());
+      else {
+        const d = await s.B.v.buildPatientDelta(s.P);
+        if (droga.startsWith('delta')) expect(await o.v.applyEncryptedDelta(d), `${droga}: kontrola`).toBeTruthy();
+        else expect((await o.ev.applyEncryptedEvent({ iv: d.iv, data: d.data })).status, `${droga}: kontrola`).toBe('applied');
+      }
+      tik();
+      await o.gotowe();
+      if (!droga.startsWith('notatka')) expect((await wpisyEksportu(o, s.v)).map(faktWpisu), `${droga}: kontrola — wpis z gwiazdką`).toEqual([{ masa: 20, gwiazdka: true, tresc: true }]);
+      expect(wierszeKosza(o, s0).map(opis), `${droga}: wiersze stomb`).toEqual([]);
+    }
+  }, 3 * CZAS);
+
+  it('przełącznik wyłączony — sejf a sejf bez odsyłania w bliźniaczych oknach przy kopertach wpisów Kosza (gwiazdka i poprawka, w ładunku i spoza): te same wyniki, zapis przebiegu atrapy, wiersze i operacje crypto.subtle; 4 odczyty pola i 4 klucza przełącznika na 4 zastosowania', async () => {
+    const o = await okno({ bramka: true });
+    await o.zaloguj('A');
+    const s = await zestawKosza(o);
+    const t = zegar;
+    ustawZegar(t);
+    const a = await przebieg(await klonA(o, ZRODLO_SEJFU), s.koperty);
+    ustawZegar(t);
+    const b = await przebieg(await klonA(o, bezOdsylania().zrodlo), s.koperty);
+    expect(a.wyniki.map((w) => w.status), 'kontrola: statusy').toEqual(['applied', 'applied', 'applied', 'applied']);
+    expect(a.wyniki, 'wyniki').toEqual(b.wyniki);
+    expect(a.log, 'zapis przebiegu atrapy').toEqual(b.log);
+    expect(a.krypto, 'operacje crypto.subtle').toEqual(b.krypto);
+    expect(a.wiersze, 'wiersze kolejki').toEqual(b.wiersze);
+    expect({ sejf: a.echo, bez: b.echo }, 'odczyty pola przełącznika').toEqual({ sejf: MA_ECHO ? 4 : 0, bez: 0 });
+    expect({ sejf: a.klucz, bez: b.klucz }, 'odczyty klucza przełącznika').toEqual({ sejf: MA_ECHO ? 4 : 0, bez: 0 });
+  }, 2 * CZAS);
+
+  it('zamknięta bramka dziennika przy włączonym przełączniku i kopercie snap z gwiazdką dla v w Koszu — 0 wierszy, zapis przebiegu atrapy jak w sejfie bez odsyłania (bez odczytu metadanych konta ponad dziś); „Komputer w pracy” — bez bazy kolejki i bez porównania wpisów', async () => {
+    const o = await okno({ bramka: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const t = zegar;
+    const w = {};
+    for (const [nazwa, zrodlo, echo] of [['sejf', ZRODLO_SEJFU, true], ['bez odsyłania', bezOdsylania().zrodlo, undefined]]) {
+      ustawZegar(t);
+      const X = await klonA(o, zrodlo, echo);
+      X.bramka.wartosc = false;
+      w[nazwa] = await przebieg(X, [s.kB.env]);
+    }
+    expect(w.sejf.wyniki, 'wynik').toEqual(w['bez odsyłania'].wyniki);
+    expect(w.sejf.log, 'zapis przebiegu atrapy').toEqual(w['bez odsyłania'].log);
+    expect(w.sejf.wiersze, 'wiersze kolejki').toEqual([]);
+    const c = await okno({ bramka: true, echo: true, chmura: ['A'] });
+    await c.zaloguj('A');
+    const k = await karta(c, 1, [20, 21]);
+    await c.gotowe();
+    const { drugieOkno } = await import('../support/okno-magazynu.mjs');
+    const B = await drugieOkno(c, { bramka: false, zaloguj: 'A' });
+    OKNA.push(B);
+    await B.v.mergeSyncPayload(await c.v.exportSyncPayload());
+    tik(MIN);
+    await gwiazdka(B, k.P, k.w[0]);
+    const kB = await kopertaSnap(B, k.P, k.w[0]);
+    tik(MIN);
+    await doKosza(c, k.P, k.w[0]);
+    await c.gotowe();
+    const n = odszKosza(c);
+    expect((await zastosuj(c, kB.env)).status).toBe('applied');
+    expect((await wpisyEksportu(c, k.w[0])).map(faktWpisu), '„Komputer w pracy”: kontrola — wpis z gwiazdką').toEqual([{ masa: 20, gwiazdka: true, tresc: true }]);
+    expect([c.jestBaza('A'), n.ile], '„Komputer w pracy”: bez bazy kolejki, bez odszyfrowań w porównaniu wpisów').toEqual([false, 0]);
+  }, 3 * CZAS);
+
+  it('wartownik treści: fikcyjny napis z nazwiska nie wychodzi poza szyfrogram — emisja odsyłania wpisu z samym identyfikatorem wersji, wyniki, console, localStorage i sessionStorage', async () => {
+    const W = 'Wartownik-Testowy-KZ4';
+    const WZ = W.slice(0, 9);
+    const util = await import('node:util');
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const szpiedzy = [console, o.win.console].flatMap((c) => ['log', 'info', 'warn', 'error', 'debug'].map((m) => vi.spyOn(c, m)));
+    const r0 = await o.v.savePatient({ name: 'Testowy ' + W, user: { lastName: W, firstName: 'Jan', sex: 'M', height: 120, weight: 20 } }, { dedup: false });
+    tik();
+    const r1 = await o.v.savePatient({ name: 'Testowy ' + W, user: { lastName: W, firstName: 'Jan', sex: 'M', height: 121, weight: 21 } }, { dedup: false, patientId: r0.patientId });
+    tik();
+    await o.gotowe();
+    const B = await blizniak(o);
+    tik(MIN);
+    await gwiazdka(B, r0.patientId, r0.snapshotId);
+    const kB = await kopertaSnap(B, r0.patientId, r0.snapshotId);
+    expect(JSON.stringify(kB.k), 'kontrola: napis w treści koperty').toContain(W);
+    tik(MIN);
+    await doKosza(o, r0.patientId, r0.snapshotId);
+    await o.gotowe();
+    const e0 = o.l.emisje.length;
+    const wynik = await zastosuj(o, kB.env);
+    expect([wynik.status, r1.patientId], 'kontrola: zastosowane').toEqual(['applied', r0.patientId]);
+    expect(JSON.stringify(wynik)).not.toContain(WZ);
+    const odsylanie = emisjeKosza(o, e0);
+    expect(odsylanie.map((x) => x.klucze), 'emisja odsyłania wpisu: sam identyfikator wersji').toEqual([[r0.snapshotId]]);
+    for (const x of odsylanie) expect(JSON.stringify(x)).not.toContain(WZ);
+    for (const s of szpiedzy) for (const wywolanie of s.mock.calls) expect(util.inspect(wywolanie, { depth: 8, showHidden: true })).not.toContain(WZ);
+    expect(JSON.stringify(o.lokalny.m)).not.toContain(WZ);
+    const ss = o.win.sessionStorage;
+    const sesyjne = typeof ss.klucze === 'function' ? ss.klucze().map((k) => ss.getItem(k)) : [];
+    expect(JSON.stringify(sesyjne)).not.toContain(WZ);
+  }, CZAS);
+});
+
+describe('odsyłanie wpisów Kosza: odbiorcy, samo wygaśnięcie treści i okno nagrobków (sztuczny zegar)', () => {
+  const D30 = 30 * 24 * 3600e3;
+  const D365 = 365 * 24 * 3600e3;
+  it('odesłany wpis z gwiazdką u urządzenia, które usunęło kartę później niż Kosz — karta zostaje usunięta, okno Kosza bez wiersza tej karty, 0 odesłań', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const C = await klonA(o, ZRODLO_SEJFU, true);
+    tik(MIN);
+    await C.v.removePatient(s.P);
+    tik();
+    await C.gotowe();
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, s.kB.env)).status).toBe('applied');
+    const odeslane = wierszeKosza(o, s0);
+    expect(odeslane.map(opis), 'kontrola: wiersz odsyłania A').toEqual([['stomb', s.v, 'pending']]);
+    const sC = ostatni(C);
+    expect((await zastosuj(C, odeslane[0].env)).status).toBe('applied');
+    expect(await C.v.getPatient(s.P), 'karta P zostaje usunięta').toBe(null);
+    expect((await C.v.listTrashedSnapshots()).filter((e) => e.snapshotId === s.v && e.patientExists), 'okno Kosza bez wiersza karty P').toEqual([]);
+    expect(wierszeOd(C, sC).map(opis), 'bez odesłań').toEqual([]);
+  }, CZAS);
+
+  it('samo wygaśnięcie treści: wpis z treścią po granicy 30 dni i koperta snap v bez nowości — zapis wpisu bez treści, 0 wierszy', async () => {
+    {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await bazaKosza(o);
+      const kB = await kopertaSnap(s.B, s.P, s.v);
+      tik(MIN);
+      await doKosza(o, s.P, s.v);
+      await o.gotowe();
+      const [e] = await wpisyEksportu(o, s.v);
+      ustawZegar(Date.parse(e.deletedAtISO) + D30 + 1);
+      const przed = surowyKosz(o, s.v);
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, kB.env)).status).toBe('applied');
+      expect([surowyKosz(o, s.v) !== przed, (await wpisyEksportu(o, s.v)).map(faktWpisu)], 'samo wygaśnięcie: kontrola — zapis wpisu bez treści').toEqual([true, [{ masa: null, gwiazdka: false, tresc: false }]]);
+      expect(wierszeOd(o, s0).map(opis), 'samo wygaśnięcie: wiersze').toEqual([]);
+    }
+  }, CZAS);
+
+  it('unieważnienie Kosza: Kosz A połączony z późniejszym przycięciem v z B (porządkowanie) — jeden wiersz stomb v', async () => {
+    {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await bazaKosza(o);
+      tik(MIN);
+      await doKosza(o, s.P, s.v);
+      await o.gotowe();
+      tik(MIN);
+      await s.B.v.pruneSnapshotsForPatient(s.P, { recentHours: 0 });
+      tik();
+      const kB = await koperta(s.B, await s.B.ev.buildSnapshotTombstoneEvent(s.v, null));
+      expect(kB.k.snapshotTombstones.map((x) => [x.powod, !!x.payload]), 'kontrola: wpis retencji B bez treści').toEqual([['retencja', false]]);
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, kB.env)).status).toBe('applied');
+      const [po] = await wpisyEksportu(o, s.v);
+      expect([!!po.przycietoISO, !!po.payload, po.powod], 'kontrola: Kosz A z późniejszym przycięciem, z treścią').toEqual([true, true, undefined]);
+      expect(wierszeOd(o, s0).map(opis), 'unieważnienie: wiersze').toEqual([['stomb', s.v, 'pending']]);
+    }
+  }, CZAS);
+
+  it('zegar: gwiazdka spoza ładunku przy Kosz + 30 d − 1 ms, dokładnie + 30 d i + 30 d + 1 ms — jeden wiersz stomb v z treścią, z treścią, bez treści (zawsze z gwiazdką); odbiorca odesłanego wpisu (B) nic nie odsyła, okno Kosza i „Przywróć” takie same na obu', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const [e] = await wpisyEksportu(o, s.v);
+    const granica = Date.parse(e.deletedAtISO) + D30;
+    const wynik = [];
+    for (const [nazwa, t] of [['− 1 ms', granica - 1], ['= granica', granica], ['+ 1 ms', granica + 1]]) {
+      ustawZegar(t);
+      const X = await klonA(o, ZRODLO_SEJFU, true);
+      const Y = await klonA(s.B, ZRODLO_SEJFU, true);
+      const s0 = ostatni(X);
+      expect((await zastosuj(X, s.kB.env)).status, `${nazwa}: wynik`).toBe('applied');
+      const nowe = wierszeOd(X, s0);
+      const wpisy = nowe.length === 1 ? (await trescWierszaKosza(X, nowe[0])).wpisy : null;
+      const sY = ostatni(Y);
+      if (nowe.length === 1) expect((await zastosuj(Y, nowe[0].env)).status, `${nazwa}: odbiorca`).toBe('applied');
+      const w = await widokKoszaObu(o, X, Y, s.P, s.v);
+      wynik.push({ nazwa, wiersze: nowe.map((x) => x.kind), wpisy, odbiorca: wierszeOd(Y, sY).map(opis), widokRowny: JSON.stringify(w.X) === JSON.stringify(w.Y), oknoKosza: !!w.X.wiersz });
+    }
+    const wpis = (tresc) => [{ karta: s.P, masa: tresc ? 20 : null, gwiazdka: true, tresc }];
+    expect(wynik, 'wiersze odsyłania, odbiorca, okno Kosza').toEqual([
+      { nazwa: '− 1 ms', wiersze: ['stomb'], wpisy: wpis(true), odbiorca: [], widokRowny: true, oknoKosza: true },
+      { nazwa: '= granica', wiersze: ['stomb'], wpisy: wpis(true), odbiorca: [], widokRowny: true, oknoKosza: true },
+      { nazwa: '+ 1 ms', wiersze: ['stomb'], wpisy: wpis(false), odbiorca: [], widokRowny: true, oknoKosza: false },
+    ]);
+  }, 3 * CZAS);
+
+  it('zegar: granica 30 dni w trakcie scalania (zegar przestawiony przy szyfrowaniu treści z ładunku w fazie Kosza) — poprawka z gwiazdką: jeden wiersz stomb v bez treści, z gwiazdką; sama poprawka: 0 wierszy', async () => {
+    const wynik = {};
+    for (const [nazwa, zGwiazdka] of [['poprawka z gwiazdką', true], ['sama poprawka', false]]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await bazaKosza(o);
+      tik(MIN);
+      await popraw(s.B, s.P, s.v, 40);
+      if (zGwiazdka) await gwiazdka(s.B, s.P, s.v);
+      const kB = await kopertaSnap(s.B, s.P, s.v);
+      tik(MIN);
+      await doKosza(o, s.P, s.v);
+      await o.gotowe();
+      const [e] = await wpisyEksportu(o, s.v);
+      const granica = Date.parse(e.deletedAtISO) + D30;
+      ustawZegar(granica - 1000);
+      const h = o.krypto.po({ metoda: 'encrypt', wStosie: 'Bkz_scalKoniec' }, () => { ustawZegar(granica + 1); });
+      const s0 = ostatni(o);
+      expect((await zastosuj(o, kB.env)).status, `${nazwa}: wynik`).toBe('applied');
+      expect([h.zrobione, (await wpisyEksportu(o, s.v)).map((x) => x.payload ? 'z treścią' : 'bez treści')], `${nazwa}: kontrola — hak przy szyfrowaniu treści, wpis bez treści`).toEqual([true, ['bez treści']]);
+      // Wiersze stomb: skok zegara o 30 dni uruchamia przy pierwszej emisji przegląd kolejki „po dobie”, który dopisuje
+      // wiersz karty P (nośnik — snap najnowszej wersji w) — jak dziś, poza odsyłaniem.
+      const nowe = wierszeKosza(o, s0);
+      wynik[nazwa] = { wiersze: nowe.map((x) => [x.kind]), wpisy: nowe.length ? (await trescWierszaKosza(o, nowe[0])).wpisy.map((x) => [x.gwiazdka, x.tresc]) : [] };
+    }
+    expect(wynik).toEqual({ 'poprawka z gwiazdką': { wiersze: [['stomb']], wpisy: [[true, false]] }, 'sama poprawka': { wiersze: [], wpisy: [] } });
+  }, 2 * CZAS);
+
+  it('zegar: okno nagrobków 365 dni — przy ostatniej chwili wpisu + 365 d − 1 ms jeden wiersz stomb v bez treści, z gwiazdką; przy + 365 d + 1 ms wpisu nie ma: 0 wierszy i 0 emisji stomb, v wraca do karty ze starej koperty B (z gwiazdką) bez wiersza snap', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await gwiazdkaSpoza(o);
+    const [e] = await wpisyEksportu(o, s.v);
+    const granica = Date.parse(e.deletedAtISO) + D365;
+    const wynik = [];
+    for (const [nazwa, t] of [['− 1 ms', granica - 1], ['+ 1 ms', granica + 1]]) {
+      ustawZegar(t);
+      const X = await klonA(o, ZRODLO_SEJFU, true);
+      const s0 = ostatni(X);
+      const e0 = X.l.emisje.length;
+      expect((await zastosuj(X, s.kB.env)).status, `${nazwa}: wynik`).toBe('applied');
+      const nowe = wierszeOd(X, s0);
+      wynik.push({
+        nazwa, wiersze: nowe.map((x) => x.kind), emisjeKosza: emisjeKosza(X, e0).length, wpisy: (await wpisyEksportu(X, s.v)).map(faktWpisu),
+        wersja: await stanWersji(X, s.P, s.v),
+      });
+    }
+    expect(wynik).toEqual([
+      { nazwa: '− 1 ms', wiersze: ['stomb'], emisjeKosza: 1, wpisy: [{ masa: null, gwiazdka: true, tresc: false }], wersja: null },
+      { nazwa: '+ 1 ms', wiersze: [], emisjeKosza: 0, wpisy: [], wersja: { masa: 20, gwiazdka: true, rev: 1 } },
+    ]);
+  }, 2 * CZAS);
+
+  it('zegar: rozjazd zegarów — odbiorca (A) po granicy 30 dni scala kopertę stomb nadawcy (B) przed granicą: A odsyła raz wpis bez treści z gwiazdką; B (przed granicą) zachowuje treść i odsyła raz złączenie z gwiazdką; A nic; potem B po granicy przy kolejnym zdarzeniu z v — 0', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    tik(MIN);
+    await gwiazdka(o, s.P, s.v);
+    await o.gotowe();
+    const X = await klonA(s.B, ZRODLO_SEJFU, true);
+    tik(MIN);
+    await doKosza(X, s.P, s.v);
+    await X.gotowe();
+    const kX = await koperta(X, await X.ev.buildSnapshotTombstoneEvent(s.v, null));
+    const [e] = await wpisyEksportu(X, s.v);
+    const granica = Date.parse(e.deletedAtISO) + D30;
+    ustawZegar(granica + 1);
+    const sA = ostatni(o);
+    expect((await zastosuj(o, kX.env)).status).toBe('applied');
+    const odA = wierszeOd(o, sA);
+    expect(await Promise.all(odA.map(async (w) => (await trescWierszaKosza(o, w)).wpisy.map((x) => [x.gwiazdka, x.tresc]))), 'A po granicy: jeden wiersz bez treści, z gwiazdką').toEqual([[[true, false]]]);
+    ustawZegar(Date.parse(e.deletedAtISO) + 2 * MIN);
+    const sX = ostatni(X);
+    expect((await zastosuj(X, odA[0].env)).status).toBe('applied');
+    expect((await wpisyEksportu(X, s.v)).map((x) => [!!(x.gwiazdka && x.gwiazdka.pin), !!x.payload]), 'kontrola: B zachowuje treść, przyjmuje gwiazdkę').toEqual([[true, true]]);
+    const odX = wierszeOd(X, sX);
+    expect(await Promise.all(odX.map(async (w) => (await trescWierszaKosza(X, w)).wpisy.map((x) => [x.gwiazdka, x.tresc]))), 'B przed granicą: jedno złączenie z gwiazdką i treścią').toEqual([[[true, true]]]);
+    ustawZegar(granica + 2);
+    const sA2 = ostatni(o);
+    expect((await zastosuj(o, odX[0].env)).status).toBe('applied');
+    expect(wierszeOd(o, sA2).map(opis), 'A po złączeniu B: nic').toEqual([]);
+    const sX2 = ostatni(X);
+    expect((await zastosuj(X, odA[0].env)).status).toBe('applied');
+    expect(wierszeOd(X, sX2).map(opis), 'B po granicy, kolejne zdarzenie z v: 0').toEqual([]);
+  }, 2 * CZAS);
+
+  it('zegar: odbiorca po granicy 30 dni dostaje wpis Kosza z treścią (u nadawcy przed granicą), bez innej różnicy — zapisuje wpis bez treści, 0 wierszy (samo wygaśnięcie względem ładunku)', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await bazaKosza(o);
+    tik(MIN);
+    await doKosza(s.B, s.P, s.v);
+    const kB = await koperta(s.B, await s.B.ev.buildSnapshotTombstoneEvent(s.v, null));
+    expect(kB.k.snapshotTombstones.map((x) => !!x.payload), 'kontrola: wpis z treścią').toEqual([true]);
+    ustawZegar(Date.parse(kB.k.snapshotTombstones[0].deletedAtISO) + D30 + 1);
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, kB.env)).status).toBe('applied');
+    expect((await wpisyEksportu(o, s.v)).map(faktWpisu), 'kontrola: wpis A bez treści').toEqual([{ masa: null, gwiazdka: false, tresc: false }]);
+    expect(wierszeOd(o, s0).map(opis), 'wiersze').toEqual([]);
+  }, CZAS);
+});
+
+// ══ Odsyłanie ukrytego wpisu Kosza karty usuniętej (E3-PR0d2, P-ZBIEZNOSC-ZDARZEN; ten sam przełącznik) ══════════════
+// Wpis Kosza, który zostaje tylko na jednym urządzeniu, gdy późniejsza wersja nie weszła, bo karta jest tu usunięta: po
+// udanym zastosowaniu koperty zdarzenia z wersją v pod kartą P, gdy po scaleniu v nie ma pod żadną kartą, jest jej wpis
+// Kosza, z którym v by wygrała, karty żadnego elementu wpisu nie ma, a karta P przegrała tu z nagrobkiem pacjenta
+// (najpóźniejszy nagrobek P nie wcześniejszy niż zapis karty P w ładunku), urządzenie odsyła swój wpis (stomb v, ta
+// sama lista co odsyłanie wpisów E3-PR0d). Odczyt istnienia kart i nagrobków pacjentów (Bev_stanKart) — tylko przy
+// udanym scaleniu i niepustym wstępie, przez strzeżony adapter, bez odszyfrowania.
+// Wspólny początek: A — karta „Testowy Jan1” [v 20 kg, w 21 kg] (przy zQ także karta „Testowy Jan2” [q 30 kg, 31 kg]);
+// bliźniak B daje v do Kosza („Odepnij i usuń”) — koperta stomb B zastosowana na A (wpis Kosza v pod P); potem B
+// „Przywróć” v — koperta snap P/v B (wersja zmieniona po Koszu), na A jeszcze nie zastosowana. Bliźniak B z emisją
+// (emisjaB) — odbiorca wierszy A przy otwartej bramce i włączonym przełączniku.
+const KOTWICA_STANU_KART = 'async function Bev_stanKart(';
+async function ukrytyWpis(o, { zQ = false, emisjaB = false } = {}) {
+  const k = await karta(o, 1, [20, 21]);
+  const kq = zQ ? await karta(o, 2, [30, 31]) : null;
+  await o.gotowe();
+  const B = await blizniak(o, emisjaB ? { emisja: true, echo: true } : {});
+  tik(MIN);
+  await B.v.moveSnapshotToTrash(k.P, k.w[0], { odepnij: true });
+  tik();
+  const kKosz = await koperta(B, await B.ev.buildSnapshotTombstoneEvent(k.w[0], null));
+  expect((await zastosuj(o, kKosz.env)).status, 'kontrola: Kosz B u A').toBe('applied');
+  tik(MIN);
+  await B.v.restoreTrashedSnapshot(k.P, k.w[0]);
+  tik();
+  if (emisjaB) await B.gotowe();
+  const kSnap = await kopertaSnap(B, k.P, k.w[0]);
+  return { P: k.P, v: k.w[0], w: k.w[1], Q: kq ? kq.P : null, q: kq ? kq.w[0] : null, B, kSnap };
+}
+const usunPacjenta = async (o, P) => { tik(MIN); await o.v.removePatient(P); tik(); await o.gotowe(); };
+// Czekanie na warunek (prawdziwe setTimeout; sztuczny zegar podmienia tylko Date) — najwyżej ok. ms milisekund.
+const czekajNa = async (warunek, ms = 5000) => { for (let i = 0; i < ms / 10 && !warunek(); i += 1) await new Promise((ok) => { setTimeout(ok, 10); }); };
+// Stan urządzenia X wobec wersji v: karta P jest, v w karcie P, wpisy Kosza v (karta, masa, gwiazdka, z treścią).
+const stanUkrytego = async (X, s) => ({ kartaP: !!(await X.v.getPatient(s.P)), vWKarcie: !!(await wersja(X, s.P, s.v)), kosz: (await wpisyEksportu(X, s.v)).map((e) => ({ karta: e.patientId === s.P ? 'P' : e.patientId === s.Q ? 'Q' : '?', ...faktWpisu(e) })) });
+const KOSZ_V_UKRYTY = [{ karta: 'P', masa: 20, gwiazdka: false, tresc: true }];
+const etykietyWierszy = (s) => (w) => [w.kind, w.entityKey === s.v ? 'v' : w.entityKey === s.P ? 'P' : w.entityKey === s.q ? 'q' : w.entityKey, w.state];
+// Transakcje atrapy na sklepie bazy sejfu od znacznika.
+const txSklepu = (o, z, sklep) => o.idb.__atrapa.log.slice(z.log).filter((w) => w[0] === 'tx' && w[1] === bazaSejfu(o) && w[2].includes(sklep) && w[4] === 'start').length;
+// A po „Usuń pacjenta” stosuje kopertę „Przywróć” z B: wynik, wiersze od znacznika, emisje stomb w sesji scalania.
+async function odeslanieUkrytego(o, s) {
+  const s0 = ostatni(o);
+  const e0 = o.l.emisje.length;
+  const r = await zastosuj(o, s.kSnap.env);
+  return { r, s0, wiersze: wierszeOd(o, s0), emisje: emisjeKosza(o, e0) };
+}
+
+describe('odsyłanie ukrytego wpisu Kosza karty usuniętej: późniejsza wersja nie weszła, bo karta jest tu usunięta', () => {
+  it('A „Usuń pacjenta”, potem koperta „Przywróć” z B — wersja nie wchodzi (karta P przegrywa z nagrobkiem), wpis Kosza zostaje ukryty: jeden wiersz stomb v z wpisem 20 kg pod P (z treścią, koperta bez kart); emisja z samym identyfikatorem wersji', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    const x = await odeslanieUkrytego(o, s);
+    expect(x.r.status, 'wynik').toBe('applied');
+    expect(await stanUkrytego(o, s), 'kontrola: karta P usunięta, v poza kartą, wpis 20 kg pod P').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+    expect(x.wiersze.map(opis), 'wiersze od znacznika').toEqual([['stomb', s.v, 'pending']]);
+    expect(await trescWierszaKosza(o, x.wiersze[0]), 'treść wiersza').toEqual({ kind: 'stomb', key: s.v, wpisy: [{ karta: s.P, masa: 20, gwiazdka: false, tresc: true }] });
+    expect((await odszyfruj(o, x.wiersze[0].env)).patients || [], 'koperta bez kart (karty P nie ma)').toEqual([]);
+    expect(x.emisje.map((e) => e.klucze), 'emisja odsyłania: sam identyfikator wersji').toEqual([[s.v]]);
+  }, CZAS);
+
+  it('odbiorca po usunięciu karty (B z żywą v stosuje nagrobek P z A, potem wiersz A) — karta usunięta, wpis zapisany jako ukryty (okno Kosza bez wiersza karty P), 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o, { emisjaB: true });
+    await usunPacjenta(o, s.P);
+    const x = await odeslanieUkrytego(o, s);
+    const stomb = x.wiersze.filter((w) => w.kind === 'stomb');
+    expect(stomb.map(opis), 'kontrola: wiersz odsyłania A').toEqual([['stomb', s.v, 'pending']]);
+    const sB = ostatni(s.B);
+    const kPt = await koperta(o, await o.ev.buildPatientTombstoneEvent(s.P, null));
+    expect([(await zastosuj(s.B, kPt.env)).status, (await zastosuj(s.B, stomb[0].env)).status], 'statusy u B').toEqual(['applied', 'applied']);
+    expect(await stanUkrytego(s.B, s), 'B: karta usunięta, wpis ukryty').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+    expect((await s.B.v.listTrashedSnapshots()).filter((e) => e.snapshotId === s.v && e.patientExists), 'okno Kosza B bez wiersza karty P').toEqual([]);
+    expect(wierszeOd(s.B, sB).map(opis), 'B: wiersze').toEqual([]);
+  }, CZAS);
+
+  it('odbiorca z tym samym ukrytym wpisem (kopia A po usunięciu karty, przełącznik włączony) — 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    const C = await klonA(o, ZRODLO_SEJFU, true);
+    const x = await odeslanieUkrytego(o, s);
+    const stomb = x.wiersze.filter((w) => w.kind === 'stomb');
+    expect(stomb.map(opis), 'kontrola: wiersz odsyłania A').toEqual([['stomb', s.v, 'pending']]);
+    const sC = ostatni(C);
+    expect((await zastosuj(C, stomb[0].env)).status, 'status u kopii').toBe('applied');
+    expect(await stanUkrytego(C, s), 'kopia: karta usunięta, wpis ukryty').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+    expect(wierszeOd(C, sC).map(opis), 'kopia: wiersze').toEqual([]);
+  }, CZAS);
+
+  it('ta sama koperta zastosowana drugi raz z powodzeniem — wpis odesłany jeszcze raz (zbędna druga wiadomość, decyzja 1 z 2026-11-19): druga emisja stomb v i nowy wiersz', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    const x = await odeslanieUkrytego(o, s);
+    expect(x.wiersze.map(opis), 'kontrola: pierwsze odesłanie').toEqual([['stomb', s.v, 'pending']]);
+    const y = await odeslanieUkrytego(o, s);
+    expect(y.r.status, 'powtórka: wynik').toBe('applied');
+    expect(y.emisje.map((e) => e.klucze), 'powtórka: emisja odsyłania').toEqual([[s.v]]);
+    expect(y.wiersze.map(opis), 'powtórka: wiersze od znacznika').toEqual(POWTORKA_UKRYTEGO.nowe(s));
+    expect(o.kolejka('A').filter((w) => w.kind === 'stomb' && w.entityKey === s.v).map(opis), 'wiersze stomb v w kolejce A').toEqual(POWTORKA_UKRYTEGO.wszystkie(s));
+  }, CZAS);
+
+  it('busy, busy i apply-error na wejściu scalania przy ukrytym wpisie (między próbami inny wiersz w kolejce) — po każdej nieudanej próbie 0 wierszy stomb; udane ponowienie — jeden wiersz', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_LE) });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o, { zQ: true });
+    await usunPacjenta(o, s.P);
+    const s0 = ostatni(o);
+    const wynik = [];
+    for (const [i, x] of [blad({ vildaMergeBusy: true, code: 'PATIENT_LOCK_TIMEOUT' }), blad({ vildaMergeBusy: true, code: 'PATIENT_LOCK_TIMEOUT' }), blad({ code: 'CARE_FIKCYJNY' }), null].entries()) {
+      o.win.__fikcyjneBledy = x ? [x] : [];
+      const r = await zastosuj(o, s.kSnap.env);
+      wynik.push([r.status, wierszeKosza(o, s0).length]);
+      await popraw(o, s.Q, s.q, 32 + i);
+      await o.gotowe();
+    }
+    expect(wynik, 'status i liczba wierszy stomb po każdej próbie').toEqual([['busy', 0], ['busy', 0], ['apply-error', 0], ['applied', 1]]);
+    expect(wierszeKosza(o, s0).map(opis), 'jedyny wiersz stomb').toEqual([['stomb', s.v, 'pending']]);
+  }, 2 * CZAS);
+
+  it('karta żywa (bez „Usuń pacjenta”) — wersja wchodzi do karty P, wpis zdjęty, 0 wierszy stomb', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    const x = await odeslanieUkrytego(o, s);
+    expect(x.r.status, 'wynik').toBe('applied');
+    expect(await stanUkrytego(o, s), 'v w karcie P, bez wpisu').toEqual({ kartaP: true, vWKarcie: true, kosz: [] });
+    expect(x.wiersze.filter((w) => w.kind === 'stomb').map(opis), 'wiersze stomb').toEqual([]);
+  }, CZAS);
+
+  it('wersja nie późniejsza niż Kosz (koperta snap v z B sprzed Kosza B), karta usunięta — wpis wygrywa i się nie zmienia: 0 wierszy stomb', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const k = await karta(o, 1, [20, 21]);
+    await o.gotowe();
+    const B = await blizniak(o);
+    tik(MIN);
+    const kWczesna = await kopertaSnap(B, k.P, k.w[0]);
+    tik(MIN);
+    await B.v.moveSnapshotToTrash(k.P, k.w[0], { odepnij: true });
+    tik();
+    expect((await zastosuj(o, (await koperta(B, await B.ev.buildSnapshotTombstoneEvent(k.w[0], null))).env)).status, 'kontrola: Kosz B u A').toBe('applied');
+    const s = { P: k.P, v: k.w[0], B };
+    await usunPacjenta(o, s.P);
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, kWczesna.env)).status, 'wynik').toBe('applied');
+    expect(await stanUkrytego(o, s), 'kontrola: karta P usunięta, wpis 20 kg pod P').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+  }, CZAS);
+
+  it('busy na wejściu scalania przy żywej karcie (vildaMergeBusy, PATIENT_LOCK_TIMEOUT) — 0 wierszy; ponowienie — v w karcie P, 0 wierszy stomb', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_LE) });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    const s0 = ostatni(o);
+    o.win.__fikcyjnyBlad = blad({ vildaMergeBusy: true, code: 'PATIENT_LOCK_TIMEOUT' });
+    const r1 = await zastosuj(o, s.kSnap.env);
+    expect([r1.status, r1.code, wierszeOd(o, s0).map(opis)], 'busy: status, kod, wiersze').toEqual(['busy', 'PATIENT_LOCK_TIMEOUT', []]);
+    expect(await stanUkrytego(o, s), 'kontrola: karta P żywa, v poza kartą, wpis').toEqual({ kartaP: true, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+    const r2 = await zastosuj(o, s.kSnap.env);
+    expect(r2.status, 'ponowienie').toBe('applied');
+    expect(await stanUkrytego(o, s), 'ponowienie: v w karcie P, bez wpisu').toEqual({ kartaP: true, vWKarcie: true, kosz: [] });
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+  }, CZAS);
+
+  it('wpis pod żywą kartą Q po „Scal pacjentów” P → Q tutaj (A daje v do Kosza pod Q), koperta snap v z gwiazdką B z kartą P z zapisem sprzed scalenia (spoza buildera) — 0 wierszy stomb; wpis widoczny pod Q, karta P nie wraca (rodzina E4b, E3-PR0e — wynik świadomie wpisany)', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const k = await karta(o, 1, [20, 21]);
+    const kq = await karta(o, 2, [30]);
+    await o.gotowe();
+    const B = await blizniak(o);
+    const zapisP = ((await o.v.exportSyncPayload()).patients || []).find((p) => p.patientId === k.P).lastSavedAtISO;
+    tik(MIN);
+    await o.v.mergePatients(k.P, kq.P);
+    tik();
+    await o.v.moveSnapshotToTrash(kq.P, k.w[0]);
+    tik();
+    await o.gotowe();
+    tik(MIN);
+    await gwiazdka(B, k.P, k.w[0]);
+    const jaw = JSON.parse(JSON.stringify((await kopertaSnap(B, k.P, k.w[0])).k));
+    jaw.patients[0].lastSavedAtISO = zapisP;
+    const s = { P: k.P, v: k.w[0], Q: kq.P };
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, (await zTresci(B, jaw)).env)).status, 'wynik').toBe('applied');
+    expect(await stanUkrytego(o, s), 'karta P nie wraca, wpis 20 kg pod Q').toEqual({ kartaP: false, vWKarcie: false, kosz: [{ karta: 'Q', masa: 20, gwiazdka: false, tresc: true }] });
+    expect(await wersja(o, s.Q, s.v), 'v nie wraca pod Q').toBe(null);
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+  }, CZAS);
+
+  it('wpis pod kartą Q po „Scal pacjentów” P → Q tutaj i „Usuń pacjenta” Q, koperta snap v z gwiazdką B z kartą P z zapisem sprzed scalenia (spoza buildera) — karty wpisu Q nie ma, karta P z ładunku przegrywa z nagrobkiem scalenia: jeden wiersz stomb v (wpis 20 kg pod Q)', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const k = await karta(o, 1, [20, 21]);
+    const kq = await karta(o, 2, [30]);
+    await o.gotowe();
+    const B = await blizniak(o);
+    const zapisP = ((await o.v.exportSyncPayload()).patients || []).find((p) => p.patientId === k.P).lastSavedAtISO;
+    tik(MIN);
+    await o.v.mergePatients(k.P, kq.P);
+    tik();
+    await o.v.moveSnapshotToTrash(kq.P, k.w[0]);
+    tik();
+    await o.gotowe();
+    await usunPacjenta(o, kq.P);
+    tik(MIN);
+    await gwiazdka(B, k.P, k.w[0]);
+    const jaw = JSON.parse(JSON.stringify((await kopertaSnap(B, k.P, k.w[0])).k));
+    jaw.patients[0].lastSavedAtISO = zapisP;
+    const s = { P: k.P, v: k.w[0], Q: kq.P };
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, (await zTresci(B, jaw)).env)).status, 'wynik').toBe('applied');
+    expect(await stanUkrytego(o, s), 'karta P nie wraca, wpis 20 kg pod Q (karta Q usunięta)').toEqual({ kartaP: false, vWKarcie: false, kosz: [{ karta: 'Q', masa: 20, gwiazdka: false, tresc: true }] });
+    expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([['stomb', s.v, 'pending']]);
+  }, CZAS);
+
+  it('nagrobek porządkowania przypiętej wersji pod usuniętą kartą (B daje v gwiazdkę, A bez wiedzy przycina v porządkowaniem i usuwa kartę) — wpis porządkowania odesłany bez zmian (bez treści); ten sam przy żywej karcie — v wraca do karty P, wpis porządkowania przy niej odsyła odsyłanie wpisów E3-PR0d (poznał rejestr gwiazdki)', async () => {
+    const wynik = {};
+    for (const usun of [true, false]) {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const k = await karta(o, 1, [20, 21]);
+      await o.gotowe();
+      const B = await blizniak(o);
+      tik(MIN);
+      await gwiazdka(B, k.P, k.w[0]);
+      const kB = await kopertaSnap(B, k.P, k.w[0]);
+      tik(MIN);
+      const przyciete = (await o.v.pruneSnapshotsForPatient(k.P, { recentHours: 0 })).prunedIds;
+      tik();
+      await o.gotowe();
+      const s = { P: k.P, v: k.w[0] };
+      if (usun) await usunPacjenta(o, s.P);
+      const s0 = ostatni(o);
+      const r = await zastosuj(o, kB.env);
+      const w = wierszeKosza(o, s0);
+      wynik[usun ? 'karta usunięta' : 'karta żywa'] = {
+        przyciete: przyciete.map((x) => (x === s.v ? 'v' : x)), status: r.status, stan: await stanUkrytego(o, s),
+        wiersze: w.map(etykietyWierszy(s)), tresc: w.length ? (await trescWierszaKosza(o, w[0])).wpisy.map((e) => ({ ...e, karta: e.karta === s.P ? 'P' : e.karta })) : [],
+      };
+    }
+    expect(wynik).toEqual(RETENCJA_UKRYTEGO);
+  }, 2 * CZAS);
+});
+
+describe('odsyłanie ukrytego wpisu Kosza: drogi bez odsyłania (pełna kopia, delta, stara delta)', () => {
+  for (const droga of ['pełna kopia (mergeSyncPayload)', 'delta (applyEncryptedDelta)', 'stara delta przez applyEncryptedEvent']) {
+    it(`„Przywróć” z B po „Usuń pacjenta” na A dochodzi drogą „${droga}” — wersja nie wchodzi, wpis zostaje ukryty, 0 wierszy stomb`, async () => {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await ukrytyWpis(o);
+      await usunPacjenta(o, s.P);
+      const s0 = ostatni(o);
+      if (droga.startsWith('pełna')) await o.v.mergeSyncPayload(await s.B.v.exportSyncPayload());
+      else {
+        const d = await s.B.v.buildPatientDelta(s.P);
+        if (droga.startsWith('delta')) expect(await o.v.applyEncryptedDelta(d), 'kontrola: delta zastosowana').toBeTruthy();
+        else expect((await o.ev.applyEncryptedEvent({ iv: d.iv, data: d.data })).status, 'kontrola: stara delta zastosowana').toBe('applied');
+      }
+      tik();
+      await o.gotowe();
+      expect(await stanUkrytego(o, s), 'kontrola: karta P usunięta, wpis ukryty').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+      expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+    }, CZAS);
+  }
+});
+
+describe('odsyłanie ukrytego wpisu Kosza: „Usuń pacjenta” we własnym i w cudzym otwartym kroku', () => {
+  for (const [nazwa, sklep] of [['zatwierdzeniu nagrobka pacjenta', 'tombstones'], ['usunięciu karty', 'patients']]) {
+    it(`„Usuń pacjenta” wstrzymane na ${nazwa}; w trakcie applyEncryptedEvent(snap P/v) — zastosowanie czeka na koniec usuwania; po zwolnieniu wiersze ptomb P, potem stomb v; B z żywą v stosuje je w tej kolejności — karta usunięta, wpis ukryty, 0 wierszy`, async () => {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const s = await ukrytyWpis(o, { emisjaB: true });
+      tik(MIN);
+      const s0 = ostatni(o);
+      const h = wstrzymaj(o, { przy: 'commit', baza: bazaSejfu(o), sklep, tryb: 'readwrite' });
+      const usun = o.v.removePatient(s.P);
+      await h.czeka;
+      let rozstrz = null;
+      const zast = o.ev.applyEncryptedEvent(s.kSnap.env).then((x) => { rozstrz = x; return x; });
+      for (let i = 0; i < 60; i += 1) await new Promise((ok) => { setImmediate(ok); });
+      // wiersz ptomb P (przy wstrzymaniu na usunięciu karty) dopisuje się po szyfrowaniu w puli wątków — pod obciążeniem
+      // później niż po stałej liczbie obrotów, więc czekamy na tyle wierszy, ile ma literał (do 5 s), bez zwalniania
+      await czekajNa(() => wierszeOd(o, s0).length >= WSTRZYMANE_USUN[sklep].wiersze.length);
+      const przed = { zastosowanie: rozstrz ? rozstrz.status : 'czeka', wiersze: wierszeOd(o, s0).map(etykietyWierszy(s)) };
+      h.zwolnij();
+      await usun;
+      const r = await zast;
+      tik();
+      await o.gotowe();
+      const wiersze = wierszeOd(o, s0);
+      const sB = ostatni(s.B);
+      const statusy = [];
+      for (const w of wiersze) statusy.push([w.kind, (await zastosuj(s.B, w.env)).status]);
+      expect(przed, 'przed zwolnieniem').toEqual(WSTRZYMANE_USUN[sklep]);
+      expect([r.status, wiersze.map(etykietyWierszy(s))], 'po zwolnieniu: wynik i wiersze').toEqual(['applied', [['ptomb', 'P', 'pending'], ['stomb', 'v', 'pending']]]);
+      expect(await stanUkrytego(o, s), 'A: karta usunięta, wpis ukryty').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+      expect(statusy, 'B: statusy w kolejności kolejki A').toEqual([['ptomb', 'applied'], ['stomb', 'applied']]);
+      expect(await stanUkrytego(s.B, s), 'B: karta usunięta, wpis ukryty').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+      expect(wierszeOd(s.B, sB).map(opis), 'B: wiersze').toEqual([]);
+    }, 2 * CZAS);
+  }
+
+  it('cudzy otwarty krok (A: „Usuń do Kosza” wersji q karty Q wstrzymane na odszyfrowaniu); w trakcie „Usuń pacjenta” P i applyEncryptedEvent(snap P/v) — w kroku 0 wierszy, po końcu kroku stomb v, stomb q, ptomb P (ranga); B z żywą v: wpis zdjęty, potem karta usunięta — A: ukryty wpis, B: bez wpisu (znane ograniczenie: przy dwóch urządzeniach różnica do pełnej synchronizacji)', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o, { zQ: true, emisjaB: true });
+    tik(MIN);
+    const s0 = ostatni(o);
+    const h = o.krypto.wstrzymaj({ metoda: 'decrypt', wStosie: 'Bkz_doKosza' });
+    const kosz = o.v.moveSnapshotToTrash(s.Q, s.q);
+    await h.osiagnieta;
+    const usun = await Promise.race([o.v.removePatient(s.P).then(() => 'gotowe'), new Promise((ok) => { setTimeout(() => ok('czeka'), 5000); })]);
+    const r = await Promise.race([o.ev.applyEncryptedEvent(s.kSnap.env), new Promise((ok) => { setTimeout(() => ok({ status: 'czeka' }), 5000); })]);
+    for (let i = 0; i < 60; i += 1) await new Promise((ok) => { setImmediate(ok); });
+    const wKroku = wierszeOd(o, s0).map(etykietyWierszy(s));
+    h.zwolnij();
+    await kosz;
+    tik();
+    await o.gotowe();
+    const wiersze = wierszeOd(o, s0);
+    const sB = ostatni(s.B);
+    const statusy = [];
+    for (const w of wiersze.filter((x) => x.entityKey !== s.q)) statusy.push([w.kind, (await zastosuj(s.B, w.env)).status]);
+    expect([usun, r.status, wKroku], 'usuwanie, zastosowanie i wiersze w otwartym kroku').toEqual(['gotowe', 'applied', []]);
+    expect(wiersze.map(etykietyWierszy(s)), 'po końcu kroku: kolejność rangą').toEqual([['stomb', 'v', 'pending'], ['stomb', 'q', 'pending'], ['ptomb', 'P', 'pending']]);
+    expect(await stanUkrytego(o, s), 'A: karta usunięta, wpis ukryty').toEqual({ kartaP: false, vWKarcie: false, kosz: KOSZ_V_UKRYTY });
+    expect(statusy, 'B: statusy (stomb v, potem ptomb P)').toEqual([['stomb', 'applied'], ['ptomb', 'applied']]);
+    expect(await stanUkrytego(s.B, s), 'B: wpis zdjęty (Kosz przegrał z żywą v), potem karta usunięta razem z v').toEqual({ kartaP: false, vWKarcie: false, kosz: [] });
+    expect(wierszeOd(s.B, sB).map(opis), 'B: wiersze').toEqual([]);
+  }, 2 * CZAS);
+});
+
+describe('odsyłanie ukrytego wpisu Kosza: błędy, sesja, usuwanie konta i koszt odczytu kart', () => {
+  it('błąd odczytu kart (zwykły błąd na początku Bev_stanKart) — odesłanie każdego kandydata wstępu: applied, jeden wiersz stomb v', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_STANU_KART) });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    o.win.__fikcyjnyBlad = blad({ code: 'CARE_FIKCYJNY' });
+    const x = await odeslanieUkrytego(o, s);
+    expect([x.r.status, o.win.__fikcyjnyBlad], 'wynik; kontrola: błąd zużyty w odczycie kart').toEqual(['applied', null]);
+    expect(x.wiersze.map(opis), 'wiersze').toEqual([['stomb', s.v, 'pending']]);
+  }, CZAS);
+
+  it('błąd odczytu wpisów Kosza przed scaleniem przy ukrytym wpisie — odsyłanie wpisów E3-PR0d wskazuje wersję v (stan przed nieznany), reguła ukrytego wpisu też: jedna emisja z kluczem v raz, jeden wiersz stomb v', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_STANU_KOSZA) });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    o.win.__fikcyjneBledy = [blad({ name: 'UnknownError' }), null];
+    const x = await odeslanieUkrytego(o, s);
+    expect(o.win.__fikcyjneBledy, 'kontrola: odczyt wpisów „przed” z błędem, „po” bez błędu').toEqual([]);
+    expect(x.r.status, 'wynik').toBe('applied');
+    expect(x.emisje.map((e) => e.klucze), 'emisja odsyłania: klucz v raz').toEqual([[s.v]]);
+    expect(x.wiersze.map(opis), 'wiersze od znacznika').toEqual([['stomb', s.v, 'pending']]);
+  }, CZAS);
+
+  it('odczyt kart z kodem SYNC_DB_DELETED (usuwanie konta) — applied, bez emisji odsyłania wersji i wpisów, 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterka(KOTWICA_STANU_KART) });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    const e0 = o.l.emisje.length;
+    o.win.__fikcyjnyBlad = blad({ code: 'SYNC_DB_DELETED' });
+    const x = await odeslanieUkrytego(o, s);
+    expect([x.r.status, o.win.__fikcyjnyBlad], 'wynik; kontrola: błąd zużyty w odczycie kart').toEqual(['applied', null]);
+    expect(o.l.emisje.slice(e0).filter((e) => e.sesja), 'bez emisji odsyłania wersji i wpisów').toEqual([]);
+    expect(x.wiersze.map(opis), 'wiersze').toEqual([]);
+  }, CZAS);
+
+  it('zmiana sesji w odczycie kart (odczyt karty wstrzymany; w trakcie blokada i ponowne odblokowanie A) — applied jak dziś (scalanie skończone), bez kolektora: bez emisji odsyłania, 0 wierszy', async () => {
+    const o = await okno({ bramka: true, echo: true, zrodlo: zUsterkaKolejna(KOTWICA_STANU_KART) });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    const s0 = ostatni(o);
+    const e0 = o.l.emisje.length;
+    // Wstawka na początku Bev_stanKart woła shift() listy przy wejściu: uzbraja wstrzymanie odczytu karty (patients, get).
+    let uzbrojone;
+    const wstrzymanie = new Promise((ok) => { uzbrojone = ok; });
+    o.win.__fikcyjneBledy = Object.assign([null], {
+      shift() { uzbrojone(wstrzymaj(o, { przy: 'success', baza: bazaSejfu(o), sklep: 'patients', metoda: 'get' })); return [].shift.call(this); },
+    });
+    const p = o.ev.applyEncryptedEvent(s.kSnap.env);
+    const h = await Promise.race([wstrzymanie, p.then(() => null)]);
+    expect(!!h, 'kontrola: wejście do odczytu kart').toBe(true);
+    expect(await Promise.race([h.czeka.then(() => 'wstrzymane'), p.then(() => 'koniec')]), 'kontrola: odczyt karty wstrzymany').toBe('wstrzymane');
+    const prz = o.przelaczWTle('A');
+    await prz.sesja;
+    h.zwolnij();
+    const r = await p;
+    await prz.koniec;
+    await o.gotowe();
+    expect(r.status, 'wynik').toBe('applied');
+    expect(o.l.emisje.slice(e0).filter((e) => e.sesja), 'bez emisji odsyłania').toEqual([]);
+    expect(wierszeOd(o, s0).map(opis), 'wiersze').toEqual([]);
+  }, CZAS);
+
+  it('koszt odczytu kart: koperta poprawki wersji żywej karty (przyjęta bez zmian) — transakcje sklepów patients i tombstones przy włączonym przełączniku = przy wyłączonym; ukryty wpis — więcej o jedną transakcję tombstones (lista nagrobków) i o transakcje patients odczytu karty P i budowy koperty stomb', async () => {
+    const zmierz = async (o, env) => {
+      const t = zegar;
+      const wynik = {};
+      for (const [nazwa, echo] of [['włączony', true], ['wyłączony', undefined]]) {
+        ustawZegar(t);
+        const X = await klonA(o, ZRODLO_SEJFU, echo);
+        await X.gotowe();
+        const z = X.znacznik();
+        const r = await X.ev.applyEncryptedEvent(env);
+        await X.gotowe();
+        wynik[nazwa] = { status: r.status, patients: txSklepu(X, z, 'patients'), tombstones: txSklepu(X, z, 'tombstones') };
+      }
+      return { status: [wynik['włączony'].status, wynik['wyłączony'].status], patients: wynik['włączony'].patients - wynik['wyłączony'].patients, tombstones: wynik['włączony'].tombstones - wynik['wyłączony'].tombstones };
+    };
+    const o = await okno({ bramka: true });
+    await o.zaloguj('A');
+    const k = await karta(o, 1, [20, 21]);
+    await o.gotowe();
+    const B = await blizniak(o);
+    tik(MIN);
+    await popraw(B, k.P, k.w[0], 25);
+    const zywa = await zmierz(o, (await kopertaSnap(B, k.P, k.w[0])).env);
+    const o2 = await okno({ bramka: true });
+    await o2.zaloguj('A');
+    const s = await ukrytyWpis(o2);
+    await usunPacjenta(o2, s.P);
+    const ukryty = await zmierz(o2, s.kSnap.env);
+    expect({ zywa, ukryty }, 'różnica transakcji (włączony − wyłączony)').toEqual({ zywa: { status: ['applied', 'applied'], patients: 0, tombstones: 0 }, ukryty: KOSZT_UKRYTEGO });
+  }, 2 * CZAS);
+});
+
+describe('odsyłanie ukrytego wpisu Kosza: warunki z kodu sejfu (funkcje czyste) i forma odczytu kart', () => {
+  // Funkcje czyste z tekstu sejfu (wytnijFunkcje; wycinek dokładnie tekstu deklaracji — także zminifikowanych Bm1, mt)
+  // z domknięciem rozstrzygnięcia „nagrobek wygrywa z wersją” (LO.WYGRYWA_Z_SEJFU, stała Bgw_czPam wycięta przez
+  // LO.stalaZKodu — strażnik „wycięte = sejf” w tests/unit/licznik-odsylania.test.mjs) i pomocniczymi Bev_.
+  const czyste = () => {
+    const stale = STALE_WYGRYWA.map((n) => stalaZKodu(ZRODLO_SEJFU, n));
+    const nazwy = [...WYGRYWA_Z_SEJFU, 'Bev_obiekt', 'Bev_id', 'Bev_kopia', 'Bev_kandydaciEcha', 'Bev_kandydaciUkrytych', 'Bev_wstepUkrytych', 'Bev_echoUkrytych'];
+    return new Function(`${stale.join('\n')}\n${nazwy.map((n) => wytnijFunkcje(ZRODLO_SEJFU, n)).join('\n')}\nreturn { Bev_kandydaciEcha, Bev_kandydaciUkrytych, Bev_wstepUkrytych, Bev_echoUkrytych };`)();
+  };
+  const CH0 = '2026-03-02T08:00:00.000Z', CH1 = '2026-03-02T09:00:00.000Z', CH2 = '2026-03-02T10:00:00.000Z', CH3 = '2026-03-02T11:00:00.000Z';
+  const S = (sid, o = {}) => ({ snapshotId: sid, savedAtISO: CH0, updatedAtISO: CH2, rev: 2, payload: { user: { weight: 20 } }, ...o });
+  const wpis = (pid, sid, o = {}) => ({ patientId: pid, snapshotId: sid, deletedAtISO: CH1, savedAtISO: CH0, rev: 1, updatedAtISO: CH0, ...o });
+  it('Bev_kandydaciUkrytych: para karta/wersja z ładunku z zapisem karty i kopią wersji sprzed scalania; wersja tylko w snapshotTombstones — nie; karta bez lastSavedAtISO — pusty zapis; ta sama wersja pod dwiema kartami — dwie pary', () => {
+    const f = czyste();
+    const t = { patients: [{ patientId: 'P', lastSavedAtISO: CH1, snapshots: [S('v'), { snapshotId: 7 }, null] }, { patientId: 'R', snapshots: [S('v'), S('x')] }, { snapshots: [S('y')] }], snapshotTombstones: [wpis('P', 'z')] };
+    const m = f.Bev_kandydaciUkrytych(t, f.Bev_kandydaciEcha(t));
+    expect([...m.keys()], 'wersje').toEqual(['v', 'x']);
+    expect(m.get('v').map((x) => [x.p, x.zapis, x.S.snapshotId, x.S.updatedAtISO]), 'v pod P i R').toEqual([['P', CH1, 'v', CH2], ['R', '', 'v', CH2]]);
+    expect(m.get('v')[0].S === t.patients[0].snapshots[0], 'kopia, nie ten sam obiekt').toBe(false);
+  });
+  it('Bev_wstepUkrytych: wersja jest po scaleniu → pusto; odczyt wersji po scaleniu zawiódł → kandydat; odczyt wpisów zawiódł albo wpisu nie ma → pusto; wersja nie późniejsza niż Kosz → pusto; wersja wygrywa z jednym elementem wpisu, a z drugim (Kosz później) nie → pusto; przycięcie przy gwiazdce wersji → kandydat; wyjątek rozstrzygnięcia → kandydat; karty elementów bez powtórzeń', () => {
+    const f = czyste();
+    const ku = (lista) => new Map([['v', lista]]);
+    const jedna = ku([{ p: 'P', S: S('v'), zapis: CH1 }]);
+    const kosz = (l) => ({ m: new Map([['v', l]]) });
+    const po = (m) => ({ m });
+    expect(f.Bev_wstepUkrytych(jedna, po(new Map([['v', { snapshotId: 'v' }]])), kosz([wpis('P', 'v')])), 'wersja jest po scaleniu').toEqual([]);
+    expect(f.Bev_wstepUkrytych(jedna, po(null), kosz([wpis('P', 'v')])), 'odczyt wersji zawiódł').toEqual([{ v: 'v', P: [{ p: 'P', zapis: CH1 }], karty: ['P'] }]);
+    expect(f.Bev_wstepUkrytych(jedna, po(new Map([['v', null]])), { m: null }), 'odczyt wpisów zawiódł').toEqual([]);
+    expect(f.Bev_wstepUkrytych(jedna, po(new Map([['v', null]])), kosz([])), 'wpisu nie ma').toEqual([]);
+    expect(f.Bev_wstepUkrytych(ku([{ p: 'P', S: S('v', { updatedAtISO: CH1 }), zapis: CH1 }]), po(new Map()), kosz([wpis('P', 'v')])), 'wersja w chwili Kosza').toEqual([]);
+    expect(f.Bev_wstepUkrytych(jedna, po(new Map()), kosz([wpis('P', 'v'), wpis('Q', 'v', { deletedAtISO: CH3 })])), 'wersja wygrywa z elementem pod P (Kosz wcześniej), z elementem pod Q (Kosz później) nie').toEqual([]);
+    expect(f.Bev_wstepUkrytych(jedna, po(new Map()), kosz([wpis('Q', 'v', { deletedAtISO: CH3 }), wpis('P', 'v')])), 'to samo w odwrotnej kolejności elementów').toEqual([]);
+    const ret = wpis('P', 'v', { powod: 'retencja' });
+    expect(f.Bev_wstepUkrytych(ku([{ p: 'P', S: S('v', { updatedAtISO: CH0 }), zapis: CH1 }]), po(new Map()), kosz([ret])), 'przycięcie bez gwiazdki').toEqual([]);
+    expect(f.Bev_wstepUkrytych(ku([{ p: 'P', S: S('v', { updatedAtISO: CH0, payload: { _pinned: true } }), zapis: CH1 }]), po(new Map()), kosz([ret])), 'przycięcie przy gwiazdce wersji').toEqual([{ v: 'v', P: [{ p: 'P', zapis: CH1 }], karty: ['P'] }]);
+    expect(f.Bev_wstepUkrytych(ku([{ p: 'P', S: null, zapis: '' }]), po(new Map()), kosz([wpis('P', 'v')])), 'wyjątek rozstrzygnięcia').toEqual([{ v: 'v', P: [{ p: 'P', zapis: '' }], karty: ['P'] }]);
+    expect(f.Bev_wstepUkrytych(ku([{ p: 'P', S: S('v'), zapis: CH1 }, { p: 'R', S: S('v', { updatedAtISO: CH0 }), zapis: CH0 }]), po(new Map()), kosz([wpis('P', 'v'), wpis('Q', 'v'), wpis('P', 'v', { koszISO: CH1 })])), 'tylko wygrywające pary; karty bez powtórzeń').toEqual([{ v: 'v', P: [{ p: 'P', zapis: CH1 }], karty: ['P', 'Q'] }]);
+  });
+  it('Bev_echoUkrytych: karty żadnego elementu nie ma i karta P przegrała z nagrobkiem nie wcześniejszym niż zapis (równy, brak zapisu) → wysyłka; element pod żywą kartą, karta P żywa (także przy wpisie pod inną usuniętą kartą), bez nagrobka, nagrobek wcześniejszy niż zapis, element bez poprawnego patientId → pusto; stan kart nieznany → każdy kandydat', () => {
+    const f = czyste();
+    const x = (o = {}) => ({ v: 'v', P: [{ p: 'P', zapis: CH2 }], karty: ['P'], ...o });
+    const stan = (karty, nagrobki) => ({ karty: new Map(Object.entries(karty)), nagrobki: new Map(Object.entries(nagrobki)) });
+    expect(f.Bev_echoUkrytych([x(), x({ v: 'w' })], null), 'stan nieznany').toEqual(['v', 'w']);
+    expect(f.Bev_echoUkrytych([x()], stan({ P: false }, { P: CH2 })), 'nagrobek równy zapisowi').toEqual(['v']);
+    expect(f.Bev_echoUkrytych([x({ P: [{ p: 'P', zapis: '' }] })], stan({ P: false }, { P: CH0 })), 'brak zapisu').toEqual(['v']);
+    expect(f.Bev_echoUkrytych([x()], stan({ P: false }, { P: CH1 })), 'nagrobek wcześniejszy niż zapis').toEqual([]);
+    expect(f.Bev_echoUkrytych([x()], stan({ P: false }, {})), 'bez nagrobka').toEqual([]);
+    expect(f.Bev_echoUkrytych([x()], stan({ P: true }, { P: CH3 })), 'karta P żywa').toEqual([]);
+    expect(f.Bev_echoUkrytych([x({ karty: ['R'] })], stan({ R: false, P: true }, { P: CH3 })), 'wpis pod usuniętą kartą R, karta P z ładunku żywa mimo nagrobka').toEqual([]);
+    expect(f.Bev_echoUkrytych([x({ karty: ['P', 'Q'] })], stan({ P: false, Q: true }, { P: CH3 })), 'drugi element pod żywą Q').toEqual([]);
+    expect(f.Bev_echoUkrytych([x({ karty: ['P', 'Q'] })], stan({ P: false, Q: false }, { P: CH3 })), 'kontrola: karty żadnego elementu nie ma').toEqual(['v']);
+    expect(f.Bev_echoUkrytych([x({ karty: ['P', undefined] })], stan({ P: false }, { P: CH3 })), 'element bez patientId').toEqual([]);
+    expect(f.Bev_echoUkrytych([x({ karty: ['R'], P: [{ p: 'Q', zapis: CH2 }, { p: 'P', zapis: CH2 }] })], stan({ R: false, P: false, Q: true }, { P: CH3 })), 'któraś karta P przegrała').toEqual(['v']);
+  });
+  it('Bev_stanKart (kod z sejfu, atrapa strzeżonego adaptera): sesja sprawdzana przed Bev_start i po każdym odczycie; odczyt kart elementów wpisu i kart P z ładunku, bez powtórzeń i bez niepoprawnych identyfikatorów; jedna lista nagrobków pacjentów, na kartę najpóźniejszy (rekordy bez karty albo chwili pominięte); zmiana sesji po odczycie — wyjątek bez dalszych odczytów', async () => {
+    const log = [];
+    const nagrobki = [{ patientId: 'P', deletedAtISO: CH1 }, { patientId: 'P', deletedAtISO: CH3 }, { patientId: 'P', deletedAtISO: CH2 }, { patientId: 'Q', deletedAtISO: CH0 },
+      { patientId: '', deletedAtISO: CH3 }, { patientId: 'Q', deletedAtISO: '' }, { patientId: 'Q' }, { patientId: 7, deletedAtISO: CH3 }, null, 'S'];
+    const adapter = { u: 'A', a: {
+      getPatientForUser: async (u, id) => { log.push(`karta ${u}/${id}`); return id === 'R' ? { patientId: 'R' } : null; },
+      listTombstonesForUser: async (u) => { log.push(`nagrobki ${u}`); return nagrobki; },
+    }, strzez() {} };
+    let zmiana = Infinity; // sprawdzenie sesji o numerze > zmiana rzuca SESSION_CHANGED
+    const pilnuj = (x) => { log.push(`sesja ${x}`); if (log.filter((w) => w.startsWith('sesja')).length > zmiana) throw Object.assign(new Error('fikcyjna zmiana sesji'), { code: 'SESSION_CHANGED' }); };
+    const start = (dev) => { log.push(`start ${dev}`); return adapter; };
+    const Bev_stanKart = new Function('Bses_pilnuj', 'Bev_start', `${['Bev_obiekt', 'Bev_id', 'Bev_stanKart'].map((n) => wytnijFunkcje(ZRODLO_SEJFU, n)).join('\n')}\nreturn Bev_stanKart;`)(pilnuj, start);
+    const wstep = [{ v: 'v', P: [{ p: 'P', zapis: CH1 }, { p: 'R', zapis: '' }], karty: ['Q', 'P', 7, '', 'Q', undefined] }, { v: 'w', P: [{ p: 'P', zapis: CH1 }], karty: ['S'] }];
+    const r = await Bev_stanKart(wstep, 's1');
+    expect(log, 'kolejność: sesja, Bev_start, karty (elementy wpisu, potem karty P z ładunku; bez powtórzeń), lista nagrobków — po każdym odczycie sesja').toEqual(['sesja s1', 'start null', 'karta A/Q', 'sesja s1', 'karta A/P', 'sesja s1', 'karta A/R', 'sesja s1', 'karta A/S', 'sesja s1', 'nagrobki A', 'sesja s1']);
+    expect([r.c === adapter, [...r.karty], [...r.nagrobki]], 'adapter z Bev_start, istnienie kart, najpóźniejszy nagrobek na kartę').toEqual([true, [['Q', false], ['P', false], ['R', true], ['S', false]], [['P', CH3], ['Q', CH0]]]);
+    log.length = 0;
+    zmiana = 1;
+    await expect(Bev_stanKart(wstep, 's2'), 'zmiana sesji po pierwszym odczycie karty').rejects.toMatchObject({ code: 'SESSION_CHANGED' });
+    expect(log, 'bez dalszych odczytów').toEqual(['sesja s2', 'start null', 'karta A/Q', 'sesja s2']);
+  });
+  it('strażnik formy: Bev_stanKart sprawdza sesję zastosowania przed strzeżonym adapterem i po każdym odczycie; w Bev_zastosujZEchem odczyt kart tylko przy udanym scaleniu (!blad && !usuwane && !Bses_zmieniona(s)), po nim kartyPo.c.strzez()', async () => {
+    const { parse } = await import('acorn');
+    const m = ZRODLO_SEJFU.match(/\nasync function Bev_stanKart\(([^)]*)\) \{[\s\S]*?\n\}/);
+    expect(m, 'funkcja Bev_stanKart w części Bev_').toBeTruthy();
+    const f = parse(m[0], { ecmaVersion: 'latest', sourceType: 'script' }).body[0];
+    const s = f.params[1] && f.params[1].name;
+    expect(s, 'drugi parametr — sesja zastosowania').toBeTruthy();
+    const tekst = (n) => m[0].slice(n.start, n.end);
+    const instr = f.body.body;
+    const i0 = instr.findIndex((n) => /Bev_start\(/.test(tekst(n)));
+    expect([tekst(instr[0]), i0], 'Bses_pilnuj(sesja) jako pierwsza instrukcja, potem Bev_start').toEqual([`Bses_pilnuj(${s});`, 1]);
+    // adapter odczytów to pośrednik z Bev_start (każda metoda sprawdza usuwanie konta); odczyty tylko przez niego
+    const c0 = instr[1].type === 'VariableDeclaration' && instr[1].declarations.length === 1 ? instr[1].declarations[0] : null;
+    expect(c0 && [c0.id.name, tekst(c0.init)], 'zmienna adaptera z Bev_start(null)').toEqual(['c', 'Bev_start(null)']);
+    expect(m[0].match(/\bawait\s+[\w$.]+\.\w+\(/g), 'odczyty przez c.a z Bev_start').toEqual(['await c.a.getPatientForUser(', 'await c.a.listTombstonesForUser(']);
+    // każda instrukcja z await (także w ciele pętli) ma zaraz po sobie Bses_pilnuj(sesja)
+    const zle = [];
+    let ile = 0;
+    const blok = (lista) => lista.forEach((n, i) => {
+      if (n.type === 'ForStatement' || n.type === 'ForOfStatement' || n.type === 'WhileStatement') { blok(n.body.type === 'BlockStatement' ? n.body.body : [n.body]); return; }
+      if (!/\bawait\b/.test(tekst(n))) return;
+      ile += 1;
+      if (!lista[i + 1] || tekst(lista[i + 1]) !== `Bses_pilnuj(${s});`) zle.push(tekst(n).slice(0, 60));
+    });
+    blok(instr);
+    expect([ile, zle], 'instrukcje z await (getPatientForUser, listTombstonesForUser) i te bez Bses_pilnuj zaraz po nich').toEqual([2, []]);
+    const z = ZRODLO_SEJFU.match(/\nasync function Bev_zastosujZEchem\(([^)]*)\) \{[\s\S]*?\n\}/);
+    expect(z, 'funkcja Bev_zastosujZEchem').toBeTruthy();
+    const ast = parse(z[0], { ecmaVersion: 'latest', sourceType: 'script' });
+    const tz = (n) => z[0].slice(n.start, n.end);
+    const warunki = [];
+    const po = [];
+    // warunek instrukcji if, której blok przypisuje wstęp; instrukcja zaraz po odczycie kart w tym samym bloku
+    const idz = (n) => {
+      if (!n || typeof n.type !== 'string') return;
+      if (n.type === 'IfStatement' && n.consequent.type === 'BlockStatement' && n.consequent.body.some((x) => /^wstep = Bev_wstepUkrytych\(/.test(tz(x)))) warunki.push(tz(n.test));
+      if (n.type === 'BlockStatement') n.body.forEach((x, i) => { if (/^kartyPo = await Bev_stanKart\(/.test(tz(x))) po.push(n.body[i + 1] ? tz(n.body[i + 1]) : null); });
+      for (const k of Object.keys(n)) { const x = n[k]; if (Array.isArray(x)) x.forEach(idz); else if (x && typeof x.type === 'string') idz(x); }
+    };
+    idz(ast);
+    expect({ warunki, po }, 'warunek wstępu i instrukcja po odczycie kart').toEqual({ warunki: ['!blad && !usuwane && !Bses_zmieniona(s)'], po: ['kartyPo.c.strzez();'] });
+  });
+});
+
+describe('odsyłanie ukrytego wpisu Kosza: przełącznik wyłączony, bramka i tryb', () => {
+  it('przełącznik wyłączony — sejf a sejf bez odsyłania w bliźniaczych oknach przy kopertach ukrytego wpisu (koperta „Przywróć” B po „Usuń pacjenta” na A, poprawka v z B pod kartą usuniętą): te same wyniki, zapis przebiegu atrapy, wiersze i operacje crypto.subtle; po jednym odczycie pola i klucza przełącznika na zastosowanie', async () => {
+    const o = await okno({ bramka: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    tik(MIN);
+    await popraw(s.B, s.P, s.v, 23);
+    const kPoprawka = await kopertaSnap(s.B, s.P, s.v);
+    await usunPacjenta(o, s.P);
+    const t = zegar;
+    ustawZegar(t);
+    const a = await przebieg(await klonA(o, ZRODLO_SEJFU), [s.kSnap.env, kPoprawka.env]);
+    ustawZegar(t);
+    const b = await przebieg(await klonA(o, bezOdsylania().zrodlo), [s.kSnap.env, kPoprawka.env]);
+    expect(a.wyniki.map((w) => w.status), 'kontrola: statusy').toEqual(['applied', 'applied']);
+    expect(a.wyniki, 'wyniki').toEqual(b.wyniki);
+    expect(a.log, 'zapis przebiegu atrapy').toEqual(b.log);
+    expect(a.krypto, 'operacje crypto.subtle').toEqual(b.krypto);
+    expect(a.wiersze, 'wiersze kolejki').toEqual(b.wiersze);
+    expect({ sejf: a.echo, bez: b.echo }, 'odczyty pola przełącznika').toEqual({ sejf: MA_ECHO ? 2 : 0, bez: 0 });
+    expect({ sejf: a.klucz, bez: b.klucz }, 'odczyty klucza przełącznika').toEqual({ sejf: MA_ECHO ? 2 : 0, bez: 0 });
+  }, 2 * CZAS);
+
+  it('zamknięta bramka dziennika przy włączonym przełączniku i ukrytym wpisie — 0 wierszy, zapis przebiegu atrapy jak w sejfie bez odsyłania (bez odczytu kart i nagrobków ponad dziś); „Komputer w pracy” (Kosz v tutaj, poprawka v z drugiego okna po Koszu, „Usuń pacjenta” tutaj) — bez bazy kolejki i bez odczytu listy nagrobków ponad przełącznik wyłączony', async () => {
+    const o = await okno({ bramka: true });
+    await o.zaloguj('A');
+    const s = await ukrytyWpis(o);
+    await usunPacjenta(o, s.P);
+    const t = zegar;
+    const w = {};
+    for (const [nazwa, zrodlo, echo] of [['sejf', ZRODLO_SEJFU, true], ['bez odsyłania', bezOdsylania().zrodlo, undefined]]) {
+      ustawZegar(t);
+      const X = await klonA(o, zrodlo, echo);
+      X.bramka.wartosc = false;
+      w[nazwa] = await przebieg(X, [s.kSnap.env]);
+    }
+    expect(w.sejf.wyniki, 'wynik').toEqual(w['bez odsyłania'].wyniki);
+    expect(w.sejf.log, 'zapis przebiegu atrapy').toEqual(w['bez odsyłania'].log);
+    expect(w.sejf.wiersze, 'wiersze kolejki').toEqual([]);
+    const praca = {};
+    for (const echo of [true, undefined]) {
+      const c = await okno({ bramka: true, echo, chmura: ['A'] });
+      await c.zaloguj('A');
+      const k = await karta(c, 1, [20, 21]);
+      await c.gotowe();
+      const { drugieOkno } = await import('../support/okno-magazynu.mjs');
+      const B = await drugieOkno(c, { bramka: false, zaloguj: 'A' });
+      OKNA.push(B);
+      await B.v.mergeSyncPayload(await c.v.exportSyncPayload());
+      tik(MIN);
+      await doKosza(c, k.P, k.w[0]);
+      await c.gotowe();
+      tik(MIN);
+      // B (bez wiedzy o Koszu) poprawia v później niż Kosz — wersja z ładunku wygrywa z wpisem
+      await popraw(B, k.P, k.w[0], 25);
+      const kB = await kopertaSnap(B, k.P, k.w[0]);
+      await usunPacjenta(c, k.P);
+      const z = c.znacznik();
+      const r = await zastosuj(c, kB.env);
+      praca[echo ? 'włączony' : 'wyłączony'] = { status: r.status, baza: c.jestBaza('A'), tombstones: txSklepu(c, z, 'tombstones'), kosz: (await wpisyEksportu(c, k.w[0])).map(faktWpisu) };
+    }
+    expect(praca['włączony'], '„Komputer w pracy”: przełącznik włączony = wyłączony (bez bazy kolejki, ta sama liczba odczytów listy nagrobków)').toEqual(praca['wyłączony']);
+    expect([praca['włączony'].status, praca['włączony'].baza, praca['włączony'].kosz], '„Komputer w pracy”: kontrola — zastosowane, bez bazy kolejki, wpis ukryty').toEqual(['applied', false, [{ masa: 20, gwiazdka: false, tresc: true }]]);
+  }, 3 * CZAS);
+});
+
+// Wyniki zmierzone na kodzie odsyłania ukrytego wpisu (wpisane literałem).
+// Powtórka: drugie odesłanie tej samej wersji — nowy wiersz stomb v (łączenie wpisów Bob_plan zastępuje czekający wiersz
+// tej encji na końcu kolejki, więc w kolejce A zostaje jeden).
+const POWTORKA_UKRYTEGO = { nowe: (s) => [['stomb', s.v, 'pending']], wszystkie: (s) => [['stomb', s.v, 'pending']] };
+// Wstrzymanie „Usuń pacjenta”: na zatwierdzeniu nagrobka zastosowanie czeka, kolejka bez wierszy; na usunięciu karty
+// (karta usunięta po kursorze, przed zatwierdzeniem transakcji) „Usuń pacjenta” już dopisało nagrobek.
+const WSTRZYMANE_USUN = {
+  tombstones: { zastosowanie: 'czeka', wiersze: [] },
+  patients: { zastosowanie: 'czeka', wiersze: [['ptomb', 'P', 'pending']] },
+};
+// Koszt: ukryty wpis — transakcje włączony − wyłączony: patients 2 (odczyt karty P w Bev_stanKart i odczyt karty wpisu
+// przy budowie koperty stomb odesłania), tombstones 1 (lista nagrobków pacjentów w Bev_stanKart).
+const KOSZT_UKRYTEGO = { status: ['applied', 'applied'], patients: 2, tombstones: 1 };
+// Nagrobek porządkowania przypiętej wersji (porządkowanie A przycina v; B dało v gwiazdkę wcześniej): przy karcie
+// usuniętej wersja przypięta nie wchodzi, wpis porządkowania (bez treści) zostaje bez zmian i jest odesłany ze stanu;
+// przy karcie żywej v wraca do karty P, a wpis porządkowania zostaje przy niej i poznaje rejestr gwiazdki — ten wiersz
+// odsyła odsyłanie wpisów E3-PR0d (wpis zapisany scaleniem inaczej, niż był), nie reguła ukrytego wpisu (v pod kartą).
+const RETENCJA_UKRYTEGO = {
+  'karta usunięta': { przyciete: ['v'], status: 'applied', stan: { kartaP: false, vWKarcie: false, kosz: [{ karta: 'P', masa: null, gwiazdka: false, tresc: false }] }, wiersze: [['stomb', 'v', 'pending']], tresc: [{ karta: 'P', masa: null, gwiazdka: false, tresc: false }] },
+  'karta żywa': { przyciete: ['v'], status: 'applied', stan: { kartaP: true, vWKarcie: true, kosz: [{ karta: 'P', masa: null, gwiazdka: true, tresc: false }] }, wiersze: [['stomb', 'v', 'pending']], tresc: [{ karta: 'P', masa: null, gwiazdka: true, tresc: false }] },
+};

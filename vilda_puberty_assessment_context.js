@@ -117,6 +117,13 @@
     var years = number(user.age), months = number(user.ageMonths);
     return years === null && months === null ? null : (years || 0) * 12 + (months || 0);
   }
+  function sessionReference(user) {
+    var years = number(user.age), months = number(user.ageMonths), weeks = number(user.ageWeeks);
+    // Match the assessment carrier: default zero months with blank years is
+    // unknown, while an explicit newborn age or completed weeks is known.
+    return { sex: sex(user.sex), measuredAtISO: user.measuredAtISO || null,
+      ageMonths: years === null && !months && !weeks ? null : (years || 0) * 12 + (months || 0) };
+  }
   function facts(view, user) {
     if (!view) return Object.assign({}, user && user.puberty || {}, {
       testicularVolume: user && user.advanced && user.advanced.testicularVolume || null,
@@ -163,9 +170,11 @@
     var visitContext = source && source.read ? source.read.visitContext : source && source.user ? {
       sex: sex(source.user.sex), ageMonths: payloadAge(source.user), measuredAtISO: source.user.measuredAtISO || null
     } : {};
+    var delegated = !!(source && source.state && usesActiveWriter(source));
+    var projectionReady = !delegated || projectionAvailable(source);
     var context = { available: !!source, scope: source && source.state ? 'visit' : 'local',
-      canEditVisit: !!(source && source.state),
-      preparing: preparing(w) || !!(source && source.view && preparing(source.view)),
+      canEditVisit: !!(source && source.state && projectionReady),
+      preparing: !projectionReady || preparing(w) || !!(source && source.view && preparing(source.view)),
       patientId: id, assessmentContext: read, visitMarker: visit, demographics: demographics(source),
       sex: sex(opts.sex || opts.plec || visitContext.sex || field(w, 'sex')),
       currentAgeMonths: number(opts.currentAgeMonths != null ? opts.currentAgeMonths :
@@ -185,10 +194,119 @@
     context.summary = summary(context);
     return context;
   }
+
+  function sameValue(left, right) {
+    if (left === right) return true;
+    if (!left || !right || typeof left !== 'object' || typeof right !== 'object' ||
+        Array.isArray(left) !== Array.isArray(right)) return false;
+    var keys = Object.keys(left).sort(), other = Object.keys(right).sort();
+    return keys.length === other.length && keys.every(function (key, index) {
+      return key === other[index] && sameValue(left[key], right[key]);
+    });
+  }
+  function assessmentMatches(user, captured) {
+    var own = Object.prototype.hasOwnProperty;
+    return own.call(user, 'pubertyAssessment') === captured.present &&
+      (!captured.present || sameValue(user.pubertyAssessment, captured.raw)) &&
+      own.call(user, 'pubertyAssessmentVisit') === captured.visitPresent &&
+      (!captured.visitPresent || sameValue(user.pubertyAssessmentVisit, captured.visitRaw));
+  }
+  function usesActiveWriter(source) {
+    try {
+      var host = w.parent;
+      return !!(source.view !== w && host && host !== w && host.VildaShell &&
+        typeof host.VildaShell.captureSessionWriter === 'function');
+    } catch (_) { return true; }
+  }
+  function projectionAvailable(source) {
+    try {
+      var shell = w.parent && w.parent.VildaShell, adapter = w.VildaPersistence;
+      return !!(typeof source.state.editObservationToSession === 'function' && shell &&
+        typeof shell.captureSessionWriter === 'function' && typeof shell.isSessionWriterCurrent === 'function' &&
+        shell.captureSessionWriter(w) && adapter &&
+        typeof adapter.readMainSession === 'function' && typeof adapter.writeMainSession === 'function');
+    } catch (_) { return false; }
+  }
+  function account(view) {
+    var vault = view.VildaVault, unlocked = !!(vault && vault.isUnlocked && vault.isUnlocked());
+    var user = unlocked && vault.getCurrentUser ? vault.getCurrentUser() : null;
+    var token = unlocked && vault.captureSyncOperationSession && vault.assertSyncOperationSession
+      ? vault.captureSyncOperationSession() : null;
+    if (token) vault.assertSyncOperationSession(token);
+    return { view: view, vault: vault, unlocked: unlocked, userId: user && user.userId || null, token: token };
+  }
+  function accountCurrent(scope) {
+    try {
+      var current = account(scope.view);
+      if (scope.token) scope.vault.assertSyncOperationSession(scope.token);
+      return current.vault === scope.vault && current.unlocked === scope.unlocked && current.userId === scope.userId;
+    } catch (_) { return false; }
+  }
+  function sameVisit(session, source, patientId) {
+    var user = session.user, live = source.read.visitContext;
+    if (!sameValue(sessionReference(user), live)) return false;
+    // Check the general encounter whenever one exists, including before the
+    // first typed observation. The read-only capture must not invent a visit.
+    var visit = source.view.VildaVisitContext;
+    var current = visit && typeof visit.capture === 'function'
+      ? visit.capture(session, { patientId: patientId, readOnly: true, allowCreate: false }) : null;
+    if (current || session.visit) return !!(current && session.visit && current.patientId === patientId && sameValue(current, session.visit));
+    var marker = source.read.visit;
+    return !!(marker && marker.ownerPatientId === patientId && sameValue(marker, user.pubertyAssessmentVisit));
+  }
+  function sessionProjection(source) {
+    try {
+      var shell = w.parent && w.parent.VildaShell, adapter = w.VildaPersistence, id = identity(w);
+      if (!shell || typeof shell.captureSessionWriter !== 'function' || typeof shell.isSessionWriterCurrent !== 'function' ||
+          !adapter || typeof adapter.readMainSession !== 'function' || typeof adapter.writeMainSession !== 'function' ||
+          typeof source.state.editObservationToSession !== 'function' || stale(w) || preparing(w) || preparing(source.view)) return null;
+      var ticket = shell.captureSessionWriter(w);
+      if (!ticket) return null;
+      var sourceAccount = account(source.view), callerAccount = account(w);
+      if (sourceAccount.unlocked !== callerAccount.unlocked || sourceAccount.userId !== callerAccount.userId ||
+          id && (!sourceAccount.unlocked || !sourceAccount.userId)) return null;
+      var before = source.state.capture(), session = adapter.readMainSession();
+      if (identity(source.view) !== id || before.patientId !== id || !session || session.version !== 1 ||
+          !session.user || typeof session.user !== 'object' || Array.isArray(session.user) ||
+          !assessmentMatches(session.user, before) || !sameVisit(session, source, id)) return null;
+      var sourceDocument = source.view.document, callerDocument = w.document;
+      var revision = source.state.getActivityRevision();
+      var activeVisit = source.read.visit;
+      return function (candidate) {
+        if (candidate.patientId !== id || identity(w) !== id || identity(source.view) !== id ||
+            source.view.document !== sourceDocument || w.document !== callerDocument ||
+            source.view.VildaPubertyAssessmentState !== source.state ||
+            w.parent.VildaShell !== shell || w.VildaPersistence !== adapter ||
+            stale(w) || stale(source.view) || preparing(w) || preparing(source.view) ||
+            !accountCurrent(sourceAccount) || !accountCurrent(callerAccount) ||
+            !shell.isSessionWriterCurrent(ticket, w) || source.state.getActivityRevision() !== revision ||
+            !sameValue(adapter.readMainSession(), session) || !assessmentMatches(session.user, source.state.capture()) ||
+            !sameVisit(session, source, id) ||
+            candidate.visitRaw.ownerPatientId !== id || !sameValue(candidate.visitRaw.reference, sessionReference(session.user)) ||
+            activeVisit && candidate.visitRaw.visitId !== activeVisit.visitId) return false;
+        var next = model().clone(session);
+        next.user.pubertyAssessment = model().clone(candidate.raw);
+        next.user.pubertyAssessmentVisit = model().clone(candidate.visitRaw);
+        // This write belongs to the active caller. No other field, saved
+        // snapshot or saved-status reference is changed by this transport.
+        return adapter.writeMainSession(next) === true;
+      };
+    } catch (_) { return null; }
+  }
   function editObservation(axis, stage, options) {
     var source = chooseSource(identity(w));
     if (!source || !source.state || stale(w)) return { ok: false, reason: 'no-active-visit' };
     preferredView = source.view;
+    if (usesActiveWriter(source)) {
+      var project = sessionProjection(source);
+      if (!project) return { ok: false, reason: 'session-write-unavailable' };
+      var result = source.state.editObservationToSession(axis, stage, options, project);
+      if (result.ok) {
+        var indicator = w.VildaSaveStatusIndicator;
+        if (indicator && typeof indicator.reconcileFromSharedReference === 'function') indicator.reconcileFromSharedReference();
+      }
+      return result;
+    }
     return source.state.editObservation(axis, stage, options);
   }
   function notify() {

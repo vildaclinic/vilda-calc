@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createFictionalVault, fictionalPatient, loadPatient, readyForPatient, shellFrame } from '../support/centile-live-fixture.mjs';
 import { orientacja, wygenerujPdf } from '../support/siatka-poziomo.mjs';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(240_000);
@@ -158,6 +159,98 @@ test('home growth: history edits keep original nodes, metadata, annotations and 
   }
   const values = '.vgcc-row .vgcc-nm, .vgcc-row .vgcc-val';
   expect(await dialog.locator('.vgcc ' + values.split(', ').join(', .vgcc ')).allTextContents()).toEqual(await frame.locator('#advResults .vgcc ' + values.split(', ').join(', #advResults .vgcc ')).allTextContents());
+});
+
+test('home growth: reported patient measurements remain native read-only copies outside the editable history and patient save', async ({ page }) => {
+  const { frame, id, ids } = await setup(page, { gh: true });
+  await withGh(frame);
+  await frame.evaluate(async patientId => {
+    const journal = window.VildaDziennikOtylosci;
+    for (const [dateISO, ageYears, ageMonths, weight] of [
+      ['2025-06-17', 12, 0, 39.9], ['2025-12-17', 12, 6, 42.5],
+      ['2026-03-17', 12, 9, 44.4], ['2026-06-17', 13, 0, 45.9],
+    ]) {
+      const plan = journal.planNowego(await journal.wczytaj(patientId, []), patientId, {
+        type: 'continue', dateISO, ageYears, ageMonths, weight, weightSource: 'pacjent',
+        height: null, drug: 'Wegovy (semaglutyd) – s.c. 1×/tydz.', substance: '', dose: '2,4 mg / tydz.',
+      });
+      if (!plan.ok) throw new Error('Fictional journal fixture rejected: ' + JSON.stringify(plan.bledy));
+      await journal.zapisz(patientId, plan.wersje);
+    }
+  }, id);
+  await expect.poll(() => frame.evaluate(() => window.VildaDziennikOtylosci.punktyWczytanego()?.length)).toBe(4);
+  await frame.evaluate(() => window.VildaAdvDziennik.odswiez());
+  const native = frame.locator('#advMeasurements > .adv-dz-row');
+  await expect(native).toHaveCount(2);
+  await expect(frame.locator('#advHistoryPatient')).toHaveText('2 od pacjenta');
+  await frame.waitForFunction(() => VildaAdvancedGrowth.advGrowthPredictionsMatchCurrentInput());
+  const describeRows = rows => rows.map(row => ({
+    age: row.getAttribute('data-age-months'), origin: row.getAttribute('data-origin'),
+    date: row.getAttribute('data-date'), label: row.getAttribute('aria-label'), text: row.textContent,
+    values: [...row.querySelectorAll('.adv-dz-value')].map(value => value.textContent),
+  }));
+  const reported = await native.evaluateAll(describeRows);
+  // Both the archived 12-year visit and the current 13-year visit take priority
+  // over a diary entry from the same month. The other two entries stay visible.
+  expect(reported.map(row => [row.age, row.origin, row.values])).toEqual([
+    ['150', 'pacjent', ['12', '6', '—', '42,5', '']],
+    ['153', 'pacjent', ['12', '9', '—', '44,4', '']],
+  ]);
+  const canonical = await frame.evaluateHandle(() => [...document.querySelectorAll('#advMeasurements .measure-row')]);
+  const canonicalBefore = await canonical.evaluate(rows => rows.map(row => row.outerHTML));
+  expect(canonicalBefore).toHaveLength(5);
+  const stored = () => frame.evaluate(async patientId => ({
+    patient: await VildaVault.getPatient(patientId), notes: await VildaVault.listPatientNotesForPatient(patientId),
+  }), id);
+  const before = await snapshot(frame), storedBefore = await stored();
+  const dialog = await show(frame);
+  const copies = dialog.locator('[data-growth-reported-history]');
+  await expect(copies).toBeVisible();
+  await expect(copies.getByRole('heading', { name: 'Pomiary z dokumentacji leczenia', exact: true })).toBeVisible();
+  expect(await copies.locator('.adv-dz-row').evaluateAll(describeRows)).toEqual(reported);
+  await expect(copies.locator('input, select, textarea, button, [contenteditable="true"]')).toHaveCount(0);
+  await expect(dialog.locator('#vhomeGrowthHistoryCount')).toHaveText('Wcześniejsze pomiary: 7 · 2 od pacjenta');
+  await expect(dialog.locator('[data-growth-source-index]')).toHaveCount(5);
+  await expect(apply(dialog)).toBeDisabled();
+  expect(await canonical.evaluate(rows => rows.every(row => row.isConnected)
+    && rows.every((row, index) => row === document.querySelectorAll('#advMeasurements .measure-row')[index]))).toBe(true);
+  expect(await canonical.evaluate(rows => rows.map(row => row.outerHTML))).toEqual(canonicalBefore);
+  expect(await snapshot(frame)).toEqual(before);
+  expect(await stored()).toEqual(storedBefore);
+  await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  expect(await canonical.evaluate(rows => rows.map(row => row.outerHTML))).toEqual(canonicalBefore);
+  expect(await snapshot(frame)).toEqual(before);
+  expect(await stored()).toEqual(storedBefore);
+  await canonical.dispose();
+
+  await show(frame);
+  // An external patient selection invalidates the open modal before the native
+  // picker can load the replacement patient. Exercise the existing owner guard.
+  await frame.evaluate(next => sessionStorage.setItem('vildaCurrentPatientId', next), ids.b);
+  await expect(dialog).toBeHidden();
+  await expect(dialog.locator('[data-growth-reported-history]')).toHaveCount(0);
+  const menu = await visibleChromeMenu(page);
+  await menu.getByRole('button', { name: 'Baza pacjentów', exact: true }).click();
+  await frame.locator(`.pt-row[data-patient-id="${ids.b}"] .pt-row-open`).click();
+  await expect.poll(() => frame.evaluate(() => window.VildaSaveStatusIndicator.getCurrentDecision().ready)).toBe(true);
+  await frame.getByRole('button', { name: 'Wczytaj tego pacjenta', exact: true }).click();
+  const confirmation = frame.getByRole('dialog', { name: 'Ten pacjent jest już wczytany', exact: true });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole('button', { name: 'Wczytaj ponownie', exact: true }).click();
+  await expect(confirmation).toBeHidden();
+  const choices = frame.locator('#vildaLoadChoiceModal');
+  await expect(choices).toBeVisible();
+  await frame.waitForFunction(() => !window.VildaDobAge.restorePending());
+  await frame.evaluate(() => new Promise(resolve => { requestAnimationFrame(() => { requestAnimationFrame(resolve); }); }));
+  await choices.locator('#vildaLcmRestore').click();
+  await expect(choices).toHaveCount(0);
+  await expect.poll(() => frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(ids.b);
+  const replacement = await show(frame);
+  await expect(replacement.locator('[data-growth-reported-history]')).toBeHidden();
+  await expect(replacement.locator('.adv-dz-row')).toHaveCount(0);
+  await replacement.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  expect(await stored()).toEqual(storedBefore);
 });
 
 test('home growth: stale load, changed patient and locked vault cannot apply an old draft', async ({ page }) => {

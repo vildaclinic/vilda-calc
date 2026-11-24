@@ -1,11 +1,11 @@
 {
   "namespace": "vilda-visit-document-vault",
   "version": 1,
-  "baseVaultSHA256": "0499a9e445e5463d3a694cf5675684d333bbd4dd2b01a956a56ee918245869cd",
+  "baseVaultSHA256": "c03c5e5ddb0e282d3e52f44445337a5321b5913140058493a5c2ec02f6952cba",
   "source": "runtime/visit-document-v1/vault-fragment.js",
   "sourceSHA256": "b06f75fb9b879e781aa6b0d3852088a7c31bb3e6ba2dfece2a7a4683c9df8952",
   "fragmentSHA256": "9747f764ffd7e4901b5747fe217713a8d4f7b1e1803f037c8eb3a37270c7d067",
-  "integratedVaultSHA256": "011c7839314326b5a31c4d0cb075da7414807f8c8587a9aee8768067b3cd63f1",
+  "integratedVaultSHA256": "8c258ae2118257af1929817b7b6c1c1a24f4b3325ad48c11ea022914eb3ed8ed",
   "hooks": [
     {
       "name": "patient-lock-before-note-lock",

@@ -1,3 +1,4 @@
+import {applyClinicalAuditAuth, hasClinicalAuditAuth, replayClinicalAuditIfBase, reverseClinicalAuditAuth} from './clinical-audit-auth-delta.mjs';
 import { applyEncounterNoteAuthHooks, reverseEncounterNoteAuthHooks } from './home-encounter-note-auth-hooks.mjs';
 import { applyInlinePatientHooks, reverseInlinePatientHooks } from './home-inline-patient-auth-hooks.mjs';
 import { applyOverviewRemindersHooks, reverseOverviewRemindersHooks } from './home-overview-reminders-auth-hooks.mjs';
@@ -23,12 +24,16 @@ function chartReferenceSex(source, reverse = false) {
   return source.replace(before, reverse ? previousChart : chartWithReferenceSex);
 }
 export function applyGabinetAuthHooks(source, inline = true) {
-  return applyPatientProfileAuthHooks(chartReferenceSex(applyRegistration(source, inline)));
+  return replayClinicalAuditIfBase(applyPatientProfileAuthHooks(chartReferenceSex(applyRegistration(source, inline))));
 }
 
 // The older reproducers also accept their historical inputs. Reapply exactly
 // the layers found on entry when replaying a change or writing their output.
 export function gabinetAuthLayers(source) {
+  if (hasClinicalAuditAuth(source)) {
+    const previous = gabinetAuthLayers(reverseClinicalAuditAuth(source));
+    return { base: previous.base, replay: value => applyClinicalAuditAuth(previous.replay(value)) };
+  }
   const hasProfile = source.includes('/* BEGIN HOME PATIENT PROFILE EDIT */');
   const input = source;
   if (hasProfile) source = reversePatientProfileAuthHooks(source);

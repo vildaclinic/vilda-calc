@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = 'c50d9f4359adb8c94ce38194d2b6633cb3ca43d7698dcffda2a9c7d58a3e10da';
+const BASE = '5541e774dc67458bcf446362f33d1c6b262ad0ef3b3817d4991f0e5a3b23ec95';
 const SOURCE = 'runtime/staged-documentation-v1/vault-fragment.js';
 const MANIFEST = 'runtime/staged-documentation-v1/manifest.json';
 const START = '/* BEGIN VILDA STAGED DOCUMENTATION V1 */\n';

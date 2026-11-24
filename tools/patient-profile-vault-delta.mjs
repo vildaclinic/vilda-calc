@@ -9,7 +9,7 @@ import { parse } from 'acorn';
 import { restoreVisitDocumentBaseline } from './visit-document-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = '981b7dd790d068486be0ab6b3a3346ba86550ca4e32f180f05aa0f4d8e618b9f';
+const BASE = 'bb0aeebc6e2db25afb3b96a1531e19b0e0846ec64edb6806a04200854e1507a5';
 const START = '/* BEGIN VILDA PATIENT PROFILE V1 */\n';
 const END = '/* END VILDA PATIENT PROFILE V1 */\n';
 const PATH = 'runtime/patient-profile-v1/manifest.json';

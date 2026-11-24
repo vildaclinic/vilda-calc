@@ -1,3 +1,4 @@
+import {applyClinicalAuditAuth, reverseClinicalAuditAuth} from '../../tools/clinical-audit-auth-delta.mjs';
 import { reverseBscAuthHooks } from '../../tools/account-duplicate-dismissals-auth-hooks.mjs';
 import { applyGabinetAuthHooks, gabinetAuthLayers } from '../../tools/home-gabinet-auth-hooks.mjs';
 import fs from 'node:fs';
@@ -388,20 +389,22 @@ describe('static and lazy native handoff dependencies', () => {
 
 describe('exact reproducible Auth security delta', () => {
   it('reverses all 17 unique pairs to the prior checkpoint, replays idempotently and commutes with the explicit Home hooks', () => {
-    let nativeChartReplay = reverseOwnerChartView(auth);
+    const preAudit = reverseClinicalAuditAuth(auth);
+    expect(applyClinicalAuditAuth(preAudit)).toBe(auth);
+    let nativeChartReplay = reverseOwnerChartView(preAudit);
     for (const pair of ownerChartViewDelta.pairs) {
       expect(nativeChartReplay.split(pair.before)).toHaveLength(2);
       nativeChartReplay = nativeChartReplay.replace(pair.before, pair.after);
     }
-    expect(nativeChartReplay).toBe(auth);
-    let nativeDoseReplay = reverseOwnerDoseView(auth);
+    expect(nativeChartReplay).toBe(preAudit);
+    let nativeDoseReplay = reverseOwnerDoseView(preAudit);
     for (const pair of ownerDoseViewDelta.pairs) {
       expect(nativeDoseReplay.split(pair.before)).toHaveLength(2);
       nativeDoseReplay = nativeDoseReplay.replace(pair.before, pair.after);
     }
-    expect(nativeDoseReplay).toBe(auth);
+    expect(nativeDoseReplay).toBe(preAudit);
     expect(UI_INTENT_AUTH_PAIRS).toHaveLength(17);
-    for (const pair of UI_INTENT_AUTH_PAIRS) expect(auth.split(pair.after)).toHaveLength(2);
+    for (const pair of UI_INTENT_AUTH_PAIRS) expect(preAudit.split(pair.after)).toHaveLength(2);
     const beforeGabinet = gabinetAuthLayers(auth).base;
     expect(digest(beforeGabinet)).toBe('b66b2992c59c353d32bb9aad48e83bb5ca0112fc3d9db6d72b95090d4cf5ff62');
     expect(applyGabinetAuthHooks(beforeGabinet)).toBe(auth);

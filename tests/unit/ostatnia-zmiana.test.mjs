@@ -450,6 +450,9 @@ describe('wyrocznia: klasy tabeli wyjątków wymagają mechanizmu (pozytyw; nega
     expect(WYR.WYJATKI['E1/E1b (utrata wersji nieznanej scalającemu)'].naprawa).toBe('do naprawy w E3-PR0 (decyzja właściciela 9a z 2026-11-15)');
     expect(WYR.WYJATKI['E4b (stara karta po „Scal pacjentów”)'].naprawa).toBe('do naprawy w osobnym PR etapu E3-PR0 (stara karta po „Scal pacjentów”; decyzja właściciela 4a z 2026-11-15)');
     expect(WYR.WYJATKI['E4b (stara karta po „Scal pacjentów”)'].swiaty, 'E4b: tylko W1').toEqual(['W1']);
+    // R5-E1 (decyzja właściciela z 2026-11-20): jawny wyjątek kryterium odbioru E3-PR0, bez zapowiedzi naprawy.
+    expect(WYR.WYJATKI['R5-E1'].naprawa, 'R5-E1: bez naprawy').toBe('bez naprawy: wynik taki jak po pełnej synchronizacji (decyzje właściciela z 2026-11-19 i 2026-11-20)');
+    expect(WYR.WYJATKI['R5-E1'].swiaty, 'R5-E1: światy bez zmian').toEqual(['W1', 'W4', 'bloby']);
     const e4b = [{ klasa: 'E4b (stara karta po „Scal pacjentów”)' }];
     expect(['W1', 'W4', 'bloby'].map((s) => WYR.bezWyjatku(e4b, s).length), 'E4b: W1 dozwolone, W4 i bloby czerwone').toEqual([0, 1, 1]);
     for (const s of ['W1', 'W4', 'bloby']) expect(WYR.bezWyjatku([{ klasa: null }], s).length, `null w ${s}`).toBe(1);

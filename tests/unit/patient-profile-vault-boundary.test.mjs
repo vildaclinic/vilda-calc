@@ -16,7 +16,7 @@ function nativeFragment(text) {
 describe('strict patient profile outer Vault layer', () => {
   it('rebuilds byte-for-byte from the exact reviewed rapid-visit image', () => {
     const base = restorePatientProfileBaseline(source);
-    expect(digest(base)).toBe('981b7dd790d068486be0ab6b3a3346ba86550ca4e32f180f05aa0f4d8e618b9f');
+    expect(digest(base)).toBe('bb0aeebc6e2db25afb3b96a1531e19b0e0846ec64edb6806a04200854e1507a5');
     expect(applyPatientProfileDelta(base)).toBe(source);
     expect(digest(source)).toBe(manifest.integratedVaultSHA256);
   });

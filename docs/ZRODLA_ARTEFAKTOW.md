@@ -2252,6 +2252,90 @@ P-OTYLOSC-SIATKI po `Ob_dzPowiadom`: `Ob_dzSiatki`, `Ob_zrMetryki`, `Ob_dzMaPacj
 **Granice.** `H` poza `we()` zostaje listą wizyt: kafelek tempa w „Status” (`hvSdsKafelek`) i PDF siatek bez zmian.
 Sejf, dziennik i zapis bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-OTYLOSC-STRONA — pomiary od pacjenta w całej aplikacji (temat D; `vilda_cykle_leczenia.js` 11 → 12, `vilda_centile_live_data.js` 8 → 9, `vilda_centile_live_render.js` 5 → 6, `vilda_centile_live_view.js` 5 → 6, `vilda_centile_live_colors.js` 2 → 3, `vilda_centile_live_preview.js` 3 → 4, `vilda_centile_live_panel.css` 7 → 8, `vilda_professional_summary.js` 2 → 3, `vilda_professional_summary.css` 3 → 4, `vilda_adv_history_collapse.js` 2 → 3, `vilda_trajectory_analysis.js` 47 → 48, `vilda_advanced_growth.js` 82 → 83, `vilda_summary_cards.js` 65 → 66, `inline_index_04.js` 29 → 30, `inline_index_00.css` 3 → 4, `style.css` 96 → 97, `index.html`, 2026-11-20, makieta zaakceptowana przez właściciela)
+
+Opis działania, przypadki i wpływ kliniczny: `docs/clinical/ALGORITHMS.md`, wpis P-OTYLOSC-STRONA. Zmiany wprost
+w artefaktach; nic nie przebudowano ani nie minifikowano ponownie.
+
+Czytelne źródła:
+- `vilda_cykle_leczenia.js` (eksport `VildaDziennikOtylosci`): `pomiaryStrony` (dziennik pacjenta strony →
+  `pomiaryDoSiatek`, opcje `patientId`, `doWiekuMies`), `zrodloMetryki`, `pomiaryOdcinka`, `opisMasyOdPacjenta`,
+  `opisOdcinka`, `rysujPdf` (romby, kropki i legenda na stronie PDF);
+- `vilda_centile_live_data.js` — `reportedMeasurements` (pole migawki `reportedMeasurements`, tylko do rysowania),
+  nasłuch `vilda:therapy-points-changed` (`source: 'obesity-dziennik'`);
+- `vilda_centile_live_render.js` — `reportedFor` (pole `reported` siatki), `probe` czyta punkt z dziennika w jego wieku;
+- `vilda_centile_live_colors.js` — `drawReported`, warstwa pełnoekranowa (`fullLayer`) rysuje romby i omija je etykietą;
+- `vilda_centile_live_preview.js` — romby w podglądzie, przeszkody dla etykiety bieżącego pomiaru;
+- `vilda_centile_live_view.js` — legenda „dane z gabinetu” / „dane od pacjenta” (licznik ustępuje miejsca), dymek
+  „◇ od pacjenta · wiek”, „Waga 74,6 kg”, data; kursor i strzałki przeskakują także na pomiary z dziennika;
+- `vilda_professional_summary.js` — `laterPatientWeight`, `reportedWeightNode` (linijka w wierszu „Waga”), odświeżenie
+  karty po zmianie dziennika;
+- `vilda_cykle_leczenia.js` — trzecia część pliku, `window.VildaAdvDziennik`: bloki tylko do odczytu `.adv-dz-row`
+  w `#advMeasurements` (tylko lista z nagłówkiem `#advHistoryToggle`, strona główna). Nie osobny plik: nowy wpis
+  precache przekroczyłby budżet instalacji SW (600 żądań, `tests/unit/sw-precache-stron.test.mjs`);
+  `vilda_adv_history_collapse.js` — `blokiDziennika` (liczy bloki do nagłówka, ich nie tworzy);
+- `vilda_trajectory_analysis.js` — `zDziennikiemStrony`, `analyze` przy `input.dziennikStrony`.
+
+Wstawki w plikach zminifikowanych:
+
+```
+// vilda_advanced_growth.js — wejście analizy trajektorii karty zaawansowanej
+//    było:  TJ9=window.VildaTrajectoryAnalysis.analyze({measurements:or,
+//    jest:  TJ9=window.VildaTrajectoryAnalysis.analyze({dziennikStrony:!0,measurements:or,
+// vilda_summary_cards.js — karta „Porównanie z poprzednim pomiarem”
+// 1. żetony:  …'<span id="porownanieKontekst" …></span>');
+//      jest:  …'<span id="porownanieKontekst" …></span>','<span id="porownaniePacjent" class="porownanie-chip porownanie-chip--pacjent" hidden></span>');
+// 2. updatePrevSummaryDiff: kEl=…("porownanieKontekst"),pEl=…("porownaniePacjent"),…;pEl&&(pEl.hidden=!0,pEl.textContent="");
+// 3. po pasku „kontekst:”: const Sd_dzOdc=Dz.pomiaryOdcinka([{ageMonths:t.ageMonths,weight:t.weightKg},{ageMonths:A*12,weight:s}],t.ageMonths,A*12),
+//    Sd_romb=…; żeton: romb + Dz.opisOdcinka(n)
+// 4. wiersz: po podpisie „Dziś” — w.klucz==="masa": span.pt-s.pt-pacjent (romb + Dz.opisMasyOdPacjenta(ostatni))
+// inline_index_04.js — buildCentilePageCanvas / generateCentileChart
+// 1. parametry:  …legacyLayout:__legacyLayout}){  →  …legacyLayout:__legacyLayout,pomiaryDziennika:__dz04}){
+// 2. po serii wagi (przed „wagaiwzrost.pl”): (function(){if(__dz04!==!0)return;…Dz.rysujPdf(n,{minX:e,maxX:t,
+//    height:{px:220,py:me+80,pw:ce-220,ph:ue-160,minY:w,maxY:A},weight:{px:220,py:Ge+80,pw:ce-220,ph:Ae-160,minY:M,maxY:u},
+//    legend:{x:oe/2,y:le-24},current:{ageMonths:_,weight:X,height:ne},measurements:advancedGrowthData.measurements})})(),
+// 3. generateCentileChart: …suppressSummaryBox:!!t}) → …suppressSummaryBox:!!t,pomiaryDziennika:!t})
+//    (siatka „zewnętrzna” — inne dane niż pacjent strony — i producenci modelOnly nie rysują dziennika)
+```
+
+`index.html`: `<span id="advHistoryPatient" class="porownanie-chip adv-history-patient" hidden>` obok licznika
+„Poprzednich pomiarów”. CSS: `vilda_centile_live_panel.css` (klucz kropki i rombu,
+data w dymku), `vilda_professional_summary.css` (`.professional-summary-reported`), `inline_index_00.css` (`.adv-dz-*`,
+`.adv-history-patient`, `#advResults .vtap-pac-l` schowany jak na makiecie), `style.css` (`.porownanie-chip--pacjent`,
+`.vilda-romb-pacjent`, `.pt-s.pt-pacjent`).
+
+**Granice.** Sejf, dziennik, zapis wizyty, autozapis i `collectAdvancedMeasurements()` bez zmian — pomiary z dziennika
+są tylko rysowane i pokazywane. Bez zmian: Karta pacjenta (temat C), strona „standardowa” PDF, karta „Obliczenia
+wzrostowe” (tryb podstawowy). Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`. Sprostowanie
+(2026-11-23): DocPro ładuje te same pliki, więc zmiany działają także tam (poza blokami „Poprzednich pomiarów”) — patrz
+łatka P-OTYLOSC-STRONA-2 niżej; siatki Palczewskiej (własny przycisk) dostały romby w P-OTYLOSC-STRONA-2.
+
+## Łatka P-OTYLOSC-STRONA-2 — romby i legenda w PDF siatek Palczewskiej; DocPro (`vilda_cykle_leczenia.js` 13 → 14, `inline_index_07.js` 16 → 17, `vilda_centile_landscape.js` 2 → 3, 2026-11-23, polecenie właściciela)
+
+Przy źródle Palczewska PDF tworzy osobny przycisk (`generatePalczewskaCentileCharts`, `Re` w `inline_index_07.js`), nie
+`generateCentileChart`, więc łatka P-OTYLOSC-STRONA go nie obejmowała — ani 0–3 lata, ani 1–18 lat. Czytelne źródła:
+`vilda_cykle_leczenia.js` — `rysujLegendePdf` wydzielona z `rysujPdf` (eksport `VildaDziennikOtylosci`);
+`vilda_centile_landscape.js` — `buildPage` rysuje legendę pod stopką strony poziomej, gdy któryś wykres narysował romby.
+
+```
+// inline_index_07.js
+// 1. Fe (jeden wykres 1–18 lat):  …modelOnly:__modelOnly}){  →  …modelOnly:__modelOnly,pomiaryDziennika:__dz07}){
+// 2. Fe, po serii pomiarów, przed blokiem samego wzrostu (o==="height"&&…; adnotacje Kreatora zostają tuż po nim —
+//    pilnuje tests/unit/publication-creator.test.mjs): (function(){if(__dz07!==!0||S)return;…Dz.rysujPdf(e,{minX:12,maxX:216,[o]:{px:te+120,
+//    py:ne+80,pw:Z-220,ph:U-160,minY:F,maxY:R},legend (tylko strona pionowa):{x:Y/2,y:xe-175},current:{ageMonths:ve,
+//    weight:l,height:f},measurements:advancedGrowthData.measurements});Me.dataset.vildaRomby=String(n)})(),
+// 3. ze: destrukturyzacja …,pomiaryDziennika:__dzZ},__lay) i przekazanie do obu wywołań Fe (…layout:__lay,pomiaryDziennika:__dzZ})
+// 4. Ie (0–3 lata): …userHeight:l,pomiaryDziennika:__dzI}) i do buildCentilePageCanvas …userHeight:l,pomiaryDziennika:__dzI===!0,
+// 5. Re (przycisk strony): __a={…,pomiaryDziennika:!0} (1–18 lat, pion i poziom) oraz Ie({…,pomiaryDziennika:!0})
+```
+
+Siatki publikacyjne (`window.publicationCharts`), raport pacjenta i Kreator nie podają flagi — bez rombów. **DocPro**:
+sprawdzone na prawdziwej stronie (e2e ST-8) — linijka pod „Waga”, romby na siatce „Podsumowania wyników” i analiza
+trajektorii karty zaawansowanej z wpisami działają jak na stronie głównej (te same pliki); bloków „pomiar od pacjenta”
+w „Poprzednich pomiarach” DocPro nie ma (`VildaAdvDziennik` tylko przy `#advHistoryToggle`). Decyzja właściciela 2026-11-23: DocPro
+zostaje jak strona główna (analiza z masami od pacjenta).
+
+
 ## Łatka P-E2-MENARCHE — estradiol poniżej 18 lat: zakresy dorosłych po 5 latach od menarche (`lab_units_data.js` 42 → 43, `lab_unit_converter.js` 10 → 11, `vilda_lab_packages.js` 10 → 11, `inline_przelicznik_jednostek_00.css` 17 → 18, `przelicznik-jednostek.html`, 2026-11-19, decyzje właściciela)
 
 Opis działania, przypadki, dowody i ograniczenia: `docs/clinical/ALGORITHMS.md`, wpis „LAB-E2-MENARCHE”. Zmiany wprowadzono wprost w artefaktach, czytelnymi blokami; żadnego pliku nie przebudowano z dawnych źródeł ani nie minifikowano ponownie.
@@ -2331,6 +2415,532 @@ Strona nie ma kopii reguły: próg, granicę wieku, zakres wieku menarche i list
 
 **Granice.** Bez nowych stylów ustawianych wprost na elementach (`tests/fixtures/style-elementow.json` bez zmian: nowe pole i nota chowają się atrybutem `hidden`). `vilda_lab_range_snapshot.js` i `vilda_vault.js` bez zmian — format zapisanego zakresu się nie zmienił, a dawne zapisy nie są przeliczane. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-KARTA-LECZENIE, etap 1 — zakładka „Leczenie” i pasek leczenia (`vilda_auth_ui.js` 574 → 575, `vilda_auth_ui.css` 86 → 87, 2026-11-20, decyzje właściciela)
+
+Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE zaraz po funkcji `jl` (przed `function Pl(`):
+`Kl_IKONA`, `Kl_zakladka` (biała lista: „leczenie” bez zakładki → „antro”), `Kl_daneGh`, `Kl_daneOb` (części paska
+z obiektów wyjściowych bloków), `Kl_kolejnosc` (D2), `Kl_ustaw`/`Kl_miesci`/`Kl_krok`/`Kl_dopasuj` (jedna/dwie linie,
+stopnie tekstu klasami `vilda-kl-pasek--r1…r3`, odrzucanie ostatnich części), `Kl_pasek` (przycisk), `Kl_przewin`
+(przewinięcie kontenera Karty) i `Kl_leczenie` (zakładka, treść, paski; obserwator rozmiaru pasków). Czytelna `Ob_dz`
+dostaje 7. argument `Kl_po`. Gdy blok rzuci wyjątek (`czesci` w `Ob_dz`, `wl`/`kl` w `Kl_leczenie`), jego obiekt
+wyjściowy jest czyszczony — pasek nie pokazuje wartości ani oceny bloku, który się nie narysował (`Ob_b` wypełnia
+wyjście przed wykresem). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-KARTA-LECZENIE; plan: `docs/KARTA_LECZENIE_PLAN.md`.
+
+```
+// vilda_auth_ui.js — wl (podsumowanie GH): obiekt wyjściowy
+// 1. function wl(t){ → function wl(t,Kl_wy){
+// 2. przed v=e("div",{class:"vilda-gh-summary-head"},…): Kl_odz=s?"Leczony IGF-1 (mekasermina)":"Leczony hormonem wzrostu (rhGH)",
+//    Kl_st=o?"leczenie zako\u0144czone":"aktywne", — odznaka i znacznik stanu używają Kl_odz i Kl_st (teksty bez zmian)
+// 3. return e("div",{class:"vilda-gh-summary"},…) → return Kl_wy&&(Kl_wy.odznaka=Kl_odz,Kl_wy.stan=Kl_st,
+//    Kl_wy.zakonczone=!!o,Kl_wy.dawka=u==="\u2014"?"":u),e("div",{class:"vilda-gh-summary"},…)
+// vilda_auth_ui.js — kl (Dane analityczne GH)
+// 4. function kl(t,a,n,r,o){ → function kl(t,a,n,r,o,Kl_wy){
+// 5. po var z=y!=null&&x!=null?x-y:null; : Kl_wy&&(Kl_wy.czas=Gk&&W>0?W+" mies.":"",
+//    Kl_wy.tempo=F!=null&&!(Fo&&Fo.krotki)?qt(F,1)+" cm/rok":"",Kl_wy.dhsds=z!=null?be(z,"",2):"");
+// vilda_auth_ui.js — Cl (podsumowanie otyłości)
+// 6. function Cl(t){ → function Cl(t,Kl_wy){; Kl_odz/Kl_st przed y=e("div",{class:"vilda-gh-summary-head"},…) jak w 2.;
+//    return …[y,x,Ob_h,Ob_z,Ob_u]) → return Kl_wy&&(…,Kl_wy.dawka=p==="\u2014"?"":p),e(…)
+// vilda_auth_ui.js — Ml / Ob_b (Dane analityczne — otyłość)
+// 7. function Ml(t,a,n,Ob_dzs){ → function Ml(t,a,n,Ob_dzs,Kl_wy){; function Ob_b(Ob_m){var o=… →
+//    function Ob_b(Ob_m,Kl_out){var Kl_red=null,Kl_rv,Kl_k,o=…
+// 8. kafelek „Redukcja do oceny”: wartość zapamiętana (…"Redukcja do oceny",Kl_rv=K!=null?…), po nim
+//    ,Kl_red=ot[ot.length-1],ot.push(fe("","Pr\xF3g ChPL",… (liczba ot.push(fe( bez zmian — strażnik R6)
+// 9. werdykty „przed oknem”, „wystarczająca”, „niewystarczająca”: krotko:Kl_k="oce\u0144 po "+L,
+//    title:"Przed oknem oceny \u2014 "+Kl_k (analogicznie „kontynuowa\u0107 leczenie”,
+//    „wg ChPL odstawi\u0107 i ponownie oceni\u0107”) — tytuły bez zmian, budowane z krótkiej formy
+// 10. przed var lt=ot.slice(); : Kl_out&&(Kl_out.czas=Ob_g&&D!=="\u2014"?D+" "+M:"",
+//     Kl_out.redukcja=Kl_red&&ot.indexOf(Kl_red)>=0&&K!=null?{miara:P,tekst:Kl_rv}:null,
+//     Kl_out.ocena=!Ob_m.end&&gt&&gt.krotko?{cls:gt.cls,ic:gt.ic,tekst:gt.krotko}:null);
+// 11. Ob_b(Ob_C[Ob_C.length-1]) → Ob_b(Ob_C[Ob_C.length-1],Kl_wy) (przełącznik cykli woła Ob_b(l) bez wyjścia)
+// vilda_auth_ui.js — jl (karta „wg notatek”)
+// 12. function jl(t,a){ → function jl(t,a,Kl_n,Kl_wy){; z tablicą notatek Kl_n karta powstaje od razu (wewnętrzna
+//     Kl_buduj — dawne ciało .then(function(l){…})), bez niej — jak dotąd po odczycie notatek z sejfu;
+//     Kl_odz/Kl_st przed h=e("div",{class:"vilda-gh-summary-head"},…); wyjście: odznaka, stan, zakonczone=!p, dawka
+// vilda_auth_ui.js — showPatientCard (se)
+// 13. przed Ft=e("div",{class:"vilda-patient-tabs",…}): KlL=Kl_leczenie({patientId:t,rekord:s,plec:S,zaawansowane:y,
+//     siatka:h,notatki:GdNotatki,user:m,zakladka:at(Kl_IKONA,"Leczenie")}); lista zakładek [Et,KlL?KlL.zakladka:null,Bt,…]
+// 14. ua(): [Et,KlL&&KlL.zakladka,Bt,…].filter(Boolean) i [Nt,KlL&&KlL.tresc,Ct,…].filter(Boolean)
+// 15. przed CarePatientTab.addEventListener(…): KlL&&KlL.zakladka.addEventListener("click",function(){ua("leczenie");
+//     ia({screen:"card",patientId:t,tab:"leczenie"})});
+// 16. biała lista activeTab: …==="antro"||r.activeTab==="leczenie"&&KlL||…; Ka.tab: Kl_zakladka(r&&r.activeTab,KlL)||"antro";
+//     xa.restoreTab: ua(Kl_zakladka(ct,KlL)||"antro")
+// 17. Cs: trzy wywołania wl/kl/Ob_dz nad Ft → KlL?KlL.paski:null,Ft,Nt,KlL?KlL.tresc:null,Ct,…
+// vilda_auth_ui.js — Ob_dzNotatki (czytelne)
+// 18. button[data-tab="antro"] → button[data-tab="leczenie"] (zapas: "antro"); sekcja.scrollIntoView(…) → Kl_przewin(sekcja)
+```
+
+`vilda_auth_ui.css`: rozdział „P-KARTA-LECZENIE, etap 1” na końcu pliku — `.vilda-kl-paski`/`.vilda-kl-gh`
+(`display: contents`), `.vilda-kl-tresc` (kolumna z odstępem 18 px jak Karta), `.vilda-kl-pasek*` i `.vilda-kl-pigulka*`
+(kolory podsumowania i pola oceny; `!important` przy szczegółowości 0-2-0 jak `.vilda-gha-btn`), `--dwie` (dwie linie),
+`--r1…--r3` (stopnie tekstu), siedem zakładek z zawijaniem w wierszu (`.vilda-patient-tabs:has(>…[data-tab=leczenie])`).
+
+**Granice.** Bez nowego pliku ładowanego przez strony; `vilda_cykle_leczenia.js` i `obesity_response_criteria.js` bez
+zmian; sejf, dziennik, zapis i synchronizacja bez zmian; style tylko klasami (bez stylów wpisanych w elementy). Klasy,
+których szukają testy i moduły (`.vdo`, `.vilda-gha-btn`, `.vilda-gh-summary`, `.vilda-oba-verdict`, `.vilda-ob-dz`),
+bez zmian; pasek ma własne klasy (`.vilda-kl-*`), żeby lokatory bloków nie trafiały w pasek. Wersje `?v=`, precache
+i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-GH-WZNOWIENIE, część 1 — kursy GH od wznowienia w Karcie (`vilda_auth_ui.js` 575 → 576, `growth-basic-module.js` 24 → 25, 2026-11-20, decyzje właściciela)
+
+Czytelne źródło reguły: `vilda_trajectory_analysis.js` — `ghKursy` (eksport `VildaTrajectoryAnalysis.ghKursy`; z niej
+`therapyIntervals`), `kursyZPrzerwa` (dawna reguła, już tylko zapas kursów otyłości). W `vilda_auth_ui.js` nowy czytelny
+blok P-GH-WZNOWIENIE zaraz po funkcji `jl` (przed blokiem P-KARTA-LECZENIE): `Gw_BEZ_WLACZENIA`, `Gw_kursy` (kursy
+z modułu trajektorii; bez modułu — null), `Gw_biezacy` (bieżący kurs przy > 1 kursie, inaczej null — Karta liczy jak
+dotąd), `Gw_znacznik` („kurs k z N”, wygląd „cykl k z N” z `Ob_css`), `Gw_infoW2` (treść ramki W2), `Gw_wgWieku`
+(punkty wg wieku, stabilnie), `Gw_pasy` (pas na kurs; jeden kurs — z punktów wg wieku), `Gw_numerKursu` (numer kursu
+punktu trendu), `Gw_punktyProgramu` (program trendu z bieżącego kursu; jeden kurs — z punktów wg wieku). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-WZNOWIENIE, część 1.
+
+```
+// vilda_auth_ui.js — wl (podsumowanie GH)
+// 1. pętla Włączenia/Zakończenia po posortowanych n (było: po tablicy a); po niej:
+//    var Gw=Gw_biezacy(a),Gw_p=Gw?Gw.kurs.punkty:n;Gw&&(r=Gw.kurs.wlaczenie,o=Gw.kurs.b!=null?Gw_p[Gw_p.length-1]:null);
+//    var Gs=r;r||(r=Gw_p[0]);                                         (było: var Gs=r;r||(r=n[0]);)
+// 2. znacznik stanu: …text:Kl_st})]) → …text:Kl_st}),Gw?Gw_znacznik(Gw):null])
+// 3. h("Punkty kontrolne",String(a.length)) → h("Punkty kontrolne",Gw?Gw_p.length+" w kursie ("+a.length+" łącznie)":String(a.length))
+// 4. ramka P-GH-BEZ-STARTU: text:"Brak punktu włączenia…" → text:Gw?Gw_infoW2(Gw):"Brak punktu włączenia…"
+// vilda_auth_ui.js — kl (Dane analityczne GH)
+// 5. pętla Włączenia po posortowanych d (było: po tablicy l); po niej:
+//    var Gw=Gw_biezacy(l),Gw_d=d,Gw_w2=!!Gw&&Gw.bezWlaczenia;Gw&&(d=Gw.kurs.punkty.slice(),l=d,c=Gw.kurs.wlaczenie);
+// 6. var w=u!=null&&h!=null?h-u:null → var w=!Gw_w2&&u!=null&&h!=null?h-u:null; etykieta „Przyrost od Włączenia”
+//    i podpis Gw_BEZ_WLACZENIA przy W2
+// 7. var z=y!=null&&x!=null?x-y:null; → var z=!Gw_w2&&y!=null&&x!=null?x-y:null; podpis ΔhSDS Gw_BEZ_WLACZENIA przy W2
+// 8. „Wiek kostny (ost.)”: pętla po Gw_d (cała historia, jak dotąd) zamiast d
+// 9. createTextNode("Wzrastanie") → createTextNode("Wzrastanie"+(Gw?" — kurs "+Gw.numer+" z "+Gw.liczba:""))
+// vilda_auth_ui.js — Pl (Trend leczenia GH), ml i gl (wykresy)
+// 10. var l=[] → var l=[],Gw_nr=Gw_numerKursu(a); w punkcie trendu: var Gw_n=Gw_nr(u);Gw_n!==void 0&&(h.Gw_kurs=Gw_n)
+// 11. program: pętla po Gw_punktyProgramu(a) zamiast a
+// 12. ml: else if(P.Gw_kurs!==t[L-1].Gw_kurs)K+=" M "+… (linia dawki przerwana między kursami)
+// 13. gl: if(!(P==null||L==null)) → if(!(P==null||L==null||f.Gw_kurs!==K.Gw_kurs)) (bez odcinka między kursami)
+// vilda_auth_ui.js — showPatientCard (siatki)
+// 14. Yt=Lt(s.ghTherapyPoints,"GH","#0F6E56") → Yt=Gw_pasy(s.ghTherapyPoints,function(pe){return Lt(pe,"GH","#0F6E56")})
+// 15. Ne=[Yt,ke].filter(Boolean) → Ne=[].concat(Yt||[],ke||[])
+// 16. _cx9: …,redKursy:ae._vildaCmpCtx.redKursy} → …,redKursy:ae._vildaCmpCtx.redKursy,ghKursy:ae._vildaCmpCtx.ghKursy}
+// vilda_auth_ui.js — panel „Porównanie pomiarów” (renderPanel)
+// 17. nowa function ctxGhKursy(cx,ovlM) przed renderPanel (suma pokryć cx.ghKursy; bez listy — koperta cx.gh)
+// 18. var ghM=cx?ovlM(cx.gh):0, → var ghM=ctxGhKursy(cx,ovlM),
+
+// growth-basic-module.js — kontekst analizy trajektorii (z)
+//    było:  k9&&(k9.gh&&(c9.gh=k9.gh),k9.red&&(c9.red=k9.red),typeof k9.mpSds=="number"
+//    jest:  k9&&(k9.gh&&(c9.gh=k9.gh),k9.red&&(c9.red=k9.red),/* P-GH-WZNOWIENIE … */k9.ghKursy&&(c9.ghKursy=k9.ghKursy),
+//           k9.redKursy&&(c9.redKursy=k9.redKursy),typeof k9.mpSds=="number"      (jak vilda_advanced_growth.js)
+```
+
+**Granice.** Jeden kurs (albo brak `VildaTrajectoryAnalysis.ghKursy`) — `Gw_biezacy` daje null i wszystkie gałęzie liczą
+jak dotąd; jedyna zmiana przy jednym kursie: „Włączenie” = pierwsze „start” wg wieku, nie wg kolejności tablicy (wynik inny
+tylko przy dwóch Włączeniach w otwartym kursie — scalone duplikaty). Punkty trendu jednego kursu nie dostają pola
+`Gw_kurs`. Bez nowego pliku ładowanego przez strony i bez nowych stylów (znacznik i ramka mają dotychczasowy wygląd);
+DocPro (`gh_therapy_monitor.js`, `vilda_gh_punkty.js`, odcinki, B.64), sejf, Terminarz i Historia bez zmian (część 2).
+Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatki P-GH-WZNOWIENIE, część 2 — wznowienie leczenia GH w DocPro (`gh_therapy_monitor.js` 64 → 65, `gh_therapy_segments.js` 5 → 6, `gh_igf_therapy.js` 33 → 34, `vilda_auth_ui.js` 576 → 577; czytelne `vilda_gh_punkty.js` 6 → 7, `vilda_gh_punkt_z_wiersza.js` 3 → 4; 2026-11-20, decyzje właściciela)
+
+Czytelne źródło reguły wpisu: `vilda_gh_punkty.js` (wersja 4: `sprawdzRodzaj` z `opcje.wiekM`, `dostepneRodzaje` z kluczem
+`continue` i wariantem `{ wsteczny: true }`, `wiekMiesZPol`, `gotowe({ kursy: true })`) i `vilda_gh_punkt_z_wiersza.js`
+(`rodzajeWWieku`, `stanPrzycisku` z rodzajami, `przygotujPunkt` z wiekiem wiersza). Reguła kursów: `ghKursy` w
+`vilda_trajectory_analysis.js` (część 1, bez zmian). Opis: `docs/clinical/ALGORITHMS.md`, P-GH-WZNOWIENIE, część 2.
+Zminifikowane pliki zmienione wprost w artefakcie kotwicami występującymi dokładnie raz (skrypty łatek odtwarzają wynik
+z `origin/audyt` 8350126); bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelny blok przed function F() (renderGHTherapyTable): GH_PODPOWIEDZ_BEZ_STARTU,
+//   GH_PODPOWIEDZ_WZNOWIENIE, ghKursyMonitora (kursy z VildaTrajectoryAnalysis.ghKursy i wiersze tabeli w ich kolejności;
+//   wpis spoza kursów w miejscu wg wieku; null bez modułu), ghWiekKursuTekst, ghOpisKursu („Kurs k — wznowienie w wieku …”
+//   / „Kurs k — bez Włączenia (…)”), ghWierszKursu (tr.gh-kurs-row), ghSeparatorKursu, ghProgramKursu, ghKursProgramu
+//   (przy edycji — kurs edytowanego punktu), ghPodpowiedzKursu, ghGrupyKursow, ghOznaczKurs (Gw_kurs, Gw_naglowek),
+//   ghSeparatorMetryki, ghMetrykiBiezacegoKursu, ghWiekNowegoPunktu, ghRodzajeWsteczne (bramka Gpb)
+// 1. Gpb:   A&&A.wersja===3&&                      → A&&A.wersja===4&&
+// 2. He:    sprawdzRodzaj(window.ghTherapyPoints,e,{pomin:x})  → …,{pomin:x,wiekM:ghWiekNowegoPunktu(Gpk,x)})
+// 3. ghAddRetroPoint: sprawdzRodzaj(window.ghTherapyPoints,o) → …,o,{wiekM:Gpk.wiekMiesZPol(#ghRetroAge,#ghRetroAgeMonths)})
+// 4. ghRetroSyncTypeOptions (i): przed dawnymi opcjami if(ghRodzajeWsteczne(a,o))return;
+// 5. F(): const r={start:0,continue:1,end:2},i=Gpo().sort(…) → const Gwk=ghKursyMonitora(Gpo()),r=…,i=Gwk?Gwk.wiersze.map(…):Gpo().sort(…)
+// 6. F(): wiersz programu: …break}Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));if(!o&&i[0]…
+// 7. F(): i.forEach(o=>{ghSeparatorKursu(t,Gwk,o)&&(a=null);if(a!=null&&o.drug…   (zmiana preparatu w obrębie kursu)
+// 8. F(): #therProg: …(l=i[0].program),Gwk&&Gwk.wiele&&(l=ghProgramKursu(ghKursProgramu(Gwk))||l),l&&(o.value=l)…
+// 9. F(): #ghTherapyStartHint: tekst i widoczność z ghPodpowiedzKursu (bez modułu — dawny warunek i dawny tekst)
+// 10. ae(): po sortowaniu const Gwk=ghKursyMonitora(e),Gwg=Gwk&&Gwk.wiele?ghGrupyKursow(Gwk):[e];
+//     baza (e.find start) i pętla metryk w for(const Gwe of Gwg){…Gwe.find…Gwe.forEach(…),Gwk&&Gwk.wiele&&ghOznaczKurs(n,Gwe)}
+//     (jeden kurs albo brak modułu — jedna grupa = cała lista, ta sama ścieżka co dotąd)
+// 11. de(): e.forEach((i,Gwi)=>{ghSeparatorMetryki(n,i,e[Gwi-1]);…   Bg1(e) → Bg1(ghMetrykiBiezacegoKursu(e))
+// 12. arkusz w znaczniku Re(): #ghTherapyMonitorCard tr.gh-kurs-row > td{…} (bez stylów wpisanych w elementy)
+
+// gh_therapy_segments.js — ghSegmentByDrug (_):
+//   po filtrze punktów: var Kw=e.poKursach===!1?null:kursyOdcinkow(a);if(Kw)return odcinkiKursow(Kw,r);
+//   dawna treść (sortowanie, grupowanie po pełnej nazwie preparatu, tempo z VildaTempoWzrastania.odcinek) przeniesiona
+//   bez zmian do function odcinkiPunktow(a,r); nowe kursyOdcinkow (≥ 2 kursy z ghKursy, punkty bez wieku na początek
+//   kursu 1) i odcinkiKursow (odcinki każdego kursu, pole kurs, zmiany preparatu w obrębie kursu)
+
+// gh_igf_therapy.js — Qe (wizyta kontrolna):
+//   było:  return Array.isArray(e)&&e.length?e[e.length-1]:null
+//   jest:  return Array.isArray(e)&&e.length?ghOstatniPunktWgWieku(e):null
+//   nowa function ghOstatniPunktWgWieku(e): ostatni punkt ostatniego kursu ghKursy; bez modułu albo kursów — e[e.length-1]
+
+// vilda_auth_ui.js — czytelny blok P-GH-WZNOWIENIE (część 1):
+//   Gw_infoW2: „… Czas leczenia, przyrost i ΔhSDS od wznowienia liczymy od punktu „Włączenie leczenia”, którego ten kurs
+//   nie ma.” → „… Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas leczenia, przyrost i ΔhSDS
+//   od wznowienia.”; komentarz bloku zaktualizowany
+//   wl (podsumowanie GH): x.ghSegmentByDrug(a) → x.ghSegmentByDrug(a,{poKursach:!1})  (łańcuch „Preparaty (historia)”
+//   z całej historii, jak dotąd)
+```
+
+**Granice.** Jeden kurs (albo brak `VildaTrajectoryAnalysis.ghKursy`): metryki, B.64, odcinki i program monitora idą dawną
+ścieżką kodu; bez modułu kursów tabela i podpowiedź jak dotąd, a `VildaGhPunkty.sprawdzRodzaj` odmawia zapisu z prośbą
+o odświeżenie strony (bez powrotu do dawnej reguły). Nowe pola: wiersze metryk przy ≥ 2 kursach (`Gw_kurs`, `Gw_naglowek`),
+odcinki przy ≥ 2 kursach (`kurs`). Bez nowego pliku ładowanego przez strony; style w arkuszu karty monitora (znacznik `Re`),
+bez nowych zapisów stylu w elementach. Sejf, Historia, edytor notatki i lista pacjentów bez zmian. Wersje `?v=`, precache
+i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-KARTA-LECZENIE, etap 2 — karta leczenia otyłości z przełącznikiem (`vilda_auth_ui.js` 577 → 578, `vilda_auth_ui.css` 87 → 88, czytelne `vilda_cykle_leczenia.js` 12 → 13, 2026-11-21, makieta zaakceptowana przez właściciela)
+
+Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE, etap 2 zaraz po bloku etapu 1 (po
+`Kl_leczenie`, przed `function Pl(`): `Ko_licznik`, `Ko_widoki` (wybrany widok karty per pacjent), `Ko_CZESTOSC`
+(częstość leku jak `products[…].frequency` katalogu `obesity_therapy.js`), `Ko_zapomnij`, `Ko_czestosc` (lek rozpoznany
+przez `ObesityResponseCriteria.resolveDrug`), `Ko_dawkaOd` („od DD.MM.RRRR” dawki), `Ko_pierwszeZdanie` (pierwsze zdanie
+opisu oceny), `Ko_punkty`, `Ko_kafel`, `Ko_podpisy` (łamanie podpisu kafelka na granicy części), `Ko_kafelki`,
+`Ko_bezBmi` (ostatni wpis bez wzrostu przy ocenie z BMI/ΔbmiSDS),
+`Ko_werdykt` (linia oceny) i `Ko_karta` (nagłówek z akcjami sekcji, przełącznik, widoki, „Szczegóły oceny”). Czytelne
+`Ob_dz`, `Kl_leczenie` i `Ob_dzNotatki` zmienione w miejscu (opis niżej). `vilda_cykle_leczenia.js` (czytelny):
+`sekcja(opcje)` z opcją `uklad: 'karta'` i `wyjscie` — addytywnie, bez opcji ten sam DOM co dotąd. Opis:
+`docs/clinical/ALGORITHMS.md`, wpis „P-KARTA-LECZENIE, etap 2”; plan: `docs/KARTA_LECZENIE_PLAN.md`. Zminifikowane
+miejsca zmienione kotwicami występującymi dokładnie raz; skrypty łatek (Python, `zamien` z licznikiem kotwicy) odtwarzają
+wynik z `origin/audyt` e3efa99; bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — Cl (podsumowanie otyłości): dane „Przeglądu” i „Analizy”; tryb karty bez siatki pól
+// 1. return Kl_wy&&(…,Kl_wy.dawka=p==="—"?"":p),e("div",{class:"vilda-gh-summary"},[y,x,Ob_h,Ob_z,Ob_u])
+//    → …,Kl_wy.dawka=…,Kl_wy.lek=c,Kl_wy.substancja=s,Kl_wy.punkty=Ob_k.pts.length,Kl_wy.punktyRazem=a.length,
+//      Kl_wy.cykle=Ob_C.length,Kl_wy.dawkaOd=Ko_dawkaOd(Ob_k.pts),Kl_wy.glowa=y),
+//      e("div",{class:"vilda-gh-summary"},[y,Kl_wy&&Kl_wy.karta?null:x,Ob_h,Ob_z,Ob_u])
+// vilda_auth_ui.js — Ml / Ob_b (Dane analityczne — otyłość)
+// 2. function Ob_b(Ob_m,Kl_out){var Kl_red=null,Kl_rv,Kl_k,o=… → …Kl_k,Ko_H,Ko_prog=null,o=…
+// 3. H=Z!=null&&h>0?Z/h*100:null;T.push( → …:null;Ko_H=H;T.push(   („Redukcja BMI” z kafelka — H nadpisuje potem Ob_pkt)
+// 4. ot.push(fe("","Pr\xF3g ChPL",…,ht.label)), → …,ht.label)),Ko_prog=ot[ot.length-1],
+// 5. Kl_out.ocena=…:null);var lt=ot.slice(); → Kl_out.ocena=…:null,Kl_out.przeglad={czasK,czasV:D,czasJ:M,
+//    wlData:Ob_g?_n(l.dateISO):"",wlWiek:Ob_g?ra(l):"",masaV:u!=null?qt(u,1):"—",masaJ,
+//    redMasa:C!=null&&N!=null?be(C,"",1)+" kg ("+be(N,"%",1)+")":"",redMasaCls:z(C),od:Ob_g?"od włączenia":"od 1. punktu",
+//    bmiV:v!=null?qt(v,1):"—",redBmi:Ko_H!=null?be(Ko_H,"%",1):"",
+//    prog:Ko_prog&&ot.indexOf(Ko_prog)>=0&&ht.thresholdPct!=null?{miara:P,tekst:"≥"+ht.thresholdPct+"%"}:null,
+//    werdykt:$&&gt?{cls:gt.cls,ic:gt.ic,tytul:gt.title,opis:gt.desc||""}:null,miara:P||"",bmiBrak:v==null,
+//    ocena:Kl_out.redukcja,ocenaZ:Ob_po&&Ob_po.inny&&Ob_po.punkt?_n(Ob_po.punkt.dateISO)||"z wiekiem "+Ye(Ob_po.punkt)+" mies.":""});
+//    var lt=ot.slice();   (ocenaZ — wpis z kafelka „Wzrost do oceny”, gdy ocena idzie z wpisu innego niż ostatni)
+//    (te same zmienne, z których powstają kafelki i pole oceny; liczba ot.push(fe( bez zmian — strażnik R6)
+// 6. st=e("div",{class:"vilda-gha-panel",style:"display:none;"},…) → st=e("div",Kl_wy&&Kl_wy.karta?{class:"vilda-gha-panel"}
+//    :{class:"vilda-gha-panel",style:"display:none;"},…)
+// 7. return rt.addEventListener(…),e("div",{style:"margin:2px 0 2px;"},[rt,st])} → return Kl_wy&&Kl_wy.karta?st:(…)}
+//    (tryb karty: panel bez belki, rozwinięty — widok „Analiza”; przełącznik cykli bez zmian)
+// vilda_auth_ui.js — Ob_seg (przełącznik cykli panelu)
+// 7a. "aria-selected":l===o?"true":"false",text:"Cykl "… → …,"data-biezacy":l===o?"true":"false",text:"Cykl "…
+//     („Szczegóły oceny” wraca nim do bieżącego cyklu, który opisuje linia „Przeglądu”)
+// vilda_auth_ui.js — Ob_dz (czytelne)
+// 8. Ko_uklad, Ko_jest(punkty); czesci(): Cl i Ml z flagą karta, Ko_karta({podsumowanie,sekcja,panel,wy,patientId});
+//    karta się nie złożyła (wyjątek, podsumowanie bez rysunku) → null → Ko_uklad=false i rysunek jak w etapie 1
+// 9. rysuj(): wy.sekcja; Ui.sekcja({…, uklad: ko ? "karta" : void 0, wyjscie: ko ? wy.sekcja : void 0})
+// vilda_auth_ui.js — Kl_leczenie (czytelne): if (o && !o.tlo) Ko_zapomnij(o.patientId);
+// vilda_auth_ui.js — showPatientCard (se): Kl_leczenie({…,zakladka:at(Kl_IKONA,"Leczenie")}) → …,tlo:GdTlo})
+//    (odświeżenie po synchronizacji tej samej Karty zostawia widok karty leczenia)
+// vilda_auth_ui.js — Ob_dzNotatki (czytelne): przed przewinięciem do .vdo — klik „Wpisy” karty leczenia
+//    (.vilda-ko-seg [data-widok="wpisy"]), Kl_przewin(karta), fokus na „Wpisy”; bez karty — jak dotąd
+
+// vilda_cykle_leczenia.js — sekcja(opcje), uklad: 'karta' (czytelne, addytywnie)
+//    jakRozwiniete (stan łącza per pacjent); msgDodaj (komunikat „+ Kontynuacja”; bez opcji = msg); dawne (akapit
+//    „Wpisy z dawnych wizyt…” — w karcie pod łączem); wstep / akcje / podpowiedz jako zmienne (ten sam DOM);
+//    karta: o.wyjscie = { akcje (.vdo-head-actions.vdo-zewn), komunikat, liczba }, sekcja .vdo.vdo-karta
+//    (aria-label „Wpisy leczenia”) bez .vdo-head, z jakDziala(patientId, [wstep, podpowiedz, dawne]) na początku
+```
+
+`vilda_auth_ui.css`: reguły przycisków sekcji (`.vdo .vdo-btn`, `:hover`, `:focus-visible`, `-docpro`, `-add`,
+`-add:hover`, telefon 44 px) dostają drugi selektor `.vdo-zewn .vdo-btn…` (akcje nagłówka sekcji oddane karcie stoją
+poza `.vdo`); rozdział „P-KARTA-LECZENIE, etap 2” na końcu pliku — nagłówek karty, przełącznik (`.vilda-ko-seg`, wygląd
+`.vilda-oba-seg`), kafelki `.vilda-ko-kafel*` (wartości stylu `.vilda-gha-tile`; komputer 1 × 4, telefon ≤ 560 px 2 × 2),
+podpisy (`.vilda-ko-sub--stos`), linia oceny `.vilda-ko-werdykt*` (kolory pola oceny), przyciski-łącza `.vilda-ko-link`
+i `.vdo-jak` (`!important` przy szczegółowości 0-2-0 jak `.vilda-gha-btn`; telefon — cel dotyku 44 px), `.vdo.vdo-karta`
+(sekcja bez własnego pudełka), `.vdo-jak*`, `.vilda-ko-cicha`, panel w „Analizie” bez pudełka.
+
+**Granice.** Bez nowego pliku ładowanego przez strony; `obesity_response_criteria.js`, sejf, dziennik, zapis
+i synchronizacja bez zmian; style tylko klasami (`tests/fixtures/style-elementow.json` bez zmian: widoki chowa atrybut
+`hidden`). Kafelki i linia mają własne klasy (`.vilda-ko-*`), żeby lokatory kafelków panelu (`.vilda-gha-tile`) i pola
+oceny (`.vilda-oba-verdict`) nie trafiały w „Przegląd”. GH, karta „wg notatek” (`jl`) i pacjent bez leczenia otyłości —
+bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-KARTA-LECZENIE, etap 3 — karta leczenia GH z przełącznikiem (`vilda_auth_ui.js` 578 → 579, `vilda_auth_ui.css` 88 → 89, 2026-11-21, makieta zaakceptowana przez właściciela)
+
+Czytelne źródło: `vilda_auth_ui.js` — nowy czytelny blok P-KARTA-LECZENIE, etap 3 zaraz po bloku etapu 2 (po
+`Ko_karta`, przed `function Pl(`): `Kg_licznik`, `Kg_widoki` (wybrany widok karty GH per pacjent, osobno od `Ko_widoki`),
+`Kg_zapomnij`, `Kg_punktyTrendu` (filtr punktów trendu — jeden dla `Pl` i karty), `Kg_maTrend` (karta ma „Trend dawki”
+dokładnie wtedy, gdy `Pl` rysuje trend z punktów GH), `Kg_dawkaCz` (liczba, jednostka i podpis kafelka „Preparat
+i dawka” z gałęzi, z których `wl` składa „Aktualną dawkę”), `Kg_cichyNaglowek`, `Kg_cichaAnaliza`, `Kg_kolor`,
+`Kg_kafelki` (kafelki etapu 2: `Ko_kafel`, `Ko_podpisy`, `Ko_punkty`), `Kg_karta` (nagłówek, przełącznik, widoki,
+`pokaz(widok)`), `Kg_grupa` (karta albo — po wyjątku — bloki jak w etapie 1), `Kg_opcjeKarty` i `Kg_poOtwarciu` (otwarcie
+Karty z notatki GH). Czytelne `Kl_leczenie` zmienione w miejscu (opis niżej). Opis: `docs/clinical/ALGORITHMS.md`, wpis
+„P-KARTA-LECZENIE, etap 3”; plan: `docs/KARTA_LECZENIE_PLAN.md`. Zminifikowane miejsca zmienione kotwicami
+występującymi dokładnie raz; skrypty łatek (Python, `zamien` z licznikiem kotwicy: `patch_auth.py` + `kg_blok.js`,
+`patch_css.py` + `kg_style.css`) odtwarzają wynik z `origin/audyt` 19fd027e; bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — Gwl_inc (Increlex, dawka na podanie): części tekstu dla kafelka (tekst bez zmian)
+// 1. function Gwl_inc(d){ → function Gwl_inc(d,Kg_cz){; przed return: Kg_cz&&(Kg_cz.dobowa=A!=null?"2 × "+qt(A/2,2)+" mg":"",
+//    Kg_cz.podanie=K||"",Kg_cz.podanieV=K?qt(d.dose/2,3):"")   (wszystkie dotychczasowe wywołania — jeden argument)
+// vilda_auth_ui.js — wl (podsumowanie GH): dane nagłówka, „Przeglądu” i „Analizy”; tryb karty bez siatki pól
+// 2. u=s&&!/tydz/i.test(p)?Gwl_inc(d):… → Kg_ib=s&&!/tydz/i.test(p),Kg_inc={},u=Kg_ib?Gwl_inc(d,Kg_inc):…
+// 3. return Kl_wy&&(…,Kl_wy.dawka=…),e("div",{class:"vilda-gh-summary"},[v,m,y,Gh].filter(Boolean))
+//    → …,Kl_wy.dawkaCz=Kg_dawkaCz(Kg_ib,Kg_inc,d,p),Kl_wy.program=c,Kl_wy.programPelny=c?bl(c):"",
+//      Kl_wy.preparat=d.drug||r.drug||"",Kl_wy.punkty=Gw?Gw_p.length:a.length,Kl_wy.punktyRazem=a.length,
+//      Kl_wy.kursy=Gw?Gw.liczba:1,Kl_wy.ostatnia=ra(d)==="—"?"":ra(d),Kl_wy.glowa=v),
+//      e("div",{class:"vilda-gh-summary"},[v,Kl_wy&&Kl_wy.karta?null:m,y,Gh].filter(Boolean))
+//    (te same zmienne co pola Program, Preparat, Aktualna dawka, Punkty kontrolne, Ostatnia kontrola)
+// vilda_auth_ui.js — kl (Dane analityczne GH)
+// 4. Kl_wy&&(Kl_wy.czas=…,Kl_wy.tempo=…,Kl_wy.dhsds=…); → …,Kl_wy.przeglad={czasK,czasV:W,czasJ:"mies.",czasOd:"od "+ra(c)
+//    (W2 — Gw_BEZ_WLACZENIA),tempoV:qt(F,1),tempoJ,tempoSub:S,tempoCls,dhsdsV:be(z,"",2),dhsdsCls,
+//    dhsdsSds:Ur(y)+" → "+Ur(x) bez „hSDS ”,dhsdsOd:!Gk,dhsdsSub}   (te same zmienne co kafelki „Przyrost…”, „Tempo
+//    wzrastania”, „Odpowiedź (ΔhSDS)”, „Wzrost przy włączeniu/w 1. punkcie”, „Wzrost ostatni”; liczba fe( bez zmian)
+// 5. it=e("div",{class:"vilda-gha-panel",style:"display:none;"},C) → it=e("div",Kl_wy&&Kl_wy.karta?{class:"vilda-gha-panel"}:{…},C)
+// 6. return ht.addEventListener(…),e("div",{style:"margin:2px 0 2px;"},[ht,it])} → return Kl_wy&&Kl_wy.karta?it:(…)}
+//    (tryb karty: panel bez belki, rozwinięty — widok „Analiza”)
+// vilda_auth_ui.js — Pl (Trend leczenia GH): tryb karty (trzeci argument, zgodnie wstecz) i nazwany filtr punktów
+// 7. function Pl(t,a){var n=e("div",{style:"margin-top:18px;"}),… → function Pl(t,a,Kg_o){var Kg_k=!!(Kg_o&&Kg_o.karta),
+//    n=e("div",Kg_k?{class:"vilda-kg-trend"}:{style:"margin-top:18px;"}),…
+// 8. n.appendChild(e("p",{class:"vilda-patient-section-h",text:"Trend leczenia GH"})); → Kg_k||n.appendChild(…);
+// 9. l=a.filter(function(u){return u&&(u.type==="start"||…)&&typeof u.dose=="number"&&isFinite(u.dose)}).map( → l=Kg_punktyTrendu(a).map(
+// 9a. koniec rysunku: S(),n.appendChild(W),n.appendChild(xl(u,h))} → …,n.appendChild(xl(u,h)),Kg_k&&typeof Kg_o.poRysunku=="function"&&Kg_o.poRysunku()}
+//     (tryb karty: zgłoszenie po narysowaniu — przewinięcie z notatki GH powtarza się, gdy trend czekał na odczyt notatek)
+// vilda_auth_ui.js — Kl_leczenie (czytelne)
+// 10. if (o && !o.tlo) Ko_zapomnij(…) → if (o && !o.tlo) { Ko_zapomnij(o.patientId); Kg_zapomnij(o.patientId); }
+// 11. ghPods/ghPanel + wl/kl + lista.push({el:div.vilda-kl-gh [wl, kl]}) → var gh = Kg_grupa(o, s); lista.push({el: gh.el, …})
+// 12. return {…} → {…, trendGh: !!(gh && gh.trend), pokazGh: gh && gh.pokaz ? gh.pokaz : null}
+// vilda_auth_ui.js — showPatientCard (se)
+// 13. Kl_leczenie({…,user:m,zakladka:…,tlo:GdTlo}) → Kl_leczenie({…,user:m,widokGh:r&&r.widokGh,zakladka:…,tlo:GdTlo}),
+//     Kg_opcje=r=Kg_opcjeKarty(r,KlL)   (widokGh „trend” bez karty GH z „Trendem dawki” → activeTab „traj”, jak dotąd)
+// 14. try{Ct.appendChild(Pl(t,s.ghTherapyPoints))}catch{} → try{KlL&&KlL.trendGh||Ct.appendChild(Pl(t,s.ghTherapyPoints))}catch{}
+//     (Siatki centylowe bez trendu, gdy ma go karta GH — Pl woła się raz)
+// 15. po xa={…restoreTab…}: Kg_poOtwarciu(KlL,r);   (przewinięcie do karty GH i fokus na „Trend dawki”, 60 ms po montażu)
+// vilda_auth_ui.js — arkusz notatki GH (CareOpenLegacyNoteEditor)
+// 16. text:"↗ Siatki / punkt GH" → text:"↗ Trend dawki / punkt GH";
+//     …:se(h,null,null,{activeTab:"traj"}) → …:se(h,null,null,{activeTab:"leczenie",widokGh:"trend"})  (z ghPointId — Gr, bez zmian)
+```
+
+`vilda_auth_ui.css`: rozdział „P-KARTA-LECZENIE, etap 3” na końcu pliku — cichy tekst nagłówka `.vilda-kg-cichy` (po
+prawej; telefon ≤ 560 px — w osobnej linii pod znacznikiem), odstępy przełącznika `.vilda-kg-seg` (wygląd
+`.vilda-oba-seg`), kolor wartości kafelków `.vilda-kg-kafel--good/--bad` (jak `.vilda-gha-tile.good/.bad`), biała ramka
+wykresu `.vilda-kg-ramka` (wartości `.vilda-oba-chartbox`), nagłówek tabeli trendu w ramce (przezroczyste tło zamiast
+`th { background: var(--secondary) }` motywu, ciemny tekst `var(--text-strong)` z `!important` wobec stylu wpisanego
+przez `Pl`), panel „Analizy” bez pudełka (`.vilda-kg-widok--analiza .vilda-gha-panel`). Kafelki — klasy etapu 2
+(`.vilda-ko-kafelki`, `.vilda-ko-kafel*`; komputer 1 × 4, telefon 2 × 2).
+
+**Granice.** Bez nowego pliku ładowanego przez strony; style tylko klasami (`tests/fixtures/style-elementow.json` bez
+zmian: widoki chowa atrybut `hidden`, `Pl` bez opcji ma ten sam atrybut `style`). Karta GH ma własne klasy (`.vilda-kg-*`),
+żeby lokatory karty otyłości (`.vilda-ko-karta`, `.vilda-ko-seg`) nie trafiały w kartę GH; karta otyłości, `Ko_*` i jej
+DOM bez zmian. `Pl` bez trzeciego argumentu rysuje jak dotąd (nagłówek i margines; także trend z wpisów Terminarza
+w „Siatkach”). Sejf, dane, obliczenia, progi, teksty kafelków panelu i DocPro bez zmian. Strażnik treści edytora notatki
+(`tests/unit/care-plan-auth-ui-boundary.test.mjs`) dostał nowy odcisk z opisem zmiany (etykieta i opcja otwarcia Karty).
+Wersje `?v=`, precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-GH-PREPARAT-BIEZACY — Karta: Increlex czy rhGH wg bieżącego preparatu (`vilda_auth_ui.js` 581 → 582, 2026-11-23, decyzja właściciela)
+
+Czytelne źródło reguły: `vilda_auth_ui.js` — nowy czytelny blok P-GH-PREPARAT-BIEZACY zaraz po `Gw_punktyProgramu`
+(koniec bloku P-GH-WZNOWIENIE, przed blokiem P-KARTA-LECZENIE, etap 1): `Gp_rodzajPunktu` (rodzaj punktu: Increlex,
+rhGH albo nieznany — lek decyduje, bez leku program `/^IGF/`), `Gp_program` (program bieżący kursu, jak w `Gp_biezacy`),
+`Gp_increlexPunktu` (punkt pojedynczy: lek decyduje, bez leku — program punktu `/^IGF/`, jak dotąd), `Gp_biezacy` (stan
+bieżący podsumowania: Increlex czy rhGH z ostatniego punktu z lekiem albo programem; lek i program ostatniego punktu,
+a gdy pusty — ostatni wcześniejszy tego samego rodzaju). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-PREPARAT-BIEZACY. Zminifikowane miejsca zmienione kotwicami występującymi
+dokładnie raz; skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_auth.py` + `gp_blok.js`) odtwarza wynik
+z `origin/audyt` a7b2920b; bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — Gwl_isInc (punkt pojedynczy: wiersz trendu xl, legenda Gwl_all, odcinki w kl, Historia/edytor Gwl_hist)
+// 1. function Gwl_isInc(d,p){return/^Increlex/.test(String(d||""))||/^IGF/.test(String(p||""))}
+//    → function Gwl_isInc(d,p){/* P-GH-PREPARAT-BIEZACY … */return Gp_increlexPunktu(d,p)}
+// vilda_auth_ui.js — wl (podsumowanie GH)
+// 2. var d=n[n.length-1],c=r.program||d.program||"",s=c==="IGF-1"||/^Increlex/.test(String(d.drug||r.drug||"")),
+//    → var d=n[n.length-1];/* P-GH-PREPARAT-BIEZACY … */var Gp_s=Gp_biezacy(Gw_p),c=Gp_s.program,s=Gp_s.increlex,
+//    (Gw_p — punkty bieżącego kursu wg wieku; jeden kurs — wszystkie punkty wg wieku; c i s zasilają jak dotąd znacznik,
+//    pole/cichy tekst „Program”, dymek, Gwl_inc/Kg_dawkaCz, Kl_wy.odznaka/dawka/dawkaCz/program/programPelny)
+// 3. h("Preparat",d.drug||r.drug||"—") → h("Preparat",Gp_s.lek||"—")
+// 4. Kl_wy.preparat=d.drug||r.drug||"" → Kl_wy.preparat=Gp_s.lek   (podpis kafelka „Preparat i dawka”, linia „Analizy”)
+// vilda_auth_ui.js — Pl (Trend leczenia GH): program pasa „Pokaż typowy zakres dawki”
+// 5. var d="",Gw_pp=Gw_punktyProgramu(a);if(Array.isArray(Gw_pp))for(var c=0;c<Gw_pp.length;c+=1){var s=Gw_pp[c];
+//    if(s&&s.program&&(d=s.program,s.type==="start"))break}
+//    → /* P-GH-PREPARAT-BIEZACY … */var d=Gp_program(Gw_punktyProgramu(a));
+// vilda_auth_ui.js — komentarz P-GH-INCRELEX-WIDOKI przed Gwl_isInc (dopisek, bez zmiany kodu)
+// 6. Increlex = preparat Increlex albo program IGF-1; → … albo program IGF-1 [od P-GH-PREPARAT-BIEZACY (2026-11-23): …];
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+Kurs jednym preparatem z jednym programem w każdym punkcie — rysunek Karty (DOM), pasek i trend identyczne z `origin/audyt`
+(porównanie drzew DOM 18 przypadków × 3 konfiguracje modułów, poza repozytorium). Różnica tylko przy zmianie preparatu
+Increlex ↔ rhGH, punkcie bez leku lub programu i zmianie programu w kursie. `gh_therapy_monitor.js`, `gh_igf_therapy.js`,
+`gh_therapy_segments.js`, `vilda_vault.js`, sejf, zapis punktów i wpisów — bez zmian. Wersje `?v=`, precache
+i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-GH-PROGRAM-BIEZACY — DocPro: program w formularzu monitora wg bieżącego preparatu (`gh_therapy_monitor.js` 65 → 66, 2026-11-23, decyzja właściciela)
+
+Czytelne źródło reguły: `gh_therapy_monitor.js`, czytelna część na górze pliku — nowy blok P-GH-PROGRAM-BIEZACY zaraz po
+`ghKursProgramu` (blok P-GH-WZNOWIENIE, część 2): `ghRodzajPunktu` (Increlex, rhGH albo nieznany — lek decyduje, bez leku
+program `/^IGF/`, jak `Gp_rodzajPunktu` Karty), `ghBiezacy` (`{ lek, program, increlex }` — ta sama reguła co
+`Gp_biezacy` w `vilda_auth_ui.js`: rodzaj z ostatniego punktu z lekiem albo programem, lek i program ostatniego punktu,
+a gdy pusty — ostatni wcześniejszy tego samego rodzaju), `ghProgramBiezacy` (= `ghBiezacy(…).program`),
+`ghPunktyBiezacegoKursu` (kilka kursów — ostatni kurs `ghKursy`; jeden kurs albo brak modułu — cała lista wg wieku, jak
+`Gw_punktyProgramu` Karty), `ghProgramWiersza`, `ghProgramPola` (przy edycji — jak dotąd), `ghPrzywrocDateKarty`,
+`ghPreparatyKarty` (lista preparatów karty za programem pola). Spójność z Kartą (lek, program, rodzaj) pilnuje test
+jednostkowy `tests/unit/gh-program-biezacy.test.mjs` (funkcje wycięte z obu plików, ten sam zbiór przypadków). Opis:
+`docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-BIEZACY. Zminifikowane ciało (`F()`, `renderGHTherapyTable`) zmienione
+kotwicami występującymi dokładnie raz; skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py`
++ `gp_monitor_blok.js`, poza repozytorium) odtwarza wynik z `origin/audyt` e163b85a; bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelna część: blok P-GH-PROGRAM-BIEZACY po function ghKursProgramu (funkcje wyżej),
+//   komentarz ghProgramKursu (od tej łatki: edycja punktu i zapas) i dopisek w komentarzu bloku P-GH-WZNOWIENIE, część 2
+// 1. F(), wiersz „Program terapeutyczny: …” nad tabelą:
+//    Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));if(!o&&i[0]&&(o=i[0].program),o){
+//    → Gwk&&Gwk.wiele&&(o=ghProgramKursu(Gwk.biezacy));/* P-GH-PROGRAM-BIEZACY */o=ghProgramWiersza(Gwk,o);if(!o&&…
+// 2. F(), #therProg (lista z punktami):
+//    Gwk&&Gwk.wiele&&(l=ghProgramKursu(ghKursProgramu(Gwk))||l),l&&(o.value=l),o.disabled=!0}else o.disabled=!1}
+//    → …||l),/* P-GH-PROGRAM-BIEZACY */l=ghProgramPola(Gwk,l),l&&(o.value=l),o.disabled=!0,ghPreparatyKarty(o,l,Gwk)}else o.disabled=!1}
+//    (dawne wyrażenie zostaje jako zapas: program bieżący pusty → program jak dotąd; edycja punktu → jak dotąd)
+// ghPreparatyKarty: tylko poza edycją, tylko gdy wybrany preparat #therDrug nie należy do programu pola (R — preparaty
+//   programu, jak w edycji i punkcie wstecznym) i tylko gdy program pola zgadza się z rodzajem bieżącego preparatu
+//   (/^IGF/.test(program) === ghBiezacy(…).increlex): zdarzenie change pola (gh_igf_therapy.js: u — ręczna data kontroli
+//   i własna liczba dni czyszczone, De — lista i preparat domyślny, pe — dawka zalecana i podpowiedź, T — kalkulator),
+//   potem — gdy lek bieżący (ghBiezacy(…).lek) jest na nowej liście — jego wybór i zdarzenie change preparatu (u, pe, Gdpo,
+//   T); na końcu ghPrzywrocDateKarty: ręczna data kontroli i własna liczba dni sprzed przeliczenia wracają przez
+//   vildaGhIgfPersistApi.restoreState (stan po przeliczeniu, dawka w trybie pola, które lekarz wypełnia; bez zdarzeń).
+//   Sprzeczność rodzaju albo preparat z programu — bez zdarzeń (jak dotąd).
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+`vilda_gh_punkty.js` (`VildaGhPunkty`) bez zmian: monitor i panel wiersza przyjmują tylko API wersji 4 (bramka zapisu
+`A.wersja===4`), więc nowa funkcja w API oznaczałaby nową wersję i zmianę obu bramek; reguła mieszka w czytelnej części
+monitora, a Karta zostaje przy `Gp_biezacy`. `vilda_auth_ui.js`, `gh_igf_therapy.js` (Terminarz `Je()` czyta pole),
+`vilda_gh_punkt_z_wiersza.js`, zapis punktów, walidacja (`sprawdzRodzaj`), kursy i sejf — bez zmian. Kurs jednym
+programem — pole, wiersz, tabela, preparat, lista i dawka karty identyczne jak dotąd (test jednostkowy: monitor
+z wywołaniami łatki usuniętymi = „jak dotąd”); wyjątek — kurs Increlex przy karcie z listą rhGH (lista idzie za polem).
+Zdarzenia change karty przy przeliczeniu zapisuje autozapis stanu strony (`therProg`, `therDrug`, jak po ręcznej zmianie);
+wskaźnik zapisu pacjenta je pomija. Złota siatka punktów (`tests/fixtures/gh-punkty-wzorzec.json`) bez zmian pliku: przypadki nowego punktu z karty
+na listach z innym programem ostatniego punktu mają dziś program bieżący (`wplywProgramuBiezacego`, `zProgramemNowego`
+w `tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
+precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (`gh_therapy_monitor.js` 66 → 67, 2026-11-23, decyzja właściciela, pytanie 17)
+
+Czytelne źródło reguły: `gh_therapy_monitor.js`, czytelna część na górze pliku — nowy blok P-GH-PROGRAM-EDYCJA (komentarz
+i funkcja `ghProgramEdycji(Gwk, dotad)`) zaraz po `ghProgramPola` (blok P-GH-PROGRAM-BIEZACY). `ghProgramPola` przy edycji
+punktu (`x != null`) woła `ghProgramEdycji` zamiast zwracać dawne wyrażenie: program edytowanego punktu (pierwszy
+o równym `String(id)` na liście, jak `O()`), bez programu — `ghProgramBiezacy` na punktach kursu punktu wg wieku do
+niego włącznie (kilka kursów — kurs z `Gwk.wgPunktu`; jeden kurs albo brak modułu kursów — `ghPunktyBiezacegoKursu(null,
+lista)`; punkt spoza kursów — sam punkt; edytowany punkt z lekiem z formularza edycji, `Gpv("ghEditDrug")`), bez tego
+— `dotad` (dawne wyrażenie); punktu nie ma na liście (usunięty w trakcie edycji) — `ghProgramWiersza`, jak poza edycją.
+Po przeglądzie w tym samym bloku: `ghZmianaPreparatuEdycji` (słuchacz `change` na dokumencie, instalowany raz przy
+starcie skryptu z flagą `window.__ghProgramEdycjiBound`, jak inne słuchacze monitora: zmiana `#ghEditDrug` w trakcie
+edycji punktu bez programu → `F()`), `ghPoKoncuEdycji` (`F()` po zakończeniu edycji tam, gdzie dotąd po `Gek()` nie
+było `F()`) i `ghWstecznyZKarty` z `ghProgramPozaEdycji` (formularz wsteczny w trakcie edycji — program, który pole pokazuje poza
+edycją, i lek bieżący kursu). Dopiski
+w komentarzach P-GH-WZNOWIENIE (część 2), `ghProgramKursu`, `ghKursProgramu` i P-GH-PROGRAM-BIEZACY („Edycja punktu —
+bez zmian”). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-EDYCJA. Zminifikowane ciało: `F()` od
+P-GH-PROGRAM-BIEZACY woła już `ghProgramPola` (bez nowej kotwicy); po przeglądzie cztery kotwice występujące dokładnie
+raz (niżej). Skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py` + `ge_monitor_blok.js`, poza
+repozytorium) odtwarza wynik z `origin/audyt` 77cb60dc; bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelna część:
+// 1. ghProgramPola: return x != null ? dotad : ghProgramWiersza(Gwk, dotad);
+//    → return x != null ? ghProgramEdycji(Gwk, dotad) : ghProgramWiersza(Gwk, dotad);
+//    a zaraz po funkcji blok P-GH-PROGRAM-EDYCJA (komentarz + ghProgramEdycji)
+// 1a. zdarzenie storage vildaCurrentPatientId: try{Gea()||Gek()}… → try{Gea()||(Gek(),/* P-GH-PROGRAM-EDYCJA */ghPoKoncuEdycji())}…
+//     i() (formularz wsteczny): …if(a){try{D()}catch{} → …if(a){const Gxe=x!=null;try{D()}catch{}Gxe&&x==null&&ghPoKoncuEdycji();
+//     ghAddRetroPoint: function(){D(); → function(){const Gxe=x!=null;D();Gxe&&x==null&&ghPoKoncuEdycji();
+// 1b. ghOpenRetroForm: o.value=d.value||"" → o.value=ghWstecznyZKarty("program",d.value||"");
+//     n(o?o.value:"",l?l.value:null) → n(o?o.value:"",ghWstecznyZKarty("lek",l?l.value:null))
+// 2.–5. dopiski [od P-GH-PROGRAM-EDYCJA (2026-11-23): …] w komentarzach P-GH-WZNOWIENIE (część 2), ghProgramKursu,
+//    ghKursProgramu i P-GH-PROGRAM-BIEZACY
+// Kontrola: tests/unit/gh-program-edycja.test.mjs cofa wszystkie wpięcia (ZAMIANY_PRZED, zachowanie 77cb60dc), kontrola
+//   negatywna złotej siatki — 'x != null ? ghProgramEdycji(Gwk, dotad) :' → 'x != null ? dotad :'.
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+`vilda_gh_punkty.js` (zapis i walidacja), `vilda_auth_ui.js` (Karta), `gh_igf_therapy.js`, `vilda_gh_punkt_z_wiersza.js`
+(panel wiersza), lista preparatów formularza edycji (`O()`), `ghPreparatyKarty`, blokada pola, kursy i sejf — bez zmian.
+Złota siatka punktów (`tests/fixtures/gh-punkty-wzorzec.json`) bez zmian pliku: zapisy edycji punktu o innym programie
+niż Włączenie mają dziś program edytowanego punktu (`wplywProgramuEdycji`, `zProgramemEdytowanego` w
+`tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
+precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-STATUS-KAFLE-ROWNE — Karta pacjenta: kafelki „Statusu” jednego rozmiaru (`vilda_auth_ui.js` 582 → 583, `vilda_growth_prediction_validation.js` 14 → 15, 2026-11-23, makieta zaakceptowana przez właściciela)
+
+Opis reguły: `docs/clinical/ALGORITHMS.md`, wpis P-STATUS-KAFLE-ROWNE. Czytelne części tej samej zmiany są w plikach
+czytelnych: `vilda_height_velocity.js` (`OPIS_POWODU_KROTKI`, pole `opisPowoduKrotki`), `vilda_trajectory_analysis.js`
+(`hvSdsKafelek`: krótki powód, `linie` i `szczegoly` odmowy) i `vilda_auth_ui.css` (siatka). Zminifikowane miejsca
+zmienione kotwicami występującymi dokładnie raz (skrypt Python z licznikiem kotwicy, poza repozytorium; odtwarza wynik
+z `origin/audyt` 9662e33b); bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — showPatientCard, kafelek „Tempo wzrastania”
+// 1. Ie=Ee?"improve":null,Tw=Tf?Tf.wartosc+(Tf.odstep?" ("+Tf.odstep+(Tf.pozaOknem?", poza oknem oceny normy":"")+")":""):St(ut)+" cm/rok";
+//    ce.push(xt("Tempo wzrastania",Tw,Ee,Ie))}
+//    → Ie=Ee?"improve":null,/* P-STATUS-KAFLE-ROWNE … */Tw=Tf?Tf.wartosc:St(ut)+" cm/rok",
+//      TwS=Tf&&Tf.odstep?Tf.odstep+(Tf.pozaOknem?" \xB7 poza oknem oceny normy":""):null,TwK=xt("Tempo wzrastania",Tw,TwS||Ee,Ie);
+//      TwS&&Ee&&TwK.appendChild(e("div",{class:"vilda-patient-stat-extra",text:Ee}));ce.push(TwK)}
+// vilda_auth_ui.js — showPatientCard, kafelek „SDS tempa” (blok GROWTH-HV-STATUS)
+// 2. if(Bh0.wartosc==null)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
+//    else{Bh3.push(e("div",{class:"vilda-patient-stat-sub",style:"margin-top:3px;",text:"kliknij, aby rozwin\u0105\u0107"}));
+//    var Bh4=…;var Bh5=e("div",{class:"vilda-patient-stat vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0"},Bh4);
+//    → // P-STATUS-KAFLE-ROWNE …
+//      var BhOdm=Bh0.wartosc==null,BhMa=(Bh0.linie&&Bh0.linie.length)||(Bh0.szczegoly&&Bh0.szczegoly.length);
+//      if(!BhMa)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
+//      else{var Bh4=…;var Bh5=e("div",{class:BhOdm?"vilda-patient-stat vhv-tile vhv-odm":"vilda-patient-stat
+//      vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0","aria-expanded":"false"},Bh4);
+//    oraz w arkuszu wstrzykiwanym przez blok (vhv-style), po regule .vhv-tile.vhv-open .vhv-cev:
+//      ".vhv-tile.vhv-odm{opacity:.78}",   (przygaszenie odmowy klasą, nie stylem na elemencie — P-STYLE krok 5b)
+// 3. try{Bh5.classList.toggle("vhv-open",!Bh9)}catch(Bha){}};
+//    → try{Bh5.classList.toggle("vhv-open",!Bh9);Bh5.setAttribute("aria-expanded",Bh9?"false":"true")}catch(Bha){}};
+// vilda_growth_prediction_validation.js — Pe() (buildStatusSection), podpis kafelka „Walidacja prognoz”
+// 4. r("div",{class:"vilda-patient-stat-sub",text:a.points.length+" punkt\xF3w \xB7 kliknij, aby rozwin\u0105\u0107"})
+//    → /* P-STATUS-KAFLE-ROWNE … */r("div",{class:"vilda-patient-stat-sub",text:(function(_k){var _d=_k%10,_s=_k%100;
+//      return _k+(_k===1?" punkt":_d>=2&&_d<=4&&!(_s>=12&&_s<=14)?" punkty":" punkt\xF3w")})(a.points.length)})
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony. Zapis pacjenta, sejf, model tempa, silnik SDS tempa (liczby),
+panel trajektorii, opis pacjenta, podsumowanie i schowek — bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił
+`npm run podbij-wersje`.
+
+## Łatka P-WALIDACJA-KAFEL-KROTKO — krótki podpis kafla „Walidacja prognoz” bez prognoz (`vilda_growth_prediction_validation.js` 15 → 16, 2026-11-23, decyzja właściciela)
+
+Opis: `docs/clinical/ALGORITHMS.md`, wpis P-WALIDACJA-KAFEL-KROTKO. Jedna kotwica występująca dokładnie raz, bez ponownej
+minifikacji.
+
+```
+// vilda_growth_prediction_validation.js — Pe() (buildStatusSection), kafel bez prognoz (i===0)
+// r("div",{class:"vilda-patient-stat-sub",text:"za mało danych do prognoz — uzupełnij wiek kostny i/lub wzrost rodziców"})
+// → /* P-WALIDACJA-KAFEL-KROTKO … */r("div",{class:"vilda-patient-stat-sub",text:"uzupełnij wiek kostny lub wzrost rodziców"})
+```
+
+## Łatka P-BAZA-SZYBKIE — sejf: odczyt najnowszej wersji karty i notatek jednej kategorii (`vilda_vault.js` 285 → 286, 2026-11-24, decyzja właściciela „zrób A i B razem”)
+
+Artefakt `vilda_vault.js` jest zminifikowany; zmiana to dwie dopisane funkcje tylko do odczytu i dwa wpisy mapy eksportu.
+Nic istniejącego nie zostało zmienione. Opis i uzasadnienie: `docs/clinical/ALGORITHMS.md`, wpis P-BAZA-SZYBKIE.
+
+1. Kotwica (jednoznaczna, poza blokiem natywnym i poza blokiem trwałych wizyt):
+   `async function hr(t){const e=await ct(t);return!e||!e.snapshots.length?null:e.snapshots[0]}` — bezpośrednio po niej,
+   w nowych liniach, komentarz i funkcje `Bnw_najnowsza(t, opcje)` oraz `Bnw_notatki(kategoria, opcje)`.
+   - `Bnw_najnowsza`: koperty wersji pacjenta (`listSnapshotsForUser`) porządkuje tym samym `yr`, co `ct` (pola jawne
+     koperty: `savedAtISO`, `updatedAtISO`, `rev`, `seq`, `snapshotId`), odszyfrowuje tylko pierwszą i przepuszcza ją
+     przez `Bvisit_read`; wynik ma kształt elementu `getLatestSnapshot`. Nie czyta nagłówka i nie woła `Bzu_zapamietaj`.
+   - `Bnw_notatki`: koperty notatek konta filtruje po jawnej kategorii (`Un(koperta.category)`) i odszyfrowuje tylko
+     pasujące (`Ft`), w porządku `Fr` — jak `listAllPatientNotes`.
+   - Obie honorują odczyt ścisły (`VaultStrictReadSession` / `VaultStrictReadAssert`).
+2. Kotwica w mapie eksportu: `listPatientTreatmentPeriods:Ao,` → dopisane
+   `getNewestSnapshot:Bnw_najnowsza,listPatientNotesByCategory:Bnw_notatki,`. Wpisu nie wolno stawiać przy
+   `getLatestSnapshot:hr,` — ten fragment mapy jest tekstem haka `41-Bvisit_list` warstwy trwałych wizyt.
+3. Przeliczone skróty (7 wartości w 5 plikach, jak przy każdej zmianie sejfu poza blokiem natywnym):
+   `runtime/durable-visits-v1/manifest.json` (`baseVaultSHA256`, `integratedVaultSHA256`), `tools/visits-vault-delta.mjs`
+   (`BASE`), `tests/unit/visits-vault-boundary.test.mjs`, `runtime/clinical-workspace-v1/manifest.json`
+   (`baseVaultSHA256`, `integratedVaultSHA256`), `tools/check_clinical_workspace_boundary.mjs` (`BASE`). Wartości niżej,
+   w akapitach „Od P-BAZA-SZYBKIE”. Kontrola: `node tools/visits-vault-delta.mjs`,
+   `node tools/check_clinical_workspace_boundary.mjs`.
+4. Lint: nowy kod nie dokłada naruszeń do `eslint-suppressions.json` (zmienna ładunku bez zbędnego przypisania).
+
+Strażnik: `tests/unit/sejf-odczyt-najnowszej.test.mjs` (prawdziwy sejf: ten sam wynik, co `getLatestSnapshot`, jedno
+odszyfrowanie zamiast sześciu; zgodność po poprawce, przypięciu i przywróceniu wersji; odczyt ścisły; blokada).
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -2386,6 +2996,31 @@ delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
 `22f7d1f27f71ea7cb01304cc048b885159d04cc237431d842064ddd3d199e86f`, a wynikiem — bieżący `vilda_vault.js`
 (`4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a`). Baza z 2c (`fe4fad0b…`) odpowiada
 stanowi sprzed E3-PR0c (`audyt` `64fa29dc`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
+Od E3-PR0d (P-ZBIEZNOSC-ZDARZEN, odsyłanie wpisów Kosza; zmiana tylko w bloku P-DZIENNIK-ZDARZEN) bazą delty jest
+obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`417ac2f4df8debc5dcaa7b4cec452397a161f0803f9d4fdaf852ebf48d26115e`, a wynikiem — bieżący `vilda_vault.js`
+(`ed2f7832ac7a4c06df08d36029e5700c24603587eb5828311bdc65546c3fabd1`). Baza z E3-PR0c (`22f7d1f2…`) odpowiada
+stanowi sprzed E3-PR0d (`audyt` `4bff32aa`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
+Od E3-PR0d2 (P-ZBIEZNOSC-ZDARZEN, odsyłanie ukrytego wpisu Kosza karty usuniętej; zmiana tylko w bloku
+P-DZIENNIK-ZDARZEN) bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`5318fe8f57be1ed3a7cb093cfa8affea151007195519e042a81b96dc754a8620`, a wynikiem — bieżący `vilda_vault.js`
+(`5f5ec15f783375b99066288f80bf653d825f4591255af5c0149c1838f0c0afde`). Baza z E3-PR0d (`417ac2f4…`) odpowiada
+stanowi sprzed E3-PR0d2 (`audyt` `119f0225`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
+Od E3-PR0e1 (P-SYNC-WLASCICIEL, karta opróżniona przy „Scal pacjentów” zachowuje znany nagrobek scalenia; zmiana
+poza blokiem P-DZIENNIK-ZDARZEN i poza blokiem trwałych wizyt) bazą delty jest obraz sejfu po tej zmianie bez bloku
+trwałych wizyt: SHA-256 `3e7bcd5a4ef38b482c00d318db8cf9c126b50d024dcc182e65bb111a2f1aa2c8`, a wynikiem — bieżący
+`vilda_vault.js` (`3f647b800629fd9118689af6d61f34e67a467c0f698dce68785fcb99e28cfe36`). Baza `a11b41b3…` (po
+vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-PR0e1 (`audyt` `a7b2920b`); bieżącą bazę daje to samo
+odwrócenie delty co wyżej.
+
+Od P-BAZA-SZYBKIE (dwa odczyty dla statystyk Bazy pacjentów: `getNewestSnapshot` i `listPatientNotesByCategory`;
+zmiana poza blokiem trwałych wizyt i poza blokiem natywnym) bazą delty jest obraz sejfu po tej zmianie bez bloku
+trwałych wizyt: SHA-256 `776c4c6907f52c48a16a321d40599a9d8a0505ecd82bfe4a0eab4f41118e9b14`, a wynikiem — bieżący
+`vilda_vault.js` (`63deb8c33eed2d17647803b985862c7efc7e1b7f9e7bdf930565fd6d9a04c97d`). Baza `3e7bcd5a…` odpowiada stanowi
+sprzed P-BAZA-SZYBKIE (`audyt` `8f4f3cf8`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -2602,6 +3237,38 @@ Od E3-PR0c (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w blo
 `06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031`, a `integratedVaultSHA256` (obraz pośredni) —
 `76214599a49249fc762d29e4eb31f079440ef254149ffc8cde8ecf5e36b77bb2`. Blok natywny, haki natywne, rodzina modułów
 `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Od E3-PR0d (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bloku P-DZIENNIK-ZDARZEN) baza sejfu to
+`e0fdbf3504adef9db240a1584231e2f6b5e041172de3da9d39b37e90c9f0ea50`, a `integratedVaultSHA256` (obraz pośredni) —
+`d9f5b5e9dc36b0f87f172f925d0235e7c9455fb9aafff0dfbe738d88a8b7e0b0`. Baza z E3-PR0c (`06ea0231…`) odpowiada stanowi
+sprzed E3-PR0d (`audyt` `4bff32aa`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256`
+i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Od E3-PR0d2 (P-ZBIEZNOSC-ZDARZEN; zmiana sejfu tylko poza blokiem natywnym, w bloku P-DZIENNIK-ZDARZEN) baza sejfu to
+`8855e4a1ff4b5225e233ad1bb8b9ab2808b0df75d42dcd043d9245e5709d9ff4`, a `integratedVaultSHA256` (obraz pośredni) —
+`a54d9c62a128bdf7031a5a54257b10872b0913f33963747604ad772e33432e8f`. Baza z E3-PR0d (`e0fdbf35…`) odpowiada stanowi
+sprzed E3-PR0d2 (`audyt` `119f0225`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256`
+i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
+W Terminarzu operacja zamknięcia zwykłej listy oczekujących sprawdza jej aktualny skład i zapisuje
+usunięcie listy oraz terminu w metadanych sejfu. Przy ponownym budowaniu bloku natywnego należy
+zachować kopiowanie argumentów `addWaitlistList` i `completeWaitlistBooking` oraz wyłączną
+blokadę obszaru roboczego dla `completeWaitlistBooking` w ścieżce V1. Aktualne skróty obu warstw
+sejfu są zapisane w ich manifestach.
+
+Od E3-PR0e1 (P-SYNC-WLASCICIEL; zmiana sejfu tylko poza blokiem natywnym — `Bsw_przenies`, `Bsw_poOddaniu`
+i komentarze) baza sejfu to `75fa66c9e580e9ac051c7300b621de8cb03ede637cad026afc0f15c7b1a0ec68`, a
+`integratedVaultSHA256` (obraz pośredni) — `32f1087105a3d8efb4ba701ebdba608bac21bbc7bb9387e86b9e0f067b434115`.
+Baza `1464cdf4…` (po vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-PR0e1 (`audyt` `a7b2920b`). Blok
+natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości
+są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Od P-BAZA-SZYBKIE (zmiana sejfu tylko poza blokiem natywnym — funkcje `Bnw_najnowsza` i `Bnw_notatki` oraz dwa wpisy
+mapy eksportu) baza sejfu to `8f8d3490c8b7178f07441a83f18d9a870f0dfeaa3f1d96977086b4027b57a6cc`, a
+`integratedVaultSHA256` (obraz pośredni) — `5c395dd0d24f19a3b76116d93d416d956699bda31100d486f75ac0731e8d1d85`.
+Baza `75fa66c9…` odpowiada stanowi sprzed P-BAZA-SZYBKIE (`audyt` `8f4f3cf8`). Blok natywny, haki natywne, rodzina
+modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w
+`runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych

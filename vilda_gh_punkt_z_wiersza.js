@@ -19,8 +19,14 @@
  * bieżącego pacjenta (vilda:patient-loaded, source 'save') zmianą pacjenta nie jest. Znacznik pacjenta: najpierw wspólny
  * dla ramek powłoki sessionStorage (P-GH-PUNKT-Z-WIERSZA-ZNACZNIK, uwaga recenzji do #590).
  *
- * Funkcje czyste (eksport dla testów): pomiarWiersza, tekstPomiaru, stanPrzycisku, ostatniPunkt, domyslne,
- * preparatyProgramu, schematPreparatu, poleDawki, etykietaWierszaGh, przygotujPunkt. Warstwa DOM: init (wołana raz
+ * P-GH-WZNOWIENIE część 2 (decyzje właściciela 2026-11-20, W2): rodzaj punktu sprawdza reguła kursów VildaGhPunkty
+ * (wersja 4) z WIEKIEM pomiaru wiersza. Radio „Rodzaj wizyty” pokazuje rodzaje możliwe w tym wieku (rodzajeWWieku):
+ * po „Zakończeniu leczenia” tylko „Włączenie leczenia” (wznowienie), w środku kursu jak dotąd Kontynuacja; przycisk
+ * w wierszu jest nieaktywny w przerwie między kursami, gdzie żaden rodzaj nie przejdzie. Warunek widoczności (punkt
+ * Włączenia na liście) i zakaz punktu w zajętym miesiącu — bez zmian.
+ *
+ * Funkcje czyste (eksport dla testów): pomiarWiersza, tekstPomiaru, stanPrzycisku, rodzajeWWieku, ostatniPunkt,
+ * domyslne, preparatyProgramu, schematPreparatu, poleDawki, etykietaWierszaGh, przygotujPunkt. Warstwa DOM: init (wołana raz
  * po załadowaniu strony). Moduł nie zmienia wzorów ani jednostek, nie pisze do ghTherapyDB i nie dotyka monitora DocPro.
  * Style: klasy w vilda_gh_punkt_z_wiersza.css (bez stylów wpisanych w elementy).
  */
@@ -38,6 +44,7 @@
     naglowek: 'Nowy punkt leczenia GH z tego pomiaru',
     rodzaj: 'Rodzaj wizyty',
     zajety: { start: 'Jest już punkt Włączenia leczenia.', end: 'Jest już punkt Zakończenia leczenia.' },
+    przerwa: 'W tym wieku nie można dodać punktu leczenia GH: to przerwa po „Zakończeniu leczenia”, przed kolejnym „Włączeniem leczenia”.',
     program: 'Program',
     preparat: 'Preparat',
     igf: 'IGF-1 (ng/ml, opcjonalnie)',
@@ -117,8 +124,9 @@
 
   // Przycisk w wierszu ręcznym: widoczny tylko przy gotowych modułach i punkcie Włączenia na liście, nie przy pustym
   // wierszu (karta zawsze ma pusty wiersz do wpisania pomiaru); nieaktywny (z powodem w podpowiedzi), gdy pomiar jest
-  // niekompletny albo w tym miesiącu wieku jest już punkt.
-  function stanPrzycisku(lista, pomiar, gotowe) {
+  // niekompletny albo w tym miesiącu wieku jest już punkt. rodzaje (opcjonalnie, rodzajeWWieku dla wieku wiersza):
+  // gdy żaden rodzaj nie przejdzie reguły kursów (przerwa między kursami) — nieaktywny z powodem TEKSTY.przerwa.
+  function stanPrzycisku(lista, pomiar, gotowe, rodzaje) {
     var L = obiekty(lista);
     if (!gotowe || !L.some(function (p) { return p.type === 'start'; }) || !pomiar || pomiar.pusty) {
       return { widoczny: false, aktywny: false, powod: null };
@@ -127,7 +135,27 @@
     if (L.some(function (p) { return wiekMiesPunktu(p) === pomiar.wiekMies; })) {
       return { widoczny: true, aktywny: false, powod: TEKSTY.zajetyMiesiac };
     }
+    if (rodzaje && !RODZAJE.some(function (t) { return rodzaje[t] && rodzaje[t].ok; })) {
+      return { widoczny: true, aktywny: false, powod: TEKSTY.przerwa };
+    }
     return { widoczny: true, aktywny: true, powod: null };
+  }
+
+  // Rodzaje możliwe w wieku pomiaru wiersza (P-GH-WZNOWIENIE część 2): dla każdego rodzaju wynik reguły kursów
+  // VildaGhPunkty.sprawdzRodzaj z tym wiekiem ({ok, komunikat}); domyslny — Kontynuacja, gdy przejdzie (jak dotąd),
+  // inaczej Włączenie, inaczej Zakończenie, a gdy nic nie przejdzie — Kontynuacja (zapis pokaże powód). Bez wieku
+  // (niekompletny pomiar) — null.
+  function rodzajeWWieku(A, lista, pomiar) {
+    if (!A || !pomiar || !pomiar.kompletny) return null;
+    var s = pomiar.surowe;
+    var wiekM = A.wiekMiesZPol(s.lata, s.miesiace);
+    var wynik = {};
+    RODZAJE.forEach(function (t) {
+      var r = A.sprawdzRodzaj(lista, t, { wiekM: wiekM });
+      wynik[t] = { ok: !!r.ok, komunikat: r.ok ? null : r.komunikat };
+    });
+    wynik.domyslny = ['continue', 'start', 'end'].filter(function (t) { return wynik[t].ok; })[0] || 'continue';
+    return wynik;
   }
 
   // Ostatni punkt = najstarszy wiek; przy równym wieku późniejszy na liście.
@@ -176,9 +204,10 @@
   // Punkt z pomiaru wiersza i wyboru w panelu — reguły punktu wstecznego z VildaGhPunkty. Zwraca {ok, punkt} albo
   // {ok:false, komunikat} z tekstem odmowy z API (te same komunikaty co w monitorze).
   function przygotujPunkt(A, lista, pomiar, wybor) {
-    var r = A.sprawdzRodzaj(lista, wybor.typ);
-    if (!r.ok) return { ok: false, komunikat: r.komunikat };
     var s = pomiar.surowe;
+    // P-GH-WZNOWIENIE część 2: reguła kursów z wiekiem pomiaru wiersza (ten sam wiek, który zapisze polaZPodawanej).
+    var r = A.sprawdzRodzaj(lista, wybor.typ, { wiekM: A.wiekMiesZPol(s.lata, s.miesiace) });
+    if (!r.ok) return { ok: false, komunikat: r.komunikat };
     var wynik = A.polaZPodawanej({
       typ: wybor.typ, lata: s.lata, miesiace: s.miesiace, masa: s.masa, wzrost: s.wzrost, wiekKostny: s.wiekKostny,
       podawana: wybor.podawana, preparat: wybor.preparat || null, program: wybor.program || null,
@@ -192,7 +221,7 @@
 
   function api() {
     var A = w.VildaGhPunkty;
-    return A && A.wersja === 3 ? A : null;
+    return A && A.wersja === 4 ? A : null;
   }
   function dawkaModul() {
     var E = w.VildaGhDawka;
@@ -204,7 +233,7 @@
   }
   function gotowe() {
     var A = api();
-    return !!(A && dane() && A.gotowe({ dawka: true }).ok);
+    return !!(A && dane() && A.gotowe({ dawka: true, kursy: true }).ok);
   }
   function lista() {
     var A = api();
@@ -305,7 +334,8 @@
       }
       var e = r.querySelector('.gh-z-wiersza-etykieta');
       if (e) e.parentNode.removeChild(e);
-      przycisk(r, panelWiersza(r) ? { widoczny: false } : stanPrzycisku(L, pomiarWiersza(wartosciWiersza(r)), ok));
+      var pm = pomiarWiersza(wartosciWiersza(r));
+      przycisk(r, panelWiersza(r) ? { widoczny: false } : stanPrzycisku(L, pm, ok, ok ? rodzajeWWieku(api(), L, pm) : null));
     });
     // Panel bez swojego wiersza (wiersz usunięty innym przyciskiem) znika.
     Array.prototype.forEach.call(c.querySelectorAll('.gh-z-wiersza-panel'), function (p) {
@@ -364,7 +394,6 @@
     Array.prototype.forEach.call(d.querySelectorAll('.gh-z-wiersza-panel'), function (p) { p.parentNode.removeChild(p); });
     var L = lista();
     var pomiar = pomiarWiersza(wartosciWiersza(r));
-    var rodzaje = A.dostepneRodzaje(L);
     var dom = domyslne(L, D);
     var E = dawkaModul();
 
@@ -386,21 +415,38 @@
     var fsNazwa = el('span', 'gh-z-wiersza-pole-nazwa gh-z-wiersza-rodzaje-nazwa', TEKSTY.rodzaj);
     fsNazwa.id = 'ghZWierszaRodzajNazwa';
     fs.appendChild(fsNazwa);
+    var radia = {};
     RODZAJE.forEach(function (t) {
       var lab = el('label', 'gh-z-wiersza-rodzaj');
       var i = el('input');
       i.type = 'radio';
       i.name = 'ghZWierszaRodzaj';
       i.value = t;
-      var dostepny = t === 'continue' || (t === 'start' ? rodzaje.start : rodzaje.end);
-      i.disabled = !dostepny;
-      i.checked = t === 'continue';
-      if (!dostepny) lab.title = TEKSTY.zajety[t];
+      radia[t] = { i: i, lab: lab };
       lab.appendChild(i);
       lab.appendChild(el('span', null, NAZWY_RODZAJOW[t]));
       fs.appendChild(lab);
     });
     p.appendChild(fs);
+    // P-GH-WZNOWIENIE część 2: rodzaje możliwe w wieku wiersza (reguła kursów); przy zmianie wieku wiersza
+    // odświeżane w odswiezPomiar. Wybór lekarza zostaje, dopóki jest możliwy; inaczej rodzaj domyślny.
+    var kluczRodzajow = null;
+    function ustawRodzaje(Lb, pm) {
+      var rw = rodzajeWWieku(A, Lb, pm);
+      var klucz = JSON.stringify(rw);
+      if (klucz === kluczRodzajow) return;
+      kluczRodzajow = klucz;
+      var wybrany = null;
+      RODZAJE.forEach(function (t) { if (radia[t].i.checked && !radia[t].i.disabled) wybrany = t; });
+      RODZAJE.forEach(function (t) {
+        var dostepny = rw ? rw[t].ok : true;
+        radia[t].i.disabled = !dostepny;
+        if (dostepny || !rw) radia[t].lab.removeAttribute('title');
+        else radia[t].lab.title = rw[t].komunikat;
+      });
+      var cel = wybrany && rw && rw[wybrany].ok ? wybrany : (rw ? rw.domyslny : (wybrany || 'continue'));
+      RODZAJE.forEach(function (t) { radia[t].i.checked = t === cel; });
+    }
 
     var prog = el('select');
     prog.id = 'ghZWierszaProgram';
@@ -533,7 +579,8 @@
         pomiarEl.textContent = tekstPomiaru(pm);
         if (innaMasa && liczba(dawka.value) != null) opisDawki();
       }
-      var stan = stanPrzycisku(Lb, pm, true);
+      ustawRodzaje(Lb, pm);
+      var stan = stanPrzycisku(Lb, pm, true, rodzajeWWieku(A, Lb, pm));
       var tekst = stan.aktywny ? '' : (stan.powod || TEKSTY.niekompletny);
       zapisz.disabled = !stan.aktywny;
       // Tylko przy zmianie: panel leży w #advMeasurements, a każdy zapis tekstu to mutacja dla obserwatora karty,
@@ -580,7 +627,7 @@
       pokazBlad(p, TEKSTY.pomiarZmieniony);
       return;
     }
-    var stan = stanPrzycisku(L, pomiar, true);
+    var stan = stanPrzycisku(L, pomiar, true, rodzajeWWieku(A, L, pomiar));
     if (!stan.aktywny) { pokazBlad(p, stan.powod || TEKSTY.niekompletny); return; }
     var wynik = przygotujPunkt(A, L, pomiar, wybor);
     if (!wynik.ok) { pokazBlad(p, wynik.komunikat); return; }
@@ -638,6 +685,7 @@
     pomiarWiersza: pomiarWiersza,
     tekstPomiaru: tekstPomiaru,
     stanPrzycisku: stanPrzycisku,
+    rodzajeWWieku: rodzajeWWieku,
     ostatniPunkt: ostatniPunkt,
     domyslne: domyslne,
     preparatyProgramu: preparatyProgramu,

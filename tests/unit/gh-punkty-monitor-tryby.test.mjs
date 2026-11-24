@@ -20,7 +20,11 @@ import {
 // (P-GH-DAWKA-BEZ-MODULU, zmiana kliniczna) nie zapisuje — to sprawdza wariant odmowy niżej, a porównanie z monitorem
 // sprzed API obejmuje scenariusze z modułem dawki. Od P-GH-NOWE-ID-MONITOR id nowego punktu nadaje dzisiejszemu
 // monitorowi VildaGhPunkty.noweId(), a monitor sprzed API nadawał je sam: to jedyna zamierzona różnica, którą porównanie
-// tłumaczy co do numeru wywołania zegara atrapy (idNaPostacSprzedApi niżej). Dane wyłącznie FIKCYJNE.
+// tłumaczy co do numeru wywołania zegara atrapy (idNaPostacSprzedApi niżej). Od P-GH-WZNOWIENIE, część 2 (reguła kursów
+// zamiast „najwyżej jedno Włączenie i jedno Zakończenie”, tabela wg reguły kursów zamiast wg rodzaju) porównanie tłumaczy
+// też zamierzone różnice reguły: tekst odmowy drugiego Włączenia i Zakończenia (wyrocznia dostaje tekst reguły kursów),
+// a scenariusze z inną decyzją albo inną kolejnością wierszy tabeli mają jawne oczekiwanie (ZMIANY_REGULY niżej).
+// Dane wyłącznie FIKCYJNE.
 
 const punkt = (id, type, nadpisania = {}) => ({
   id, type, ageYears: 9, ageMonths: 0, weight: 32, height: 130, boneAge: null, dose: 0.025, doseUnit: 'mg/kg/d',
@@ -119,12 +123,72 @@ function idNaPostacSprzedApi(tekst) {
   return { wynik, dawne };
 }
 
+// P-GH-WZNOWIENIE, część 2: ta sama odmowa drugiego Włączenia / Zakończenia ma dziś tekst reguły kursów. Wyrocznia
+// (monitor sprzed API) dostaje w zrzucie tekst dzisiejszy; inna decyzja albo inny kod odmowy dalej wywraca porównanie.
+const TEKSTY_REGULY = [
+  ['Punkt „Włączenie leczenia” został już dodany.',
+    'Ten kurs leczenia ma już punkt „Włączenie leczenia”. Nowe Włączenie można dodać po „Zakończeniu leczenia”.'],
+  ['Punkt „Zakończenie leczenia” został już dodany.', 'Ten kurs leczenia ma już punkt „Zakończenie leczenia”.'],
+];
+const ZAKONCZENIE_BEZ_KURSU = '„Zakończenie leczenia” zamyka kurs leczenia — musi je poprzedzać co najmniej jeden punkt tego kursu.';
+const ZAKONCZENIE_TEN_SAM_MIESIAC = '„Zakończenie leczenia” nie może być w tym samym miesiącu co „Włączenie leczenia” tego kursu.';
+const ZAKONCZENIE_NIE_OSTATNIE = '„Zakończenie leczenia” musi być ostatnim punktem kursu.';
+function zRegulaKursow(zrzutWyroczni) {
+  let t = kanon(zrzutWyroczni);
+  for (const [dawny, nowy] of TEKSTY_REGULY) t = t.split(JSON.stringify(dawny)).join(JSON.stringify(nowy));
+  return JSON.parse(t);
+}
+// Scenariusze z zamierzoną inną decyzją (odmowa — dawniej zapis), innym tekstem odmowy niż odpowiednik dawnego (tekst)
+// albo inną kolejnością wierszy tabeli (wg reguły kursów: wiek, przy równym wieku Kontynuacja → Zakończenie → Włączenie;
+// wpis bez wieku na początku). Po przeglądzie (2026-11-20) Włączenie w pierwszym kursie po wcześniejszej Kontynuacji jest
+// przyjmowane (dotąd w tej wersji odmowa „nie później niż pierwszy punkt”), a Zakończenie w miesiącu Włączenia ma
+// własny tekst.
+const ZMIANY_REGULY = {
+  // Zakończenie bez wcześniejszego punktu kursu.
+  'karta end, pusta lista': { odmowa: ZAKONCZENIE_BEZ_KURSU },
+  'wsteczny end, pusta lista': { odmowa: ZAKONCZENIE_BEZ_KURSU },
+  // Włączenie 9 l. 0 mies. → Zakończenie 9 l. 0 mies. przed Kontynuacją 10 l. 0 mies. / w miesiącu Włączenia.
+  'edycja end, Włączenie, masa': { odmowa: ZAKONCZENIE_BEZ_KURSU },
+  'edycja end, Ngenla, IGF-1 bez dni': { odmowa: ZAKONCZENIE_TEN_SAM_MIESIAC },
+  // Zakończenie 9 l. 6 mies. przed Kontynuacją 10 l. 0 mies. zamkniętego kursu: „musi być ostatnim punktem kursu”
+  // (dawniej „…został już dodany”, odpowiednik „ma już Zakończenie”).
+  'wsteczny end, pełny kurs': { tekst: ZAKONCZENIE_NIE_OSTATNIE },
+  // Włączenie (10 l. 3 mies.) po Kontynuacji 9,5 l. — za nią; Włączenie z miesiąca Kontynuacji (9,5 l.) — za nią;
+  // Kontynuacja z miesiąca Włączenia (9 l. 0 mies.) — przed nim.
+  'karta start, dawny format': { wiersze: (w) => [w[1], w[0]] },
+  'wsteczny start, dawny format': { wiersze: (w) => [w[1], w[0]] },
+  'edycja start, Ngenla, IGF-1 bez dni': { wiersze: (w) => [w[1], w[0]] },
+  'edycja continue, Ngenla, IGF-1 bez dni': { wiersze: (w) => [w[1], w[0]] },
+  // Wpis bez wieku (pusta tablica, pusty obiekt — bez id) na początku; dawniej za Włączeniem (rodzaj inny niż start).
+  'wpis tablica: karta, wsteczny, edycja wiersza bez id': { wiersze: (w) => ['undefined', ...w.filter((x) => x !== 'undefined')] },
+  'wpis pusty obiekt: karta, wsteczny, edycja wiersza bez id': { wiersze: (w) => ['undefined', ...w.filter((x) => x !== 'undefined')] },
+};
+
 function porownaj(scenariusz) {
   const z = przebieg(scenariusz, TERAZ).zrzuty;
+  const zmiana = ZMIANY_REGULY[scenariusz.nazwa];
+  if (zmiana && zmiana.odmowa) {
+    // Inna decyzja: bez wyroczni. Dzisiejszy monitor odmawia z tekstem reguły kursów, bez zapisu, lista bez zmian.
+    const a = przebieg({ ...scenariusz, kroki: [] }, TERAZ).atrapa.stan();
+    for (const zr of z) {
+      expect(zr.komunikat, scenariusz.nazwa).toBe(zmiana.odmowa);
+      expect(zr.dziennik.filter((w) => w.rodzaj === 'M' || w.rodzaj === 'BC'), scenariusz.nazwa).toEqual([]);
+      expect(kanon(zr.okno), scenariusz.nazwa).toBe(kanon(a.okno));
+      expect(zr.modul, scenariusz.nazwa).toBe(a.modulSurowy);
+    }
+    return { z, b: null };
+  }
   const b = przebieg(scenariusz, PRZED_API).zrzuty;
   for (let i = 0; i < z.length; i += 1) {
     const { api: _a, ...zm } = z[i];
-    const { api: _b, ...zb } = b[i];
+    const { api: _b, ...zbDawne } = b[i];
+    const zb = zRegulaKursow(zbDawne);
+    if (zmiana && zmiana.wiersze) zb.wiersze = zmiana.wiersze(zb.wiersze);
+    if (zmiana && zmiana.tekst) {
+      // Ta sama odmowa (bez zapisu), inny tekst reguły kursów: zrzut wyroczni dostaje ten tekst.
+      const dawny = zb.komunikat;
+      Object.assign(zb, JSON.parse(kanon(zb).split(JSON.stringify(dawny)).join(JSON.stringify(zmiana.tekst))));
+    }
     const { wynik, dawne } = idNaPostacSprzedApi(kanon(zm));
     expect(dawne, `${scenariusz.nazwa} — krok ${i + 1}: id nadane bez VildaGhPunkty.noweId()`).toEqual([]);
     expect(wynik, `${scenariusz.nazwa} — krok ${i + 1}`).toBe(kanon(zb));
@@ -234,27 +298,35 @@ describe('Monitor GH: dzisiejszy monitor z modułem VildaGhPunkty i monitor sprz
     expect(scenariusze.length).toBeGreaterThan(0);
     for (const s of scenariusze) porownaj(s);
   });
+
+  it('ZMIANY_REGULY dotyczą istniejących scenariuszy (literówka w nazwie nie wyłącza porównania po cichu)', () => {
+    const nazwy = new Set([...ZWYKLE, ...Z3, ...OBIEKTY, ...BRZEGI].map((x) => x.nazwa));
+    expect(Object.keys(ZMIANY_REGULY).filter((n) => !nazwy.has(n))).toEqual([]);
+  });
 });
 
 describe('Monitor GH z modułem: delegacja do VildaGhPunkty', () => {
   const api = (s, krok = 0) => przebieg(s, TERAZ, { zlicz: true }).zrzuty[krok].api;
 
+  // P-GH-WZNOWIENIE, część 2: przed sprawdzRodzaj monitor liczy wiek punktu (wiekMiesZPol), a otwarcie formularza
+  // wstecznego bierze rodzaje z dostepneRodzaje (wariant wsteczny).
   it('każda ścieżka zapisu woła API, a zapis listy to dokładnie jedno zapisz()', () => {
     expect(api({ opcje: { punkty: [WLACZENIE], ghTherapyCalc: KARTA }, kroki: [zKarty('continue')] }))
-      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'noweId', 'zapisz']);
+      .toEqual(['uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'jednostkaDawki', 'dniIgf', 'normalizujWiek', 'sprawdzWartosci', 'noweId', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny()] }))
-      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'noweId', 'punkt', 'zapisz']);
+      .toEqual(['dostepneRodzaje', 'uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'polaZPodawanej', 'noweId', 'punkt', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [edytuj(KONTYNUACJA.id, { ghEditHeight: '139' }, 'continue')] }))
-      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz']);
+      .toEqual(['uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'polaZPodawanej', 'zmienWMiejscu', 'zapisz']);
     expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [(a) => a.usun(KONTYNUACJA.id)] })).toEqual(['uszkodzone', 'zapisz']);
   });
 
   it('odmowy: API odmawia, monitor nie zapisuje (bez zapisz)', () => {
-    expect(api({ opcje: { punkty: [WLACZENIE], ghTherapyCalc: KARTA }, kroki: [zKarty('start')] })).toEqual(['uszkodzone', 'sprawdzRodzaj']);
+    expect(api({ opcje: { punkty: [WLACZENIE], ghTherapyCalc: KARTA }, kroki: [zKarty('start')] }))
+      .toEqual(['uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj']);
     expect(api({ opcje: { punkty: [WLACZENIE] }, kroki: [wsteczny({ ghRetroDose: '0' })] }))
-      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej']);
+      .toEqual(['dostepneRodzaje', 'uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'polaZPodawanej']);
     expect(api({ opcje: { punkty: [WLACZENIE, KONTYNUACJA] }, kroki: [edytuj(KONTYNUACJA.id, { ghEditWeight: '0' }, 'continue')] }))
-      .toEqual(['uszkodzone', 'sprawdzRodzaj', 'polaZPodawanej']);
+      .toEqual(['uszkodzone', 'wiekMiesZPol', 'sprawdzRodzaj', 'polaZPodawanej']);
   });
 
   it('edycja spoza bieżącej listy i zmiana pacjenta: odmowa monitora PRZED jakimkolwiek wywołaniem API', () => {
@@ -291,7 +363,9 @@ const BEZ_API = [
       for (const plik of ['vilda_gh_opakowania_dane.js', 'vilda_gh_dawka_dane.js', 'vilda_gh_dawka.js']) loadBrowserScript(plik, w);
     },
   }) },
-  ...[1, 2].map((wersja) => ({ nazwa: `API wersji ${wersja} (plik ${wersja === 1 ? 'raty 1' : 'rat 2–3'} z pamięci przeglądarki)`, opcje: {}, podmien: (w) => {
+  // P-GH-WZNOWIENIE, część 2: wersja 3 (dawna reguła „jedno Włączenie i jedno Zakończenie”, plik sprzed reguły kursów)
+  // też jest odmową — monitor zna tylko wersję 4.
+  ...[1, 2, 3].map((wersja) => ({ nazwa: `API wersji ${wersja} (plik ${['raty 1', 'rat 2–3', 'raty 4, sprzed reguły kursów'][wersja - 1]} z pamięci przeglądarki)`, opcje: {}, podmien: (w) => {
     const api = w.VildaGhPunkty;
     const wywolania = [];
     const stare = { wersja };

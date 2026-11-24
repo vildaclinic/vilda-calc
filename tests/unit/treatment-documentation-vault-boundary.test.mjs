@@ -12,7 +12,7 @@ const native=value=>value.slice(value.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE
 describe('strict treatment-document durability outer layer',()=>{
   it('replays over the exact frozen outcome image and preserves the protected native source',()=>{
     const base=restoreTreatmentDocumentationBaseline(source);
-    expect(hash(base)).toBe('294774d6ee7fdb494e238b68c9bd81d74eb61aefb348acb71cc69ab6b241870c');
+    expect(hash(base)).toBe('0237aa6ce880d54bbe5b48cc00f4c89de9be178f504884928c8ac677b48ac103');
     expect(applyTreatmentDocumentationDelta(base)).toBe(source); expect(hash(source)).toBe(manifest.integratedVaultSHA256);
     expect(native(source)).toBe(native(base)); expect(native(source)).not.toBe('');
     expect(restoreDocumentOutcomesBaseline(source)).toBe(restoreDocumentOutcomesBaseline(base));

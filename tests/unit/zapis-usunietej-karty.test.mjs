@@ -16,6 +16,11 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // (mergedIntoPatientId), gdy sejf zna którąś z nich. Ponowienie do tej karty z opcją dolaczPoScaleniu dopisuje wiersze
 // karty docelowej, niczego nie zastępuje i o nic nie pyta. Karta nieznana (bez nagrobka) — zapis jak dotąd.
 //
+// Od E3-PR0e1 (decyzja 1 właściciela z 2026-11-23): karta opróżniona przy pełnej synchronizacji z urządzeniem, które ją
+// scaliło, znika z nagrobkiem z ładunku — zapis z formularza i korekta takiej karty odmawiają jak na urządzeniu, które
+// scaliło (na a7b2920b czerwone 2: zapis zakładał X od nowa, korekta kończyła się błędem technicznym); kontrola: karta
+// opróżniona bez znanego nagrobka (delta karty przed deltą nagrobka) — zapis jak dotąd.
+//
 // Prawdziwy vilda_vault.js (i vilda_data_import_export.js) na magazynie w pamięci. Dane wyłącznie FIKCYJNE.
 
 function magazyn() {
@@ -521,5 +526,74 @@ describe('A13 — główny „Zapisz dane” w oknie z kartą scaloną albo usun
     expect(F.opcje.at(-1).patientId, 'ponowienie bez id usuniętej karty').toBeUndefined();
     expect(F.kom.at(-1).ton).toBe('nowy');
     expect(await stan(d, x), 'X nie wraca').toEqual({ rekord: false, wersje: 0, nagrobek: true });
+  });
+});
+
+describe('A13 — karta opróżniona przy synchronizacji z urządzeniem, które ją scaliło (E3-PR0e1)', () => {
+  /* Dwa urządzenia (dwa konta w pamięci, pełna kopia exportSyncPayload → mergeSyncPayload). A: X (60, 60+66) i Y (48,
+     48+54), pełna synchronizacja z B. B: „Scal pacjentów” X → Y i poprawka drugiej wersji X już pod Y (rev 2). A — bez
+     wiedzy o scaleniu — wczytuje X w tym oknie i poprawia tę samą wersję w X (rev 1, po scaleniu), więc X nie przegrywa
+     z nagrobkiem; pełna kopia B przenosi pod Y obie wersje X i X znika. Dotąd znikała bez nagrobka: zapis z formularza
+     X zakładał ją od nowa (duplikat), a korekta jej wersji i pomiaru kończyła się błędem technicznym. Od E3-PR0e1 X znika
+     z nagrobkiem z ładunku — odmowa jak na urządzeniu, które scaliło. Kontrola: X opróżniona deltą karty Y przed deltą
+     nagrobka (scalanie nagrobka nie zna) — zapis jak dotąd. */
+  const kopia = (x) => { const y = JSON.parse(JSON.stringify(x)); delete y.credential; return y; };
+  const pelna = async (od, do_) => do_.v.mergeSyncPayload(kopia(await od.v.exportSyncPayload()));
+  async function przygotuj() {
+    const A = await konto(), B = await konto();
+    const x = await karta(A.v, [[60], [60, 66]]);
+    const y = await karta(A.v, [[48], [48, 54]]);
+    await pelna(A, B);
+    const glowaX = (await A.v.getPatient(x)).snapshots[0];
+    await chwila(5);
+    await B.v.mergePatients(x, y);
+    await chwila(5);
+    await B.v.updateSnapshotPayload(y, glowaX.snapshotId, payload([60, [66, 124]]), { preserveSavedAt: true });
+    await chwila(5);
+    await A.v.updateSnapshotPayload(x, glowaX.snapshotId, payload([60, [66, 125]]), { preserveSavedAt: true });
+    expect((await A.v.getPatient(x)).snapshots.length, 'kontrola: A wczytało X').toBe(2);
+    return { A, B, x, y, sidX: glowaX.snapshotId, glowaX: glowaX.payload };
+  }
+  const POLA = (e) => (e ? { code: e.code, patientId: e.patientId, mergedIntoPatientId: e.mergedIntoPatientId, mergedIntoName: e.mergedIntoName, mergedIntoSameIdentity: e.mergedIntoSameIdentity, message: e.message } : null);
+
+  it('[czerwony na bazie] zapis z formularza opróżnionej karty po pełnej kopii: odmowa z nazwą karty scalonej, jak na urządzeniu, które scaliło; ponowienie z dolaczPoScaleniu dopisuje do Y, X nie wraca', async () => {
+    const p = await przygotuj();
+    await pelna(p.B, p.A);
+    expect(await stan(p.A, p.x), 'kontrola: X opróżniona na A').toMatchObject({ rekord: false, wersje: 0 });
+    const eA = await odmowa(p.A.v.savePatient(payload([60, 66, 72]), { patientId: p.x, dedup: false }));
+    const eB = await odmowa(p.B.v.savePatient(payload([60, 66, 72]), { patientId: p.x, dedup: false }));
+    expect(POLA(eA), 'odmowa na A').toEqual({
+      code: 'PATIENT_DELETED', patientId: p.x, mergedIntoPatientId: p.y, mergedIntoName: 'Testowy Jan', mergedIntoSameIdentity: true,
+      message: 'Tego pacjenta scalono z kartą „Testowy Jan” — nic nie zapisano.',
+    });
+    expect(POLA(eA), 'ta sama odmowa co na urządzeniu, które scaliło').toEqual(POLA(eB));
+    expect(await stan(p.A, p.x), 'nic nie zapisano').toEqual({ rekord: false, wersje: 0, nagrobek: true });
+    const yPrzed = await stan(p.A, p.y);
+    await p.A.v.savePatient(payload([60, 66, 72]), { patientId: p.y, baselinePayload: p.glowaX, dolaczPoScaleniu: p.x });
+    expect(await stan(p.A, p.y), 'ponowienie dopisało wersję do Y').toEqual({ ...yPrzed, wersje: yPrzed.wersje + 1 });
+    expect(await stan(p.A, p.x), 'X nie wraca').toEqual({ rekord: false, wersje: 0, nagrobek: true });
+    expect((await p.A.v.listPatients()).map((k) => k.patientId), 'jedna karta').toEqual([p.y]);
+  });
+
+  it('[czerwony na bazie] korekta wersji i pomiaru opróżnionej karty: ta sama odmowa ze wskazaniem karty scalonej, jak na urządzeniu, które scaliło', async () => {
+    const p = await przygotuj();
+    await pelna(p.B, p.A);
+    for (const d of [p.A, p.B]) {
+      const e1 = await odmowa(d.v.updateSnapshotPayload(p.x, p.sidX, payload([60, 66]), { preserveSavedAt: true }));
+      expect([e1 && e1.code, e1 && e1.mergedIntoPatientId], 'korekta wersji').toEqual(['PATIENT_DELETED', p.y]);
+      const e2 = await odmowa(d.v.updateMeasurementRow(p.x, { key: '66' }, { height: 126 }));
+      expect(e2 && e2.code, 'korekta pomiaru').toBe('PATIENT_DELETED');
+      expect(await stan(d, p.x), 'nic nie zapisano').toEqual({ rekord: false, wersje: 0, nagrobek: true });
+    }
+  });
+
+  it('[kontrola] karta opróżniona deltą karty Y przed deltą nagrobka X (scalanie nagrobka nie zna): zapis jak dotąd zakłada X', async () => {
+    const p = await przygotuj();
+    const delta = await p.B.v.buildPatientDelta(p.y);
+    await p.A.v.mergeSyncPayload(kopia(await p.B.v.decryptPayloadForCurrentUser(delta.iv, delta.data)));
+    expect(await stan(p.A, p.x), 'kontrola: X opróżniona bez nagrobka').toEqual({ rekord: false, wersje: 0, nagrobek: false });
+    const w = await p.A.v.savePatient(payload([60, 66, 72]), { patientId: p.x, dedup: false });
+    expect(w.patientId).toBe(p.x);
+    expect(await stan(p.A, p.x)).toEqual({ rekord: true, wersje: 1, nagrobek: false });
   });
 });

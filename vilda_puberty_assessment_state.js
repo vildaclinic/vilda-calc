@@ -420,7 +420,7 @@
     if (typeof w.setTimeout === 'function') saveTimer = w.setTimeout(save, 300);
   }
 
-  function editObservations(changes, options) {
+  function editObservations(changes, options, commitSession) {
     if (!Array.isArray(changes) || !changes.length || changes.some(function (change) {
       return !change || ['G', 'Th', 'P'].indexOf(change.axis) < 0 || change.stage !== null &&
         !(typeof change.stage === 'number' && Number.isInteger(change.stage) && change.stage >= 1 && change.stage <= 5);
@@ -456,36 +456,54 @@
     if (w.VildaPubertyAssessment.readUser({ pubertyAssessment: raw }).status !== 'ready') {
       return { ok: false, reason: 'invalid-context' };
     }
-    if (!state) load({ user: {} }, { restore: true });
-    state.present = true;
-    state.raw = raw;
+    if (!state && !commitSession) load({ user: {} }, { restore: true });
+    // A sibling's explicit edit is transported by the active panel. Prepare
+    // its candidate without exposing a change that the working session may
+    // reject; the hidden form never receives ordinary write authority.
+    var base = state || { present: false, raw: null, legacy: null, visitPresent: false,
+      visitRaw: null, visit: null, patientId: identity(), vault: ownerVault(identity()),
+      identityHandoff: null, pendingIdentity: false };
+    var next = Object.assign({}, base, { visit: clone(base.visit) });
+    next.present = true;
+    next.raw = raw;
     var reference = { sex: sourceSex, measuredAtISO: context.measuredAtISO, ageMonths: context.ageMonths };
-    if (!state.visit) state.visit = newVisit(reference);
-    else state.visit.reference = reference;
-    state.visit.currentAxes = state.visit.currentAxes.filter(function (key) {
+    if (!next.visit) next.visit = newVisit(reference);
+    else next.visit.reference = reference;
+    next.visit.currentAxes = next.visit.currentAxes.filter(function (key) {
       var observation = raw.observations[key];
       return observation && (owns(observation, 'sex') ? observation.sex : raw.sex) === sourceSex;
     });
     changes.forEach(function (change) {
-      if (change.stage !== null && state.visit.currentAxes.indexOf(change.axis) < 0) state.visit.currentAxes.push(change.axis);
-      if (change.stage === null) state.visit.currentAxes = state.visit.currentAxes.filter(function (key) { return key !== change.axis; });
+      if (change.stage !== null && next.visit.currentAxes.indexOf(change.axis) < 0) next.visit.currentAxes.push(change.axis);
+      if (change.stage === null) next.visit.currentAxes = next.visit.currentAxes.filter(function (key) { return key !== change.axis; });
     });
-    state.visitPresent = true;
-    state.visitRaw = clone(state.visit);
-    state.mode = 'edited';
-    state.pendingIdentity = false;
-    publishExplicitEdit();
+    next.visitPresent = true;
+    next.visitRaw = clone(next.visit);
+    next.mode = 'edited';
+    next.pendingIdentity = false;
+    if (commitSession) {
+      try {
+        if (commitSession({ patientId: next.patientId, raw: clone(next.raw), visitRaw: clone(next.visitRaw) }) !== true) {
+          return { ok: false, reason: 'session-write-rejected' };
+        }
+      } catch (_) { return { ok: false, reason: 'session-write-rejected' }; }
+    }
+    state = next;
+    initialized = true;
+    bootstrapSession = null;
+    bindVault();
+    publishExplicitEdit(Boolean(commitSession));
     return { ok: true };
   }
 
-  function publishExplicitEdit() {
+  function publishExplicitEdit(sessionCommitted) {
     bumpActivityRevision();
     try { w.hasUserModifiedAfterLoad = true; } catch (_) { /* Optional existing flag. */ }
     try {
       if (typeof w.updateSaveBtnVisibility === 'function') w.updateSaveBtnVisibility();
     } catch (_) { /* Persistence does not depend on the sidebar button. */ }
     notify('edit');
-    scheduleSave();
+    if (!sessionCommitted) scheduleSave();
   }
 
   // Applying history-only fields is still an explicit clinician action, even
@@ -499,8 +517,13 @@
     return { ok: true };
   }
 
-  function editObservation(axis, stage, options) {
-    return editObservations([{ axis: axis, stage: stage }], options);
+  function editObservationToSession(axis, stage, options, commitSession) {
+    if (typeof commitSession !== 'function') return { ok: false, reason: 'session-write-rejected' };
+    return editObservations([{ axis: axis, stage: stage }], options, commitSession);
+  }
+
+  function editObservation(axis, stage, options, commitSession) {
+    return editObservations([{ axis: axis, stage: stage }], options, commitSession);
   }
 
   // A presentation-only draft must not anchor observations, initialize state,
@@ -666,9 +689,9 @@
   } catch (_) { /* explicit collector/restore hooks still operate */ }
   bindVault();
 
-  w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '3', load: load,
+  w.VildaPubertyAssessmentState = Object.freeze({ VERSION: '4', load: load,
     capture: capture, captureForUserReadOnly: captureForUserReadOnly, applyToUser: applyToUser, clear: clear, mergeSession: mergeSession,
-    read: read, readReadOnly: readReadOnly, subscribe: subscribe, editObservation: editObservation, editObservations: editObservations, markFactsEdited: markFactsEdited, canEdit: canEdit, visitContext: visitContext,
+    read: read, readReadOnly: readReadOnly, subscribe: subscribe, editObservation: editObservation, editObservationToSession: editObservationToSession, editObservations: editObservations, markFactsEdited: markFactsEdited, canEdit: canEdit, visitContext: visitContext,
     getActivityRevision: getActivityRevision,
     restoreSessionIfUninitialized: restoreSessionIfUninitialized });
 })(typeof window !== 'undefined' ? window : globalThis);

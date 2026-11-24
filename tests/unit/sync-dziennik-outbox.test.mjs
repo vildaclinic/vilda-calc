@@ -89,6 +89,10 @@
 //        wiersza (nieznany eid, wiersz odrzucony) — meta bez zmian.
 //   PG35 gwiazdka starszej wersji: przyjęty wiersz wersji pokrywa nośnik pól karty — przegląd nie dokłada wersji
 //        najnowszej; zmiana bez wiersza sprzed przyjęcia (po utworzeniu wiersza) — dołożona.
+//   PG36 (E3-PR0e1, decyzja 1 właściciela z 2026-11-23) karta opróżniona w fazie przeniesień i karta ze zbioru N
+//        („zabierz”) znikają z tym samym nagrobkiem z ładunku tą samą pełną kopią; wiersze kolejki nagrobka po scaleniu,
+//        w przeglądzie i po przeładowaniu strony te same w obu wariantach (na a7b2920b czerwony: karta opróżniona bez
+//        nagrobka).
 //
 // Każdy przypadek poza strażnikami PG10 i PG25 zaczyna od sprawdzenia, że sejf ma część przeglądu
 // (VildaVault._eventLog.sweepOutbox).
@@ -1581,5 +1585,64 @@ describe('PG34–PG35: przyjęcie a pamięć par', () => {
     await o.gotowe();
     expect([sw.ok, sw.dopisane], 'przegląd').toEqual([true, 1]);
     expect(klucze(o), 'tylko zmiana bez wiersza').toEqual([`note|${n}`]);
+  }, 60_000);
+});
+
+describe('PG36: nagrobek karty opróżnionej w fazie przeniesień (E3-PR0e1)', () => {
+  // A (okno z emisją i przeglądem): X (dwie wersje) i Y; bliźniak B (to samo konto). B: „Scal pacjentów” X → Y i poprawka
+  // drugiej wersji X już pod Y (rev 2). Wariant „opróżniona”: A — bez wiedzy o scaleniu — poprawia tę wersję w starej X
+  // (rev 1, po scaleniu), więc X nie jest w zbiorze N; pełny ładunek B przenosi obie wersje X pod Y w fazie przeniesień,
+  // a X znika — od E3-PR0e1 ze znanym nagrobkiem z ładunku (zapis nagrobka przez magazyn, bez wiersza kolejki w chwili
+  // scalenia). Wariant „zabierz”: A bez poprawki, X w zbiorze N — nagrobek zapisuje Bsl_usunPacjenta. Ten sam nagrobek
+  // z ładunku tą samą pełną kopią: w kolejce po scaleniu, w przeglądzie i po przeładowaniu strony wiersze nagrobka X są
+  // te same w obu wariantach.
+  async function przebieg(poprawka) {
+    const o = await okno();
+    await o.zaloguj('A');
+    const X = await karta(o, 1);
+    const Y = await karta(o, 2);
+    await o.gotowe();
+    const B = await blizniak(o);
+    tik(MIN);
+    await B.v.mergePatients(X.P, Y.P);
+    tik(MIN);
+    const w = (await B.v.getPatient(Y.P)).snapshots.find((s) => s.snapshotId === X.S2);
+    await B.v.updateSnapshotPayload(Y.P, X.S2, { ...w.payload, user: { ...w.payload.user, weight: 31 } }, { preserveSavedAt: true });
+    tik(MIN);
+    await B.cisza();
+    const T = (await B.v.exportSyncPayload()).tombstones.find((t) => t.patientId === X.P).deletedAtISO;
+    if (poprawka) {
+      const wA = (await o.v.getPatient(X.P)).snapshots.find((s) => s.snapshotId === X.S2);
+      await o.v.updateSnapshotPayload(X.P, X.S2, { ...wA.payload, user: { ...wA.payload.user, weight: 41 } }, { preserveSavedAt: true });
+      tik(MIN);
+      await o.gotowe();
+    }
+    const ladunek = await B.v.exportSyncPayload();
+    const s0 = ostatni(o);
+    tik(MIN);
+    await o.v.mergeSyncPayload(ladunek);
+    tik();
+    await o.gotowe();
+    const nagrobek = ((await o.v.exportSyncPayload()).tombstones.find((t) => t.patientId === X.P) || {}).deletedAtISO || null;
+    const zX = (lista) => lista.filter((k) => k.endsWith(`|${X.P}`) || k.includes(`|${X.P}/`));
+    const poScaleniu = zX(po(o, s0));
+    const s1 = ostatni(o);
+    await o.ev.sweepOutbox();
+    await o.gotowe();
+    const poPrzegladzie = zX(po(o, s1));
+    tik(MIN);
+    const o2 = await przeladuj(o);
+    const n0 = ostatni(o2);
+    await o2.zaloguj('A');
+    await o2.gotowe();
+    const poPrzeladowaniu = zX(po(o2, n0));
+    return { karta: !!(await o2.v.getPatient(X.P)), nagrobek: nagrobek === T, poScaleniu, poPrzegladzie, poPrzeladowaniu };
+  }
+
+  it('[czerwony na bazie] karta opróżniona w fazie przeniesień i karta ze zbioru N znikają z tym samym nagrobkiem z ładunku; wiersze kolejki nagrobka X po scaleniu, w przeglądzie i po przeładowaniu strony te same w obu wariantach', async () => {
+    const zabierz = await przebieg(false);
+    const oprozniona = await przebieg(true);
+    expect(zabierz.karta || !zabierz.nagrobek, 'kontrola: „zabierz” — X usunięta z nagrobkiem z ładunku').toBe(false);
+    expect(oprozniona, 'karta opróżniona tak samo jak karta ze zbioru N').toEqual(zabierz);
   }, 60_000);
 });

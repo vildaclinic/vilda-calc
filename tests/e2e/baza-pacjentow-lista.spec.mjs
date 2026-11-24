@@ -2,6 +2,7 @@ import { expect, test } from '../support/test-czas.mjs';
 import {
   BAZA, PICKER, LISTA, DRUGA_LISTA, przygotujBaze, otworzListe, sortuj, bezPrzewijaniaPoziomego, ustawSzerokoscBazy,
 } from '../support/baza-pacjentow-lista.mjs';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 // Testujemy rzeczywisty renderer, karty i wspólny vault powłoki. Każdy test ma
 // własny efemeryczny profil i jednoznacznie fikcyjne rekordy.
@@ -41,6 +42,78 @@ test('desktop: źródła, wyszukiwanie i katalog Listy działają w jednym widok
   await database.locator('.pt-seg [data-filter="all"]').click();
   await expect(database.locator('.pt-row'), 'powrót do Wszyscy przywraca całą bazę, a nie ostatnią listę').toHaveCount(24);
   await bezPrzewijaniaPoziomego(page, frame);
+});
+
+test('katalog Listy zachowuje poziome wiersze po karcie PRO i anulowaniu edycji listy', async ({ page }, testInfo) => {
+  const { frame, base, listId } = await przygotujBaze(page), measurements = [];
+  const database = frame.locator(BAZA);
+  const listBefore = await frame.evaluate(id => window.VildaVault.getPatientList(id), listId);
+  async function openFromDocPro() {
+    await database.locator('.pt-home').click();
+    const menu = await visibleChromeMenu(page);
+    await menu.locator('a[href="docpro.html"]').click();
+    await expect.poll(() => page.evaluate(() => window.VildaShell.getCurrentRoute())).toBe('docpro');
+    await menu.getByRole('button', { name: 'Baza pacjentów', exact: true }).click();
+    await expect(database).toBeVisible();
+    await database.locator('.pt-seg [data-filter="lists"]').click();
+  }
+  async function expectHorizontalRows(stage) {
+    await expect(database.locator('.pl-row')).toHaveCount(2);
+    await expect(database.locator('.pl-num').first()).not.toHaveText('…');
+    await database.locator('.pl-tile').first().hover();
+    const rows = await database.locator('.pl-row').evaluateAll(nodes => nodes.map(row => {
+      const tile = row.querySelector('.pl-tile'), edit = row.querySelector('.pl-edit');
+      const parts = [tile.querySelector('.pt-icon:first-child'), tile.querySelector('.pl-description'),
+        tile.querySelector('.pl-num'), tile.querySelector('.pt-icon:last-child'), edit];
+      const box = node => {
+        const r = node.getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom,
+          width: r.width, height: r.height, centerY: r.top + r.height / 2 };
+      };
+      const bounds = box(row), boxes = parts.map(box), style = getComputedStyle(tile);
+      return { direction: style.flexDirection, shadow: style.boxShadow, bounds, boxes,
+        nonzero: [box(tile), ...boxes].every(value => value.width > 0 && value.height > 0),
+        contained: boxes.every(value => value.left >= bounds.left - 1 && value.right <= bounds.right + 1
+          && value.top >= bounds.top - 1 && value.bottom <= bounds.bottom + 1),
+        aligned: boxes.every(value => Math.abs(value.centerY - boxes[0].centerY) <= 1),
+        ordered: boxes.every((value, index) => !index || value.left >= boxes[index - 1].right - 1) };
+    }));
+    measurements.push({ stage, rows });
+    expect(rows.map(({ direction, shadow, nonzero, contained, aligned, ordered }) =>
+      ({ direction, shadow, nonzero, contained, aligned, ordered })), stage).toEqual([
+      { direction: 'row', shadow: 'none', nonzero: true, contained: true, aligned: true, ordered: true },
+      { direction: 'row', shadow: 'none', nonzero: true, contained: true, aligned: true, ordered: true },
+    ]);
+  }
+  try {
+    await openFromDocPro();
+    await expectHorizontalRows('katalog otwarty z menu DocPro');
+    await database.locator('.pl-tile', { hasText: LISTA }).click();
+    await expect(database.locator('.pt-row')).toHaveCount(18);
+    await database.locator(`.pt-row[data-patient-id="${base[0]}"] .pt-row-open`).click();
+    const card = frame.locator('.vilda-auth-patient-card');
+    await expect(card).toBeVisible();
+    // The native PRO list chips mount the legacy editor stylesheet. Returning
+    // must preserve the current directory's own layout, including under hover.
+    await expect(card.locator('.vilda-pl-chip', { hasText: LISTA })).toBeVisible();
+    await frame.locator('[data-patients-return]').click();
+    await expect(database.locator('.pt-count')).toHaveText(`Lista: ${LISTA}`);
+    await database.locator('.pl-back').click();
+    await expectHorizontalRows('powrót z karty PRO do katalogu');
+    await database.locator('.pl-row .pl-edit').first().click();
+    const editor = frame.locator('.vilda-pl-modal');
+    await expect(editor).toBeVisible();
+    await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+    await expect(editor).toHaveCount(0);
+    await expectHorizontalRows('po anulowaniu natywnego edytora list');
+    await openFromDocPro();
+    await expectHorizontalRows('ponowne otwarcie Bazy z DocPro');
+    expect(await frame.evaluate(id => window.VildaVault.getPatientList(id), listId)).toEqual(listBefore);
+    await bezPrzewijaniaPoziomego(page, frame);
+  } finally {
+    await testInfo.attach('list-directory-layout.json', { contentType: 'application/json',
+      body: JSON.stringify(measurements, null, 2) });
+  }
 });
 
 test('powrót z kart bazowego i zewnętrznego pacjenta zachowuje listę, query, sortowanie i scroll', async ({ page }) => {

@@ -345,11 +345,13 @@ test('B1 Leczenie preserves genuine GH and obesity monitors without inventing a 
   const before = await records(frame, id), clinicalBefore = await clinical(frame);
   await expect(frame.locator(CARD)).toContainText(/GH|Leczenie/);
   const treatment = await openTreatment(frame);
-  const gh = treatment.locator('.vilda-gh-summary', { hasText: 'Omnitrope 10 mg' });
+  const gh = treatment.locator('.vilda-kg-karta', { hasText: 'Omnitrope 10 mg' });
   await expect(gh).toBeVisible();
+  await expect(gh.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(gh).toContainText('Leczony hormonem wzrostu (rhGH)');
-  const obesity = treatment.locator('.vilda-gh-summary', { hasText: 'Wegovy' });
+  const obesity = treatment.locator('.vilda-ko-karta', { hasText: 'Wegovy' });
   await expect(obesity).toBeVisible();
+  await expect(obesity.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(obesity).toContainText('Leczenie otyłości');
   const legacyOnly = await treatmentState(frame, id);
   expect(legacyOnly.diagnoses).toEqual([]); expect(legacyOnly.episodes).toEqual([]);

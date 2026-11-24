@@ -63,7 +63,10 @@ async function pacjentNaLiraglutydzie(page, { imie, dataKontroli, masaKontrolna 
 /** Otwiera Kartę, rozwija panel analityczny otyłości i oddaje treść werdyktu. */
 async function werdykt(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
-  const przycisk = page.locator('.vilda-gha-btn', { hasText: 'Dane analityczne' });
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+  // P-KARTA-LECZENIE (etap 2): panel „Dane analityczne — otyłość” to widok „Analiza” karty leczenia (dotąd belka).
+  const przycisk = page.locator('.vilda-ko-seg').getByRole('tab', { name: 'Analiza' });
   await expect(przycisk, 'panel analityczny otyłości istnieje w Karcie').toBeVisible();
   await przycisk.click();
   const blok = page.locator('.vilda-oba-verdict');

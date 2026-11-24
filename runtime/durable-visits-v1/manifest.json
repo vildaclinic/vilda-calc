@@ -2,8 +2,8 @@
   "namespace": "vilda-durable-visits-vault",
   "version": 1,
   "sourceRef": "40d742d38f4d2924d3ba85a50d746790d0de6644",
-  "baseVaultSHA256": "22f7d1f27f71ea7cb01304cc048b885159d04cc237431d842064ddd3d199e86f",
-  "integratedVaultSHA256": "4ca270bc7461e33d50b791242cd9298da710cfd651ffe1a099b059f80c4acd7a",
+  "baseVaultSHA256": "776c4c6907f52c48a16a321d40599a9d8a0505ecd82bfe4a0eab4f41118e9b14",
+  "integratedVaultSHA256": "63deb8c33eed2d17647803b985862c7efc7e1b7f9e7bdf930565fd6d9a04c97d",
   "fragmentSHA256": "5b7d345724247d971d1a18129d101bf27fbaf01db5c91d1383606302fd31f88d",
   "hooks": [
     {

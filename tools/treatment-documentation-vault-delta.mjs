@@ -8,7 +8,7 @@ import { parse } from 'acorn';
 import { restoreStagedDocumentationBaseline } from './staged-documentation-vault-delta.mjs';
 
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const BASE='294774d6ee7fdb494e238b68c9bd81d74eb61aefb348acb71cc69ab6b241870c';
+const BASE = '0237aa6ce880d54bbe5b48cc00f4c89de9be178f504884928c8ac677b48ac103';
 const SOURCE='runtime/treatment-documentation-v1/vault-fragment.js';
 const MANIFEST='runtime/treatment-documentation-v1/manifest.json';
 const START='/* BEGIN VILDA TREATMENT DOCUMENTATION V1 */\n';
