@@ -128,6 +128,166 @@
       birthWeight: positive(birth.weight) || positive(perinatal.birthWeightG)
     };
   }
+  /* P-BAZA-STATYSTYKI, etap 2 (decyzja właściciela 2026-11-24): leczenie hormonem wzrostu.
+   * Model niczego nie liczy własnym wzorem: tempo daje silnik VildaTempoWzrastania (odcinek),
+   * kursy leczenia — VildaTrajectoryAnalysis.ghKursy, hSDS — VildaSdsWzrostu. Zależności są
+   * podawane z zewnątrz (deps), żeby model dało się sprawdzić na prawdziwych silnikach bez DOM.
+   *
+   * Definicje (te same pojęcia, co w reszcie aplikacji):
+   *   - leczony = karta ma co najmniej jeden punkt leczenia GH (Włączenie, Kontynuacja, Zakończenie);
+   *   - liczy się PIERWSZY kurs z punktem Włączenia (leczenie wznowione po Zakończeniu to osobny
+   *     kurs i nie jest „pierwszym rokiem”);
+   *   - odcinek roczny = dwa pomiary odległe o 9–15 mies., najbliżej 12 (okno roczne silnika tempa);
+   *   - 1. rok leczenia: od Włączenia do takiej kontroli; kolejne lata — łańcuchem od poprzedniej;
+   *   - tempo przed leczeniem: pomiar 9–15 mies. przed Włączeniem (najbliżej 12) → Włączenie;
+   *   - zmiana hSDS w 1. roku: hSDS kontroli − hSDS Włączenia, na siatce zapisanej w karcie.
+   * Pacjent bez pary w oknie nie wchodzi do średniej i jest wykazany z powodem. */
+  function therapyAge(point) {
+    if (!point || (finite(point.ageYears) === null && finite(point.ageMonths) === null)) return null;
+    return Math.round((finite(point.ageYears) || 0) * 12 + (finite(point.ageMonths) || 0));
+  }
+  function heightOf(value) {
+    if (!positive(value)) return null;
+    return Number(String(value).trim().replace(/\s+/g, '').replace(',', '.'));
+  }
+  function annualWindow(tempo) {
+    const limits = tempo && tempo.P;
+    if (!limits || typeof tempo.odcinek !== 'function') return null;
+    const min = finite(limits.ROCZNE_OKNO_MIN_M), max = finite(limits.ROCZNE_OKNO_MAX_M), target = finite(limits.ROCZNE_CEL_M);
+    return min === null || max === null || target === null ? null : { min, max, target };
+  }
+  // Punkt z okna rocznego, najbliższy 12 mies.; przy równej odległości — bliższy w czasie.
+  function annualPick(points, gapOf, range) {
+    let best = null, distance = Infinity, bestGap = Infinity;
+    points.forEach((point) => {
+      const gap = gapOf(point);
+      if (gap < range.min || gap > range.max) return;
+      const away = Math.abs(gap - range.target);
+      if (away < distance || (away === distance && gap < bestGap)) { best = point; distance = away; bestGap = gap; }
+    });
+    return best;
+  }
+  function ghPatient(payload, deps) {
+    const data = payload && typeof payload === 'object' ? payload : {};
+    const tools = deps || {};
+    const raw = (Array.isArray(data.ghTherapyPoints) ? data.ghTherapyPoints : [])
+      .filter((point) => point && (point.type === 'start' || point.type === 'continue' || point.type === 'end'));
+    if (!raw.length) return null;
+    const programOf = (points) => {
+      const found = points.find((point) => point && String(point.program || '').trim());
+      return found ? String(found.program).trim() : '';
+    };
+    const result = { program: '', firstYear: null, years: [], before: null, deltaSds: null, reason: null };
+    let coursePoints = null, start = null;
+    if (typeof tools.kursy === 'function') {
+      const course = (tools.kursy(raw) || []).find((item) => item && item.wlaczenie);
+      if (course) { coursePoints = course.punkty.slice(); start = course.wlaczenie; }
+    } else {
+      const ordered = raw.filter((point) => therapyAge(point) !== null).sort((x, y) => therapyAge(x) - therapyAge(y));
+      const from = ordered.findIndex((point) => point.type === 'start');
+      if (from !== -1) {
+        const rest = ordered.slice(from), end = rest.findIndex((point) => point.type === 'end');
+        coursePoints = end === -1 ? rest : rest.slice(0, end + 1); start = rest[0];
+      }
+    }
+    result.program = start && String(start.program || '').trim() ? String(start.program).trim() : programOf(coursePoints || raw);
+    const startAge = start ? therapyAge(start) : null, startHeight = start ? heightOf(start.height) : null;
+    if (!start || startAge === null || startHeight === null) { result.reason = 'no-start'; return result; }
+    const range = annualWindow(tools.tempo);
+    if (!range) { result.reason = 'no-engine'; return result; }
+    const measured = (point) => ({ ageMonths: therapyAge(point), height: heightOf(point.height), point });
+    const later = coursePoints.map(measured).filter((item) => item.ageMonths !== null && item.height !== null && item.ageMonths > startAge)
+      .sort((x, y) => x.ageMonths - y.ageMonths);
+    const velocity = (from, to) => {
+      const segment = tools.tempo.odcinek({ ageMonths: from.ageMonths, height: from.height }, { ageMonths: to.ageMonths, height: to.height });
+      return segment && finite(segment.cmPerYear) !== null ? segment.cmPerYear : null;
+    };
+    let anchor = { ageMonths: startAge, height: startHeight }, first = null;
+    for (;;) {
+      const from = anchor;
+      const next = annualPick(later, (item) => item.ageMonths - from.ageMonths, range);
+      const value = next ? velocity(from, next) : null;
+      if (value === null) break;
+      result.years.push(value);
+      if (!first) first = next;
+      anchor = next;
+    }
+    result.firstYear = result.years.length ? result.years[0] : null;
+    if (result.firstYear === null) result.reason = later.some((item) => item.ageMonths - startAge >= range.min) ? 'no-control' : 'too-early';
+
+    // Pomiary sprzed Włączenia: wiersze historii (wiek łączny w miesiącach) i punkty leczenia (lata + miesiące).
+    const earlier = new Map();
+    const keep = (ageMonths, height) => {
+      if (ageMonths === null || height === null || ageMonths >= startAge) return;
+      earlier.set(Math.round(ageMonths), { ageMonths: Math.round(ageMonths), height });
+    };
+    const rows = (value) => Array.isArray(value) ? value : [];
+    rows(data.ghTherapyPoints).forEach((point) => { if (point) keep(therapyAge(point), heightOf(point.height)); });
+    rows(data.obesityTherapyPoints).forEach((point) => { if (point) keep(therapyAge(point), heightOf(point.height)); });
+    [data.advanced && data.advanced.data && data.advanced.data.measurements, data.growthBasic && data.growthBasic.data && data.growthBasic.data.measurements]
+      .forEach((list) => rows(list).forEach((row) => {
+        if (!row) return;
+        keep(finite(row.ageMonths) !== null ? row.ageMonths : finite(row.ageYears) !== null ? row.ageYears * 12 : null, heightOf(row.height));
+      }));
+    const prior = annualPick(Array.from(earlier.values()), (item) => startAge - item.ageMonths, range);
+    if (prior) result.before = velocity(prior, { ageMonths: startAge, height: startHeight });
+
+    const sex = sexKey(data.user && data.user.sex);
+    if (first && sex && typeof tools.sds === 'function') {
+      const source = data.zscore && /^(OLAF|WHO|PALCZEWSKA)$/i.test(String(data.zscore.dataSource || '')) ? String(data.zscore.dataSource).toUpperCase() : tools.defaultSource || null;
+      const population = data.clinical && data.clinical.downSyndrome === true ? 'DS' : 'OGOLNA';
+      const at = (item) => tools.sds({ wzrost: item.height, plec: sex, wiekMies: item.ageMonths, zrodlo: source, populacja: population });
+      const before = at({ ageMonths: startAge, height: startHeight }), after = at(first);
+      if (finite(before) !== null && finite(after) !== null) result.deltaSds = after - before;
+    }
+    return result;
+  }
+  const GH_REASONS = [
+    ['no-start', 'brak Włączenia ze wzrostem'],
+    ['no-control', 'brak kontroli po 9–15 mies.'],
+    ['too-early', 'leczenie krótsze niż 9 mies.']
+  ];
+  const SMALL_GROUP = 5;
+  function ghCohort(entries) {
+    const list = (Array.isArray(entries) ? entries : []).filter((entry) => entry && entry.gh);
+    const summary = (values) => ({ n: values.length, mean: mean(values), median: median(values) });
+    const paired = (items) => {
+      const both = items.filter((entry) => entry.gh.firstYear !== null && entry.gh.before !== null);
+      return { n: both.length, before: mean(both.map((entry) => entry.gh.before)), first: mean(both.map((entry) => entry.gh.firstYear)) };
+    };
+    const withFirst = list.filter((entry) => entry.gh.firstYear !== null);
+    const programs = new Map();
+    list.forEach((entry) => {
+      const key = entry.gh.program || 'bez programu';
+      if (!programs.has(key)) programs.set(key, []);
+      programs.get(key).push(entry);
+    });
+    const years = [];
+    for (let index = 0; index < 4; index += 1) {
+      const values = list.filter((entry) => entry.gh.years.length > index).map((entry) => entry.gh.years[index]);
+      if (!values.length) break;
+      years.push({ year: index + 1, n: values.length, mean: mean(values) });
+    }
+    const missing = {};
+    GH_REASONS.forEach(([key]) => { missing[key] = list.filter((entry) => entry.gh.reason === key).map((entry) => entry.id); });
+    const delta = list.filter((entry) => entry.gh.deltaSds !== null).map((entry) => entry.gh.deltaSds);
+    return {
+      treated: list.length, ids: list.map((entry) => entry.id),
+      first: Object.assign(summary(withFirst.map((entry) => entry.gh.firstYear)), { ids: withFirst.map((entry) => entry.id) }),
+      paired: paired(list), deltaSds: summary(delta), years, missing,
+      programs: Array.from(programs.entries()).map(([program, items]) => {
+        const done = items.filter((entry) => entry.gh.firstYear !== null);
+        return { program, treated: items.length, ids: items.map((entry) => entry.id), n: done.length,
+          mean: mean(done.map((entry) => entry.gh.firstYear)), paired: paired(items), small: done.length > 0 && done.length < SMALL_GROUP };
+      }).sort((x, y) => y.treated - x.treated || x.program.localeCompare(y.program, 'pl'))
+    };
+  }
+  function formatVelocity(value) { return value === null || value === undefined || !Number.isFinite(value) ? '—' : value.toFixed(1).replace('.', ','); }
+  function formatDelta(value) {
+    if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+    const text = Math.abs(value).toFixed(2).replace('.', ',');
+    return (Number(Math.abs(value).toFixed(2)) === 0 ? '' : value > 0 ? '+' : '−') + text;
+  }
   const CARD_ITEMS = [
     ['measurements', 'Co najmniej 2 pomiary wzrostu'],
     ['parents', 'Wzrost obojga rodziców'],
@@ -184,7 +344,10 @@
     // P-BAZA-STATYSTYKI: sprawdzanie kart (odszyfrowanie najnowszego zapisu każdego pacjenta).
     let cardsRun = 0;        // żeton bieżącego przebiegu; zmiana żetonu przerywa pętlę
     let cardsBusy = null;    // { done, total } w trakcie przebiegu
-    let cardsHost = null;    // sekcja „Kompletność danych” w bieżącym renderze
+    let cardsHost = null;    // wiersze kompletności kart w bieżącym renderze
+    let cardsBar = null;     // pasek „z kart”: zachęta, postęp albo czas policzenia
+    let ghHost = null;       // sekcja „Leczenie hormonem wzrostu”
+    let ghHint = null;
     let cardsProgress = null;
     const timeFormatter = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
     const rowHeights = new Map(Array.isArray(initial.rowHeights) ? initial.rowHeights : []);
@@ -799,47 +962,66 @@
       } else row.appendChild(el('span', 'pt-stat-missing pt-stat-missing--none', 'komplet'));
       return row;
     }
+    /* Karty czyta jeden przebieg: z tego samego najnowszego zapisu liczy się kompletność danych
+     * i leczenie GH. Pasek „z kart” (cardsBar) prowadzi przebieg; sekcje tylko pokazują wynik. */
+    function savedCards() {
+      return state.cards && state.cards.signature === cardsSignature(basePatients()) ? state.cards : null;
+    }
+    function ghDeps() {
+      const tempo = win.VildaTempoWzrastania, trajectory = win.VildaTrajectoryAnalysis, engine = win.VildaSdsWzrostu;
+      const sds = engine && typeof engine.policz === 'function' ? (input) => {
+        const outcome = engine.policz(input);
+        return outcome && typeof outcome.sds === 'number' && Number.isFinite(outcome.sds) ? outcome.sds : null;
+      } : null;
+      return {
+        tempo, kursy: trajectory && typeof trajectory.ghKursy === 'function' ? trajectory.ghKursy : null, sds,
+        defaultSource: typeof win.bmiSource === 'string' && win.bmiSource ? win.bmiSource.toUpperCase() : null,
+        // Tablice siatek wzrostu ładuje tylko część stron; bez nich hSDS milczy u każdego pacjenta.
+        sdsReady: Boolean(sds) && sds({ wzrost: 110, plec: 'M', wiekMies: 60, zrodlo: 'OLAF', populacja: 'OGOLNA' }) !== null
+      };
+    }
     function fillCards() {
-      if (!cardsHost) return;
-      clear(cardsHost); cardsProgress = null;
-      const base = basePatients();
-      const saved = state.cards && state.cards.signature === cardsSignature(base) ? state.cards : null;
+      if (!cardsBar) return;
+      clear(cardsBar); cardsProgress = null;
+      const base = basePatients(), saved = savedCards();
       if (cardsBusy) {
-        const progress = el('div', 'pt-stat-progress');
+        const progress = el('span', 'pt-stat-progress');
         progress.setAttribute('role', 'status'); progress.setAttribute('aria-live', 'polite');
-        const text = el('span', 'pt-stat-progress-text');
-        progress.appendChild(text);
-        cardsHost.appendChild(progress);
-        cardsProgress = { text };
+        cardsBar.appendChild(progress);
+        cardsProgress = { text: progress };
         updateCardsProgress();
-        return;
+      } else if (saved) {
+        const when = new Date(saved.at);
+        cardsBar.appendChild(el('span', null, 'Karty policzone' + (Number.isFinite(when.getTime()) ? ' o ' + timeFormatter.format(when) : '')
+          + (saved.failed ? ' · nie udało się odczytać: ' + saved.failed : '') + '.'));
+        cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz ponownie', checkCards));
+      } else {
+        cardsBar.appendChild(el('span', null, 'Leczenie hormonem wzrostu i kompletność kart liczą się z zapisów kart. Policzenie odszyfrowuje po kolei każdą kartę na tym urządzeniu i przy dużej bazie może chwilę potrwać.'));
+        cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz z kart (' + base.length + ')', checkCards));
       }
-      if (saved) {
-        CARD_ITEMS.forEach(([key, label]) => {
+      if (cardsHost) {
+        clear(cardsHost);
+        if (saved && !cardsBusy) CARD_ITEMS.forEach(([key, label]) => {
           const missing = saved.missing[key] || [];
           cardsHost.appendChild(meterRow(label, saved.total - saved.failed - missing.length, saved.total - saved.failed, missing, label + ' — brak'));
         });
-        const foot = el('div', 'pt-stat-cards-foot');
-        const when = new Date(saved.at);
-        foot.appendChild(el('span', null, 'Karty sprawdzone' + (Number.isFinite(when.getTime()) ? ' o ' + timeFormatter.format(when) : '')
-          + (saved.failed ? ' · nie udało się odczytać: ' + saved.failed : '') + '.'));
-        foot.appendChild(button('pt-secondary pt-stat-check', 'Sprawdź ponownie', checkCards));
-        cardsHost.appendChild(foot);
-        return;
       }
-      const intro = el('div', 'pt-stat-cards-foot');
-      intro.appendChild(el('span', null, 'Pomiary, wzrost rodziców i masa urodzeniowa są w kartach. Sprawdzenie odszyfrowuje po kolei każdą kartę na tym urządzeniu i przy dużej bazie może chwilę potrwać.'));
-      intro.appendChild(button('pt-secondary pt-stat-check', 'Sprawdź karty (' + base.length + ')', checkCards));
-      cardsHost.appendChild(intro);
+      if (ghHost) { clear(ghHost); renderGh(ghHost, saved && !cardsBusy ? saved.gh : null); }
+      if (ghHint) {
+        const cohort = saved && !cardsBusy ? saved.gh : null;
+        ghHint.textContent = cohort && cohort.treated
+          ? 'leczonych: ' + cohort.treated + ' · ' + cohort.programs.map((item) => item.program + ' ' + item.treated).join(' · ') : '';
+      }
     }
     function updateCardsProgress() {
-      if (cardsProgress && cardsBusy) cardsProgress.text.textContent = 'Sprawdzanie kart… ' + cardsBusy.done + ' z ' + cardsBusy.total;
+      if (cardsProgress && cardsBusy) cardsProgress.text.textContent = 'Liczenie z kart… ' + cardsBusy.done + ' z ' + cardsBusy.total;
     }
     async function checkCards() {
       if (cardsBusy || !alive() || state.view !== 'stats') return;
       const base = basePatients();
       const run = ++cardsRun, signature = cardsSignature(base);
       const missing = {}; CARD_ITEMS.forEach(([key]) => { missing[key] = []; });
+      const deps = ghDeps(), treated = [];
       let failed = 0;
       cardsBusy = { done: 0, total: base.length };
       fillCards();
@@ -853,6 +1035,8 @@
           else {
             const result = cardCompleteness(snapshot.payload);
             CARD_ITEMS.forEach(([key]) => { if (!result[key]) missing[key].push(record.patientId); });
+            const gh = ghPatient(snapshot.payload, deps);
+            if (gh) treated.push({ id: record.patientId, gh });
           }
         } catch {
           if (run !== cardsRun) return;
@@ -862,13 +1046,139 @@
       }
       cardsBusy = null;
       if (!alive()) return;
-      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed, missing };
+      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed, missing,
+        gh: Object.assign(ghCohort(treated), { sdsReady: deps.sdsReady, engineReady: Boolean(annualWindow(deps.tempo)) }) };
       fillCards();
-      const again = cardsHost && cardsHost.querySelector('.pt-stat-check');
+      const again = cardsBar && cardsBar.querySelector('.pt-stat-check');
       if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
     }
+    /* Hantla „przed → 1. rok” i pojedynczy punkt. SVG rozciąga się na szerokość wiersza
+     * (viewBox 0–1000, bez zachowania proporcji), a linie mają grubość niezależną od skali
+     * (vector-effect w arkuszu), więc kropka — krótka kreska z okrągłymi końcami — ma ten sam
+     * rozmiar na telefonie i na komputerze. Pozycje są atrybutami, nie stylem. */
+    function ghScale(cohort) {
+      const values = [cohort.first.mean, cohort.paired.before].concat(cohort.programs.map((item) => item.mean),
+        cohort.programs.map((item) => item.paired.before), cohort.programs.map((item) => item.paired.first), cohort.years.map((item) => item.mean))
+        .filter((value) => typeof value === 'number' && Number.isFinite(value));
+      return Math.max(6, Math.ceil(Math.max.apply(null, values.concat([0])) / 3) * 3);
+    }
+    function dumbbell(before, after, top) {
+      const svg = doc.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('class', 'pt-gh-plot'); svg.setAttribute('viewBox', '0 0 1000 24');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+      const x = (value) => Math.round((20 + Math.max(0, Math.min(value, top)) / top * 960) * 10) / 10;
+      const line = (className, from, to) => {
+        const node = doc.createElementNS(SVG_NS, 'line');
+        node.setAttribute('class', className);
+        node.setAttribute('x1', String(from)); node.setAttribute('x2', String(to));
+        node.setAttribute('y1', '12'); node.setAttribute('y2', '12');
+        svg.appendChild(node);
+      };
+      const dot = (className, value) => {
+        line('pt-gh-ring', x(value), x(value) + 0.01);
+        line('pt-gh-dot ' + className, x(value), x(value) + 0.01);
+      };
+      line('pt-gh-axis', 20, 980);
+      if (before !== null && after !== null) line('pt-gh-link', x(before), x(after));
+      if (before !== null) dot('pt-gh-dot--before', before);
+      if (after !== null) dot('pt-gh-dot--first', after);
+      return svg;
+    }
+    function renderGh(host, cohort) {
+      if (!cohort) {
+        host.appendChild(el('p', 'pt-stat-note', cardsBusy ? 'Trwa liczenie z kart…' : 'Pojawi się po policzeniu z kart.'));
+        return;
+      }
+      if (!cohort.treated) {
+        host.appendChild(el('p', 'pt-stat-note', 'W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.'));
+        return;
+      }
+      if (!cohort.engineReady) {
+        host.appendChild(el('p', 'pt-stat-note', 'Leczonych: ' + cohort.treated + '. Tempa nie policzono, bo na tej stronie nie wczytał się moduł tempa wzrastania. Odśwież aplikację i policz ponownie.'));
+        return;
+      }
+      const people = (count) => count + (count === 1 ? ' pacjent' : ' pacjentów');
+      const tiles = el('div', 'pt-stat-tiles pt-gh-tiles');
+      const firstTile = statTile('Tempo w 1. roku leczenia', formatVelocity(cohort.first.mean), cohort.first.n ? 'cm/rok' : '',
+        cohort.first.n ? 'mediana ' + formatVelocity(cohort.first.median) + ' · n = ' + cohort.first.n : 'żaden pacjent nie ma kontroli po 9–15 mies.',
+        cohort.first.n ? () => showGroup('GH · tempo w 1. roku', cohort.first.ids) : null);
+      if (cohort.first.n) firstTile.setAttribute('aria-label', 'Średnie tempo wzrastania w 1. roku leczenia: ' + formatVelocity(cohort.first.mean) + ' cm/rok, ' + people(cohort.first.n) + '. Pokaż listę');
+      tiles.appendChild(firstTile);
+      tiles.appendChild(statTile('Przed leczeniem → 1. rok', cohort.paired.n ? formatVelocity(cohort.paired.before) + ' → ' + formatVelocity(cohort.paired.first) : '—',
+        cohort.paired.n ? 'cm/rok' : '', cohort.paired.n ? 'n = ' + cohort.paired.n + ' z pomiarem 9–15 mies. przed Włączeniem' : 'brak pomiarów 9–15 mies. przed Włączeniem'));
+      tiles.appendChild(statTile('Zmiana hSDS w 1. roku', formatDelta(cohort.deltaSds.mean), '',
+        cohort.deltaSds.n ? 'mediana ' + formatDelta(cohort.deltaSds.median) + ' · n = ' + cohort.deltaSds.n
+          : cohort.sdsReady ? 'brak pary hSDS (płeć, wiek lub siatka)' : 'siatki wzrostu nie są wczytane na tej stronie — otwórz Bazę ze strony Start'));
+      host.appendChild(tiles);
+
+      const top = ghScale(cohort);
+      const programHead = el('div', 'pt-stat-card-head');
+      programHead.appendChild(el('h4', null, 'Wg programu (cm/rok)'));
+      const legend = el('div', 'pt-stat-legend');
+      [['before', 'przed leczeniem'], ['first', '1. rok']].forEach(([key, text]) => {
+        const item = el('span', 'pt-stat-legend-item');
+        item.appendChild(el('span', 'pt-stat-swatch pt-gh-swatch--' + key));
+        item.appendChild(el('span', null, text));
+        legend.appendChild(item);
+      });
+      programHead.appendChild(legend); host.appendChild(programHead);
+      const programs = el('div', 'pt-stat-bands');
+      cohort.programs.forEach((item) => {
+        const pairedHere = item.paired.n > 0;
+        const figure = !item.n ? 'brak tempa' : pairedHere ? formatVelocity(item.paired.before) + ' → ' + formatVelocity(item.paired.first) : formatVelocity(item.mean);
+        const describe = item.program + ': leczonych ' + item.treated + ', z tempem w 1. roku ' + item.n
+          + (item.n ? ', średnio ' + formatVelocity(item.mean) + ' cm/rok' : '') + (pairedHere ? ', pary przed i po: ' + item.paired.n : '');
+        const row = button('pt-stat-band pt-gh-row', null, () => showGroup('GH · ' + item.program, item.ids));
+        row.setAttribute('data-program', item.program);
+        row.setAttribute('aria-label', describe + '. Pokaż listę'); row.title = describe;
+        const name = el('span', 'pt-gh-name');
+        name.appendChild(el('b', null, item.program));
+        name.appendChild(el('span', 'pt-gh-n', 'n = ' + item.n + ' z ' + item.treated + (item.small ? ' · mała grupa' : '')));
+        row.appendChild(name);
+        row.appendChild(dumbbell(pairedHere ? item.paired.before : null, item.n ? (pairedHere ? item.paired.first : item.mean) : null, top));
+        row.appendChild(el('span', 'pt-stat-band-total pt-gh-figure', figure));
+        programs.appendChild(row);
+      });
+      host.appendChild(programs);
+      const axis = el('div', 'pt-gh-scale');
+      axis.setAttribute('aria-hidden', 'true');
+      [0, top / 3, top / 3 * 2, top].forEach((value) => axis.appendChild(el('span', null, String(Math.round(value)))));
+      host.appendChild(axis);
+
+      if (cohort.years.length > 1) {
+        const yearsHead = el('div', 'pt-stat-card-head');
+        yearsHead.appendChild(el('h4', null, 'Kolejne lata leczenia'));
+        host.appendChild(yearsHead);
+        const years = el('div', 'pt-stat-meters');
+        cohort.years.forEach((item) => {
+          const row = el('div', 'pt-stat-meter pt-gh-year');
+          row.setAttribute('data-year', String(item.year));
+          row.appendChild(el('span', 'pt-stat-meter-name', item.year + '. rok'));
+          row.appendChild(statBar('pt-gh-yearbar', [{ className: 'pt-stat-fill', width: Math.min(item.mean, top) / top * 1000 }]));
+          row.appendChild(el('span', 'pt-stat-meter-figure', formatVelocity(item.mean) + ' cm/rok'));
+          row.appendChild(el('span', 'pt-stat-missing pt-stat-missing--none', 'n = ' + item.n));
+          years.appendChild(row);
+        });
+        host.appendChild(years);
+      }
+
+      const without = GH_REASONS.filter(([key]) => (cohort.missing[key] || []).length);
+      if (without.length) {
+        const gaps = el('div', 'pt-gh-gaps');
+        gaps.appendChild(el('span', null, 'Bez tempa w 1. roku:'));
+        without.forEach(([key, label]) => {
+          const ids = cohort.missing[key];
+          const show = button('pt-stat-missing', label + ': ' + ids.length + ' ›', () => showGroup('GH · ' + label, ids));
+          show.setAttribute('data-reason', key);
+          gaps.appendChild(show);
+        });
+        host.appendChild(gaps);
+      }
+      host.appendChild(el('p', 'pt-stat-note', '1. rok: od punktu Włączenia do kontroli po 9–15 mies. (najbliższej 12 mies.), w pierwszym kursie leczenia. Kolejne lata liczą się tak samo od poprzedniej kontroli. Pacjent bez takiej pary nie wchodzi do średniej. Przy grupie mniejszej niż ' + SMALL_GROUP + ' osób średnia jest niestabilna.'));
+    }
     function renderStats() {
-      cardsHost = null; cardsProgress = null;
+      cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; cardsProgress = null;
       const model = demographics(patients, { ageMonths: ageFromVault });
       if (!model.total) {
         empty(scroll, 'Brak pacjentów w bazie', 'Statystyki pojawią się po dodaniu pierwszego pacjenta.', '+ Dodaj pacjenta', () => { if (opts.onAddPatient) opts.onAddPatient(); });
@@ -924,6 +1234,19 @@
       ageCard.appendChild(el('p', 'pt-stat-note', 'Wiek na dziś, liczony z daty urodzenia. Wybierz przedział, aby zobaczyć pacjentów.'
         + (model.missingDob.length ? ' Bez daty urodzenia: ' + model.missingDob.length + ' (poza wiekiem).' : '')));
       wrap.appendChild(ageCard);
+
+      cardsBar = el('div', 'pt-stat-cards-foot pt-stat-cardsbar');
+      wrap.appendChild(cardsBar);
+
+      const ghCard = el('section', 'pt-stat-card pt-gh');
+      const ghHead = el('div', 'pt-stat-card-head');
+      ghHead.appendChild(el('h3', null, 'Leczenie hormonem wzrostu'));
+      ghHint = el('span', 'pt-stat-card-hint');
+      ghHead.appendChild(ghHint);
+      ghCard.appendChild(ghHead);
+      ghHost = el('div', 'pt-gh-body');
+      ghCard.appendChild(ghHost);
+      wrap.appendChild(ghCard);
 
       const dataCard = el('section', 'pt-stat-card');
       const dataHead = el('div', 'pt-stat-card-head');
@@ -1161,7 +1484,7 @@
       clear(scroll);
       if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
       if (state.view === 'stats') { count.textContent = ''; renderStats(); restorePosition(); return; }
-      ++cardsRun; cardsBusy = null; cardsHost = null; // sprawdzanie kart trwa tylko, dopóki widać statystyki
+      ++cardsRun; cardsBusy = null; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
         if (opts.duplicates && typeof opts.duplicates.render === 'function') opts.duplicates.render(scroll);
@@ -1330,5 +1653,5 @@
     return { root, read, destroy, mount, refreshDuplicates, deferRefresh };
   }
   function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
-  win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge });
+  win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort });
 })(typeof window !== 'undefined' ? window : null);
