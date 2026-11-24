@@ -298,10 +298,23 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
 
   const start = frame.locator('#vhomeGabinetStart');
   await start.locator('[data-entry="office"]').click();
+  const office = start.locator('.vgs-office');
   const grid = start.locator('.vgs-office-grid');
-  await expect(grid.locator('h2')).toHaveText(['Znajdź pacjenta', 'Dzisiejsze wizyty', 'Przypomnienia', 'Plany opieki']);
+  await expect(office.getByRole('heading', { level: 1 })).toHaveText('Gabinet');
+  await expect(grid.locator('h2')).toHaveText(['Pacjenci', 'Dzisiejsze wizyty', 'Przypomnienia', 'Plany opieki']);
+  await expect(frame.locator('#gbEntryHeader .gb-breadcrumb').getByRole('button')).toHaveAccessibleName('Ekran startowy');
+  await expect(frame.locator('#gbEntryHeader [aria-current="page"]')).toBeHidden();
+  await expect(frame.locator('#gbEntryHeader [data-entry-separator]')).toBeHidden();
+  await expect(office.locator('.vgs-heading .vgs-date time')).toHaveCount(1);
+  await expect(office.locator('.vgs-date-long:visible, .vgs-date-short:visible')).toHaveCount(1);
   await expect(grid.locator('.vgs-schedule .vgs-appointment')).toHaveCount(1);
   await expect(grid.locator('.vgs-schedule')).toContainText('09:00');
+  await expect(grid.locator('.vgs-count:visible')).toHaveCount(0);
+  await expect(office.getByRole('button', { name: 'Wszystkie przypomnienia', exact: true })).toHaveCount(0);
+  const allPlans = office.getByRole('button', { name: 'Pokaż wszystkie plany opieki', exact: true });
+  await expect(allPlans).toBeVisible();
+  expect(await allPlans.evaluate(node => node.getBoundingClientRect().top >=
+    node.parentElement.querySelector('.vgs-related-body').getBoundingClientRect().bottom - 1)).toBe(true);
   const reminder = grid.locator('.vgs-reminders').getByRole('button', { name: new RegExp(reminderTitle) });
   const plan = grid.locator('.vgs-care').getByRole('button', { name: new RegExp(planTitle) });
   await expect(reminder).toBeVisible();
@@ -323,15 +336,61 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   expect(desktop[2].x).toBe(desktop[0].x);
   expect(desktop[2].y).toBeGreaterThan(desktop[0].y);
   const search = start.getByRole('searchbox');
-  await search.fill('Antoni');
-  await expect(start.locator('#vgs-results')).toBeVisible();
-  expect(await cards()).toEqual(desktop);
-  await search.press('Escape');
-  await expect(start.locator('#vgs-results')).toBeHidden();
+  const results = start.locator('#vgs-results');
+  const list = office.getByRole('button', { name: 'Lista pacjentów', exact: true });
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    // The shell updates the embedded document's host mode asynchronously.
+    if (width >= 992) await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
+    else await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
+    await expect.poll(() => frame.locator('#gbWorkspaceHeader').evaluate(node => {
+      const reserved = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gb-workspace-header-height'));
+      return Math.round(reserved * 100) === Math.round(node.getBoundingClientRect().height * 100);
+    })).toBe(true);
+    await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await expect.poll(() => list.evaluate(node => {
+      const button = node.getBoundingClientRect(), field = node.parentElement.querySelector('.vgs-search-field').getBoundingClientRect();
+      return [Math.round(button.top - field.top), Math.round(button.height - field.height), Math.round(button.left - field.right)];
+    })).toEqual([0, 0, 0]);
+    expect(await search.evaluate(node => {
+      const input = node.getBoundingClientRect(), field = node.closest('.vgs-search-field').getBoundingClientRect();
+      return input.width > 100 && input.left >= field.left && input.right <= field.right &&
+        document.documentElement.scrollWidth <= innerWidth;
+    })).toBe(true);
+    const beforeSearch = await cards();
+    await list.click();
+    await expect(results).toBeVisible();
+    expect(await cards()).toEqual(beforeSearch);
+    await list.click();
+    await expect(results).toBeHidden();
+    await list.press('Enter');
+    await expect(results).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(results).toBeHidden();
+    await expect(search).toBeFocused();
+    await search.fill('Antoni');
+    await expect(results.locator('.vgs-found-row')).toHaveCount(1);
+    await search.press('ArrowDown');
+    await expect(results.getByRole('button', { name: 'Fikcyjny Antoni', exact: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(results).toBeHidden();
+    await expect(search).toBeFocused();
+    expect(await cards()).toEqual(beforeSearch);
+    await search.fill('');
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
+  const bell = page.locator('#vildaRemindersBtn');
+  await bell.click();
+  const remindersDialog = page.getByRole('dialog', { name: 'Przypomnienia', exact: true });
+  await expect(remindersDialog).toBeVisible();
+  await remindersDialog.getByRole('button', { name: /Zamknij/ }).first().click();
+  await expect(remindersDialog).toBeHidden();
   const before = await breadcrumbPosition(officeCrumb);
   const edges = await horizontalEdges(grid);
 
   await reminder.click();
+  await expect(frame.locator('#vhomePatientOverview .vhome-native-patient-card')).toBeVisible({ timeout: 15_000 });
   await expect(frame.locator('#vhomePatientOverview #remindersInline [aria-current="true"]')).toContainText(reminderTitle);
   expect(await breadcrumbPosition(patientCrumb)).toEqual(before);
   expect(await horizontalEdges(frame.locator('#vhomePatientOverview'))).toEqual(edges);
@@ -339,10 +398,12 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   await patientCrumb.getByRole('button').click();
   await expect(plan).toBeVisible();
   await plan.click();
+  await expect(frame.locator('#vhomePatientOverview .vhome-native-patient-card')).toBeVisible({ timeout: 15_000 });
   await expect(frame.locator('#vhomePatientOverview .vcp-detail .vcp-title')).toHaveText(planTitle);
   expect(await breadcrumbPosition(patientCrumb)).toEqual(before);
 
   await page.setViewportSize({ width:390, height:844 });
+  await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
   const phone = await breadcrumbPosition(patientCrumb);
   await patientCrumb.getByRole('button').click();
   await expect(officeCrumb).toBeVisible();
@@ -350,6 +411,47 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   const stacked = await cards();
   expect(stacked.every(card => card.x === stacked[0].x)).toBe(true);
   expect(stacked.map(card => card.y)).toEqual(stacked.map(card => card.y).sort((a,b) => a-b));
+
+  await frame.evaluate(async ids => {
+    const today = new Date().toLocaleDateString('sv-SE');
+    for (let index = 0; index < 6; index++) await window.VildaVault.savePatientNote({
+      patientId: ids.a, category: 'followup', title: 'Fikcyjna wizyta listy ' + index,
+      dueDateISO: today, dueTime: String(10 + index) + ':00',
+    });
+    for (let index = 0; index < 2; index++) {
+      await window.VildaVault.savePatientNote({
+        patientId: ids.a, category: 'reminder-contact', title: 'Fikcyjne dodatkowe przypomnienie ' + index,
+        dueDateISO: today, dueTime: '16:0' + index,
+      });
+      const saved = await window.VildaVault.mutateCarePlan({
+        patientId: ids.b, action: 'create', operationId: crypto.randomUUID(),
+        title: 'Fikcyjny dodatkowy plan ' + index, goal: 'Fikcyjny cel',
+      });
+      if (!saved.saved) throw new Error('Nie zapisano dodatkowego fikcyjnego planu.');
+    }
+  }, ids);
+  const schedule = grid.locator('.vgs-schedule-body');
+  await expect(schedule.locator('.vgs-appointment')).toHaveCount(7);
+  for (const section of ['reminders', 'care']) {
+    await expect(grid.locator('.vgs-' + section + ' .vgs-related-row')).toHaveCount(2);
+    await expect(grid.locator('.vgs-' + section + ' .vgs-count')).toHaveText('3');
+  }
+  await expect(grid.locator('.vgs-schedule .vgs-count')).toHaveText('7');
+  expect(await schedule.evaluate(node => node.scrollHeight <= node.clientHeight + 1)).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(schedule).toHaveAttribute('data-scrollable', '');
+  await expect(schedule).toHaveCSS('overflow-y', 'auto');
+  expect(await schedule.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+
+  const archived = await frame.evaluate(id => window.VildaVault.getPatient(id).then(record => record.snapshots), ids.a);
+  await search.fill('Antoni');
+  await results.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
+  await expect(frame.locator('#vhomeGabinetHeader')).toContainText('Antoni');
+  await expect.poll(() => frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a)).toBe('new');
+  await expect(frame.locator('#height')).toHaveValue('');
+  await expect(frame.locator('#weight')).toHaveValue('');
+  expect(await frame.evaluate(() => sessionStorage.getItem('vildaCurrentPatientId'))).toBe(ids.a);
+  expect(await frame.evaluate(id => window.VildaVault.getPatient(id).then(record => record.snapshots), ids.a)).toEqual(archived);
 });
 
 test('Gabinet uses one patient header for overview and analysis and displays reminders only in the overview', async ({ page }) => {
