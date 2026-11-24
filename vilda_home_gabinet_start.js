@@ -50,13 +50,9 @@
   }
 
   const paths = {
-    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-    chevron: '<path d="m9 5 7 7-7 7"/>',
     clipboard: '<rect x="5" y="5" width="14" height="16" rx="2"/><rect x="8" y="2.5" width="8" height="5" rx="1.5"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18"/>',
-    users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-7 14-7 14 0M16 4a4 4 0 0 1 0 8m2 3c3 1 4 3 4 5"/>',
-    search: '<circle cx="10.5" cy="10.5" r="6.7"/><path d="m16 16 5 5"/>',
-    calc: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8v4H8zM8 14h2m4 0h2m-8 4h2m4 0h2"/>'
+    search: '<circle cx="10.5" cy="10.5" r="6.7"/><path d="m16 16 5 5"/>'
   };
 
   function icon(key) {
@@ -161,16 +157,21 @@
       (entry.careContext?.role === 'calendar' || entry.reminderContext?.kind !== 'reminder');
   }
   const sections = {
-    reminders: {name: 'Przypomnienia', symbol: 'clock', all: 'Wszystkie przypomnienia', empty: 'Brak przypomnień na dziś i zaległych.'},
-    care: {name: 'Plany opieki', symbol: 'clipboard', all: 'Wszystkie plany opieki', empty: 'Brak otwartych planów opieki.'}
+    reminders: {name: 'Przypomnienia', empty: 'Brak przypomnień na dziś i zaległych.'},
+    care: {name: 'Plany opieki', empty: 'Brak otwartych planów opieki.'}
   };
+  const relatedPreviewRows = 2;
+  const visibleAppointmentRows = 3;
 
   function relatedCard(key) {
     const info = sections[key];
+    const footer = key === 'care'
+      ? '<button type="button" class="vgs-related-footer" data-all="care" aria-label="Pokaż wszystkie plany opieki">Pokaż wszystkie</button>'
+      : '';
     return '<section class="vgs-box vgs-related vgs-' + key + '" aria-labelledby="vgs-' + key + '-title">' +
-      '<div class="vgs-heading-row"><span class="vgs-tile">' + icon(info.symbol) + '</span><h2 id="vgs-' + key + '-title">' +
+      '<div class="vgs-heading-row"><h2 id="vgs-' + key + '-title">' +
       info.name + '</h2><span class="vgs-count" hidden></span></div><div class="vgs-related-body" aria-live="polite"></div>' +
-      '<button type="button" class="vgs-related-footer" data-all="' + key + '">' + info.all + icon('chevron') + '</button></section>';
+      footer + '</section>';
   }
 
   function reminderRows(groups, day) {
@@ -237,17 +238,16 @@
       '<div class="vgs-launch-tiles">' + entries.map(card).join('') + '</div><p class="vgs-launch-status" role="status"></p>';
     const page = element('section','vgs-start vgs-office');
     let day = civilDay(new Date());
-    page.innerHTML = '<div class="vgs-heading"><h1 tabindex="-1">Gabinet</h1><div class="vgs-heading-actions"><div class="vgs-date">' + icon('calendar') +
-      '<time><span class="vgs-date-long"></span><span class="vgs-date-short"></span></time></div><button type="button" class="vgs-quick">' +
-      icon('calc') + 'Szybkie obliczenie</button></div></div><div class="vgs-office-grid">' +
-      '<section class="vgs-box vgs-search" aria-labelledby="vgs-search-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('users') + '</span><h2 id="vgs-search-title">Znajdź pacjenta</h2></div>' +
-      '<div class="vgs-controls"><label class="vgs-search-field">' + icon('search') + '<input type="search" id="vgs-query" autocomplete="off" aria-label="Szukaj pacjenta po nazwisku, imieniu lub dacie urodzenia" aria-controls="vgs-results" placeholder="Imię, nazwisko, data ur."></label>' +
-      '<button type="button" class="vgs-list-toggle" aria-controls="vgs-results" aria-expanded="false">Lista pacjentów</button>' +
+    page.innerHTML = '<div class="vgs-heading"><h1 tabindex="-1">Gabinet</h1><div class="vgs-heading-actions"><div class="vgs-date">' +
+      '<time><span class="vgs-date-long"></span><span class="vgs-date-short"></span></time></div></div></div><div class="vgs-office-grid">' +
+      '<section class="vgs-box vgs-search" aria-labelledby="vgs-search-title"><div class="vgs-heading-row"><h2 id="vgs-search-title">Pacjenci</h2></div>' +
+      '<div class="vgs-controls"><label class="vgs-search-field">' + icon('search') + '<input type="search" id="vgs-query" autocomplete="off" aria-label="Szukaj pacjenta po nazwisku, imieniu lub dacie urodzenia" aria-controls="vgs-results" placeholder="Szukaj pacjenta"></label>' +
+      '<button type="button" class="vgs-list-toggle" aria-controls="vgs-results" aria-expanded="false" aria-label="Lista pacjentów">Lista</button>' +
       '<div class="vgs-results" id="vgs-results" role="region" aria-label="Wyniki wyszukiwania pacjentów" hidden></div></div>' +
       '<div class="vgs-feedback" role="status"></div><section class="vgs-working" aria-label="Rozpoczęta wizyta" hidden></section>' +
       '<div class="vgs-recent" hidden><h3>Ostatnio przyjęci</h3><ul></ul></div></section>' +
-      '<section class="vgs-box vgs-schedule" aria-labelledby="vgs-schedule-title"><div class="vgs-heading-row"><span class="vgs-tile">' + icon('calendar') +
-      '</span><h2 id="vgs-schedule-title">Dzisiejsze wizyty</h2><span class="vgs-count" hidden></span></div>' +
+      '<section class="vgs-box vgs-schedule" aria-labelledby="vgs-schedule-title"><div class="vgs-heading-row">' +
+      '<h2 id="vgs-schedule-title">Dzisiejsze wizyty</h2><span class="vgs-count" hidden></span></div>' +
       '<div class="vgs-schedule-body" aria-live="polite"></div></section>' + relatedCard('reminders') + relatedCard('care') + '</div>';
     const dialog = element('dialog','vgs-dialog');
     dialog.setAttribute('aria-labelledby','vgs-quick-title');
@@ -283,11 +283,11 @@
       button.onclick = () => select(record,mode);
       return button;
     }
-    function visitAction(record, full) {
+    function visitAction(record) {
       const encounter = w.VildaHomeEncounter?.state(record.id);
       if (encounter?.mode === 'new') return action(record,'overview','Kontynuuj wizytę',true);
       if (encounter?.mode === 'edit') return action(record,'overview','Kontynuuj edycję',true);
-      return action(record,'start',full ? 'Rozpocznij nową wizytę' : 'Rozpocznij');
+      return action(record,'start','Nowa wizyta');
     }
     function workingVisit() {
       const host = get('.vgs-working');
@@ -300,7 +300,7 @@
       const identity = element('div','vgs-working-identity');
       identity.append(element('small','',(encounter.mode === 'edit' ? 'Edycja wizyty' : 'Nowa wizyta') + ' · ' + dateLabel(encounter.date)),
         action(patient,'overview',patient.name));
-      host.append(tile,identity,visitAction(patient,true)); host.hidden = false;
+      host.append(tile,identity,visitAction(patient)); host.hidden = false;
     }
     const recentCache = new Map();
     let recentTask = Promise.resolve();
@@ -350,7 +350,7 @@
           const item = element('li'), button = action(person,'overview','');
           button.className = 'vgs-recent-row';
           const time = element('time','',dateLabel(date)); time.dateTime = date;
-          button.append(element('span','',person.name),time); button.insertAdjacentHTML('beforeend',icon('chevron'));
+          button.append(element('span','',person.name),time);
           item.append(button); list.append(item);
         }
         host.hidden = !list.childElementCount;
@@ -376,18 +376,35 @@
       const items = [...patients.values()].filter(patient => terms.every(term => patient.query.includes(term)));
       for (const patient of items) {
         const row = element('div','vgs-found-row');
-        row.append(identity(patient,true),visitAction(patient,true));
+        row.append(identity(patient,true),visitAction(patient));
         results.append(row);
       }
-      if (!items.length) results.append(element('p','vgs-empty',directoryError ? 'Nie udało się wczytać listy pacjentów.' : 'Brak pacjentów spełniających kryteria wyszukiwania.'));
-      if (options.onNewPatient) results.append(searchFooter);
+      if (!items.length) {
+        results.append(element('p','vgs-empty',directoryError ? 'Nie udało się wczytać listy pacjentów.' : 'Brak pacjentów spełniających kryteria wyszukiwania.'));
+        if (options.onNewPatient) results.append(searchFooter);
+      }
       results.hidden = false;
       toggle.setAttribute('aria-expanded','true');
     }
     function showCount(section, value) {
       const badge = get('.vgs-' + section + ' .vgs-count');
       badge.textContent = value == null ? '' : String(value);
-      badge.hidden = value == null;
+      const limit = section === 'schedule' ? visibleAppointmentRows : relatedPreviewRows;
+      badge.hidden = value == null || value <= limit;
+    }
+    function showScheduleCount(value) {
+      showCount('schedule',value);
+      const scrollable = value > visibleAppointmentRows;
+      schedule.toggleAttribute('data-scrollable',scrollable);
+      if (scrollable) {
+        schedule.tabIndex = 0;
+        schedule.setAttribute('role','region');
+        schedule.setAttribute('aria-labelledby','vgs-schedule-title');
+      } else {
+        schedule.removeAttribute('tabindex');
+        schedule.removeAttribute('role');
+        schedule.removeAttribute('aria-labelledby');
+      }
     }
     function retryMessage(text) {
       const message = element('p','vgs-empty',text + ' ');
@@ -422,7 +439,7 @@
       showCount(key,rows.length);
       if (!rows.length) { body.append(element('p','vgs-empty',sections[key].empty)); return; }
       const list = element('ul','vgs-related-list');
-      for (const row of rows.slice(0,2)) {
+      for (const row of rows.slice(0,relatedPreviewRows)) {
         const item = element('li'), record = !row.global && patients.get(row.patientId);
         const button = element('button','vgs-related-row');
         button.type = 'button';
@@ -433,7 +450,7 @@
         top.append(element('span','vgs-who',record?.name || row.name || 'Pacjent'),badge);
         button.append(top,element('span','vgs-row-title',row.title));
         if (row.date) {
-          const date = element('time','vgs-row-meta','Wpis z ' + dateLabel(row.date));
+          const date = element('time','vgs-row-meta',dateLabel(row.date));
           date.dateTime = row.date;
           button.append(date);
         }
@@ -444,7 +461,7 @@
     function renderSchedule(rows) {
       schedule.replaceChildren();
       const visits = rows.filter(row => isAppointment(row) && !row.isActivity && String(row.dueDateISO).slice(0,10) === day);
-      showCount('schedule',visits.length);
+      showScheduleCount(visits.length);
       visits.sort((a,b) => (a.dueTime || '99:99').localeCompare(b.dueTime || '99:99'));
       if (!visits.length) { schedule.append(element('p','vgs-empty','Brak wizyt zaplanowanych na dziś.')); return; }
       for (const visit of visits) {
@@ -453,7 +470,7 @@
         row.append(element('span','vgs-hour',visit.dueTime || 'Cały dzień'));
         row.append(patient ? identity(patient,false) : element('strong','vgs-unlisted',visit.patientName || 'Pacjent spoza kartoteki'));
         row.append(element('span','vgs-reason',visit.title || ''));
-        if (patient) row.append(visitAction(patient,false));
+        if (patient) row.append(visitAction(patient));
         schedule.append(row);
       }
     }
@@ -480,7 +497,7 @@
         results.replaceChildren(); get('.vgs-working').replaceChildren(); get('.vgs-working').hidden = true;
         schedule.replaceChildren(); feedback.replaceChildren(); query.value = '';
         for (const key of Object.keys(sections)) { get('.vgs-' + key + ' .vgs-related-body').replaceChildren(); showCount(key,null); }
-        showCount('schedule',null); return;
+        showScheduleCount(null); return;
       }
       const dateForRead = day;
       let ownReader;
@@ -509,7 +526,7 @@
       const scheduleRead = Promise.allSettled([people,appointments]).then(([,result]) => {
         if (!valid()) return;
         if (result.status === 'fulfilled') renderSchedule(result.value);
-        else { showCount('schedule',null); schedule.replaceChildren(retryMessage('Nie udało się wczytać dzisiejszych wizyt.')); }
+        else { showScheduleCount(null); schedule.replaceChildren(retryMessage('Nie udało się wczytać dzisiejszych wizyt.')); }
       });
       const related = (key, promise) => Promise.allSettled([people,promise]).then(([,result]) => {
         if (valid()) renderRelated(key,result);
@@ -595,7 +612,7 @@
     get('[data-entry="office"]').onclick = () => showView('office',true);
     get('[data-entry="new"]').onclick = () => openEntry(options.onNewPatient);
     get('[data-entry="rapid"]').onclick = () => openEntry(options.onRapid);
-    get('[data-entry="quick"]').onclick = get('.vgs-quick').onclick = openQuick;
+    get('[data-entry="quick"]').onclick = openQuick;
     bindQuick(dialog,current);
     active = {scope,vault,destroy,refresh,showView,focusSearch() {
       if (view === 'office' && current()) query.focus({preventScroll:true});

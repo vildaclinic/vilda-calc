@@ -1592,20 +1592,20 @@
   "sha256": "e726b634ebbf79d73be158e38f3adddb8f29ee34270598833cf4e30cb8087256"
  },
  "vilda_home_gabinet.js": {
-  "v": 17,
-  "sha256": "1ef1180eb887dd5deebb6aa327b72c7c4262641c25319e4cc9085dffc33e2732"
+  "v": 18,
+  "sha256": "e7790803d133b02cb656a6e960ea6ee7d4ac1d89309dd76748842614c978438e"
  },
  "vilda_home_gabinet_quick.js": {
   "v": 1,
   "sha256": "87575cac6078f869b8ed5742c4d3ec4f9969b4bcaec2e1464758d83fa85464db"
  },
  "vilda_home_gabinet_start.css": {
-  "v": 5,
-  "sha256": "67da45866cccafed4085ac1736b2af22015b1512a4df7591b9d53fee23a29874"
+  "v": 6,
+  "sha256": "7f033f43e7f7003d70209769327451ff528b2df6c870294ddf7e66ead13e5b15"
  },
  "vilda_home_gabinet_start.js": {
-  "v": 7,
-  "sha256": "32765be07af749f4ba5f8bf213633467d49d06c85eddee09d69ac35797853cdf"
+  "v": 8,
+  "sha256": "5431612983afe25230f97f966eed4507d98eb8800e1ff1d19effcd59adf0e49d"
  },
  "vilda_home_growth.js": {
   "v": 9,

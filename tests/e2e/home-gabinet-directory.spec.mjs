@@ -48,7 +48,7 @@ test('Gabinet isolates search and quick inputs, and drops delayed records on vau
   const search = page.getByRole('searchbox');
   await search.fill('zuk');
   const results = page.getByRole('region',{name:'Wyniki wyszukiwania pacjentów'});
-  await results.getByRole('button',{name:'Rozpocznij nową wizytę'}).click();
+  await results.getByRole('button',{name:'Nowa wizyta',exact:true}).click();
   expect(await page.evaluate(()=>window.picked)).toEqual(['fictional-patient','start']);
   await page.evaluate(async () => {
     window.VildaHomeEncounter = {state:()=>({mode:'new'})};
@@ -57,7 +57,10 @@ test('Gabinet isolates search and quick inputs, and drops delayed records on vau
   const draft = page.getByRole('region',{name:'Rozpoczęta wizyta'});
   await draft.getByRole('button',{name:'Kontynuuj wizytę'}).click();
   expect(await page.evaluate(()=>window.picked)).toEqual(['fictional-patient','overview']);
-  await page.getByRole('button',{name:'Szybkie obliczenie'}).click();
+  const quick = page.getByRole('button',{name:'Szybkie obliczenie',exact:true});
+  await expect(quick).toBeHidden();
+  await page.evaluate(() => window.landing.showView('launch'));
+  await quick.click();
   const dialog = page.getByRole('dialog');
   await dialog.locator('[name="years"]').fill('12');
   await dialog.locator('[name="sex"]').selectOption('F');
@@ -68,6 +71,7 @@ test('Gabinet isolates search and quick inputs, and drops delayed records on vau
   const nativeTargets = await page.evaluate(()=>window.capturedInputs);
   expect(nativeTargets.length).toBeGreaterThan(0);
   expect([...new Set(nativeTargets)]).toEqual(['DIV']);
+  await entries.first().click();
   await page.evaluate(async () => {
     let finish;
     window.VildaVault.listPatients = () => new Promise(resolve => { finish = resolve; });

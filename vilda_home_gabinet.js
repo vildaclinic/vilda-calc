@@ -12,7 +12,7 @@
   let displayedVisit = null;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
   const entryTrails = {
-    start: [null,'Ekran startowy'], office: ['Ekran startowy','Gabinet'],
+    start: [null,'Ekran startowy'], office: ['Ekran startowy'],
     registration: ['Ekran startowy','Dodaj pacjenta'], rapid: ['Ekran startowy','Szybka ścieżka'],
     history: ['Karta pacjenta','Historia wizyt']
   };
@@ -194,12 +194,14 @@
     entryHeader.hidden = !labels;
     if (!labels || entryHeader.dataset.screen === view) return;
     entryHeader.dataset.screen = view;
-    const [parent, current] = labels;
+    const [parent, current = ''] = labels;
     const button = entryHeader.querySelector('button');
     button.hidden = !parent;
     if (parent) button.querySelector('span').textContent = parent;
-    entryHeader.querySelector('[data-entry-separator]').hidden = !parent;
-    entryHeader.querySelector('[aria-current="page"]').textContent = current;
+    entryHeader.querySelector('[data-entry-separator]').hidden = !parent || !current;
+    const caption = entryHeader.querySelector('[aria-current="page"]');
+    caption.hidden = !current;
+    caption.textContent = current;
   }
   function setScreen(value) {
     const fields = d.getElementById('vhomeVisitFields');
