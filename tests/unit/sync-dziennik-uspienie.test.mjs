@@ -48,6 +48,9 @@
 // instrukcje (odmowa — `return Bev_zastosuj(env);`), jedno await na Bev_zastosuj(env, kolektor), potem jedno
 // Bem_zmiana('snap', …). Przy wyłączonym przełączniku zastosowanie zdarzenia to jeden odczyt pola przełącznika i jeden
 // odczyt klucza (U1), bez odczytu bramki, IndexedDB i crypto; samokontrola form wariantami zła.
+// E3-PR0d (P-ZBIEZNOSC-ZDARZEN): odsyłanie wpisów Kosza tą samą drogą i za tym samym przełącznikiem — w Bem_zastosujEcho
+// po jedynym await dokładnie dwa Bem_zmiana: najpierw ('snap', kol.echo, kol.s), potem ('stomb', kol.kosz, kol.s);
+// bez nowego await, odczytu przełącznika ani bramki; literał miejsc poza blokiem bez zmian.
 // Testy źródła (vilda_vault.js, pliki produktu z git ls-files) i eksportu (prawdziwy sejf w oknie uprzęży, dane wyłącznie
 // fikcyjne).
 //
@@ -255,6 +258,9 @@ const ID_BEV_BOB = /(?<![A-Za-z0-9_$])B(?:ev|ob|em)_[A-Za-z0-9_$]*/g;
 // if (Qwp !== g.patientId) tuż po zapisie notatki — 34 wpisy, 49 wywołań Bem_. Zmiana trybu przechowywania (E2-PR4e2,
 // P-SYNC-NADAWCA-WPIECIA): w Js const Bst_k = await Bob_przedTrybem(…) przed zmianą wpisu rejestru i await Bob_poTrybie(Bst_k)
 // jako element wyrażenia przecinkowego po niej — 35 wpisów.
+// P-TERMINARZ-LISTY-STALE: atomowy create i cleanup zapisują wllists/wlsched jednym zapisem metadanych.
+// Dwie emisje pref w Jo i dwie w completeWaitlistBooking następują po zatwierdzeniu i sprawdzeniu sesji;
+// duplikat albo zachowana lista niczego nie emituje — 37 miejsc, 53 wywołania Bem_.
 const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   Js: { Bob_przedTrybem: 1, Bob_poTrybie: 1 },
   PatientCheckpointRemoveUser: { Bob_oznacz: 1, Bob_odznacz: 1 },
@@ -274,6 +280,8 @@ const MIEJSCA_POZA_BLOKIEM = Object.freeze({
   Qe2: { Bem_hak: 1 },
   Ps: { Bem_zmiana: 1 },
   Aj: { Bem_zmiana: 1 },
+  Jo: { Bem_zmiana: 2 },
+  completeWaitlistBooking: { Bem_zmiana: 2 },
   Bnp_poZapisie: { Bem_zmiana: 1 },
   Bsc_podBlokada: { Bem_zmiana: 1 },
   Bkz_poImporcie: { Bem_zmiana: 1 },
@@ -1032,6 +1040,40 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     expect(miejscaPozaBlokiem(poza)).toEqual({ miejsca: MIEJSCA_POZA_BLOKIEM, bledy: [] });
   });
 
+  it('U2(a): emisje atomowych list i terminów są warunkowe, po zapisie metadanych i sprawdzeniu sesji', () => {
+    const calls = node => {
+      if (!node || typeof node.type !== 'string') return [];
+      const own = node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'Bem_zmiana' ? [node] : [];
+      return own.concat(Object.values(node).flatMap(value => Array.isArray(value) ? value.flatMap(calls) : calls(value)));
+    };
+    const shape = source => {
+      const statements = parse(source, { ecmaVersion: 'latest', sourceType: 'script' }).body[0].body.body;
+      const commit = statements.findIndex(node => node.type === 'ExpressionStatement' && node.expression.type === 'AwaitExpression'
+        && node.expression.argument.type === 'CallExpression' && node.expression.argument.callee.name === 'Bmk_zmien');
+      const fence = statements.findIndex((node, index) => index > commit && node.type === 'ExpressionStatement'
+        && node.expression.type === 'CallExpression' && node.expression.callee.type === 'MemberExpression'
+        && node.expression.callee.object.name === 'state' && node.expression.callee.property.name === 'assertCurrent');
+      const guards = statements.flatMap((node, index) => {
+        if (node.type !== 'IfStatement' || !calls(node.consequent).length) return [];
+        return [{ afterCommitAndFence: commit >= 0 && fence > commit && index > fence,
+          condition: source.slice(node.test.start, node.test.end),
+          arguments: calls(node.consequent).map(call => call.arguments.map(argument => argument.type === 'Literal' ? argument.value : null)) }];
+      });
+      return guards;
+    };
+    const variants = [
+      ['Jo', [{ afterCommitAndFence: true, condition: 'changed', arguments: [['pref', 'wllists']] },
+        { afterCommitAndFence: true, condition: 'scheduleChanged', arguments: [['pref', 'wlsched']] }]],
+      ['completeWaitlistBooking', [{ afterCommitAndFence: true, condition: 'result.removed.length', arguments: [['pref', 'wllists'], ['pref', 'wlsched']] }]],
+    ];
+    for (const [name, expected] of variants) {
+      const source = wytnijFunkcje(ZRODLO, name);
+      expect(shape(source), name).toEqual(expected);
+      expect(shape(source.replace('await Bmk_zmien(', 'Bmk_zmien(')), `${name}: samokontrola bez await`).not.toEqual(expected);
+      expect(shape(source.replace(`if (${expected[0].condition})`, 'if (true)')), `${name}: samokontrola emisji bez warunku zmiany`).not.toEqual(expected);
+    }
+  });
+
   // Formy z literału miejsc w małych funkcjach (kształt jak w sejfie): sprzątanie po koncie (E2-PR3a1), emisja (E2-PR3a2),
   // importy (E2-PR3a3), przegląd kolejki (E2-PR3a4: He z Bem_przeglad(true) na początku, Le z Bem_zChmury(t)) i haki
   // scalania (E2-PR3b: Le z Bem_przegrane(t,N,e) po pętli nagrobków kart, Bsl_usunPacjenta z Bem_przegrany w gałęzi karty
@@ -1055,6 +1097,8 @@ describe('U2(a): identyfikatory Bev_, Bob_ i Bem_ tylko w bloku; _eventLog dokł
     'function Qe2(t){Bem_hak("onCredentialChanged",t);Qe0.forEach(function(e){try{e(t)}catch{}})}',
     'async function Ps(t,e,P){try{if(!T()||!b)return null;const o=new Date().toISOString();return M(P,await Bmk_zmien(b,function(n){return n},P))?(Bem_zmiana("pref",t),o):null}catch(x){return null}}',
     'async function Aj(t,e){return W(A,(await Bmk_zmien(b,function(n){return n},O(null,b)),Bem_zmiana("pref",t),a))}',
+    "async function Jo(label,options){await Bmk_zmien(account,function(meta){return meta});state.assertCurrent();if(changed)Bem_zmiana('pref','wllists');if(scheduleChanged)Bem_zmiana('pref','wlsched');return result;}",
+    "async function completeWaitlistBooking(request){await Bmk_zmien(account,function(meta){return meta});state.assertCurrent();if(result.removed.length){Bem_zmiana('pref','wllists');Bem_zmiana('pref','wlsched');}return result;}",
     "async function Bnp_poZapisie(id, kiedy, rev, patientId, o) {\n  if (k) {\n    await h.putPatientNoteTombstoneForUser(b, n);\n    Bem_zmiana('pnotetomb', id, o);\n    return undefined;\n  }\n}",
     'async function Bsc_podBlokada(t,e,Bsc_s){for(let d=0;d<o.length;d+=1)await I().putSnapshotForUser(b,W(b,o[d])),Bpz_pilnuj(Bsc_s),Bem_zmiana("snap",{patientId:e,snapshotId:o[d].snapshotId},Bsc_s),a+=1;}',
     "async function Bkz_poImporcie(snapshotIds) {\n  const przepisane = [];\n  await Bkz_zmienListe([], t);\n  if (przepisane.length) Bem_zmiana('snap', przepisane);\n  return 1;\n}",
@@ -1829,8 +1873,10 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
   // (argument = parametr, bez alternatywy) i `return Bem_zastosujEcho(env);`. Bem_zastosujEcho(env): async; pierwsza
   // instrukcja `if (!Bob_bramka()) return Bev_zastosuj(env);`, druga `if (Bem_kolejka()) return Bev_zastosuj(env);`;
   // w ciele trzy wywołania Bev_zastosuj — dwa z jednym argumentem (parametr) w tych instrukcjach i jedno z dwoma,
-  // jedyne await (wynik do stałej); jedno Bem_zmiana z literałem 'snap' jako pierwszym argumentem, w instrukcji po
-  // await. Bob_bramkaEcha — tylko w Bem_zastosuj, raz; Bev_zastosuj — tylko w tych dwóch funkcjach.
+  // jedyne await (wynik do stałej); E3-PR0d: dokładnie dwa Bem_zmiana po await, w kolejności w źródle — pierwsze
+  // ('snap', <kolektor>.echo, <kolektor>.s), drugie ('stomb', <kolektor>.kosz, <kolektor>.s), gdzie <kolektor> to drugi
+  // argument Bev_zastosuj w await (wpis wersji przed wpisem Kosza, jak Bem_RANGI). Bob_bramkaEcha — tylko
+  // w Bem_zastosuj, raz; Bev_zastosuj — tylko w tych dwóch funkcjach.
   function formyOdsylania(dekl, gdzie) {
     const n = [];
     const wezlyF = (f) => { const l = []; const idz = (x) => { if (!x || typeof x.type !== 'string') return; l.push(x); for (const k of Object.keys(x)) { const y = x[k]; if (Array.isArray(y)) y.forEach(idz); else if (y && typeof y.type === 'string') idz(y); } }; idz(f.body); return l; };
@@ -1860,8 +1906,11 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       if (zast.length !== 3 || zast.filter((x) => x.arguments.length === 2).length !== 1 || zast.filter((x) => zParametrem(x, ze)).length !== 2) n.push('Bem_zastosujEcho: Bev_zastosuj nie dwa razy z parametrem i raz z dwoma argumentami');
       const czekania = w.filter((x) => x.type === 'AwaitExpression');
       if (czekania.length !== 1 || !wywolanie(czekania[0].argument, 'Bev_zastosuj') || czekania[0].argument.arguments.length !== 2) n.push('Bem_zastosujEcho: await inne niż jedno na Bev_zastosuj(env, kolektor)');
-      const zm = w.filter((x) => wywolanie(x, 'Bem_zmiana'));
-      if (zm.length !== 1 || !zm[0].arguments[0] || zm[0].arguments[0].type !== 'Literal' || zm[0].arguments[0].value !== 'snap') n.push("Bem_zastosujEcho: Bem_zmiana nie raz z literałem 'snap'");
+      const zm = w.filter((x) => wywolanie(x, 'Bem_zmiana')).sort((a, b) => a.start - b.start);
+      const kol = czekania.length && czekania[0].argument.arguments[1] && czekania[0].argument.arguments[1].type === 'Identifier' ? czekania[0].argument.arguments[1].name : null;
+      const pole = (x, nazwa) => !!x && x.type === 'MemberExpression' && !x.computed && x.object.type === 'Identifier' && x.object.name === kol && x.property.type === 'Identifier' && x.property.name === nazwa;
+      const forma = (x, rodzaj, nazwa) => x.arguments.length === 3 && x.arguments[0].type === 'Literal' && x.arguments[0].value === rodzaj && pole(x.arguments[1], nazwa) && pole(x.arguments[2], 's');
+      if (zm.length !== 2 || !forma(zm[0], 'snap', 'echo') || !forma(zm[1], 'stomb', 'kosz')) n.push("Bem_zastosujEcho: Bem_zmiana nie dokładnie dwa razy: 'snap' z kol.echo, potem 'stomb' z kol.kosz");
       else if (czekania.length && zm[0].start < czekania[0].end) n.push('Bem_zastosujEcho: Bem_zmiana przed await');
     }
     const be = (gdzie.Bob_bramkaEcha || []).join();
@@ -2080,7 +2129,8 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       "function Bem_wlasciciel(id, s) { if (!Bob_bramka()) return; try { Bem_zmiana('pnote', id, s && s.Bses_s ? s : Bses_opcje(null)); } catch (x) { } }",
       // E3-PR0c: odsyłanie poprawionych wizyt.
       'function Bem_zastosuj(env) { if (!Bob_bramkaEcha()) return Bev_zastosuj(env); return Bem_zastosujEcho(env); }',
-      "async function Bem_zastosujEcho(env) { if (!Bob_bramka()) return Bev_zastosuj(env); if (Bem_kolejka()) return Bev_zastosuj(env); const kol = {}; const w = await Bev_zastosuj(env, kol); if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s); return w; }",
+      // E3-PR0d: odsyłanie wpisów Kosza — drugie Bem_zmiana ('stomb', kol.kosz, kol.s) po odsyłaniu wersji.
+      "async function Bem_zastosujEcho(env) { if (!Bob_bramka()) return Bev_zastosuj(env); if (Bem_kolejka()) return Bev_zastosuj(env); const kol = {}; const w = await Bev_zastosuj(env, kol); if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s); if (Array.isArray(kol.kosz) && kol.kosz.length) Bem_zmiana('stomb', kol.kosz, kol.s); return w; }",
     ].join('\n');
     expect(analizujBem(DOBRA)).toEqual([]);
     const czerwone = [
@@ -2092,8 +2142,16 @@ describe('U2(c): wywołania zakazane i reguła domknięcia części magazynu', (
       DOBRA.replace('async function Bem_zastosujEcho(env) { if (!Bob_bramka()) return Bev_zastosuj(env); ', 'async function Bem_zastosujEcho(env) { '),
       DOBRA.replace(' if (Bem_kolejka()) return Bev_zastosuj(env); const kol', ' const kol'),
       DOBRA.replace("const w = await Bev_zastosuj(env, kol); if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s);", "Bem_zmiana('snap', kol.echo, kol.s); const w = await Bev_zastosuj(env, kol);"),
-      DOBRA.replace("Bem_zmiana('snap', kol.echo, kol.s); return w; }", "Bem_zmiana('snap', kol.echo, kol.s); await Bem_gotowe(); return w; }"),
-      DOBRA.replace("Bem_zmiana('snap', kol.echo, kol.s); return w; }", "Bem_zmiana('pnote', kol.echo, kol.s); return w; }"),
+      DOBRA.replace("Bem_zmiana('stomb', kol.kosz, kol.s); return w; }", "Bem_zmiana('stomb', kol.kosz, kol.s); await Bem_gotowe(); return w; }"),
+      DOBRA.replace("Bem_zmiana('snap', kol.echo, kol.s); if (Array", "Bem_zmiana('pnote', kol.echo, kol.s); if (Array"),
+      // E3-PR0d: bez odsyłania wpisów (forma E3-PR0c), 'stomb' przed await, dwa razy 'stomb', 'stomb' przed 'snap', inny
+      // rodzaj zamiast 'stomb', lista wersji zamiast listy wpisów.
+      DOBRA.replace(" if (Array.isArray(kol.kosz) && kol.kosz.length) Bem_zmiana('stomb', kol.kosz, kol.s);", ''),
+      DOBRA.replace('const w = await Bev_zastosuj(env, kol);', "Bem_zmiana('stomb', kol.kosz, kol.s); const w = await Bev_zastosuj(env, kol);").replace(" if (Array.isArray(kol.kosz) && kol.kosz.length) Bem_zmiana('stomb', kol.kosz, kol.s);", ''),
+      DOBRA.replace("Bem_zmiana('stomb', kol.kosz, kol.s); return w; }", "Bem_zmiana('stomb', kol.kosz, kol.s); Bem_zmiana('stomb', kol.kosz, kol.s); return w; }"),
+      DOBRA.replace("if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s); if (Array.isArray(kol.kosz) && kol.kosz.length) Bem_zmiana('stomb', kol.kosz, kol.s);", "if (Array.isArray(kol.kosz) && kol.kosz.length) Bem_zmiana('stomb', kol.kosz, kol.s); if (Array.isArray(kol.echo) && kol.echo.length) Bem_zmiana('snap', kol.echo, kol.s);"),
+      DOBRA.replace("Bem_zmiana('stomb', kol.kosz, kol.s); return w; }", "Bem_zmiana('pnote', kol.kosz, kol.s); return w; }"),
+      DOBRA.replace("Bem_zmiana('stomb', kol.kosz, kol.s); return w; }", "Bem_zmiana('stomb', kol.echo, kol.s); return w; }"),
       DOBRA.replace('function Bem_kolejka() { if (!T())', 'function Bem_kolejka() { if (!Bob_bramkaEcha()) return "x"; if (!T())'),
       DOBRA.replace('function Bem_przegladTeraz() { return Bem_przeglad(false); }', 'function Bem_przegladTeraz() { Bev_zastosuj(null); return Bem_przeglad(false); }'),
       DOBRA.replace('if (!T() ||', 'if (!v.indexedDB || !T() ||'),

@@ -115,11 +115,13 @@ describe('rata 6: kursy leczenia z punktów monitora (therapyIntervals, buildCli
       pkt('start', 126, 'Wegovy'), pkt('end', 132, 'Wegovy')]);
     expect(k.map((x) => [x.a, x.b, x.active, x.label])).toEqual([[96, 102, false, 'Saxenda'], [126, 132, false, 'Wegovy']]);
   });
-  // Od P-OTYLOSC-CYKLE rata 4 ta reguła (therapyIntervals) dotyczy kursów GH; kursy leczenia otyłości dzieli
-  // moduł cykli (granica = Zakończenie, bez progu przerwy) — tests/unit/kursy-otylosci-cykle.test.mjs.
-  it('GH (therapyIntervals): punkt po „end" z przerwą < 3 mies. wraca do tego samego kursu; kurs bez „end" trwa', () => {
+  // Od P-OTYLOSC-CYKLE rata 4 kursy leczenia otyłości dzieli moduł cykli (granica = Zakończenie, bez progu przerwy) —
+  // tests/unit/kursy-otylosci-cykle.test.mjs. Od P-GH-WZNOWIENIE część 1 (W3, decyzja właściciela 2026-11-20) tak samo
+  // kursy GH (therapyIntervals z ghKursy) — tests/unit/gh-wznowienie-kursy.test.mjs. Zmiana zamierzona: dotąd punkt
+  // po „end" z przerwą < 3 mies. wracał do tego samego kursu ([[96, null, true]]).
+  it('GH (therapyIntervals): punkt po „end" otwiera nowy kurs także po przerwie < 3 mies.; kurs bez „end" trwa', () => {
     const k = J().therapyIntervals([pkt('start', 96), pkt('end', 100), pkt('continue', 101)]);
-    expect(k.map((x) => [x.a, x.b, x.active])).toEqual([[96, null, true]]);
+    expect(k.map((x) => [x.a, x.b, x.active])).toEqual([[96, 100, false], [101, null, true]]);
   });
   it('buildClinicalContext niesie kursy obok koperty; normalizeContext zamienia sam przedział w jeden kurs', () => {
     const cx = J().buildClinicalContext({

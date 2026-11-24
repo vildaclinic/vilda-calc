@@ -29,12 +29,19 @@ function declaration(tree, source, name) {
   const node = one(tree, node => node.type === 'FunctionDeclaration' && node.id?.name === name, name);
   return source.slice(node.start, node.end);
 }
-const program = ['Ob_dz', 'Ob_dzPunkty', 'Ob_dzPostepy', 'Ob_dzPowiadom'].map(name => declaration(ast, auth, name)).join('\n');
+const program = ['ui', 'Ob_dz', 'Ob_dzPunkty', 'Ob_dzPostepy', 'Ob_dzPowiadom'].map(name => declaration(ast, auth, name)).join('\n');
 const homeCurrent = ['loadedSequence', 'current'].map(name => declaration(homeAst, home, name)).join('\n');
 const card = one(ast, node => node.type === 'FunctionDeclaration' && node.id?.name === 'se', 'native patient card');
-const diaryCall = one(card, node => node.type === 'CallExpression' && node.callee?.name === 'Ob_dz', 'card diary invocation');
+const treatmentCall = one(card, node => node.type === 'CallExpression' && node.callee?.name === 'Kl_leczenie', 'card treatment invocation');
+const treatment = one(ast, node => node.type === 'FunctionDeclaration' && node.id?.name === 'Kl_leczenie', 'native treatment');
+const diaryCall = one(treatment, node => node.type === 'CallExpression' && node.callee?.name === 'Ob_dz', 'treatment diary invocation');
+const ownerArgument = diaryCall.arguments[7];
+if (ownerArgument.type !== 'MemberExpression' || ownerArgument.object.name !== treatment.params[0].name || ownerArgument.computed) {
+  throw Error('The diary must use its treatment card’s notification owner');
+}
+const ownerOption = one(treatmentCall.arguments[0], node => node.type === 'Property' && node.key.name === ownerArgument.property.name, 'journal notification owner').value;
 const progressCall = one(card, node => node.type === 'CallExpression' && node.callee?.name === 'Ob_dzPostepy', 'card progress registration');
-const sourcePredicate = auth.slice(diaryCall.arguments[7].start, diaryCall.arguments[7].end);
+const sourcePredicate = auth.slice(ownerOption.start, ownerOption.end);
 const recipientPredicate = auth.slice(progressCall.arguments[4].start, progressCall.arguments[4].end);
 function deferred() { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; }
 async function flush() { for (let index = 0; index < 8; index++) await Promise.resolve(); }
@@ -83,7 +90,7 @@ function environment() {
   win.VildaDziennikOtylosci = { ...journal.D, zloz: vi.fn((...args) => { const value = journal.D.zloz(...args); projections.push(value); return value; }) };
   win.VildaDziennikOtylosciUI = { sekcja: vi.fn(options => { sections.push(options); return node('section'); }) };
   const context = vm.createContext({ i: win, w: win, active: null, Ob_dzSluchacze: [], jt: () => win.VildaVault,
-    e: node, Cl: vi.fn(points => Object.assign(node(), { points })),
+    e: node, Ko_karta: ({ podsumowanie, sekcja, panel }) => node('article', {}, [podsumowanie, sekcja, panel]), Cl: vi.fn(points => Object.assign(node(), { points })),
     Ml: vi.fn((points, _sex, _age, value) => Object.assign(node(), { points, value })), jl: vi.fn((_pid, points) => Object.assign(node(), { points })), Ot: errors });
   vm.runInContext(homeCurrent + '\n' + program, context);
   function recipient({ home: isHome = true, patientId = PID, empty = false } = {}) {
@@ -114,7 +121,7 @@ describe('native journal refresh and optional Home progress ownership', () => {
     expect(fresh.punkty.some(point => point.dziennik?.konflikt)).toBe(true);
     expect(target.render).toHaveBeenCalledExactlyOnceWith(fresh.punkty);
     expect(e.sections.at(-1).stan).toBe(fresh); expect(e.context.Ml.mock.calls.at(-1)[3]).toBe(fresh);
-    expect(box.children[0].points).toBe(fresh.punkty); expect(target.ct.children).toEqual([target.render.mock.results[0].value]);
+    expect(box.children[0].children[0].points).toBe(fresh.punkty); expect(target.ct.children).toEqual([target.render.mock.results[0].value]);
     expect(JSON.stringify(e.conflicted)).toBe(before); expect(e.errors).not.toHaveBeenCalled();
   });
 
@@ -171,7 +178,7 @@ describe('native journal refresh and optional Home progress ownership', () => {
     sourceState.owner = {}; originalRoot.isConnected = false;
     expect(target.current()).toBe(true); expect(sourceCurrent()).toBe(false);
     e.read.resolve(e.conflicted); await flush();
-    expect(e.projections).toHaveLength(2); expect(legacyBox.children[0].points).toBe(e.projections.at(-1).punkty);
+    expect(e.projections).toHaveLength(2); expect(legacyBox.children[0].children[0].points).toBe(e.projections.at(-1).punkty);
     expect(target.render).not.toHaveBeenCalled(); expect(target.ct.children).toEqual([target.initial]);
     expect(e.errors).not.toHaveBeenCalled();
   });

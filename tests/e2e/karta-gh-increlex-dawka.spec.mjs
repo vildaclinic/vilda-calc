@@ -44,6 +44,8 @@ async function kartaPacjenta(page, punkty) {
   await page.waitForTimeout(800);
   const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, () => {}, null), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
 
   const karta = page.locator('.vilda-gh-summary').first();
   await expect(karta).toBeVisible({ timeout: 15000 });
@@ -60,7 +62,10 @@ test('Karta pacjenta, Increlex: „Aktualna dawka" w dawce na podanie (2 × 2,4 
       drug: 'Increlex 40 mg', dose: 0.24, doseAbs: 4.8, doseUnit: 'mg/kg/d' },
   ]);
   expect(karta).toContain('Leczony IGF-1 (mekasermina)');
-  expect(karta).toContain('Aktualna dawka2 × 2,4 mg na dobę (0,12 mg/kg na podanie)');
+  // P-KARTA-LECZENIE, etap 3 (zmiana zamierzona): pole „Aktualna dawka” → kafelek „Preparat i dawka” karty GH — ta sama
+  // dawka z tych samych danych: „2 × 2,4 mg” + „na dobę”, podpis „0,12 mg/kg na podanie · preparat”
+  // (dotąd „Aktualna dawka2 × 2,4 mg na dobę (0,12 mg/kg na podanie)”).
+  expect(karta).toContain('Preparat i dawka2 × 2,4 mg na dobę0,12 mg/kg na podanie · Increlex 40 mg');
   expect(karta).not.toContain('mg/kg/d');
 });
 
@@ -71,7 +76,7 @@ test('Karta pacjenta, Increlex: stary punkt bez doseAbs — dawka na podanie z m
     { id: 'igf-e2e-old', type: 'start', ageYears: 8, ageMonths: 0, height: 112, weight: 13, program: 'IGF-1',
       drug: 'Increlex 40 mg', dose: 0.08, doseUnit: 'mg/kg/d' },
   ]);
-  expect(karta).toContain('Aktualna dawka2 × 0,52 mg na dobę (0,04 mg/kg na podanie)');
+  expect(karta).toContain('Preparat i dawka2 × 0,52 mg na dobę0,04 mg/kg na podanie · Increlex 40 mg'); // etap 3: kafelek (dotąd pole „Aktualna dawka…”)
 });
 
 test('Karta pacjenta, GH (kontrola): „Aktualna dawka" bez zmian — mg/kg/d', async ({ page }) => {
@@ -83,6 +88,6 @@ test('Karta pacjenta, GH (kontrola): „Aktualna dawka" bez zmian — mg/kg/d', 
       drug: 'Genotropin 12 mg', dose: 0.025, doseAbs: 0.5, doseUnit: 'mg/kg/d' },
   ]);
   expect(karta).toContain('Leczony hormonem wzrostu (rhGH)');
-  expect(karta).toContain('Aktualna dawka0,025 mg/kg/d');
+  expect(karta).toContain('Preparat i dawka0,025 mg/kg/dGenotropin 12 mg'); // etap 3: kafelek (dotąd pole „Aktualna dawka0,025 mg/kg/d”)
   expect(karta).not.toContain('na podanie');
 });

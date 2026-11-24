@@ -786,8 +786,8 @@ describe('P-WATKI: skrypt rozumie prawdziwe repozytorium', () => {
     expect(p.baza.sw).toMatch(/^\d+\.\d+\.\d+$/);
     expect(p.bledy).toEqual([]);
     expect(p.publishedHistory).toEqual({
-      commit: 'dac2691f8bae57185898176107a1f3d49d0640d2',
-      workerSHA256: '17c7d55462cdaf0f1d233586dd24c0352fb7304ff3a66fcfc124cb8d442660e0',
+      commit: 'd2f1eded39d9b8439cb96db6c8aa93f012a9adea',
+      workerSHA256: '25b7c9a29a9dedb7f30979ba1d00b0f703d762b12c125cea127858634e118544',
     });
   });
 

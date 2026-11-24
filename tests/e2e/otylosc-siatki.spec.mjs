@@ -60,6 +60,10 @@ async function pacjentka(page, wpisy) {
 
 async function siatki(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+  // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+  await page.locator('.vilda-ko-seg').getByRole('tab', { name: /^Wpisy/ }).click();
   await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
   await page.locator('.vilda-patient-tab[data-tab="traj"]').click();
   await expect(page.locator('.vilda-siatka-charts svg.vilda-patient-chart').first()).toBeVisible();
@@ -87,12 +91,16 @@ async function srodek(page, metryka, k) {
     const s = [...document.querySelectorAll('.vilda-siatka-charts svg')].find((x) => x._vildaScale && x._vildaScale.metric === m);
     s.scrollIntoView({ block: 'center' });
   }, metryka);
-  let poprzednia = null;
+  // P-KARTA-LECZENIE: bez bloków leczenia nad zakładkami siatka stoi wyżej i jej punkt bywa w oknie JUŻ PRZED
+  // przewinięciem. scrollIntoView strony formularza (custom-fixes.js) przewija dopiero po 100 ms, więc dwa równe odczyty
+  // co 100 ms nie dowodzą końca przewijania — punkt musi stać w obu osiach przez trzy kolejne odczyty (≥ 300 ms).
+  let poprzednia = null, stoiOdczytow = 0;
   await expect.poll(async () => {
     const teraz = await pozycja();
-    const stoi = poprzednia && Math.abs(teraz.y - poprzednia.y) < 0.5 && teraz.y > 0 && teraz.y < teraz.h;
+    const stoi = poprzednia && Math.abs(teraz.y - poprzednia.y) < 0.5 && Math.abs(teraz.x - poprzednia.x) < 0.5 && teraz.y > 0 && teraz.y < teraz.h;
+    stoiOdczytow = stoi ? stoiOdczytow + 1 : 0;
     poprzednia = teraz;
-    return stoi;
+    return stoiOdczytow >= 3;
   }, { intervals: [100] }).toBe(true);
   return poprzednia;
 }
@@ -173,7 +181,8 @@ test.describe('Wpisy z dziennika leczenia na siatkach i w analizie trajektorii (
     await otworz(page);
     const pid = await pacjentka(page, WPISY);
     await siatki(page, pid);
-    await page.locator('.vilda-patient-tab').first().click();
+    // P-KARTA-LECZENIE (etap 1): „Wpisy leczenia” w zakładce „Leczenie” (dotąd nad zakładkami, widoczne na „Status”).
+    await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
     await page.getByRole('button', { name: 'Kontynuacja' }).click();
     const okno = page.getByRole('dialog', { name: /Nowy wpis leczenia/ });
     await expect(okno).toBeVisible();

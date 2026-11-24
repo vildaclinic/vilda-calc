@@ -25,9 +25,10 @@
 //   KH3  onPatientListChanged przy usunięciu listy: { id, action: 'delete' } bez deletedAtISO — na obu sejfach.
 //   KH4  kolejność wywołań słuchaczy (hook, słuchacz) względem siebie: sejf = sejf bez wstawek.
 //   KH5  liczba wywołań syncPush atrapy VildaSync: sejf = sejf bez wstawek (na każdym kroku).
-//   KH6  samokontrola: sejf ma część emisji (znacznik i wstawki: Bem_hak 7, Bem_zmiana 12, pary kroku 9, Bem_sekcje 3,
+//   KH6  samokontrola: sejf ma część emisji (znacznik i wstawki: Bem_hak 7, Bem_zmiana 18, pary kroku 10, Bem_sekcje 3,
 //        Bem_partia 3, od E2-PR3a4 Bem_przeglad 1 i Bem_zChmury 1, od E2-PR3b Bem_przegrane 1, Bem_przegrany 1
-//        i Bem_ratunek 1 — razem 48), sejf bez wstawek nie ma Bem_ ani Bob_ poza blokiem, parsuje się i w obu przebiegach
+//        i Bem_ratunek 1, Bem_wlasciciel 1; atomowe listy/terminy dodają po 2 Bem_zmiana w Jo i completeWaitlistBooking
+//        oraz Kosz wizyt emisje stomb/snap i parę kroku — razem 57), sejf bez wstawek nie ma Bem_ ani Bob_ poza blokiem, parsuje się i w obu przebiegach
 //        daje 0 odczytów pola bramki (sejf przy otwartej bramce — więcej niż 0); przy otwartej bramce trzy kroki importu
 //        scenariusza (import karty, scalenie i odtworzenie kopii konta) wołają onBulkChange — KH1–KH5 obejmują więc
 //        dopisywanie partii importu; przy zamkniętej bramce i na sejfie bez wstawek — bez wywołania.
@@ -45,7 +46,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
-import { atrapaKrypto, naglowek, okno } from './sesja-zapisu-uprzaz.mjs';
+import { atrapaKrypto, naglowek, okno, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { ZNACZNIK_EMISJI, ZRODLO_SEJFU, bezWstawek, granicaBloku, wywolaniaPozaBlokiem, zaladujZrodlo } from '../support/sejf-bez-wstawek.mjs';
 
 const START = Date.parse('2026-03-02T08:00:00.000Z');
@@ -357,10 +358,17 @@ describe('kontrakt ładunków hooków: sejf = sejf bez wstawek', () => {
     // E2-PR3a3: importy (ns, ss, as) — 4 emisje wersji, 3 sekcje pliku, 3 znaki końca partii i 3 pary kroku. E2-PR3a4:
     // przegląd kolejki na początku odblokowania (He) i pary scalania z chmury (Le). E2-PR3b: haki scalania — przegrane
     // nagrobki kart w Le, karta zapisana w trakcie scalania w Bsl_usunPacjenta, ratunek notatki w Bnp_ratuj. E2-PR3c4: hak
-    // karty notatki w Le (gałąź „ładunek wygrywa”). Kosz wizyt dodaje jedną parę kroku oraz emisje stomb i snap.
+    // karty notatki w Le (gałąź „ładunek wygrywa”). Atomowe listy/terminy: po dwie emisje pref po zatwierdzeniu
+    // metadanych w Jo i completeWaitlistBooking; dokładnych warunków i kolejności pilnuje sync-dziennik-uspienie.
+    // Kosz wizyt zachowuje dodatkową parę kroku oraz emisje stomb i snap.
     expect([ile('Bem_hak'), ile('Bem_zmiana'), ile('Bem_krokStart'), ile('Bem_krokKoniec'), ile('Bem_sekcje'), ile('Bem_partia'), ile('Bem_przeglad'),
-      ile('Bem_zChmury'), ile('Bem_przegrane'), ile('Bem_przegrany'), ile('Bem_ratunek'), ile('Bem_wlasciciel')], 'wstawki emisji w sejfie').toEqual([7, 14, 10, 10, 3, 3, 1, 1, 1, 1, 1, 1]);
-    expect(wstawki.filter((w) => w.nazwa.startsWith('Bem_')).length, 'wszystkie wstawki Bem_ (bez innych nazw)').toBe(53);
+      ile('Bem_zChmury'), ile('Bem_przegrane'), ile('Bem_przegrany'), ile('Bem_ratunek'), ile('Bem_wlasciciel')], 'wstawki emisji w sejfie').toEqual([7, 18, 10, 10, 3, 3, 1, 1, 1, 1, 1, 1]);
+    for (const name of ['Jo', 'completeWaitlistBooking']) {
+      const source = wytnijFunkcje(ZRODLO_SEJFU, name), start = ZRODLO_SEJFU.indexOf(source);
+      expect(wstawki.filter(w => w.start >= start && w.end <= start + source.length).map(w => w.nazwa), `${name}: dokładnie dwie nowe emisje`)
+        .toEqual(['Bem_zmiana', 'Bem_zmiana']);
+    }
+    expect(wstawki.filter((w) => w.nazwa.startsWith('Bem_')).length, 'wszystkie wstawki Bem_ (bez innych nazw)').toBe(57);
     const bez = bezWstawek(ZRODLO_SEJFU);
     expect(wywolaniaPozaBlokiem(bez)).toEqual([]);
     const { a: a2, z: z2 } = granicaBloku(bez);

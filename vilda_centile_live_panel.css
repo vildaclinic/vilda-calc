@@ -135,3 +135,9 @@ html.vilda-centile-live-reserved #vildaCentileLiveMount+#currentSummaryWrap{marg
 /* A previous-measurement read can finish after form/chart restoration. Do not
    expose the standalone summary until that native read confirms absence. */
 html.vilda-summary-comparison-reserved #currentSummaryWrap{display:none!important}
+/* P-OTYLOSC-STRONA (temat D): legenda i dymek pomiarów z dziennika leczenia (romb — od pacjenta). */
+.vilda-centile-live-legend--office .vilda-centile-live-line-key,.vilda-centile-live-card--preview .vilda-centile-live-legend--office .vilda-centile-live-line-key{width:9px;height:9px;border-radius:var(--radius-circle)}
+.vilda-centile-live-diamond-key{width:8px;height:8px;flex:none;margin:0 1px;box-sizing:border-box;background:#fff4e0;border:1.5px solid #b45f06;transform:rotate(45deg)}
+.vilda-centile-live-tooltip-date{display:block;margin-top:3px;color:var(--text-muted);font-size:10px;line-height:1.4}
+.vilda-centile-live-tooltip--patient .vilda-centile-live-tooltip-age{color:#8a4b00;font-weight:700}
+.vilda-centile-live-legend.vilda-centile-live-legend--patient{margin-right:auto}

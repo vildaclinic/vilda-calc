@@ -88,11 +88,18 @@ dotychczasowy proces nie wymaga zmiany. Ręczne porównanie gałęzi integracyjn
 z nią samą jest odrzucane; nie dawałoby dowodu poprawności wersji.
 
 Zmiany z `audyt` regularnie włączamy do integracji bez rebase i force push,
-zachowując treść obu gałęzi. Przed końcowym PR-em do produkcji pobieramy
-najnowszy `audyt`, scalamy go i przeliczamy **całą integrację** zwykłym
-`npm run podbij-wersje` względem `origin/audyt`. Następnie wykonujemy pełną
-walidację aktualnego SHA. Końcowy PR oraz jego ręczne przebiegi CI także
-używają bazy `audyt`; nazwa gałęzi integracyjnej nie zwalnia z kontroli wersji.
+zachowując treść obu gałęzi. PR synchronizujący `audyt` z integracją scalamy
+na GitHubie przez **Create a merge commit**. Zachowuje to `audyt` jako przodka
+integracji i pozwala niezależnie zweryfikować pin opublikowanej historii
+precache także po scaleniu. Squash lub rebase takiego PR-a usuwa ten dowód
+pochodzenia, choć jego tymczasowy commit testowy mógł przejść CI.
+Przed końcowym PR-em do produkcji tworzymy gałąź wydania z integracji,
+scalamy najnowszy `audyt` i przeliczamy wersje zwykłym `npm run podbij-wersje`
+względem `origin/audyt`. Gałąź podglądu zachowuje własną historię cache.
+Po przeliczeniu odtwarzamy pakiet wizyt poleceniem `node tools/build-visit-ui-precache.mjs --write`
+i sprawdzamy dowody dla zmienionych artefaktów. Końcowy PR i jego ręczne przebiegi CI
+używają bazy `audyt`. Na aktualnym SHA przeprowadzamy pełną walidację, w tym
+aktualizację z opublikowanej wersji i ponowne uruchomienie bez sieci.
 
 Podgląd ma inny **origin**, a nie tylko inny katalog `vildaclinic.github.io`.
 Nie współdzieli lokalnego sejfu ani cache z aplikacją. Używa wyłącznie danych

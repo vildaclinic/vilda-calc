@@ -1,7 +1,7 @@
 {
   "namespace": "vilda-profile-trash-vault",
   "version": 1,
-  "baseVaultSHA256": "011c7839314326b5a31c4d0cb075da7414807f8c8587a9aee8768067b3cd63f1",
+  "baseVaultSHA256": "004a86e996b2e4aaf50f40bdb96e6396e815b37bdd7dde0449b517d301033ee9",
   "sources": [
     {
       "path": "runtime/profile-trash-v1/model.js",
@@ -13,7 +13,7 @@
     }
   ],
   "fragmentSHA256": "518840a2ea98e4eddaa295d40f1379baf2d351ec75a98cdcfb6e2243008dccf4",
-  "integratedVaultSHA256": "16c39d32d496738528142158ac57ad87e933538c17d710a4be1e290ed4fe0325",
+  "integratedVaultSHA256": "259c0804a7ac383383614adea0bf8a7b15bf682e3f5cdbcc05118a29858d3f36",
   "hooks": [
     {
       "name": "preserve-only-removed-legacy-source",

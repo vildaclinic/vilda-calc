@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const digest = value => createHash('sha256').update(value).digest('hex');
-const BASE = '9084797cddb81bce90112482bccf8a80e8730d3d1b9ac5f6001c260faab0adbb';
-const RESULT = '1cc227c5b2e0daed415b9f26fa94fdb44aa94935c21783f25e4cf33fb1d775e2';
+const BASE = '038229d3a5e4c1949c0631908fdf51f3410bc32714e2a11b15f12d00e2a1024c';
+const RESULT = '45c7ce0c61f98baf9e93a498e2f1b7d972de65c0039d289193cb021b9f1f0f67';
 const CORE = 'e3a3f1d4d5f746d4b8d78c4382bb55bd767d507b714c97e77a0c3950916e6f50';
 function fail(message) { throw new Error('Whole visit trash boundary: ' + message); }
 function hooks(root) {

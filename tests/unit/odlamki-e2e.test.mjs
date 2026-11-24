@@ -337,6 +337,25 @@ describe('tabela czasów i ten zestaw e2e', () => {
 describe('CI dzieli e2e tym podziałem', () => {
   const ci = fs.readFileSync(path.join(korzen, '.github/workflows/ci.yml'), 'utf8');
   const browser = ci.split('\n  browser:\n')[1]?.split('\n  lab_chart_webkit:\n')[0];
+  const webkit = ci.split('\n  lab_chart_webkit:\n')[1]?.split('\n  browser-summary:\n')[0];
+
+  it('obejmuje obie gałęzie docelowe i porównuje PR z jego rzeczywistym pierwszym rodzicem', () => {
+    expect(ci).toContain('pull_request:\n    branches: [audyt, agent/nowa-strona-glowna]');
+    expect(ci).toContain('          - audyt\n          - agent/nowa-strona-glowna');
+    expect(ci).toContain("BAZA: ${{ github.event_name == 'pull_request' && 'HEAD^1' || format('origin/{0}', inputs.baza_pr || 'audyt') }}");
+    expect(ci).toContain('run: node tests/scripts/prepare-published-precache-history.mjs');
+  });
+
+  it('zachowuje osobny WebKit Gabinetu i jego udział w wymaganym statusie przeglądarek', () => {
+    expect(webkit).toContain("BAZA_E2E: ${{ github.event_name == 'pull_request' && 'HEAD^1' || format('origin/{0}', inputs.baza_pr || 'audyt') }}");
+    expect(webkit).toContain('export BAZA_WEBKIT_PR="$BAZA_E2E"');
+    expect(webkit).toContain('npm run test:e2e -- --config playwright.lab-chart-webkit.config.mjs');
+    expect(ci).toContain('needs: [browser, lab_chart_webkit]');
+    expect(ci).toContain('test "${{ needs.lab_chart_webkit.result }}" = "success"');
+    const config = fs.readFileSync(path.join(korzen, 'playwright.lab-chart-webkit.config.mjs'), 'utf8');
+    expect(config).toContain("name: 'home-gabinet-webkit'");
+    expect(config).toContain('grep: /@gabinet-webkit\\b/');
+  });
 
   it('odłamki biorą listę plików z odlamki-e2e.mjs przez --test-list, nie z --shard', () => {
     expect(browser).not.toMatch(/--shard=/);

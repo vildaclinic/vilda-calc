@@ -107,8 +107,15 @@ async function closeCard(frame) {
 async function geometry(frame, selector = DIALOG) {
   const measure = () => frame.locator(selector).evaluate(node => {
     const box = node.getBoundingClientRect();
+    // Overlay and classic scrollbars resolve 100vw differently while the
+    // modal is locked; neither the root rect nor innerWidth works for both.
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;width:100vw;height:0;margin:0;padding:0;border:0;visibility:hidden;pointer-events:none';
+    document.body.append(probe);
+    const viewportWidth = probe.getBoundingClientRect().width;
+    probe.remove();
     return { width: box.width, height: box.height, x: box.x, y: box.y,
-      viewportWidth: innerWidth, viewportHeight: innerHeight, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
+      viewportWidth, viewportHeight: innerHeight, scrollWidth: node.scrollWidth, clientWidth: node.clientWidth };
   });
   // Opening motion may still be running when the native sheet becomes visible.
   // Poll at CSS-pixel precision; the raw checks below retain their original
@@ -345,11 +352,13 @@ test('B1 Leczenie preserves genuine GH and obesity monitors without inventing a 
   const before = await records(frame, id), clinicalBefore = await clinical(frame);
   await expect(frame.locator(CARD)).toContainText(/GH|Leczenie/);
   const treatment = await openTreatment(frame);
-  const gh = treatment.locator('.vilda-gh-summary', { hasText: 'Omnitrope 10 mg' });
+  const gh = treatment.locator('.vilda-kg-karta', { hasText: 'Omnitrope 10 mg' });
   await expect(gh).toBeVisible();
+  await expect(gh.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(gh).toContainText('Leczony hormonem wzrostu (rhGH)');
-  const obesity = treatment.locator('.vilda-gh-summary', { hasText: 'Wegovy' });
+  const obesity = treatment.locator('.vilda-ko-karta', { hasText: 'Wegovy' });
   await expect(obesity).toBeVisible();
+  await expect(obesity.getByRole('tab', { name: 'Przegląd', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(obesity).toContainText('Leczenie otyłości');
   const legacyOnly = await treatmentState(frame, id);
   expect(legacyOnly.diagnoses).toEqual([]); expect(legacyOnly.episodes).toEqual([]);

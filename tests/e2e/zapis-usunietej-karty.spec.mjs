@@ -9,6 +9,9 @@ import { expect, test } from '@playwright/test';
 // mówi, z którą kartą pacjenta scalono, nic nie jest zapisane, formularz zostaje; drugie „Zapisz dane” dopisuje dane
 // do karty Y z zachowaniem jej pomiarów. Edycja karty usuniętej: komunikat i zablokowany „Zapisz zmiany”.
 //
+// Od E3-PR0e1: także karta, która zniknęła przy pełnej synchronizacji z drugim urządzeniem (drugi kontekst z kopią
+// profilu), które ją scaliło — ta sama odmowa i ponowienie do karty scalonej (na a7b2920b czerwony: zapis do starej karty).
+//
 // Własne, fikcyjne konto sejfu w efemerycznym profilu przeglądarki; dane wyłącznie FIKCYJNE.
 test.use({ serviceWorkers: 'block' });
 
@@ -173,5 +176,70 @@ test.describe('P-ZAPIS-USUNIETEJ — zapis do karty scalonej albo usuniętej w i
     await expect(zapiszZmiany).toBeDisabled();
     expect(await wiekiGlowy(page, x), 'X nie wraca').toBeNull();
     expect(await liczbaKart(page)).toBe(0);
+  });
+});
+
+// E3-PR0e1 (decyzja 1 właściciela z 2026-11-23): stara karta znika przy pełnej synchronizacji z drugim urządzeniem, które
+// ją scaliło. Urządzenie B — kopia profilu A (drugi kontekst przeglądarki, osobna IndexedDB): „Scal pacjentów” X → Y
+// i poprawka wizyty X już pod Y. A — bez wiedzy o scaleniu — poprawia tę wizytę w starej X, wczytuje X do formularza
+// i dopisuje nowy pomiar, a potem dostaje pełną kopię B (mergeSyncPayload — ta sama droga co pełna synchronizacja).
+// Wizyta X przechodzi pod Y i X znika — od E3-PR0e1 z nagrobkiem scalenia z ładunku, więc „Zapisz dane” odmawia jak na
+// urządzeniu, które scaliło (dotąd zakładał X od nowa: dwie karty „Testowy Jan”). Drugi klik dopisuje dane do Y.
+test.describe('P-ZAPIS-USUNIETEJ — karta, która zniknęła przy pełnej synchronizacji z drugim urządzeniem (E3-PR0e1)', () => {
+  test('„Zapisz dane” w karcie, która zniknęła przy pełnej synchronizacji z drugim urządzeniem: odmowa z nazwą karty scalonej, drugi klik dopisuje do niej', async ({ page, context, browser }) => {
+    test.setTimeout(150_000);
+    const userId = await pierwszaKarta(page);
+    const { x, y, sid } = await page.evaluate(async (r) => {
+      const V = window.VildaVault;
+      const a = await V.savePatient(r.x, { dedup: false });
+      const b = await V.savePatient(r.y, { dedup: false });
+      return { x: a.patientId, y: b.patientId, sid: a.snapshotId };
+    }, { x: rekord([[60, 105, 17], [66, 108, 18]]), y: rekord([[48, 98, 15], [54, 101, 16]]) });
+    // B: kopia profilu A (osobna IndexedDB), „Scal pacjentów” X → Y i poprawka wizyty X już pod Y.
+    const stan = await context.storageState({ indexedDB: true });
+    const ctxB = await browser.newContext({ storageState: stan, serviceWorkers: 'block' });
+    try {
+      const pageB = await ctxB.newPage();
+      await regulamin(pageB);
+      await pageB.goto('/index.html', { waitUntil: 'load' });
+      await pageB.waitForFunction(() => Boolean(window.VildaVault));
+      const ladunekB = await pageB.evaluate(async (a) => {
+        const V = window.VildaVault;
+        if (!V.isUnlocked()) await V.unlockUser(a.userId, a.pw);
+        await V.mergePatients(a.x, a.y);
+        await new Promise((r) => { setTimeout(r, 20); });
+        const s = (await V.getPatient(a.y)).snapshots.find((q) => q.snapshotId === a.sid);
+        await V.updateSnapshotPayload(a.y, a.sid, { ...s.payload, user: { ...s.payload.user, weight: 18.5 } }, { preserveSavedAt: true });
+        return JSON.parse(JSON.stringify(await V.exportSyncPayload()));
+      }, { userId, pw: HASLO, x, y, sid });
+      // A: poprawka tej wizyty w starej X (po scaleniu na B), formularz X z nowym pomiarem, pełna kopia B.
+      await page.bringToFront();
+      await page.evaluate(async (a) => {
+        await new Promise((r) => { setTimeout(r, 20); });
+        const V = window.VildaVault;
+        const s = (await V.getPatient(a.x)).snapshots.find((q) => q.snapshotId === a.sid);
+        await V.updateSnapshotPayload(a.x, a.sid, { ...s.payload, user: { ...s.payload.user, weight: 18.2 } }, { preserveSavedAt: true });
+      }, { x, sid });
+      await wczytaj(page, x);
+      await dopiszPomiar(page, { lat: 6, mies: 0, wzrost: 112, masa: 20 });
+      await page.evaluate(async (lad) => { await window.VildaVault.mergeSyncPayload(lad); }, ladunekB);
+      expect(await wiekiGlowy(page, x), 'kontrola: X zniknęła przy pełnej kopii B').toBeNull();
+      expect(await liczbaKart(page), 'kontrola: jedna karta').toBe(1);
+
+      await zapisz(page);
+      await expect(pasek(page)).toContainText('Nie zapisano — tego pacjenta scalono z kartą „Testowy Jan”. Dane w formularzu zostały.');
+      expect(await page.evaluate(() => ((window.collectUserData().growthBasic || {}).data || {}).measurements
+        .map((m) => m.ageMonths)), 'formularz bez zmian').toContain(72);
+      expect(await wiekiGlowy(page, x), 'X nie wraca').toBeNull();
+      expect(await liczbaKart(page), 'bez duplikatu').toBe(1);
+
+      await zapisz(page);
+      await expect(pasek(page)).toHaveAttribute('data-state', 'saved');
+      expect(await wiekiGlowy(page, y), 'pomiary Y zostają, nowy pomiar trafia do Y').toContain('72:112');
+      expect(await wiekiGlowy(page, x)).toBeNull();
+      expect(await liczbaKart(page)).toBe(1);
+    } finally {
+      await ctxB.close();
+    }
   });
 });

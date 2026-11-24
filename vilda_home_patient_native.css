@@ -4,6 +4,9 @@ html.vilda-home-workspace .vilda-auth-root:has(.vhome-native-patient-card) {
   box-sizing: border-box;
   width: 100vw;
   overflow: hidden;
+  /* B1 scrolls its panels, not the auth root. A reserved single gutter would
+   * shift this frame away from its fixed-position native child dialogs. */
+  scrollbar-gutter: auto;
 }
 html.vilda-home-workspace .vilda-auth-overlay:has(.vhome-native-patient-card) {
   box-sizing: border-box;

@@ -383,7 +383,8 @@ describe('karta usuwająca', () => {
     const o = await nowe();
     const X = o.A.userId;
     const lA = blokady(o);
-    const u = wstrzymajDrugi(o, { baza: BAZA(X), sklep: 'meta', metoda: 'get' });
+    // Atomic list creation reads metadata once, under its metadata lock.
+    const u = { h: wstrzymaj(o, { przy: 'success', baza: BAZA(X), sklep: 'meta', metoda: 'get' }) };
     const pL = wynik(o.v.addWaitlistList('Fikcyjna procedura'));
     await czekajNa(() => u.h && u.h.osiagniety, 'odczyt metadanych w zapisie listy');
     const z = log(o).length;

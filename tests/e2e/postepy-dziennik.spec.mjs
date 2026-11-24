@@ -48,6 +48,10 @@ async function pacjent(page, punkty = MIGAWKA) {
 
 async function karta(page, pid) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+  // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+  await page.locator('.vilda-ko-seg').getByRole('tab', { name: /^Wpisy/ }).click();
   await expect(page.locator('.vdo')).toBeVisible({ timeout: 15000 });
 }
 async function postepy(page) {
@@ -56,7 +60,10 @@ async function postepy(page) {
   return page.locator('.vilda-pd-host');
 }
 async function wroc(page) {
-  await page.locator('.vilda-patient-tab').first().click();
+  // P-KARTA-LECZENIE (etap 1): „Wpisy leczenia” w zakładce „Leczenie” (dotąd nad zakładkami, widoczne na „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
+  // P-KARTA-LECZENIE (etap 2): „Wpisy leczenia” — widok „Wpisy” karty leczenia (domyślnie „Przegląd”).
+  await page.locator('.vilda-ko-seg').getByRole('tab', { name: /^Wpisy/ }).click();
   await expect(page.locator('.vdo')).toBeVisible();
 }
 const wiersz = (page, dateISO) => page.locator(`.vdo-list:not(.vdo-list-deleted) > .vdo-item[data-date="${dateISO}"]`);

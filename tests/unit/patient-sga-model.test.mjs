@@ -134,21 +134,56 @@ describe('SGA conclusion follows the production renderer’s weight/length categ
     expect(result.sources[0].metrics.find(metric => metric.key === 'length')).toMatchObject({ sdsLabel: '—', tone: 'improve', interpretation: 'Niedostępne w tym źródle' });
   });
 
-  it('keeps genuinely disagreeing reference assessments separate', () => {
+  // P-SGA-KAFEL-NORMY (decyzja właściciela 2026-11-23): wynik dodatni według jednej z wybranych
+  // norm daje czerwone „Tak” z nazwą normy i parametru — także gdy inna norma SGA wyklucza
+  // (dotąd bursztynowe „Różne oceny”) albo nie ma pełnych danych (dotąd „Do oceny”).
+  it('names the positive reference when another reference fully excludes SGA', () => {
     const h = environment(), birth = calculated(h, { sourceChoice: 'compare', sourceKeys: ['niklasson', 'intergrowth'], weight: '1500', length: '48' });
     expect(birth.assessment.sources.map(source => source.summary)).toEqual([
       { weightStatus: 'TAK', lengthStatus: 'NIE' }, { weightStatus: 'NIE', lengthStatus: 'NIE' }
     ]);
     const result = h.model.build(birth);
-    expect(result).toMatchObject({ value: 'Różne oceny', tone: 'improve', hasAssessment: true });
+    expect(result).toMatchObject({ value: 'Tak', tone: 'alert', subtitle: 'wg 1 z 2 norm: Niklasson (masa)', hasAssessment: true });
     expect(result.sources.map(source => source.sourceKey)).toEqual(['niklasson', 'intergrowth']);
+    expect(h.model.summaryText(birth)).toContain('SGA: Tak — wg 1 z 2 norm: Niklasson (masa).');
     expect(h.model.summaryText(birth)).toContain('SGA po masie: TAK; po długości: NIE.');
     expect(h.model.summaryText(birth)).toContain('SGA po masie: NIE; po długości: NIE.');
   });
 
-  it('distinguishes an incomplete third source from an actual positive/negative disagreement', () => {
-    const h = environment(), birth = calculated(h, { sourceChoice: 'compare', sourceKeys: ['niklasson', 'intergrowth', 'malewski'] });
-    expect(birth.assessment.sources[2].summary).toEqual({ weightStatus: 'NIE', lengthStatus: 'Niedostępne w tym źródle' });
+  it('weight only: SGA by Malewski is not hidden by INTERGROWTH at exactly −2 SDS (owner report)', () => {
+    const h = environment(), birth = calculated(h, {
+      sourceChoice: 'compare', sourceKeys: ['intergrowth', 'malewski'], sex: 'female', weeks: '33', days: '0',
+      weight: '1150', length: '', head: ''
+    });
+    expect(birth.assessment.sources.map(source => source.summary)).toEqual([
+      { weightStatus: 'NIE', lengthStatus: 'Brak danych' }, { weightStatus: 'TAK', lengthStatus: 'Niedostępne w tym źródle' }
+    ]);
+    expect(h.model.build(birth)).toMatchObject({ value: 'Tak', tone: 'alert', subtitle: 'wg 1 z 2 norm: Malewski (masa)' });
+  });
+
+  it('lists every positive reference with its parameter', () => {
+    const h = environment();
+    const all = calculated(h, {
+      sourceChoice: 'compare', sourceKeys: ['niklasson', 'intergrowth', 'malewski'], sex: 'female', weeks: '33', days: '0',
+      weight: '1150', length: '', head: ''
+    });
+    expect(h.model.build(all)).toMatchObject({ value: 'Tak', tone: 'alert', subtitle: 'wg 2 z 3 norm: Niklasson (masa), Malewski (masa)' });
+    const both = calculated(h, { sourceChoice: 'compare', sourceKeys: ['niklasson', 'intergrowth', 'malewski'] });
+    expect(both.assessment.sources.map(source => source.summary)).toEqual([
+      { weightStatus: 'TAK', lengthStatus: 'TAK' }, { weightStatus: 'NIE', lengthStatus: 'TAK' },
+      { weightStatus: 'NIE', lengthStatus: 'Niedostępne w tym źródle' }
+    ]);
+    expect(h.model.build(both)).toMatchObject({
+      value: 'Tak', tone: 'alert', subtitle: 'wg 2 z 3 norm: Niklasson (masa i długość), INTERGROWTH-21st (długość)'
+    });
+  });
+
+  it('keeps an incomplete third source without a positive result unevaluated', () => {
+    const h = environment(), birth = calculated(h, { sourceChoice: 'compare', sourceKeys: ['niklasson', 'intergrowth', 'malewski'], weight: '2700', length: '48' });
+    expect(birth.assessment.sources.map(source => source.summary)).toEqual([
+      { weightStatus: 'NIE', lengthStatus: 'NIE' }, { weightStatus: 'NIE', lengthStatus: 'NIE' },
+      { weightStatus: 'NIE', lengthStatus: 'Niedostępne w tym źródle' }
+    ]);
     expect(h.model.build(birth)).toMatchObject({ value: 'Do oceny', tone: 'improve', subtitle: 'Niepełna ocena dla części norm' });
   });
 

@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { restorePatientProfileBaseline } from './patient-profile-vault-delta.mjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
-const BASE = '1cc227c5b2e0daed415b9f26fa94fdb44aa94935c21783f25e4cf33fb1d775e2';
-const RESULT = '981b7dd790d068486be0ab6b3a3346ba86550ca4e32f180f05aa0f4d8e618b9f';
+const BASE = '45c7ce0c61f98baf9e93a498e2f1b7d972de65c0039d289193cb021b9f1f0f67';
+const RESULT = '053273d4f0b8e0e7a1519178d6ab177dc4d1824b34cf172fbeb85e6ff8f5f622';
 const CORE = '9d42be28d071afc4de4bdcf1f8600826fe1a417835af138909aefe4da5665a5c';
 const MARKER = '/* BEGIN VILDA RAPID VISIT COMMIT V1 */';
 const digest = text => createHash('sha256').update(text).digest('hex');

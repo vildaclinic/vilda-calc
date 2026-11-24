@@ -558,10 +558,28 @@ function Sp_patientLoaded(doc,event){
   }catch{}
   Sp_invalidate();
 }
+function Sp_bindStatusChip(entry,doc){
+  var binding=entry.sidebarStatusBinding;
+  if(!binding||binding.doc!==doc)return;
+  var chip=typeof doc.getElementById==="function"&&doc.getElementById("vildaPatientChip");
+  if(binding.chip===chip)return;
+  if(binding.observer)binding.observer.disconnect();
+  binding.chip=chip;binding.observer=null;
+  if(chip&&typeof a.MutationObserver==="function"){
+    binding.observer=new a.MutationObserver(function(){Sp_sourceStatus(doc)});
+    binding.observer.observe(chip,{attributes:true,attributeFilter:["class","title"]});
+  }
+}
 function Sp_bind(entry){
-  var doc=entry&&entry.frame&&entry.frame.contentDocument;if(!doc||entry.sidebarDocument===doc)return;
+  var doc=entry&&entry.frame&&entry.frame.contentDocument;if(!doc)return;
+  // Sp_target can see the document before lazy Chrome mounts its status chip.
+  // The ordinary frame-load retry must still bind that later node, and detach
+  // a replaced chip, without registering the document's listeners twice.
+  if(entry.sidebarDocument===doc){Sp_bindStatusChip(entry,doc);return}
   if(entry.sidebarCleanup)entry.sidebarCleanup.forEach(function(remove){remove()});
   entry.sidebarDocument=doc;entry.sidebarCleanup=[];
+  var binding=entry.sidebarStatusBinding={doc:doc,chip:null,observer:null};
+  entry.sidebarCleanup.push(function(){if(binding.observer)binding.observer.disconnect()});
   function listen(target,type,callback,capture){
     target.addEventListener(type,callback,!!capture);
     entry.sidebarCleanup.push(function(){target.removeEventListener(type,callback,!!capture)});
@@ -577,12 +595,7 @@ function Sp_bind(entry){
   listen(entry.frame.contentWindow,"vilda:user-state-cleared",Sp_invalidate);
   ["input","change"].forEach(function(type){listen(doc,type,function(event){if(event.isTrusted)Sp_invalidate()},true)});
   listen(doc,"vilda:puberty-assessment-changed",function(event){if(event.detail&&event.detail.reason==="edit")Sp_invalidate()});
-  var chip=typeof doc.getElementById==="function"&&doc.getElementById("vildaPatientChip");
-  if(chip&&typeof a.MutationObserver==="function"){
-    var observer=new a.MutationObserver(function(){Sp_sourceStatus(doc)});
-    observer.observe(chip,{attributes:true,attributeFilter:["class","title"]});
-    entry.sidebarCleanup.push(function(){observer.disconnect()});
-  }
+  Sp_bindStatusChip(entry,doc);
 }
 
 function Sp_enabled(button){return !!(button&&!button.disabled&&!button.hasAttribute("disabled")&&button.getAttribute("aria-disabled")!=="true")}
@@ -611,6 +624,7 @@ function Sp_begin(route){
   var previous=Sp_current(),next=null,settled=false,entry=l[c],frame=entry&&entry.frame;
   try{
     if(entry&&entry.loaded&&!entry.stale&&frame&&!frame.hidden){
+      Sp_bind(entry);
       var win=frame.contentWindow,doc=frame.contentDocument,api=win&&win.VildaSaveStatusIndicator;
       var host=Sp_account(a),account=Sp_account(win),sequence=Sp_loadSequence(),boundary=Sp_boundary;
       var decision=api&&typeof api.getCurrentDecision==="function"&&api.getCurrentDecision();

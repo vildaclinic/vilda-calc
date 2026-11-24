@@ -1,11 +1,11 @@
 {
   "namespace": "vilda-treatment-documentation-vault",
   "version": 1,
-  "baseVaultSHA256": "294774d6ee7fdb494e238b68c9bd81d74eb61aefb348acb71cc69ab6b241870c",
+  "baseVaultSHA256": "8ab490b5c984650f33813cb27ec6e72dcc4f4013223b1d46cda382c3f01e17da",
   "source": "runtime/treatment-documentation-v1/vault-fragment.js",
   "sourceSHA256": "b87c2f1aac84607586065aaa2beb1a54db044f57fc619a3e1633e6ee5409ddaf",
   "fragmentSHA256": "47a2484626ff1d30a9bc13d8004e4182e9a586788416528d2a323defbf284919",
-  "integratedVaultSHA256": "c50d9f4359adb8c94ce38194d2b6633cb3ca43d7698dcffda2a9c7d58a3e10da",
+  "integratedVaultSHA256": "1deef4e3ad53d4b3737adbb98688995f44c0c9675372a262a15d28fee35162de",
   "hooks": [
     {
       "name": "new-diagnosis-and-episode-canonical-option",

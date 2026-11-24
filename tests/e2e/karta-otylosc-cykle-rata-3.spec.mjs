@@ -51,9 +51,12 @@ const norm = (t) => String(t || '').replace(/\s+/g, ' ').trim();
 
 async function karta(page, patientId) {
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id), patientId);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
   const podsumowanie = page.locator('.vilda-gh-summary', { hasText: 'Leczenie otyłości' }).first();
   await expect(podsumowanie).toBeVisible({ timeout: 15000 });
-  await page.locator('.vilda-gha-btn', { hasText: 'otyłość' }).click();
+  // P-KARTA-LECZENIE (etap 2): panel „Dane analityczne — otyłość” to widok „Analiza” karty leczenia (dotąd belka).
+  await page.locator('.vilda-ko-seg').getByRole('tab', { name: 'Analiza' }).click();
   const panel = page.locator('.vilda-gha-panel', { has: page.locator('.vilda-oba-verdict') }).first();
   await expect(panel).toBeVisible();
   return { podsumowanie, panel };
@@ -79,8 +82,10 @@ test('dwa cykle: karta pokazuje bieżący cykl i poprzednie, panel przełącza c
   expect(k).toContain('Leczenie otyłości — Wegovy');
   expect(k).toContain('aktywne');
   expect(k).toContain('cykl 2 z 2');
-  expect(k).toContain('Włączeniew wieku 40 l. 0 mies. (12.11.2024)');
-  expect(k).toContain('Punkty kontrolne3 w cyklu (6 łącznie)');
+  // P-KARTA-LECZENIE (etap 2): pola podsumowania zniknęły z góry karty — Włączenie jest w podpisie kafelka „Czas leczenia”
+  // („Przegląd”), punkty kontrolne w cichej linii „Analizy” (dotąd pola „Włączenie” i „Punkty kontrolne”). Te same dane.
+  expect(k).toContain('od 12.11.2024 (40 l. 0 mies.)');
+  expect(k).toContain('3 punkty kontrolne w cyklu (6 łącznie)');
   expect(k).toContain('Poprzednie cykleCykl 1 · Saxenda · 12.01.2024 – 15.10.2024 · 39,6 tyg. · −6,3% masy');
 
   const przelacznik = panel.locator('.vilda-ob-seg button');
@@ -131,7 +136,7 @@ test('jeden zakończony cykl: bez przełącznika, ocena na dzień Zakończenia',
   const k = norm(await podsumowanie.textContent());
   expect(k).toContain('leczenie zakończone');
   expect(k).not.toContain('Poprzednie cykle');
-  expect(k).toContain('Punkty kontrolne3');
+  expect(k).toContain('· 3 punkty kontrolne'); // etap 2: cicha linia „Analizy” (dotąd pole „Punkty kontrolne3”)
   await expect(panel.locator('.vilda-ob-seg')).toHaveCount(0);
   const w = await werdykt(panel);
   expect(w.tytul).toMatch(/^Cykl zakończony/);

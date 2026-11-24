@@ -144,7 +144,16 @@
     var metadata = node('div', 'metadata');
     var legend = node('span', 'legend');
     var legendKey = node('span', 'line-key');
-    legend.append(legendKey, doc.createTextNode('Przebieg pacjenta'));
+    var legendText = node('span', 'legend-text', 'Przebieg pacjenta');
+    legend.append(legendKey, legendText);
+    // P-OTYLOSC-STRONA (temat D, makieta zaakceptowana 2026-11-20): przy masie (wzroście) od pacjenta legenda mówi
+    // „dane z gabinetu” (kropka) i „dane od pacjenta” (romb), a licznik pomiarów ustępuje jej miejsca.
+    var legendPatient = node('span', 'legend');
+    legendPatient.classList.add(PREFIX + 'legend--patient');
+    var legendDiamond = node('span', 'diamond-key');
+    legendDiamond.setAttribute('aria-hidden', 'true');
+    legendPatient.append(legendDiamond, node('span', 'legend-text', 'dane od pacjenta'));
+    hidden(legendPatient, true);
     var parents = node('div', 'parents');
     parents.setAttribute('aria-label', 'Wzrost rodziców');
     hidden(parents, true);
@@ -157,7 +166,7 @@
       parentFields[entry[0]] = { element: field, value: value };
     });
     var count = node('span', 'count');
-    metadata.append(legend, parents, count);
+    metadata.append(legend, legendPatient, parents, count);
     var deck = node('div', 'deck');
     var footer = node('footer', 'footer');
     var note = node('span', 'annotation-note', 'Adnotacje z Kreatora siatek');
@@ -177,7 +186,9 @@
       var tooltip = node('div', 'tooltip');
       var tooltipHeading = node('span', 'tooltip-age');
       var tooltipReading = node('strong', 'tooltip-reading');
-      tooltip.append(tooltipHeading, tooltipReading);
+      var tooltipDate = node('span', 'tooltip-date');
+      hidden(tooltipDate, true);
+      tooltip.append(tooltipHeading, tooltipReading, tooltipDate);
       tooltip.setAttribute('role', 'tooltip');
       tooltip.id = id + '-tooltip-' + index;
       var bar = node('div', 'probe-bar');
@@ -204,7 +215,7 @@
       var pane = {
         root: root, title: paneTitle, viewport: viewport, stage: stage, imageFrame: imageFrame,
         crosshair: crosshair, dot: dot, tooltip: tooltip, tooltipHeading: tooltipHeading,
-        tooltipReading: tooltipReading, bar: bar, mph: mph, mphValue: mphValue, input: input,
+        tooltipReading: tooltipReading, tooltipDate: tooltipDate, bar: bar, mph: mph, mphValue: mphValue, input: input,
         empty: empty, image: null, metric: index === 0 ? 'height' : 'weight', scale: 0,
         bounds: null, presentationPlot: null, previewAsset: null, previewWidth: 0, previewHeight: 0, gesture: null, suppressClickUntil: 0
       };
@@ -224,6 +235,17 @@
     function asset(metric) { var range = currentRange(); return range && range[metric] || null; }
     function points(data) {
       return data && Array.isArray(data.points) ? data.points.filter(function (point) { return finite(point.ageMonths) && finite(point.value); }).slice().sort(function (a, b) { return a.ageMonths - b.ageMonths; }) : [];
+    }
+    function reportedPoints(data) {
+      return data && Array.isArray(data.reported) ? data.reported.filter(function (point) { return finite(point.ageMonths) && finite(point.value); }) : [];
+    }
+    // Kursor i strzałki przeskakują także na pomiary z dziennika (temat D); interpolacja zostaje między wizytami.
+    function navigablePoints(data) {
+      return points(data).concat(reportedPoints(data)).sort(function (a, b) { return a.ageMonths - b.ageMonths; });
+    }
+    function dateLabel(iso) {
+      var match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+      return match ? match[3] + '.' + match[2] + '.' + match[1] : '';
     }
     function visiblePanes() { return panes.filter(function (pane) { return !pane.root.hidden; }); }
     function frame(callback) {
@@ -440,6 +462,12 @@
       var data = asset(pane.metric);
       var effectiveSource = result.source && data && result.source !== data.source ? ' · ' + sourceLabel(result.source) : '';
       var reading = numberLabel(result.value) + (pane.metric === 'height' ? ' cm' : ' kg') + ' · ' + pct + effectiveSource;
+      var reportedDate = result.reported ? dateLabel(result.dateISO) : '';
+      if (result.reported && result.origin === 'pacjent') {
+        // Dymek jak na makiecie: „◇ od pacjenta · wiek”, „Waga 74,6 kg”, data wpisu.
+        label = (state.pinned ? 'Przypięto · ' : '') + '◇ od pacjenta · ' + ageLabel(result.ageMonths);
+        reading = LABELS[pane.metric] + ' ' + numberLabel(result.value) + (pane.metric === 'height' ? ' cm' : ' kg');
+      }
       state.probes[pane.metric] = {
         ageMonths: result.ageMonths, value: result.value, percentile: result.percentile,
         exact: !!result.exact, source: result.source
@@ -448,11 +476,13 @@
       pane.dot.dataset.value = String(result.value);
       pane.dot.dataset.source = result.source || '';
       text(pane.tooltipHeading, label); text(pane.tooltipReading, reading);
-      text(pane.bar, label + ' — ' + LABELS[pane.metric] + ': ' + reading);
+      text(pane.tooltipDate, reportedDate); hidden(pane.tooltipDate, !reportedDate);
+      pane.tooltip.classList.toggle(PREFIX + 'tooltip--patient', !!(result.reported && result.origin === 'pacjent'));
+      text(pane.bar, label + ' — ' + (result.reported && result.origin === 'pacjent' ? reading : LABELS[pane.metric] + ': ' + reading) + (reportedDate ? ' · ' + reportedDate : ''));
       styles(pane.crosshair, { left: point.x + 'px', top: point.top + 'px', height: point.height + 'px' });
       var colors = w.VildaCentileLiveColors;
       styles(pane.dot, { left: point.x + 'px', top: point.y + 'px',
-        backgroundColor: colors ? colors.colorAt(pane.metric, data.points, result.ageMonths) : '' });
+        backgroundColor: result.reported && result.origin === 'pacjent' ? '#b45f06' : colors ? colors.colorAt(pane.metric, data.points, result.ageMonths) : '' });
       hidden(pane.crosshair, false); hidden(pane.dot, false);
       hidden(pane.tooltip, state.pointerType === 'touch'); hidden(pane.bar, state.pointerType !== 'touch');
       pane.stage.classList.toggle(PREFIX + 'stage--pinned', state.pinned);
@@ -477,7 +507,7 @@
       var rect = pane.stage.getBoundingClientRect();
       var sourceX = (clientX - rect.left) / pane.scale + pane.bounds.x;
       var age = p.ageMin + Math.max(0, Math.min(1, (sourceX - p.x) / p.w)) * (p.ageMax - p.ageMin);
-      var closest = points(data).reduce(function (best, point) { return !best || Math.abs(point.ageMonths - age) < Math.abs(best.ageMonths - age) ? point : best; }, null);
+      var closest = navigablePoints(data).reduce(function (best, point) { return !best || Math.abs(point.ageMonths - age) < Math.abs(best.ageMonths - age) ? point : best; }, null);
       var pxPerMonth = p.w * pane.scale / (p.ageMax - p.ageMin);
       if (closest && Math.abs(closest.ageMonths - age) * pxPerMonth <= (pointerType === 'touch' ? 12 : 6)) age = closest.ageMonths;
       return age;
@@ -544,7 +574,7 @@
         if (['Enter', ' ', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(event.key) === -1) return;
         event.preventDefault();
         cancelFrame(probeFrame); probeFrame = null; pendingProbe = null;
-        var list = points(asset(pane.metric));
+        var list = navigablePoints(asset(pane.metric));
         if (!list.length) return;
         if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'Home' || event.key === 'End') {
           var direction = event.key === 'ArrowRight' || event.key === 'Home' ? 1 : -1;
@@ -633,12 +663,23 @@
         var legendColors = points(data).map(function (point) { return w.VildaCentileLiveColors.color(w.VildaCentileLiveColors.tone(panes[0].metric, point.percentile)); });
         styles(legendKey, { background: legendColors.length > 1 ? 'linear-gradient(90deg, ' + legendColors.join(', ') + ')' : legendColors[0] || '#7c8b90' });
       }
+      var patientReported = visiblePanes().some(function (pane) {
+        return reportedPoints(asset(pane.metric)).some(function (point) { return point.origin === 'pacjent'; });
+      });
+      legend.classList.toggle(PREFIX + 'legend--office', patientReported);
+      text(legendText, patientReported ? 'dane z gabinetu' : 'Przebieg pacjenta');
+      hidden(legendPatient, !patientReported);
+      if (patientReported && w.VildaCentileLiveColors) {
+        var latestPoint = points(data).filter(function (point) { return point.current; }).pop() || points(data).pop();
+        styles(legendKey, { background: latestPoint ? w.VildaCentileLiveColors.color(w.VildaCentileLiveColors.tone(panes[0].metric, latestPoint.percentile)) : '#7c8b90' });
+      }
       text(sourceBadge, sourceLabel(data && data.source || state.snapshot && state.snapshot.source));
       var sex = state.snapshot && state.snapshot.sex;
       var countValue = points(data).length;
       var countLabel = countValue === 1 ? 'pomiar' : countValue % 10 >= 2 && countValue % 10 <= 4
         && (countValue % 100 < 12 || countValue % 100 > 14) ? 'pomiary' : 'pomiarów';
       text(count, (sex === 'F' ? 'Dziewczęta' : sex === 'M' ? 'Chłopcy' : '') + ' · ' + countValue + ' ' + countLabel);
+      hidden(count, patientReported);
       updateParents(); updateLatest();
       text(note, data && data.preview ? 'Centyle 3, 50 i 97 · Pełna siatka i adnotacje po powiększeniu' : 'Adnotacje z Kreatora siatek');
       text(hint, state.fullscreen ? 'Przesuń kursor lub palec, aby odczytać wartości. Kliknięcie przypina odczyt.' : 'Najedź, aby odczytać wartości. Powiększ siatkę ikoną w prawym górnym rogu.');

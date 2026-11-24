@@ -28,10 +28,23 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // content read before the note lock; the done, no-show and reopen mark is a separate register with its own change time,
 // a record joining the content of one version with the mark of the other is saved 1 ms after both, while a later mark of
 // the same value keeps only its change time; moving the date of an open entry confirms it open; the same visible
-// version shown to the doctor is not a save conflict; care plans and patient lists keep the earlier rule) and E3-PR0c
+// version shown to the doctor is not a save conflict; care plans and patient lists keep the earlier rule), E3-PR0c
 // (after a single change from another device is applied, a visit version the merge saved differently than it
-// arrived is queued again; dormant behind a hidden switch).
-const BASE = '06ea023197d3e70fc30e965d5b2b57744fbbcbc0f638f5baa798e5ce3e209031';
+// arrived is queued again; dormant behind a hidden switch), E3-PR0d (after a single change from another device is
+// applied, a trash entry the merge saved differently than before and than it arrived is queued again; dormant behind
+// the same hidden switch), E3-PR0d2 (after a single change from another device is applied successfully, a hidden
+// trash entry of a deleted card is queued again when the change carried a later version of that visit under a card
+// that lost to the patient tombstone here; dormant behind the same hidden switch), E3-PR0e1 (a card emptied by the
+// move phase of the synchronization merge disappears together with the patient tombstone known to that merge, from
+// the payload or local, written only when no local tombstone or an earlier one exists; in effect at once),
+// P-BAZA-SZYBKIE (two read-only helpers: getNewestSnapshot decrypts only the newest version of a patient card and
+// listPatientNotesByCategory decrypts only the notes of one category; docs/clinical/ALGORITHMS.md) and
+// E3-PR0e2a (an optional field of a visit version record, the moment "Merge patients" assigned the version to its
+// card, is kept as the later of both copies on every write that joins two copies of the record, while imports and
+// other single-copy writes take it from that copy; it is carried by exports, imports and the event envelope, decides
+// the owner card first when present, is checked again by the move phase and alone does not queue the version again;
+// no device writes it yet).
+const BASE = '989fec00e7cbcb8478c972b666cb2a97479e5eb0decf9364bb2cae58b03143c6';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

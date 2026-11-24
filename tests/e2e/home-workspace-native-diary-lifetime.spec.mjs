@@ -147,6 +147,15 @@ async function section(page,key){
   const panel=page.locator(NATIVE+' .vilda-patient-tab-content[data-tab="'+key+'"]');
   await expect(panel).toBeVisible();return panel;
 }
+async function openJournalEntries(page, homeCard) {
+  const card = page.locator(homeCard ? NATIVE : '.vilda-auth-patient-card:not(.vhome-native-patient-card)');
+  if (homeCard) await section(page, 'treatment');
+  else await card.locator('button[data-tab="leczenie"]').click();
+  const entries = card.locator('.vilda-ko-seg [data-widok="wpisy"]');
+  await entries.click();
+  await expect(entries).toHaveAttribute('aria-selected', 'true');
+  await expect(card.locator('.vdo')).toBeVisible();
+}
 async function openFormB1(page){
   await section(page,'treatment');
   await page.locator('.vdo-add').click();
@@ -288,8 +297,8 @@ for(const variant of ['native public B with main A','B1 B with main A','B1 B wit
  });}
  const beforeMain=await mainFingerprint(),beforeB=await snapshot(page,id),beforeA=await snapshot(page,mainId);
  await page.evaluate(({id,b1})=>VildaAuthUI.showPatientCard(id,null,b1?{homePatientPresentation:true}:null),{id,b1:variant.startsWith('B1')});
- if(variant.startsWith('B1'))await section(page,'treatment');
- await expect(page.locator('.vdo')).toBeVisible();await page.locator('.vdo-add').click();
+ await openJournalEntries(page, variant.startsWith('B1'));
+ await page.locator('.vdo-add').click();
  const dialog=page.locator('.vdo-dialog');await expect(dialog).toBeVisible();
  await dialog.locator('#vdoDate').fill('2026-11-10');await dialog.locator('#vdoW').fill('74.6');
  await dialog.getByRole('button',{name:'Zapisz wpis',exact:true}).click();await expect(page.locator('.vdo-backdrop')).toHaveCount(0);
@@ -335,9 +344,11 @@ for(const transition of ['PRO','visit'])for(const action of ['delete','restore']
   },id);
   await page.evaluate(id=>VildaAuthUI.showPatientCard(id),id);
   await expect(page.locator('.vilda-auth-patient-card:not(.vhome-native-patient-card)')).toBeVisible();
+  await openJournalEntries(page, false);
   await page.getByRole('button',{name:/^Usunięte wpisy/}).click();
   await expect(page.getByRole('button',{name:'Przywróć',exact:true})).toBeVisible();
   await page.evaluate(id=>VildaAuthUI.showPatientCard(id,null,{homePatientPresentation:true},{activeTab:'treatment'}),id);
+  await openJournalEntries(page, true);
   await expect(page.getByRole('button',{name:'Przywróć',exact:true})).toBeVisible();
  }
  const writes=await page.evaluate(async({transition,action})=>{

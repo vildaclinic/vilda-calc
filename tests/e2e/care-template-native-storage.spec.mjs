@@ -476,6 +476,80 @@ test('ordinary incoming sync cannot delete or reassign a staged plan, its patien
   await assertOrdinaryAccount(page, ids, original, requests);
 });
 
+// E3-PR0e2a (P-SYNC-WLASCICIEL): sprawdzenie przed scaleniem przewiduje przeniesienie pomiaru do innej karty tą samą
+// regułą właściciela wersji co scalanie (Bsw_ladunekWygrywa). Od tego wydania rekord wersji może nieść chwilę przypisania
+// wersji do karty („Scal pacjentów”; w tym wydaniu żadne urządzenie jej nie zapisuje): najpierw późniejsza chwila
+// przypisania (brak — najwcześniej), potem rev i chwila zmiany. Dwa fikcyjne ładunki z wersjami pomiaru pierwszego
+// pacjenta pod drugim: z późniejszą chwilą przypisania przy tym samym rev i wcześniejszej chwili zmiany — odmowa przed
+// scaleniem, żaden sklep nie zapisany; przy wyższym rev i późniejszej chwili zmiany, gdy tutejsze rekordy mają
+// późniejszą chwilę przypisania (wstawioną w bazę, jak od urządzenia, które ją zapisuje) — bez odmowy, wersje zostają
+// u pierwszego pacjenta.
+test('sprawdzenie przed scaleniem przewiduje przeniesienie pomiaru najpierw po chwili przypisania wersji do karty, potem po rev', async ({ page }) => {
+  const { ids } = await seedNativeAccount(page);
+  const { panel, plan: saved } = await applyFromLibrary(page, ids);
+  const day = await activateFirstStage(page, panel);
+  const results = await page.evaluate(async ({ ids, planId, day }) => {
+    const vault = window.VildaVault, source = await vault.getPatientNote(ids.note);
+    const current = await vault.getCarePlan(planId);
+    const recorded = await vault.mutateStagedCarePlan({ action: 'recordFact', operationId: crypto.randomUUID(),
+      planId, patientId: ids.a, expectedRevision: current.rev, stepId: current.careContext.steps[0].id,
+      factId: crypto.randomUUID(), kind: 'performance', effectiveDateISO: day,
+      evidence: { noteId: source.id, sourceRecordRevAtCapture: source.rev } });
+    if (!recorded.saved) throw new Error('Actual native evidence link was not saved');
+    const baseline = await vault.exportSyncPayload();
+    const patient = baseline.patients.find(patient => patient.patientId === ids.a);
+    const destination = baseline.patients.find(patient => patient.patientId === ids.b);
+    if (!patient.snapshots.length || !destination) throw new Error('Actual native fixture is incomplete');
+    const later = new Date(Date.now() + 60_000).toISOString(), earlier = '2000-01-01T00:00:00.000Z';
+    async function snapshots(mode, run) {
+      const name = vault.USER_DB_PREFIX + vault.getCurrentUser().userId;
+      const database = await new Promise((resolve, reject) => {
+        const request = indexedDB.open(name);
+        request.onupgradeneeded = () => { request.transaction.abort(); reject(new Error('Native source observer cannot create storage')); };
+        request.onerror = () => reject(request.error); request.onsuccess = () => resolve(request.result);
+      });
+      try {
+        return await new Promise((resolve, reject) => {
+          const transaction = database.transaction(database.objectStoreNames, mode);
+          const result = run(transaction);
+          transaction.oncomplete = () => resolve(result && result.readyState ? result.result : result);
+          transaction.onabort = transaction.onerror = () => reject(transaction.error);
+        });
+      } finally { database.close(); }
+    }
+    async function digest() {
+      const rows = await snapshots('readonly', transaction => [...transaction.objectStoreNames].sort().map(name => [name, transaction.objectStore(name).getAll()]));
+      const image = rows.map(([name, request]) => [name, request.result]);
+      const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(image)));
+      return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+    const owned = async () => (await vault.getPatient(ids.a)).snapshots.map(snapshot => snapshot.snapshotId).sort().join();
+    const merge = async snapshotsOfB => {
+      const payload = { ...structuredClone(baseline), patients: [{ ...destination, snapshots: snapshotsOfB }], patientNotes: [], notes: [],
+        tombstones: [], patientNoteTombstones: [], noteTombstones: [] };
+      try { await vault.mergeSyncPayload(payload); return null; } catch (error) { return error.code || error.name; }
+    };
+    const results = [];
+    const digestBefore = await digest(), ownedBefore = await owned();
+    const first = await merge(patient.snapshots.map(snapshot => ({ ...snapshot, updatedAtISO: earlier, assignedAtISO: later })));
+    results.push({ name: 'późniejsza chwila przypisania w ładunku', code: first, unchanged: await digest() === digestBefore, owned: await owned() === ownedBefore });
+    await snapshots('readwrite', transaction => {
+      const store = transaction.objectStore('snapshots');
+      for (const snapshot of patient.snapshots) {
+        const request = store.get(snapshot.snapshotId);
+        request.onsuccess = () => store.put({ ...request.result, assignedAtISO: later });
+      }
+    });
+    const second = await merge(patient.snapshots.map(snapshot => ({ ...snapshot, rev: snapshot.rev + 1, updatedAtISO: later })));
+    results.push({ name: 'późniejsza tutejsza chwila przypisania', code: second, owned: await owned() === ownedBefore });
+    return results;
+  }, { ids, planId: saved.id, day });
+  expect(results).toEqual([
+    { name: 'późniejsza chwila przypisania w ładunku', code: 'CARE_NATIVE_PATIENT_REFERENCED', unchanged: true, owned: true },
+    { name: 'późniejsza tutejsza chwila przypisania', code: null, owned: true },
+  ]);
+});
+
 // SHA-256 of every store of the signed-in account's native database, read without the vault.
 function nativeDigest(device) {
   return device.evaluate(async () => {

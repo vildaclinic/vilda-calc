@@ -115,6 +115,9 @@ test('home B1 shell: selected patient Leczenie opens its existing obesity Włąc
   await native.locator('.vhome-b1-nav [data-tab="treatment"]').click();
   const treatment = native.locator('.vilda-patient-tab-content[data-tab="treatment"]');
   await expect(treatment).toBeVisible();
+  const entries = treatment.locator('.vilda-ko-karta').getByRole('tab', { name: /^Wpisy(?: \(\d+\))?$/u });
+  await entries.click();
+  await expect(entries).toHaveAttribute('aria-selected', 'true');
   const entry = treatment.locator('.vdo-list:not(.vdo-list-deleted) > .vdo-item[data-date="2026-04-14"]');
   await expect(entry).toContainText('Od Włączenia zależą cykl, ocena wg ChPL i listy pacjentów.');
   await expect.poll(() => page.evaluate(() => history.state?.shellAuthOwner)).toBe('start');

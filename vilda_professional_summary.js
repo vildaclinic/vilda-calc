@@ -184,6 +184,50 @@
     return { main: main, extra: contextRows.concat(extra.map(function (line) { return row(line, context); })), predictionNote: !homeGrowth && divided.pozostale.length > 0 };
   }
 
+  // P-OTYLOSC-STRONA (temat D, makieta zaakceptowana 2026-11-20): pod wierszem „Waga” — masa od pacjenta zapisana
+  // w dzienniku leczenia PO bieżącym pomiarze: „◇ od pacjenta 12.11.2026: 74,6 kg”. Tylko gdy bieżący pomiar jest
+  // ostatnim w historii (odtworzenie dawnej wizyty nie pokazuje danych z późniejszego okresu); wizyta wygrywa w tym
+  // samym miesiącu (VildaDziennikOtylosci.pomiaryStrony). Bez dziennika — wiersz jak dotąd.
+  function measuredMonths(measurement) {
+    var months = Number(measurement && measurement.ageMonths);
+    if (!number(months) && number(Number(measurement && measurement.ageYears))) months = Number(measurement.ageYears) * 12;
+    return number(months) ? months : null;
+  }
+  function laterPatientWeight() {
+    var journal = w.VildaDziennikOtylosci;
+    if (!journal || typeof journal.pomiaryStrony !== 'function' || typeof w.getCurrentCentileChartAgeMonths !== 'function') return null;
+    try {
+      var age = Number(w.getCurrentCentileChartAgeMonths());
+      if (!number(age)) return null;
+      var growth = typeof w.getEffectiveCentileGrowthDataState === 'function' ? w.getEffectiveCentileGrowthDataState() : null;
+      if (!growth || !Array.isArray(growth.measurements)) {
+        growth = w.advancedGrowthData && Array.isArray(w.advancedGrowthData.measurements) ? w.advancedGrowthData : w.basicGrowthData;
+      }
+      var history = growth && Array.isArray(growth.measurements) ? growth.measurements : [];
+      if (history.some(function (measurement) { var m = measuredMonths(measurement); return m !== null && m > age + 1e-9; })) return null;
+      var doc = w.document, weightField = doc && doc.getElementById('weight');
+      var dob = w.VildaDobAge;
+      var current = { ageMonths: age, weight: weightField ? Number(String(weightField.value).replace(',', '.')) : null,
+        dateISO: dob && typeof dob.readMeasuredAtISO === 'function' ? dob.readMeasuredAtISO() : null };
+      var later = journal.pomiaryStrony(history.concat([current])).filter(function (point) {
+        return point && point.zrodloMasy === 'pacjent' && Number(point.weight) > 0 && point.ageMonths > age + 1e-9;
+      });
+      return later.length ? later[later.length - 1] : null;
+    } catch (_) { return null; }
+  }
+  function reportedWeightNode(doc, point) {
+    var journal = w.VildaDziennikOtylosci;
+    var node = create(doc, 'span', 'professional-summary-reported');
+    node.dataset.origin = 'pacjent';
+    if (point.dateISO) node.dataset.date = point.dateISO;
+    var key = create(doc, 'span', 'professional-summary-reported-key');
+    key.setAttribute('aria-hidden', 'true');
+    var value = journal && typeof journal.liczbaPL === 'function' ? journal.liczbaPL(point.weight, 1) : String(point.weight).replace('.', ',');
+    var date = point.dateISO && journal && typeof journal.dataPL === 'function' ? journal.dataPL(point.dateISO) : '';
+    node.appendChild(key);
+    node.appendChild(doc.createTextNode('od pacjenta' + (date ? ' ' + date : '') + ': ' + value + ' kg'));
+    return node;
+  }
   function create(doc, tag, className) {
     var node = doc.createElement(tag);
     node.className = className;
@@ -208,6 +252,10 @@
         copy.appendChild(doc.createTextNode(data.text.slice(split + 1)));
       } else copy.textContent = data.text;
       node.appendChild(copy);
+      if (data.key === 'weight' && data.availability === 'available') {
+        var reported = laterPatientWeight();
+        if (reported) node.appendChild(reportedWeightNode(doc, reported));
+      }
       if (data.reference) {
         var reference = create(doc, 'span', 'professional-summary-reference');
         reference.textContent = data.reference.text;
@@ -260,6 +308,13 @@
     details.hidden = model.extra.length === 0;
     container.classList.add('professional-summary-content');
     return model;
+  }
+  // Dziennik leczenia wczytuje się po pacjencie (asynchronicznie) i zmienia po zapisie wpisu — karta od nowa.
+  if (w.document && typeof w.document.addEventListener === 'function') {
+    w.document.addEventListener('vilda:therapy-points-changed', function (event) {
+      if (!(event && event.detail && event.detail.source === 'obesity-dziennik')) return;
+      try { if (typeof w.updateProfessionalSummaryCard === 'function') w.updateProfessionalSummaryCard(); } catch (_) { /* karta bez zmian */ }
+    });
   }
   w.VildaProfessionalSummary = Object.freeze({ build: build, render: render, velocitySdsTone: velocitySdsTone });
 }(typeof window !== 'undefined' ? window : globalThis));

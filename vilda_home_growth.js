@@ -336,6 +336,32 @@
     if (note) { var small = el('small', 'vhome-growth-field-note', note); small.id = 'vhomeGrowthNote-' + entry[0]; label.appendChild(small); label.querySelector('input,select').setAttribute('aria-describedby', small.id); }
   }
   function section(title, parent) { var node = el('section', 'vhome-growth-section'); node.appendChild(el('h3', '', title)); parent.appendChild(node); return node; }
+  function renderReportedHistory(refreshNative) {
+    var host = dialog?.querySelector('[data-growth-reported-history]');
+    if (!host || !draft || ghView) return;
+    if (!stillOwned()) { close(true); return; }
+    var journal = w.VildaDziennikOtylosci, native = w.VildaAdvDziennik, reported = [];
+    // The native journal returns a projection only for its currently loaded
+    // patient. Refresh its read-only DOM before copying, so an old patient's
+    // blocks cannot survive a pending journal load. No calculation or save.
+    if (journal?.punktyWczytanego?.() && native?.odswiez) {
+      if (refreshNative) native.odswiez();
+      if (!stillOwned()) { close(true); return; }
+      reported = Array.from(byId('advMeasurements').children).filter(function (node) {
+        return node.classList.contains('adv-dz-row');
+      });
+    }
+    host.replaceChildren(); host.hidden = !reported.length;
+    if (reported.length) {
+      host.append(el('h4', '', 'Pomiary z dokumentacji leczenia'),
+        el('p', 'vhome-growth-field-note', 'Tylko do odczytu · zmiany w Karcie pacjenta.'));
+      reported.forEach(function (node) { host.appendChild(resultCopy(node)); });
+    }
+    var count = byId('vhomeGrowthHistoryCount'), patientCount = reported.length ? byId('advHistoryPatient')?.textContent : '';
+    if (count) count.textContent = 'Wcześniejsze pomiary: ' + (draft.rows.length + reported.length)
+      + (patientCount ? ' · ' + patientCount : '');
+    byId('vhomeGrowthRowsEmpty').hidden = draft.rows.length > 0 || reported.length > 0;
+  }
   function renderRows() {
     var host = byId('vhomeGrowthRows'); host.replaceChildren();
     var table = el('table', 'vhome-growth-table'), head = el('thead'), header = el('tr'), body = el('tbody');
@@ -387,8 +413,7 @@
       cell.appendChild(line); tools.appendChild(cell); body.appendChild(tools);
     });
     byId('vhomeGrowthRowsEmpty').hidden = draft.rows.length > 0; table.hidden = !draft.rows.length;
-    var count = byId('vhomeGrowthHistoryCount');
-    if (count) count.textContent = 'Wcześniejsze pomiary: ' + draft.rows.length;
+    renderReportedHistory(true);
   }
   function fold(title, entries, parent) {
     var details = el('details', 'vhome-growth-fold'), summary = el('summary', '', title), grid = el('div', 'vhome-growth-fields');
@@ -409,6 +434,8 @@
     history.appendChild(el('p', 'vhome-growth-current-measurement', 'Bieżący pomiar: ' + value('height') + ' cm · ' + value('weight') + ' kg · z formularza głównego'));
     var list = el('div', 'vhome-growth-table-wrap'); list.id = 'vhomeGrowthRows'; history.appendChild(list);
     var empty = el('p', 'vhome-growth-empty', 'Brak wcześniejszych pomiarów.'); empty.id = 'vhomeGrowthRowsEmpty'; history.appendChild(empty);
+    var reported = el('div', 'vhome-growth-reported-history'); reported.dataset.growthReportedHistory = ''; reported.hidden = true;
+    history.appendChild(reported);
     add.disabled = measurementsReadOnly();
     add.addEventListener('click', function () {
       if (measurementsReadOnly()) return;
@@ -732,6 +759,9 @@
     // the normal app. Existing callers can still use the public native ID.
     byId('toggleAdvancedGrowth').addEventListener('click', function (event) { event.preventDefault(); event.stopImmediatePropagation(); open('data'); }, true);
     new w.MutationObserver(schedule).observe(native, { attributes: true, attributeFilter: ['style', 'hidden', 'class'] });
+    new w.MutationObserver(function () {
+      if (draft && !ghView) renderReportedHistory(false);
+    }).observe(byId('advMeasurements'), { childList: true });
     new w.MutationObserver(function () {
       schedule();
       if (draft && !viewOwned()) close(true);

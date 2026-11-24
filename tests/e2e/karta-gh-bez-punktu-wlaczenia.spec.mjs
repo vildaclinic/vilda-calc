@@ -45,11 +45,13 @@ async function kartaPacjenta(page, punkty) {
   await page.waitForTimeout(800);
   const pid = await page.evaluate(async () => (await window.VildaVault.listPatients())[0].patientId);
   await page.evaluate((id) => window.VildaAuthUI.showPatientCard(id, () => {}, null), pid);
+  // P-KARTA-LECZENIE (etap 1): bloki leczenia stoją w zakładce „Leczenie” (druga, po „Status”).
+  await page.locator('.vilda-patient-tab[data-tab="leczenie"]').click();
 
   const karta = page.locator('.vilda-gh-summary').first();
   await expect(karta).toBeVisible({ timeout: 15000 });
-  const btn = page.locator('.vilda-gha-btn').first();
-  await btn.click();
+  // P-KARTA-LECZENIE, etap 3: „Dane analityczne” — widok „Analiza” karty leczenia GH (dotąd belka .vilda-gha-btn).
+  await page.locator('.vilda-kg-seg [data-widok="analiza"]').click();
   const panel = page.locator('.vilda-gha-panel').first();
   await expect(panel).toBeVisible();
   const norm = (t) => String(t || '').replace(/\s+/g, ' ');
@@ -65,14 +67,17 @@ test('Karta pacjenta, GH bez punktu „Włączenie leczenia": karta nie podaje w
     { id: 'gh-e2e-c2', type: 'continue', ageYears: 10, ageMonths: 0, height: 127, weight: 27, program: 'SNP', drug: 'Genotropin 12 mg', dose: 0.025, doseUnit: 'mg/kg/d' },
   ]);
 
-  // Pole „Włączenie" nie może twierdzić, że leczenie włączono w wieku pierwszej kontroli.
+  // Karta nie może twierdzić, że leczenie włączono w wieku pierwszej kontroli. Etap 3 (zmiana zamierzona): pola
+  // podsumowania zniknęły — dotąd „Włączeniebrak punktu”, „Punkty kontrolne2”, „Ostatnia kontrolaw wieku 10 l. 0 mies.”;
+  // teraz kafelek „Czas od 1. punktu” (nie „Czas leczenia”), cichy tekst nagłówka i cicha linia „Analizy”.
   expect(karta).toContain('Leczony hormonem wzrostu (rhGH)');
   expect(karta).not.toContain('Włączeniew wieku');
-  expect(karta).toContain('Włączeniebrak punktu');
+  expect(karta).not.toContain('Czas leczenia');
+  expect(karta).toContain('Czas od 1. punktu5 mies.od 9 l. 7 mies.');
   expect(karta).toContain('Brak punktu włączenia leczenia (pierwszy zapisany punkt kontrolny: w wieku 9 l. 7 mies.). Dodaj punkt „Włączenie leczenia” w monitorze terapii');
   // Reszta karty bez zmian.
-  expect(karta).toContain('Punkty kontrolne2');
-  expect(karta).toContain('Ostatnia kontrolaw wieku 10 l. 0 mies.');
+  expect(karta).toContain('Program SNP · 2 punkty kontrolne');
+  expect(karta).toContain('ostatnia kontrola w wieku 10 l. 0 mies.');
 
   // Panel: te same liczby, ale nazwane od 1. punktu, nie od włączenia.
   expect(panel).not.toContain('przy włączeniu');
@@ -90,7 +95,7 @@ test('Karta pacjenta, GH z punktem „Włączenie leczenia": karta podaje wiek w
     { id: 'gh-e2e-c2', type: 'continue', ageYears: 10, ageMonths: 0, height: 127, weight: 27, program: 'SNP', drug: 'Genotropin 12 mg', dose: 0.025, doseUnit: 'mg/kg/d' },
   ]);
 
-  expect(karta).toContain('Włączeniew wieku 9 l. 7 mies.');
+  expect(karta).toContain('Czas leczenia5 mies.od 9 l. 7 mies.'); // etap 3: dotąd pole „Włączeniew wieku 9 l. 7 mies.”
   expect(karta).not.toContain('Brak punktu włączenia');
   expect(panel).toContain('Wzrost przy włączeniu122 cm');
   expect(panel).toContain('Przyrost całkowity+5,0 cmprzez 5 mies.');

@@ -324,6 +324,7 @@
       przelacznik: el('advHistoryToggle'),
       naglowek: el('advHistoryHeading'),
       licznik: el('advHistoryCount'),
+      pacjent: el('advHistoryPatient'),
       uwaga: el('advHistoryInvalid'),
       uwagaTekst: el('advHistoryInvalidText'),
       podsumowanie: el('advHistorySummary'),
@@ -366,12 +367,28 @@
     return false;
   }
 
+  /** P-OTYLOSC-STRONA (temat D): bloki pomiarów z dziennika leczenia, które między wiersze wstawia
+   *  VildaAdvDziennik (vilda_cykle_leczenia.js). Ten moduł ich nie tworzy ani nie przestawia — tylko liczy do nagłówka
+   *  („6 pomiarów”, „3 od pacjenta”); zwinięta lista chowa je regułą CSS kontenera. */
+  function blokiDziennika(lista) {
+    if (!lista) return [];
+    return Array.prototype.filter.call(lista.children || [], function (n) {
+      return n && n.classList && n.classList.contains('adv-dz-row');
+    });
+  }
+
   function odswiez() {
     var e = elementy();
     if (!e.lista || !e.przelacznik) return;
     var ws = wiersze(e.lista);
     var pelne = ws.map(daneWiersza).filter(czyWypelniony);
-    var n = pelne.length;
+    var bloki = blokiDziennika(e.lista);
+    var nPacjenta = bloki.filter(function (b) { return b.getAttribute('data-origin') === 'pacjent'; }).length;
+    if (e.pacjent) {
+      e.pacjent.hidden = nPacjenta === 0;
+      e.pacjent.textContent = nPacjenta ? nPacjenta + ' od pacjenta' : '';
+    }
+    var n = pelne.length + bloki.length;
     var zwiniete = stan.zwiniete && n > 0;
 
     e.lista.classList.toggle(KLASA_ZWINIETE, zwiniete);

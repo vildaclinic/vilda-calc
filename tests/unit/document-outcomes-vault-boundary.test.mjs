@@ -12,7 +12,7 @@ const native=value=>value.slice(value.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE
 describe('strict compound outcome layer',()=>{
   it('exactly replays over the frozen independent profile/Trash fix',()=>{
     const base=restoreDocumentOutcomesBaseline(source);
-    expect(hash(base)).toBe('16c39d32d496738528142158ac57ad87e933538c17d710a4be1e290ed4fe0325');
+    expect(hash(base)).toBe('259c0804a7ac383383614adea0bf8a7b15bf682e3f5cdbcc05118a29858d3f36');
     expect(applyDocumentOutcomesDelta(base)).toBe(source);expect(hash(source)).toBe(manifest.integratedVaultSHA256);
     expect(native(source)).toBe(native(base));
     expect(restoreProfileTrashBaseline(source)).toBe(restoreProfileTrashBaseline(base));

@@ -1,0 +1,508 @@
+{
+  "baseCommit": "70beab64",
+  "auditCommit": "ac0869f2",
+  "baseSHA256": "ddb115c8990ae53af311a4b322fef41e25d9fb5d0a9567c70e76ed8145516a39",
+  "integratedSHA256": "27609864105b4e3295d09814283ef8cb38726f0e0f52648191c6e1ce9144b116",
+  "changes": [
+    {
+      "offset": 13124,
+      "before": "if(Rt)return Rt;if(!i.document||!i.document.body)return null;const t=i.document.getElementById(Oi);if(t){try{t.setAttribute(\"data-no-swipe\",\"true\")}catch{}Rt=t;try{kr(Rt)}catch{}return Rt}Rt=e(\"div\",{id:Oi,class:\"vilda-auth-root\",\"aria-live\":\"polite\"}),Rt.style.display=\"none\";try{Rt.setAttribute(\"data-no-swipe\",\"true\")}catch{}i.document.body.appendChild(Rt);try{kr(Rt)}catch{}return Rt}",
+      "after": "\n  if(Rt||!i.document||!i.document.body)return Rt;\n  const existing=i.document.getElementById(Oi);\n  Rt=existing||e(\"div\",{id:Oi,class:\"vilda-auth-root\",\"aria-live\":\"polite\"});\n  if(!existing)Rt.style.display=\"none\";\n  try{Rt.setAttribute(\"data-no-swipe\",\"true\")}catch{}\n  if(!existing)i.document.body.appendChild(Rt);\n  Rt.addEventListener(\"scroll\",GdZwolnijPrzewiniecieZakladek,{passive:true});\n  try{kr(Rt)}catch{}\n  return Rt;\n}\n"
+    },
+    {
+      "offset": 86462,
+      "before": "bez zmian (koperta cx.gh",
+      "after": "— kursy GH (ctxGhKursy niżej, P-GH-WZNOWIENIE"
+    },
+    {
+      "offset": 86877,
+      "before": "",
+      "after": "// P-GH-WZNOWIENIE część 1 (W3): GH w przedziale A–B = suma pokryć KURSÓW GH (cx.ghKursy z buildClinicalContext;\n// granica kursu = samo Zakończenie), nie koperty „pierwszy kurs → koniec ostatniego” — przerwa między kursami nie jest\n// leczeniem. Jeden kurs = ta sama liczba co koperta. Bez listy kursów (stary kontekst) — koperta cx.gh, jak dotąd.\nfunction ctxGhKursy(cx,ovlM){var gk=cx&&Array.isArray(cx.ghKursy)&&cx.ghKursy.length?cx.ghKursy:null;\n  if(!gk)return cx?ovlM(cx.gh):0;\n  var m=0;gk.forEach(function(k){m+=ovlM(k)});return m}\n"
+    },
+    {
+      "offset": 87248,
+      "before": "cx?ovlM(cx.gh):0",
+      "after": "ctxGhKursy(cx,ovlM)"
+    },
+    {
+      "offset": 140186,
+      "before": "na zakładce z pomiarami",
+      "after": "w zakładce „Leczenie” (P-KARTA-LECZENIE; od etapu 2 — widok „Wpisy” karty\n// leczenia otyłości)"
+    },
+    {
+      "offset": 141113,
+      "before": "zakladka = karta && karta.querySelector(i.__VILDA_HOME_WORKSPACE_PREVIEW__===true&&",
+      "after": "kartaB1 = karta && i.__VILDA_HOME_WORKSPACE_PREVIEW__ === true && "
+    },
+    {
+      "offset": 141249,
+      "before": "?'button[data-tab=\"treatment\"]':'button[data-tab=\"antro\"]')",
+      "after": ";\n        var zakladka = karta && (kartaB1 ? karta.querySelector('button[data-tab=\"treatment\"]') :\n          karta.querySelector('button[data-tab=\"leczenie\"]') || karta.querySelector('button[data-tab=\"antro\"]'))"
+    },
+    {
+      "offset": 141425,
+      "before": "",
+      "after": "          // P-KARTA-LECZENIE, etap 2: karta leczenia otyłości na widoku „Wpisy”, przewinięcie do karty, fokus na „Wpisy”.\n          var wpisy = karta && karta.querySelector('.vilda-ko-seg [data-widok=\"wpisy\"]');\n          var kartaOb = wpisy && typeof wpisy.closest == \"function\" ? wpisy.closest(\".vilda-ko-karta\") : null;\n          if (wpisy && kartaOb) {\n            wpisy.click();\n            try { Kl_przewin(kartaOb); } catch (x) { kartaOb.scrollIntoView(); }\n            try { wpisy.focus({ preventScroll: true }); } catch (x) { /* brak fokusu */ }\n            return;\n          }\n"
+    },
+    {
+      "offset": 141527,
+      "before": "try { sekcja.scrollIntoView({ block: \"start\", behavior: \"smooth\" }",
+      "after": "// P-KARTA-LECZENIE: Kl_przewin — scrollIntoView podmienia custom-fixes.js (telefon: nic; komputer: okno).\n          try { Kl_przewin(sekcja"
+    },
+    {
+      "offset": 186979,
+      "before": "Siatki",
+      "after": "Trend dawki"
+    },
+    {
+      "offset": 187255,
+      "before": "traj",
+      "after": "leczenie\",widokGh:\"trend"
+    },
+    {
+      "offset": 247076,
+      "before": "",
+      "after": "}\n// Extend the scroll range from the bottom of the scrollport so a shorter panel\n// or its loading state cannot clamp the current position.\nfunction GdZachowajPrzewiniecieZakladek(tabs){\n  const overlay=tabs.closest(\".vilda-auth-overlay\");\n  if(!Rt||!overlay||overlay.parentElement!==Rt||Rt.scrollTop<=0)return;\n  const height=Math.ceil(Rt.scrollTop);\n  let spacer=overlay.querySelector(\".vilda-patient-tabs-scroll-spacer\");\n  if(!spacer){\n    spacer=i.document.createElementNS(\"http://www.w3.org/2000/svg\",\"svg\");\n    spacer.setAttribute(\"class\",\"vilda-patient-tabs-scroll-spacer\");\n    spacer.setAttribute(\"width\",\"1\");\n    spacer.setAttribute(\"aria-hidden\",\"true\");\n    overlay.appendChild(spacer);\n  }\n  spacer.setAttribute(\"height\",String(height));\n}\nfunction GdZwolnijPrzewiniecieZakladek(event){\n  const root=event.currentTarget;\n  if(root.scrollTop>0)return;\n  const spacer=root.querySelector(\".vilda-patient-tabs-scroll-spacer\");\n  if(spacer)spacer.remove();\n"
+    },
+    {
+      "offset": 453721,
+      "before": "",
+      "after": " if(P.Gw_kurs!==t[L-1].Gw_kurs)K+=\" M \"+A.toFixed(1)+\" \"+X.toFixed(1);else"
+    },
+    {
+      "offset": 458864,
+      "before": "",
+      "after": "||f.Gw_kurs!==K.Gw_kurs"
+    },
+    {
+      "offset": 463216,
+      "before": "",
+      "after": ",Kg_cz"
+    },
+    {
+      "offset": 463488,
+      "before": "",
+      "after": "Kg_cz&&(Kg_cz.dobowa=A!=null?\"2 \\xD7 \"+qt(A/2,2)+\" mg\":\"\",Kg_cz.podanie=K||\"\",Kg_cz.podanieV=K?qt(d.dose/2,3):\"\"),"
+    },
+    {
+      "offset": 464076,
+      "before": "",
+      "after": " [od P-GH-PREPARAT-BIEZACY (2026-11-23): gdy punkt ma lek — decyduje lek, bez leku — program punktu]"
+    },
+    {
+      "offset": 464263,
+      "before": "return/^Increlex/.test(String(d||\"\"))||/^IGF/.test(String(p||\"\")",
+      "after": "/* P-GH-PREPARAT-BIEZACY: lek decyduje, bez leku — program punktu (blok Gp_*). */return Gp_increlexPunktu(d,p"
+    },
+    {
+      "offset": 465025,
+      "before": "",
+      "after": ",Kl_wy"
+    },
+    {
+      "offset": 465326,
+      "before": "a.length;l++)a[l].type===\"start\"&&!r&&(r=a[l]),a[l].type===\"end\"&&(o=a[l]);var Gs=r;r||(r=n[0]);var d=n[n.length-1],c=r.program||d.program||\"\",s=c===\"IGF-1\"||/^Increlex/.test(String(d.drug||r.drug||\"\")),p=d.doseUnit||\"mg/kg/d\",u=s&&!/tydz/i.test(p)?Gwl_inc(d",
+      "after": "n.length;l++)n[l].type===\"start\"&&!r&&(r=n[l]),n[l].type===\"end\"&&(o=n[l]);/* P-GH-WZNOWIENIE: przy kilku kursach GH stan, Wlaczenie, program i preparat z biezacego (ostatniego) kursu (blok Gw_*). */var Gw=Gw_biezacy(a),Gw_p=Gw?Gw.kurs.punkty:n;Gw&&(r=Gw.kurs.wlaczenie,o=Gw.kurs.b!=null?Gw_p[Gw_p.length-1]:null);var Gs=r;r||(r=Gw_p[0]);var d=n[n.length-1];/* P-GH-PREPARAT-BIEZACY: lek, program i Increlex czy rhGH z bieżącego preparatu (ostatni punkt kursu), nie z programu Włączenia (blok Gp_*). */var Gp_s=Gp_biezacy(Gw_p),c=Gp_s.program,s=Gp_s.increlex,p=d.doseUnit||\"mg/kg/d\",Kg_ib=s&&!/tydz/i.test(p),Kg_inc={},u=Kg_ib?Gwl_inc(d,Kg_inc"
+    },
+    {
+      "offset": 465836,
+      "before": "v=e(\"div\",{class:\"vilda-gh-summary-head\"},[e(\"span\",{class:\"vilda-gh-summary-badge\",text:",
+      "after": "Kl_odz="
+    },
+    {
+      "offset": 465990,
+      "before": "}),e(\"span\",{class:\"vilda-gh-summary-chip\",text:o?\"leczenie zako\\u0144czone\":\"aktywne\"})",
+      "after": ",Kl_st=o?\"leczenie zako\\u0144czone\":\"aktywne\",v=e(\"div\",{class:\"vilda-gh-summary-head\"},[e(\"span\",{class:\"vilda-gh-summary-badge\",text:Kl_odz}),e(\"span\",{class:\"vilda-gh-summary-chip\",text:Kl_st}),Gw?Gw_znacznik(Gw):null"
+    },
+    {
+      "offset": 466175,
+      "before": "d.drug||r.drug",
+      "after": "Gp_s.lek"
+    },
+    {
+      "offset": 466303,
+      "before": "",
+      "after": "Gw?Gw_p.length+\" w kursie (\"+a.length+\" \\u0142\\u0105cznie)\":"
+    },
+    {
+      "offset": 466489,
+      "before": "",
+      "after": ",{poKursach:!1}"
+    },
+    {
+      "offset": 467958,
+      "before": "",
+      "after": ":Gw?Gw_infoW2(Gw)"
+    },
+    {
+      "offset": 468211,
+      "before": "e(\"div\",{class:\"vilda-gh-summary\"},[v,",
+      "after": "Kl_wy&&(Kl_wy.odznaka=Kl_odz,Kl_wy.stan=Kl_st,Kl_wy.zakonczone=!!o,Kl_wy.dawka=u===\"\\u2014\"?\"\":u,Kl_wy.dawkaCz=Kg_dawkaCz(Kg_ib,Kg_inc,d,p),Kl_wy.program=c,Kl_wy.programPelny=c?bl(c):\"\",Kl_wy.preparat=Gp_s.lek,Kl_wy.punkty=Gw?Gw_p.length:a.length,Kl_wy.punktyRazem=a.length,Kl_wy.kursy=Gw?Gw.liczba:1,Kl_wy.ostatnia=ra(d)===\"\\u2014\"?\"\":ra(d),Kl_wy.glowa=v),e(\"div\",{class:\"vilda-gh-summary\"},[v,Kl_wy&&Kl_wy.karta?null:"
+    },
+    {
+      "offset": 473342,
+      "before": "",
+      "after": ",Kl_wy"
+    },
+    {
+      "offset": 473570,
+      "before": "l.length;s++)if(l[s].type===\"start\"){c=l[s];break}",
+      "after": "d.length;s++)if(d[s].type===\"start\"){c=d[s];break}/* P-GH-WZNOWIENIE: przy kilku kursach GH wartosci od biezacego (ostatniego) kursu; kurs bez Wlaczenia po Zakonczeniu (W2) — bez przyrostu, czasu i dhSDS. */var Gw=Gw_biezacy(l),Gw_d=d,Gw_w2=!!Gw&&Gw.bezWlaczenia;Gw&&(d=Gw.kurs.punkty.slice(),l=d,c=Gw.kurs.wlaczenie);"
+    },
+    {
+      "offset": 474113,
+      "before": "",
+      "after": "!Gw_w2&&"
+    },
+    {
+      "offset": 474215,
+      "before": "",
+      "after": "Gw_w2?\"Przyrost od W\\u0142\\u0105czenia\":"
+    },
+    {
+      "offset": 474283,
+      "before": "",
+      "after": "Gw_w2?Gw_BEZ_WLACZENIA:"
+    },
+    {
+      "offset": 475633,
+      "before": "y!=null&&x!=null?x-y:null",
+      "after": "!Gw_w2&&y!=null&&x!=null?x-y:null;Kl_wy&&(Kl_wy.czas=Gk&&W>0?W+\" mies.\":\"\",Kl_wy.tempo=F!=null&&!(Fo&&Fo.krotki)?qt(F,1)+\" cm/rok\":\"\",Kl_wy.dhsds=z!=null?be(z,\"\",2):\"\",Kl_wy.przeglad={czasK:Gk||Gw_w2?\"Czas leczenia\":\"Czas od 1. punktu\",czasV:!Gw_w2&&W>0?String(W):\"\\u2014\",czasJ:\"mies.\",czasOd:Gw_w2?Gw_BEZ_WLACZENIA:ra(c)!==\"\\u2014\"?\"od \"+ra(c):\"\",tempoV:F!=null?qt(F,1):\"\\u2014\",tempoJ:F!=null?\"cm/rok\":\"\",tempoSub:S||\"\",tempoCls:F!=null&&!(Fo&&Fo.krotki)?\"good\":\"\",dhsdsV:z!=null?be(z,\"\",2):\"\\u2014\",dhsdsCls:z!=null?z>=0?\"good\":\"bad\":\"\",dhsdsSds:z!=null?Ur(y)+\" \\u2192 \"+String(Ur(x)).replace(/^hSDS /,\"\"):\"\",dhsdsOd:z!=null&&!Gk,dhsdsSub:z!=null?\"\":Gw_w2?Gw_BEZ_WLACZENIA:\"brak SDS start/teraz\"})"
+    },
+    {
+      "offset": 475853,
+      "before": "\"brak SDS start/teraz\"));for(var I=null,R=d.length-1;R>=0;R--)if(typeof d[R].boneAge==\"number\"&&isFinite(d[R].boneAge)){I=d",
+      "after": "Gw_w2?Gw_BEZ_WLACZENIA:\"brak SDS start/teraz\"));for(var I=null,R=Gw_d.length-1;R>=0;R--)if(typeof Gw_d[R].boneAge==\"number\"&&isFinite(Gw_d[R].boneAge)){I=Gw_d"
+    },
+    {
+      "offset": 476185,
+      "before": "",
+      "after": "+(Gw?\" \\u2014 kurs \"+Gw.numer+\" z \"+Gw.liczba:\"\")"
+    },
+    {
+      "offset": 481902,
+      "before": "",
+      "after": "Kl_wy&&Kl_wy.karta?{class:\"vilda-gha-panel\"}:"
+    },
+    {
+      "offset": 482134,
+      "before": "",
+      "after": "Kl_wy&&Kl_wy.karta?it:("
+    },
+    {
+      "offset": 482334,
+      "before": "",
+      "after": ")"
+    },
+    {
+      "offset": 489813,
+      "before": "",
+      "after": ", Kl_po"
+    },
+    {
+      "offset": 489977,
+      "before": "function czesci(punkty, stan, sekcja) {\n    var out = [];\n    try { out.push(Cl(punkty)); } catch (x) { Ot(\"karta otylosc kafelek\", x); }\n    if (sekcja) out.push(sekcja);\n    try { out.push(Ml(punkty, S, h, stan)); } catch (x) { Ot(\"karta otylosc panel\", x); }\n    try { out.push(jl(t, punkty)); } catch (x) {",
+      "after": "// P-KARTA-LECZENIE: notatki do karty „wg notatek” (jl) — te, które Karta już ma; po zapisie wpisu — świeżo przeczytane.\n  var Kl_n = Array.isArray(notatki) ? notatki : [];\n  // P-KARTA-LECZENIE, etap 2: grupa z punktami leczenia to jedna karta leczenia z przełącznikiem (Ko_karta): Cl i Ml\n  // w trybie karty (podsumowanie bez siatki pól, panel bez belki), sekcja w układzie „karta”. Gdy karta się nie złoży\n  // (wyjątek, podsumowanie bez rysunku) — Ko_uklad = false i grupa jak w etapie 1 (podsumowanie, sekcja, panel).\n  var Ko_uklad = true;\n  function Ko_jest(punkty) {\n    return Ko_uklad && Array.isArray(punkty) && ui(punkty).length > 0;\n  }\n  function czesci(punkty, stan, sekcja, wy) {\n    var out = [], ko = Ko_jest(punkty), pods = null, panel = null;\n    if (ko) { wy.podsumowanie.karta = true; wy.panel.karta = true; }\n    try { pods = Cl(punkty, wy.podsumowanie); } catch (x) { wy.podsumowanie = {}; Ot(\"karta otylosc kafelek\", x); }\n    // Blok, który się nie narysował, nie zostawia wartości na pasku (Ob_b wypełnia wyjście przed wykresem).\n    try { panel = Ml(punkty, S, h, stan, wy.panel); } catch (x) { wy.panel = {}; Ot(\"karta otylosc panel\", x); }\n    if (ko) {\n      if (!pods) return null;\n      try {\n        out.push(Ko_karta({ podsumowanie: pods, sekcja: sekcja, panel: panel, wy: wy, patientId: t }));\n      } catch (x) { Ot(\"karta leczenie karta\", x); return null; }\n    } else {\n      out.push(pods, sekcja, panel);\n    }\n    try { out.push(jl(t, punkty, Kl_n, wy.notatki)); } catch (x) { wy.notatki = {};"
+    },
+    {
+      "offset": 490361,
+      "before": "",
+      "after": "  // P-KARTA-LECZENIE: wartości paska leczenia z tego samego rysunku (Kl_daneOb), po każdym rysunku grupy.\n  function Kl_zglos(wy, jest) {\n    if (typeof Kl_po != \"function\") return;\n    try { Kl_po(jest ? Kl_daneOb(wy) : null); } catch (x) { Ot(\"karta leczenie pasek\", x); }\n  }\n"
+    },
+    {
+      "offset": 490410,
+      "before": "var stare = czesci(migawka, null, null",
+      "after": "var wy0 = { podsumowanie: {}, panel: {}, notatki: {}, sekcja: {} };\n    var stare = czesci(migawka, null, null, wy0);\n    if (!stare) { Ko_uklad = false; wy0 = { podsumowanie: {}, panel: {}, notatki: {}, sekcja: {} }; stare = czesci(migawka, null, null, wy0); }\n    Kl_zglos(wy0, stare.length > 0"
+    },
+    {
+      "offset": 490706,
+      "before": "",
+      "after": "    var wy = { podsumowanie: {}, panel: {}, notatki: {}, sekcja: {} }, ko = Ko_jest(stan.punkty);\n"
+    },
+    {
+      "offset": 491070,
+      "before": "",
+      "after": ",\n          uklad: ko ? \"karta\" : void 0, wyjscie: ko ? wy.sekcja : void 0"
+    },
+    {
+      "offset": 491147,
+      "before": "czesci(stan.punkty, stan, sekcja).forEach(function (c) { box.appendChild(c); });",
+      "after": "var cz = czesci(stan.punkty, stan, sekcja, wy);\n    if (!cz) { Ko_uklad = false; rysuj(stan); return; }\n    cz.forEach(function (c) { box.appendChild(c); });\n    Kl_zglos(wy, !!box.firstChild);"
+    },
+    {
+      "offset": 491535,
+      "before": "",
+      "after": "      Kl_n = Array.isArray(n) ? n : [];\n"
+    },
+    {
+      "offset": 505078,
+      "before": "",
+      "after": "\":l===o?\"true\":\"false\",\"data-biezacy"
+    },
+    {
+      "offset": 506136,
+      "before": "",
+      "after": ",Kl_wy"
+    },
+    {
+      "offset": 506668,
+      "before": "y=e(\"div\",{class:\"vilda-gh-summary-head\"},[e(\"span\",{class:\"vilda-gh-summary-badge\",text:",
+      "after": "Kl_odz="
+    },
+    {
+      "offset": 506806,
+      "before": "}),e(\"span\",{class:\"vilda-gh-summary-chip\",text:o?\"leczenie zako\\u0144czone\":\"aktywne\"",
+      "after": ",Kl_st=o?\"leczenie zako\\u0144czone\":\"aktywne\",y=e(\"div\",{class:\"vilda-gh-summary-head\"},[e(\"span\",{class:\"vilda-gh-summary-badge\",text:Kl_odz}),e(\"span\",{class:\"vilda-gh-summary-chip\",text:Kl_st"
+    },
+    {
+      "offset": 507905,
+      "before": "e(\"div\",{class:\"vilda-gh-summary\"},[y,",
+      "after": "Kl_wy&&(Kl_wy.odznaka=Kl_odz,Kl_wy.stan=Kl_st,Kl_wy.zakonczone=!!o,Kl_wy.dawka=p===\"\\u2014\"?\"\":p,Kl_wy.lek=c,Kl_wy.substancja=s,Kl_wy.punkty=Ob_k.pts.length,Kl_wy.punktyRazem=a.length,Kl_wy.cykle=Ob_C.length,Kl_wy.dawkaOd=Ko_dawkaOd(Ob_k.pts),Kl_wy.glowa=y),e(\"div\",{class:\"vilda-gh-summary\"},[y,Kl_wy&&Kl_wy.karta?null:"
+    },
+    {
+      "offset": 516702,
+      "before": "",
+      "after": ",Kl_wy"
+    },
+    {
+      "offset": 516847,
+      "before": "){var ",
+      "after": ",Kl_out){var Kl_red=null,Kl_rv,Kl_k,Ko_H,Ko_prog=null,"
+    },
+    {
+      "offset": 518346,
+      "before": "",
+      "after": "Ko_H=H;"
+    },
+    {
+      "offset": 521584,
+      "before": "",
+      "after": "Kl_rv="
+    },
+    {
+      "offset": 521692,
+      "before": "",
+      "after": "Kl_red=ot[ot.length-1],"
+    },
+    {
+      "offset": 521816,
+      "before": "",
+      "after": ",Ko_prog=ot[ot.length-1]"
+    },
+    {
+      "offset": 523209,
+      "before": "title:\"Przed oknem oceny \\u2014 oce\\u0144 po \"+L",
+      "after": "krotko:Kl_k=\"oce\\u0144 po \"+L,title:\"Przed oknem oceny \\u2014 \"+Kl_k"
+    },
+    {
+      "offset": 523615,
+      "before": "",
+      "after": "krotko:Kl_k=\"kontynuowa\\u0107 leczenie\","
+    },
+    {
+      "offset": 523663,
+      "before": "kontynuowa\\u0107 leczenie\"",
+      "after": "\"+Kl_k"
+    },
+    {
+      "offset": 523822,
+      "before": "",
+      "after": "krotko:Kl_k=\"wg ChPL odstawi\\u0107 i ponownie oceni\\u0107\","
+    },
+    {
+      "offset": 523873,
+      "before": "wg ChPL odstawi\\u0107 i ponownie oceni\\u0107\"",
+      "after": "\"+Kl_k"
+    },
+    {
+      "offset": 528505,
+      "before": "",
+      "after": "Kl_out&&(Kl_out.czas=Ob_g&&D!==\"\\u2014\"?D+\" \"+M:\"\",Kl_out.redukcja=Kl_red&&ot.indexOf(Kl_red)>=0&&K!=null?{miara:P,tekst:Kl_rv}:null,Kl_out.ocena=!Ob_m.end&&gt&&gt.krotko?{cls:gt.cls,ic:gt.ic,tekst:gt.krotko}:null,Kl_out.przeglad={czasK:Ob_g?\"Czas leczenia\":\"Czas od 1. punktu\",czasV:D,czasJ:M,wlData:Ob_g?_n(l.dateISO):\"\",wlWiek:Ob_g?ra(l):\"\",masaV:u!=null?qt(u,1):\"\\u2014\",masaJ:u!=null?\"kg\":\"\",redMasa:C!=null&&N!=null?be(C,\"\",1)+\" kg (\"+be(N,\"%\",1)+\")\":\"\",redMasaCls:z(C),od:Ob_g?\"od w\\u0142\\u0105czenia\":\"od 1. punktu\",bmiV:v!=null?qt(v,1):\"\\u2014\",redBmi:Ko_H!=null?be(Ko_H,\"%\",1):\"\",prog:Ko_prog&&ot.indexOf(Ko_prog)>=0&&ht.thresholdPct!=null?{miara:P,tekst:\"\\u2265\"+ht.thresholdPct+\"%\"}:null,werdykt:$&&gt?{cls:gt.cls,ic:gt.ic,tytul:gt.title,opis:gt.desc||\"\"}:null,miara:P||\"\",bmiBrak:v==null,ocena:Kl_out.redukcja,ocenaZ:Ob_po&&Ob_po.inny&&Ob_po.punkt?_n(Ob_po.punkt.dateISO)||\"z wiekiem \"+Ye(Ob_po.punkt)+\" mies.\":\"\"});"
+    },
+    {
+      "offset": 528902,
+      "before": "",
+      "after": ",Kl_wy"
+    },
+    {
+      "offset": 528964,
+      "before": "",
+      "after": "Kl_wy&&Kl_wy.karta?{class:\"vilda-gha-panel\"}:"
+    },
+    {
+      "offset": 529250,
+      "before": "",
+      "after": "Kl_wy&&Kl_wy.karta?st:("
+    },
+    {
+      "offset": 529454,
+      "before": "}function jl(t,a",
+      "after": ")}function jl(t,a,Kl_n,Kl_wy"
+    },
+    {
+      "offset": 529614,
+      "before": "",
+      "after": "Array.isArray(Kl_n)&&(!"
+    },
+    {
+      "offset": 529665,
+      "before": "",
+      "after": ")"
+    },
+    {
+      "offset": 529834,
+      "before": "return n.listPatientNotesForPatient(t).then(function",
+      "after": "function Kl_buduj"
+    },
+    {
+      "offset": 530474,
+      "before": "h=e(\"div\",{class:\"vilda-gh-summary-head\"},[e(\"span\",{class:\"vilda-gh-summary-badge\",text:",
+      "after": "Kl_odz="
+    },
+    {
+      "offset": 530630,
+      "before": "}),e(\"span\",{class:\"vilda-gh-summary-chip\",text:",
+      "after": ",Kl_st="
+    },
+    {
+      "offset": 530727,
+      "before": "",
+      "after": ",h=e(\"div\",{class:\"vilda-gh-summary-head\"},[e(\"span\",{class:\"vilda-gh-summary-badge\",text:Kl_odz}),e(\"span\",{class:\"vilda-gh-summary-chip\",text:Kl_st"
+    },
+    {
+      "offset": 531621,
+      "before": "}}).catch(function(){}),o}function Pl(t,a){var n=e(\"div\",",
+      "after": ",Kl_wy&&(Kl_wy.odznaka=Kl_odz,Kl_wy.stan=Kl_st,Kl_wy.zakonczone=!p,Kl_wy.dawka=s.dose||\"\")}}if(Array.isArray(Kl_n))return Kl_buduj(Kl_n),o.firstChild?o:null;return n.listPatientNotesForPatient(t).then(Kl_buduj).catch(function(){}),o}\n/* P-GH-WZNOWIENIE, część 1 (decyzje właściciela 2026-11-20, W1–W4; opis: docs/clinical/ALGORITHMS.md). Leczenie GH\n   wznowione po Zakończeniu. Kursy z JEDNEGO źródła — VildaTrajectoryAnalysis.ghKursy (vilda_trajectory_analysis.js,\n   ładowany na tych samych stronach co ten plik): punkty wg wieku (stabilnie, bez zależności od kolejności tablicy),\n   granicą kursu jest samo Zakończenie (W3, bez progu przerwy). Bieżący kurs = ostatni. Z niego podsumowanie (wl)\n   bierze stan, „Włączenie”, program i preparat oraz „kurs k z N” i „Punkty kontrolne: n w kursie (M łącznie)”,\n   „Dane analityczne” (kl) — punkt bazowy, wzrost przy włączeniu, przyrost, czas, tempo, ΔhSDS i odcinki leków, a trend\n   (Pl) — program; linia dawki trendu jest przerwana między kursami, a siatki rysują pas na kurs. „Aktualna dawka”\n   i „Ostatnia kontrola” — ostatni punkt wg wieku (jak dotąd). Kurs bez Włączenia po Zakończeniu (W2, stary zapis:\n   Kontynuacja po Zakończeniu) jest aktywny, ale bez czasu, przyrostu i ΔhSDS; podsumowanie prosi o dopisanie\n   Włączenia w DocPro (od części 2 monitor przyjmuje Włączenie po Zakończeniu). Jeden kurs (albo brak modułu trajektorii) — Karta liczy dokładnie jak dotąd. */\nvar Gw_BEZ_WLACZENIA = \"brak Włączenia po Zakończeniu\";\n/** Kursy GH z modułu trajektorii; null — brak modułu albo wyjątek (Karta liczy wtedy jak dotąd). */\nfunction Gw_kursy(t) {\n  try {\n    var J = i.VildaTrajectoryAnalysis;\n    return J && typeof J.ghKursy == \"function\" ? J.ghKursy(t) : null;\n  } catch (y) { return null; }\n}\n/** Bieżący (ostatni) kurs GH, gdy kursów jest więcej niż jeden; null — jeden kurs albo brak modułu. */\nfunction Gw_biezacy(t) {\n  var k = Gw_kursy(t);\n  if (!k || k.length < 2) return null;\n  var b = k[k.length - 1];\n  return { kurs: b, numer: b.numer, liczba: k.length, kursy: k, bezWlaczenia: !b.wlaczenie };\n}\n/** Znacznik „kurs k z N” obok stanu leczenia — jak „cykl k z N” leczenia otyłości (ten sam wygląd, Ob_css). */\nfunction Gw_znacznik(g) {\n  try { Ob_css(); } catch (y) {}\n  return e(\"span\", { class: \"vilda-gh-summary-chip vilda-ob-cyc\", text: \"kurs \" + g.numer + \" z \" + g.liczba });\n}\n/** W2: treść informacji w podsumowaniu (ramka informacji P-GH-BEZ-STARTU, bez zmian wyglądu); od P-GH-WZNOWIENIE,\n    część 2 — z prośbą o dopisanie Włączenia w DocPro. */\nfunction Gw_infoW2(g) {\n  var pop = g.kursy[g.kursy.length - 2], z = pop.punkty[pop.punkty.length - 1];\n  return \"Kontynuacja po Zakończeniu bez nowego Włączenia (Zakończenie w wieku \" + ra(z) + \", pierwszy punkt kursu: w wieku \"\n    + ra(g.kurs.punkty[0]) + \"). Dopisz punkt „Włączenie leczenia” w DocPro (monitor terapii), by liczyć czas leczenia, \"\n    + \"przyrost i ΔhSDS od wznowienia.\";\n}\n/** Punkty wg wieku (stabilnie, z punktami bez wieku) — „pierwsze Włączenie” wg wieku, jak w podsumowaniu (wl). */\nfunction Gw_wgWieku(t) {\n  if (!Array.isArray(t)) return t;\n  return t.map(function (p, j) { return { p: p, j: j, m: p ? (p.ageYears || 0) * 12 + (p.ageMonths || 0) : 0 }; })\n    .sort(function (x, y) { return x.m - y.m || x.j - y.j; }).map(function (x) { return x.p; });\n}\n/** Pas GH na siatkach: jeden na kurs (rysuj — dotychczasowy pas z listy punktów); jeden kurs — punkty wg wieku. */\nfunction Gw_pasy(t, rysuj) {\n  var k = Gw_kursy(t);\n  if (!k || k.length < 2) return rysuj(Gw_wgWieku(t));\n  return k.map(function (x) { return rysuj(x.punkty); }).filter(Boolean);\n}\n/** Trend GH: numer kursu punktu (linia dawki przerwana między kursami); jeden kurs — bez numerów (jak dotąd). */\nfunction Gw_numerKursu(t) {\n  var k = Gw_kursy(t);\n  if (!k || k.length < 2) return function () { return void 0; };\n  return function (p) {\n    for (var j = 0; j < k.length; j++) if (k[j].punkty.indexOf(p) >= 0) return k[j].numer;\n    return 0;\n  };\n}\n/** Trend GH: punkty, z których brany jest program — bieżący kurs; jeden kurs — cała lista wg wieku. */\nfunction Gw_punktyProgramu(t) {\n  var g = Gw_biezacy(t);\n  return g ? g.kurs.punkty : Gw_wgWieku(t);\n}\n/* P-GH-PREPARAT-BIEZACY (decyzja właściciela 2026-11-23: „popraw ten błąd”; opis: docs/clinical/ALGORITHMS.md, wpis\n   P-GH-PREPARAT-BIEZACY). Stan bieżący leczenia GH w Karcie opisuje BIEŻĄCY preparat — ostatni punkt wg wieku bieżącego\n   kursu (d w wl, jak „Aktualna dawka” i „Ostatnia kontrola”) — a nie program punktu Włączenia. Dotąd program Włączenia\n   „IGF-1” przesądzał o Increlexie także po przejściu na rhGH (znacznik „Leczony IGF-1 (mekasermina)”, program IGF-1\n   i dawka rhGH dzielona „na podanie”).\n   - Increlex czy rhGH: ostatni punkt kursu (wg wieku, od końca), który ma lek albo program — gdy ma lek, decyduje lek\n     (/^Increlex/), bez leku — jego program (IGF…); bez leku i programu w całym kursie — rhGH.\n   - Lek bieżący: lek ostatniego punktu; gdy pusty — ostatni wcześniejszy lek TEGO SAMEGO rodzaju (Increlex albo rhGH);\n     brak — pusto („—”), nigdy lek drugiego rodzaju (dawka rhGH nie dostaje podpisu „Increlex”).\n   - Program bieżący: program ostatniego punktu; gdy pusty — ostatni wcześniejszy program tego samego rodzaju\n     (IGF… dla Increlexu, inny dla rhGH); brak — „—” (program Włączenia IGF-1 nie przechodzi na kurs rhGH).\n   Z tego wl bierze znacznik, pola Program i Preparat, „Aktualną dawkę” (Increlex na podanie — Gwl_inc — albo mg/kg/d,\n   mg/kg/tydz), a przez obiekt wyjściowy — kafelek „Preparat i dawka”, pasek leczenia, cichy tekst nagłówka i linię\n   „Analizy”; Pl — program pasa „Pokaż typowy zakres dawki”. Punkt pojedynczy (Gwl_isInc: wiersz tabeli trendu, legenda\n   wykresu, odcinki leków, Historia, edytor notatki): gdy punkt ma lek — decyduje lek, bez leku — program punktu.\n   Kurs jednym preparatem i jednym programem (każdy punkt z lekiem i programem, jak zapisuje je DocPro) — wynik jak dotąd. */\n/** Rodzaj punktu GH: true — Increlex, false — rhGH, null — punkt bez leku i bez programu. */\nfunction Gp_rodzajPunktu(p) {\n  if (!p) return null;\n  if (p.drug) return /^Increlex/.test(String(p.drug));\n  if (p.program) return /^IGF/.test(String(p.program));\n  return null;\n}\n/** Program bieżący kursu (podsumowanie wl i pas typowego zakresu w Pl) — jak w Gp_biezacy. */\nfunction Gp_program(punkty) {\n  return Gp_biezacy(punkty).program;\n}\n/** Punkt pojedynczy (Gwl_isInc): Increlex, gdy punkt ma lek Increlex; bez leku — gdy program punktu to IGF-1 (jak dotąd). */\nfunction Gp_increlexPunktu(lek, program) {\n  return lek ? /^Increlex/.test(String(lek)) : /^IGF/.test(String(program || \"\"));\n}\n/** Stan bieżący podsumowania GH (wl): punkty kursu wg wieku (ostatni = d w wl). { lek, program, increlex } — lek\n    i program bieżący (uzupełniane tylko z punktów tego samego rodzaju) oraz Increlex czy rhGH. */\nfunction Gp_biezacy(punkty) {\n  var lista = Array.isArray(punkty) ? punkty.filter(function (p) {\n    return p && (p.type === \"start\" || p.type === \"continue\" || p.type === \"end\");\n  }) : [];\n  var increlex = false, j;\n  for (j = lista.length - 1; j >= 0; j--) {\n    var rodzaj = Gp_rodzajPunktu(lista[j]);\n    if (rodzaj !== null) { increlex = rodzaj; break; }\n  }\n  var ost = lista[lista.length - 1] || null;\n  function zgodny(pole, wzor) {\n    for (var k = lista.length - 1; k >= 0; k--) {\n      var w = lista[k][pole];\n      if (w && wzor.test(String(w)) === increlex) return String(w);\n    }\n    return \"\";\n  }\n  return {\n    lek: ost && ost.drug ? String(ost.drug) : zgodny(\"drug\", /^Increlex/),\n    program: ost && ost.program ? String(ost.program) : zgodny(\"program\", /^IGF/),\n    increlex: increlex\n  };\n}\n/* P-KARTA-LECZENIE, etap 1 (decyzje właściciela 2026-11-19, D1–D5; plan: docs/KARTA_LECZENIE_PLAN.md, opis:\n   docs/clinical/ALGORITHMS.md). Bloki leczenia Karty — podsumowanie i „Dane analityczne” GH oraz grupa otyłości Ob_dz\n   („Wpisy leczenia”, „Dane analityczne — otyłość” albo karta „wg notatek”) — stoją bez zmian w zakładce „Leczenie”,\n   drugiej po „Status”. Zakładka jest tylko przy co najmniej jednym bloku; pacjent bez leczenia ma sześć zakładek.\n   Nad paskiem zakładek stoi po jednym pasku na leczenie (D4: pasek zakładek nie skacze przy przełączaniu), w kolejności\n   z D2: trwające przed zakończonymi, przy równym stanie GH przed otyłością. Pasek to przycisk otwierający zakładkę.\n   Wartości paska wypełniają te same wywołania, które rysują bloki (wl/kl/Cl/Ml/jl dostają obiekt wyjściowy) — nigdy\n   tekst z DOM. Krótka ocena (D1) to końcówka tytułu oceny, ustalona w Ml w tym samym miejscu co tytuł; jest tylko\n   przy trzech stanach („przed oknem”, „wystarczająca”, „niewystarczająca”) i tylko w trwającym cyklu. Szerokość:\n   komputer — jedna linia (tekst wartości maleje do 0,84 rem, potem odpadają ostatnie części); telefon (≤ 560 px)\n   albo za mało miejsca — dwie linie (do 0,8 rem = 12,8 px, potem odpadają ostatnie części, nigdy pigułka). */\nvar Kl_IKONA = '<path d=\"m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z\"/><path d=\"m8.5 8.5 7 7\"/>';\nvar Kl_STOPNIE = [\"\", \"vilda-kl-pasek--r1\", \"vilda-kl-pasek--r2\", \"vilda-kl-pasek--r3\"];\nvar Kl_licznik = 0;\n/** Zakładka do pokazania: „leczenie” tylko w Karcie z leczeniem, w innej — „Status” (pozostałe bez zmian). */\nfunction Kl_zakladka(tab, kl) {\n  return tab === \"leczenie\" && !kl ? \"antro\" : tab;\n}\n/** Pasek GH: dawka jak „Aktualna dawka”, czas tylko od punktu „Włączenie”, tempo bez „krótkiego odstępu”, ΔhSDS. */\nfunction Kl_daneGh(pods, panel) {\n  if (!pods || !pods.odznaka) return null;\n  var a = panel || {};\n  return {\n    id: \"gh\", odznaka: pods.odznaka, stan: pods.stan, zakonczone: !!pods.zakonczone, ocena: null,\n    czesci: [pods.dawka, a.czas, a.tempo ? \"tempo \" + a.tempo : \"\", a.dhsds ? \"ΔhSDS \" + a.dhsds : \"\"].filter(Boolean)\n  };\n}\n/** Pasek otyłości: dawka jak „Aktualna dawka”, czas jak „Czas leczenia”, miara i wartość jak „Redukcja do oceny”\n    (BMI u dzieci i młodzieży, „masa” u dorosłych) i krótka ocena; karta „wg notatek” — ostatnia dawka z notatki. */\nfunction Kl_daneOb(wy) {\n  var pods = wy && wy.podsumowanie, panel = (wy && wy.panel) || {}, wg = wy && wy.notatki;\n  if (pods && pods.odznaka) {\n    var red = panel.redukcja;\n    return {\n      id: \"ob\", odznaka: pods.odznaka, stan: pods.stan, zakonczone: !!pods.zakonczone,\n      ocena: !pods.zakonczone && panel.ocena ? panel.ocena : null,\n      czesci: [pods.dawka, panel.czas, red ? (red.miara === \"masa ciała\" ? \"masa\" : red.miara) + \" \" + red.tekst : \"\"].filter(Boolean)\n    };\n  }\n  if (wg && wg.odznaka) {\n    return { id: \"ob\", odznaka: wg.odznaka, stan: wg.stan, zakonczone: !!wg.zakonczone, ocena: null, czesci: [wg.dawka].filter(Boolean) };\n  }\n  return null;\n}\n/** D2: trwające przed zakończonymi; przy równym stanie kolejność wejścia (GH, otyłość). */\nfunction Kl_kolejnosc(lista) {\n  return lista.map(function (x, j) { return { x: x, j: j }; }).sort(function (a, b) {\n    var za = a.x.dane && a.x.dane.zakonczone ? 1 : 0, zb = b.x.dane && b.x.dane.zakonczone ? 1 : 0;\n    return za - zb || a.j - b.j;\n  }).map(function (a) { return a.x; });\n}\nfunction Kl_waski() {\n  try { return !!(i.matchMedia && i.matchMedia(\"(max-width:560px)\").matches); } catch (x) { return false; }\n}\n/** Układ paska: dwie linie albo jedna, stopień tekstu wartości (0,92 / 0,88 / 0,84 / 0,8 rem) i liczba części. */\nfunction Kl_ustaw(p, dwie, krok, ile) {\n  p.classList.toggle(\"vilda-kl-pasek--dwie\", !!dwie);\n  Kl_STOPNIE.forEach(function (k, j) { if (k) p.classList.toggle(k, j === krok); });\n  var cz = p._klCzesci || [], t = p.querySelector(\".vilda-kl-pasek-t\");\n  if (t) t.textContent = cz.slice(0, ile).join(\" · \");\n  p.setAttribute(\"data-pominiete\", String(cz.length - ile));\n}\nfunction Kl_miesci(p, dwie) {\n  var w = p.querySelector(dwie ? \".vilda-kl-pasek-l2\" : \".vilda-kl-pasek-main\");\n  return !w || w.scrollWidth <= w.clientWidth + 1;\n}\n/** Pierwszy stopień tekstu, przy którym mieszczą się wszystkie części (albo ostatni dozwolony). */\nfunction Kl_krok(p, dwie) {\n  var n = (p._klCzesci || []).length, ost = dwie ? 3 : 2;\n  for (var k = 0; k <= ost; k++) {\n    Kl_ustaw(p, dwie, k, n);\n    if (Kl_miesci(p, dwie)) return { krok: k, miesci: true };\n  }\n  return { krok: ost, miesci: false };\n}\n/** Dopasowanie pasków jednej Karty do szerokości; paski w tym samym układzie dostają ten sam (najmniejszy) stopień. */\nfunction Kl_dopasuj(paski) {\n  var waski = Kl_waski();\n  var stany = paski.map(function (p) {\n    var dwie = waski, r = Kl_krok(p, dwie);\n    if (!dwie && !r.miesci) {\n      var ile = (p._klCzesci || []).length;\n      while (ile > 1 && !Kl_miesci(p, false)) { ile -= 1; Kl_ustaw(p, false, r.krok, ile); }\n      if (!Kl_miesci(p, false)) { dwie = true; r = Kl_krok(p, true); }\n    }\n    return { p: p, dwie: dwie, krok: r.krok };\n  });\n  [false, true].forEach(function (dwie) {\n    var grupa = stany.filter(function (s) { return s.dwie === dwie; });\n    var krok = grupa.reduce(function (m, s) { return Math.max(m, s.krok); }, 0);\n    grupa.forEach(function (s) {\n      var ile = (s.p._klCzesci || []).length, min = dwie ? 0 : 1;\n      Kl_ustaw(s.p, dwie, krok, ile);\n      while (ile > min && !Kl_miesci(s.p, dwie)) { ile -= 1; Kl_ustaw(s.p, dwie, krok, ile); }\n    });\n  });\n}\n/** Pasek leczenia: przycisk z odznaką i stanem jak w podsumowaniu, wartościami, pigułką oceny i „Leczenie →” / „›”. */\nfunction Kl_pasek(d, naKlik) {\n  Kl_licznik += 1;\n  var idStan = \"vilda-kl-stan-\" + Kl_licznik, idWart = \"vilda-kl-wart-\" + Kl_licznik;\n  var l1 = e(\"span\", { class: \"vilda-kl-pasek-l1\" }, [\n    e(\"span\", { class: \"vilda-kl-pasek-odznaka\", text: d.odznaka }),\n    d.stan ? e(\"span\", { class: \"vilda-kl-pasek-stan\", id: idStan, text: d.stan }) : null\n  ]);\n  var l2 = e(\"span\", { class: \"vilda-kl-pasek-l2\", id: idWart }, [\n    e(\"span\", { class: \"vilda-kl-pasek-t\" }),\n    d.ocena ? e(\"span\", { class: \"vilda-kl-pigulka vilda-kl-pigulka--\" + d.ocena.cls, text: d.ocena.ic + \" \" + d.ocena.tekst }) : null\n  ]);\n  var b = e(\"button\", {\n    type: \"button\", class: \"vilda-kl-pasek\", \"data-leczenie\": d.id,\n    \"aria-label\": d.odznaka + \": otwórz zakładkę Leczenie\",\n    \"aria-describedby\": (d.stan ? idStan + \" \" : \"\") + idWart\n  }, [\n    e(\"span\", { class: \"vilda-kl-pasek-main\" }, [l1, l2]),\n    e(\"span\", { class: \"vilda-kl-pasek-idz\", \"aria-hidden\": \"true\", text: \"Leczenie →\" }),\n    e(\"span\", { class: \"vilda-kl-pasek-chev\", \"aria-hidden\": \"true\", text: \"›\" })\n  ]);\n  b._klCzesci = (d.czesci || []).slice();\n  Kl_ustaw(b, Kl_waski(), 0, b._klCzesci.length);\n  b.addEventListener(\"click\", naKlik);\n  return b;\n}\n/** Przewinięcie Karty tak, by cel stał u góry widoku. Karta przewija się we własnym kontenerze\n    (#vilda-auth-ui-root), a custom-fixes.js na stronie formularza podmienia Element.scrollIntoView (telefon — nic,\n    komputer — przewinięcie okna), więc liczymy przesunięcie najbliższego przewijanego przodka. */\nfunction Kl_przewin(cel) {\n  if (!cel || typeof cel.getBoundingClientRect != \"function\") return;\n  var el = cel.parentElement, cs;\n  while (el && el !== i.document.body && el !== i.document.documentElement) {\n    try { cs = i.getComputedStyle(el); } catch (x) { cs = null; }\n    if (cs && /(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1) break;\n    el = el.parentElement;\n  }\n  var gora = cel.getBoundingClientRect().top;\n  if (el && el !== i.document.body && el !== i.document.documentElement) {\n    var y = Math.max(0, Math.round(el.scrollTop + gora - el.getBoundingClientRect().top - 8));\n    try { el.scrollTo({ top: y, behavior: \"smooth\" }); } catch (x) { el.scrollTop = y; }\n    return;\n  }\n  try { i.scrollTo({ top: Math.max(0, Math.round(gora + (i.pageYOffset || 0) - 8)), behavior: \"smooth\" }); } catch (x) {}\n}\n/** Zakładka „Leczenie”, jej treść i paski nad zakładkami; null, gdy Karta nie ma żadnego bloku leczenia.\n    o: patientId, rekord (migawka), plec, zaawansowane, siatka, notatki, user, zakladka (HTML ikony i etykiety). */\nfunction Kl_leczenie(o) {\n  var s = (o && o.rekord) || {}, lista = [], obWpis = null, gotowe = false, paski = [], ro = null, szer = null;\n  // P-KARTA-LECZENIE, etap 2: widok karty leczenia przetrwa tylko odświeżenie Karty po synchronizacji (o.tlo);\n  // etap 3 — także widok karty leczenia GH (osobna pamięć).\n  if (o && !o.tlo) { Ko_zapomnij(o.patientId); Kg_zapomnij(o.patientId); }\n  // P-KARTA-LECZENIE, etap 3: grupa GH to karta leczenia GH z przełącznikiem (Kg_grupa; bez karty — bloki jak w etapie 1).\n  var gh = Kg_grupa(o, s);\n  if (gh) lista.push({ el: gh.el, dane: gh.dane });\n  var obDane = null, obBox;\n  try {\n    obBox = Ob_dz(o.patientId, s, o.plec, o.siatka, o.notatki, o.user, o.homeContext, o.notificationIsCurrent, o.captureNavigation, function (d) {\n      obDane = d;\n      if (obWpis) obWpis.dane = d;\n      if (gotowe) uloz();\n    });\n  } catch (x) {\n    Ot(\"karta dziennik otylosci\", x);\n    obBox = null;\n  }\n  if (obBox) { obWpis = { el: obBox, dane: obDane }; lista.push(obWpis); }\n  if (!lista.length) return null;\n  var tresc = e(\"div\", o.homeContext ? { class: \"vilda-kl-tresc\" } :\n    { class: \"vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-kl-tresc\", \"data-tab\": \"leczenie\" });\n  var zakladka = e(\"button\", { class: \"vilda-patient-tab\", type: \"button\", html: o.zakladka, \"data-tab\": \"leczenie\" });\n  var kontener = e(\"div\", { class: \"vilda-kl-paski\" });\n  function dopasuj(wymus) {\n    var widoczne = paski.filter(function (p) { return p.isConnected && p.clientWidth > 0; });\n    if (!widoczne.length) return;\n    var klucz = widoczne[0].clientWidth + (Kl_waski() ? \"w\" : \"s\");\n    if (!wymus && klucz === szer) return;\n    szer = klucz;\n    try { Kl_dopasuj(widoczne); } catch (x) { Ot(\"karta leczenie pasek\", x); }\n  }\n  function obserwuj() {\n    if (ro) ro.disconnect();\n    ro = null;\n    if (typeof i.ResizeObserver != \"function\") return;\n    ro = new i.ResizeObserver(function () { dopasuj(false); });\n    paski.forEach(function (p) { ro.observe(p); });\n  }\n  function otworz(x) {\n    try { zakladka.click(); } catch (y) { Ot(\"karta leczenie zakladka\", y); }\n    // Pierwsze leczenie — pasek zakładek na górę (pod nim początek zawartości); kolejne — jego pierwszy blok.\n    try { Kl_przewin(Kl_kolejnosc(lista)[0] === x ? zakladka.parentNode : x.el.firstElementChild); } catch (y) { Ot(\"karta leczenie przewiniecie\", y); }\n  }\n  function uloz() {\n    var kol = Kl_kolejnosc(lista);\n    // Bloki przestawiane tylko przy zmianie kolejności (D2) — bez zbędnego odpinania grupy otyłości po każdym rysunku.\n    var jest = Array.prototype.slice.call(tresc.children);\n    if (kol.some(function (x, j) { return jest[j] !== x.el; })) kol.forEach(function (x) { tresc.appendChild(x.el); });\n    oe(kontener);\n    paski = [];\n    kol.forEach(function (x) {\n      if (!x.dane) return;\n      var p = Kl_pasek(x.dane, function () { otworz(x); });\n      paski.push(p);\n      kontener.appendChild(p);\n    });\n    obserwuj();\n    dopasuj(true);\n  }\n  uloz();\n  gotowe = true;\n  try {\n    i.document.fonts && i.document.fonts.ready && i.document.fonts.ready.then(function () { dopasuj(true); });\n  } catch (x) {}\n  // trendGh — karta GH ma „Trend dawki” (Siatki centylowe nie rysują wtedy trendu); pokazGh(widok) — notatka GH.\n  return { zakladka: zakladka, tresc: tresc, paski: kontener, grupy: [gh && gh.el, null, obBox], dopasuj: dopasuj, trendGh: !!(gh && gh.trend), pokazGh: gh && gh.pokaz ? gh.pokaz : null };\n}\n/* P-KARTA-LECZENIE, etap 2 (makieta hybrydy zaakceptowana przez właściciela 2026-11-19, „zaczynaj etap 2” 2026-11-21;\n   plan: docs/KARTA_LECZENIE_PLAN.md, opis: docs/clinical/ALGORITHMS.md). Grupa leczenia otyłości w zakładce „Leczenie”\n   jest jedną miętową kartą leczenia — kontenerem podsumowania (Cl): nagłówek ze znacznikiem leku, stanem i przyciskiem\n   „+ Kontynuacja” (ten sam przycisk i ta sama obsługa co w sekcji „Wpisy leczenia”: VildaDziennikOtylosciUI.sekcja\n   z opcją uklad: \"karta\" oddaje akcje swojego nagłówka), przełącznik „Przegląd | Wpisy (N) | Analiza” i trzy widoki:\n   - Przegląd: cztery kafelki (Aktualna dawka, Czas leczenia, Masa, BMI) i linia oceny wg ChPL (ikona, tytuł i pierwsze\n     zdanie opisu tej samej oceny co pole oceny w „Analizie”) z „Szczegóły oceny” (→ „Analiza”, przewinięcie do pola);\n   - Wpisy: sekcja „Wpisy leczenia” bez nagłówka (objaśnienia pod „Jak działa dziennik leczenia ⌄”);\n   - Analiza: panel „Dane analityczne — otyłość” (Ml) rozwinięty, bez belki, z cichą linią „lek · substancja · punkty”.\n   Wartości kafelków i linii pochodzą z obiektów wyjściowych Cl i Ml/Ob_b — z tych samych obliczeń, które rysują\n   podsumowanie i panel — nigdy z tekstu DOM; brak wartości — „—” jak w kafelkach panelu. Bieżący (ostatni) cykl.\n   Wybrany widok przetrwa przebudowę grupy (zapis wpisu, „Pokaż wszystkie”, „Usunięte wpisy”, odświeżenie po\n   synchronizacji): pamięć Ko_widoki per pacjent; nowe otwarcie Karty (Kl_leczenie bez „tlo”) zaczyna od „Przeglądu”. */\nvar Ko_licznik = 0;\nvar Ko_widoki = {};\n/* Częstość podania leku w podpisie „Aktualnej dawki”: lek rozpoznany tak jak w ocenie wg ChPL\n   (ObesityResponseCriteria.resolveDrug), częstość jak products[…].frequency w katalogu leków obesity_therapy.js\n   (moduł ładowany tylko w DocPro). Mysimba („wg titracji”) i lek nierozpoznany — bez częstości. */\nvar Ko_CZESTOSC = { wegovy: \"1×/tydz.\", saxenda: \"1×/dobę\", mounjaro: \"1×/tydz.\" };\n/** Nowe otwarcie Karty pacjenta: widok karty leczenia od „Przeglądu”. */\nfunction Ko_zapomnij(patientId) {\n  delete Ko_widoki[patientId];\n}\nfunction Ko_czestosc(lek, substancja) {\n  try {\n    var K = i.ObesityResponseCriteria, d = K && typeof K.resolveDrug == \"function\" ? K.resolveDrug(lek, substancja) : null;\n    return (d && Ko_CZESTOSC[d.drugKey]) || \"\";\n  } catch (x) {\n    return \"\";\n  }\n}\n/** „od DD.MM.RRRR” podpisu dawki: najwcześniejszy punkt bieżącego cyklu z tą samą dawką (tekst dawki jak w podsumowaniu)\n    ciągle do ostatniego punktu; punkt bez dawki albo z inną przerywa ciąg; bez daty — pusto. */\nfunction Ko_dawkaOd(pts) {\n  var lista = Array.isArray(pts) ? pts : [];\n  var klucz = function (p) {\n    return p && p.dose != null && String(p.dose).trim() !== \"\" ? String(Ob_dawka(p.dose)).replace(/\\s+/g, \" \").trim() : \"\";\n  };\n  var k = klucz(lista[lista.length - 1]);\n  if (!k) return \"\";\n  var od = lista[lista.length - 1];\n  for (var j = lista.length - 2; j >= 0 && klucz(lista[j]) === k; j--) od = lista[j];\n  return _n(od && od.dateISO) || \"\";\n}\n/** Pierwsze zdanie opisu oceny: do pierwszej kropki (wykrzyknika, pytajnika; także „.)”), po której stoi odstęp i wielka\n    litera, albo cały opis. Skróty („tyg.”, „l.”, „4.”) kończą zdanie tylko przed wielką literą. Tekst bez zmian. */\nfunction Ko_pierwszeZdanie(opis) {\n  var t = String(opis == null ? \"\" : opis).trim();\n  var m = /[.!?]\\)?(?=\\s+[A-ZĄĆĘŁŃÓŚŹŻΔ„])/.exec(t);\n  return m ? t.slice(0, m.index + m[0].length) : t;\n}\nfunction Ko_punkty(n) {\n  var a = Math.abs(n) % 100, b = a % 10;\n  return n + (n === 1 ? \" punkt kontrolny\" : b >= 2 && b <= 4 && !(a >= 12 && a <= 14) ? \" punkty kontrolne\" : \" punktów kontrolnych\");\n}\n/** Kafelek „Przeglądu” (wygląd .vilda-gha-tile, własne klasy — lokatory kafelków panelu nie trafiają w „Przegląd”).\n    czesci: [{ t, cls, sep }] — części podpisu; gdy się nie mieszczą w linii, każda staje w osobnej (Ko_podpisy). */\nfunction Ko_kafel(etykieta, wartosc, jednostka, czesci) {\n  var v = e(\"div\", { class: \"vilda-ko-v\" }, [wartosc]);\n  if (jednostka) v.appendChild(e(\"small\", { text: \" \" + jednostka }));\n  var sub = [];\n  (czesci || []).filter(function (c) { return c && c.t; }).forEach(function (c, j) {\n    if (j) sub.push(e(\"span\", { class: \"vilda-ko-sep\", text: c.sep || \" \" }));\n    sub.push(e(\"span\", { class: \"vilda-ko-cz\" + (c.cls ? \" vilda-ko-cz--\" + c.cls : \"\"), text: c.t }));\n  });\n  return e(\"div\", { class: \"vilda-ko-kafel\" }, [e(\"div\", { class: \"vilda-ko-k\", text: etykieta }), v, sub.length ? e(\"div\", { class: \"vilda-ko-sub\" }, sub) : null]);\n}\n/** Podpis, którego części nie mieszczą się w jednej linii, łamie się na granicy części (bez wiszącego „·”). */\nfunction Ko_podpisy(korzen) {\n  if (!korzen || typeof korzen.querySelectorAll != \"function\") return;\n  Array.prototype.forEach.call(korzen.querySelectorAll(\".vilda-ko-sub\"), function (sub) {\n    sub.classList.remove(\"vilda-ko-sub--stos\");\n    var cz = sub.querySelectorAll(\".vilda-ko-cz\");\n    if (cz.length > 1 && cz[cz.length - 1].offsetTop > cz[0].offsetTop + 2) sub.classList.add(\"vilda-ko-sub--stos\");\n  });\n}\n/** Cztery kafelki „Przeglądu” z obiektów wyjściowych podsumowania (pods) i panelu (prz = Kl_out.przeglad z Ob_b). */\nfunction Ko_kafelki(pods, prz) {\n  var p = prz || {}, kreska = \"—\";\n  var dawka = pods.dawka || \"\";\n  var czesciDawki = dawka ? [{ t: Ko_czestosc(pods.lek, pods.substancja) }, { t: pods.dawkaOd ? \"od \" + pods.dawkaOd : \"\", sep: \" · \" }] : [];\n  var prog = p.prog ? { t: \"próg ChPL \" + p.prog.tekst, sep: \" · \" } : null;\n  var progMasa = prog && p.prog.miara === \"masa ciała\";\n  var czas = prz && p.czasV && p.czasV !== kreska;\n  return e(\"div\", { class: \"vilda-ko-kafelki\" }, [\n    Ko_kafel(\"Aktualna dawka\", dawka || kreska, \"\", czesciDawki),\n    Ko_kafel(p.czasK || \"Czas leczenia\", czas ? p.czasV : kreska, czas ? p.czasJ : \"\",\n      p.wlData || p.wlWiek ? (p.wlData ? [{ t: \"od \" + p.wlData }, { t: p.wlWiek ? \"(\" + p.wlWiek + \")\" : \"\" }] : [{ t: \"w wieku \" + p.wlWiek }]) : []),\n    Ko_kafel(\"Masa\", p.masaV || kreska, p.masaJ || \"\",\n      [p.redMasa ? { t: p.redMasa, cls: p.redMasaCls } : null, p.redMasa ? { t: p.od } : null, progMasa ? prog : null]),\n    Ko_kafel(\"BMI\", p.bmiV || kreska, \"\", Ko_bezBmi(p) ? [\n      // ostatni wpis bez wzrostu (masa od pacjenta), a ocena liczy BMI: wartość „Redukcji do oceny” i wpis, z którego ją\n      // policzono (kafelek „Wzrost do oceny”) — te same liczby co pasek leczenia i panel\n      { t: \"brak wzrostu w ostatnim wpisie\" },\n      p.ocena ? { t: \"ocena: \" + (p.ocena.miara === \"ΔbmiSDS\" ? \"ΔbmiSDS \" : \"\") + p.ocena.tekst + (p.ocenaZ ? \" (z wpisu \" + p.ocenaZ + \")\" : \"\"), sep: \" · \" } : null,\n      prog && !progMasa ? prog : null\n    ] : [p.redBmi ? { t: p.redBmi + \" \" + p.od } : null, prog && !progMasa ? prog : null])\n  ]);\n}\n/** BMI ostatniego wpisu nie istnieje (wpis bez wzrostu), a ocena wg ChPL liczy BMI albo ΔbmiSDS. */\nfunction Ko_bezBmi(p) {\n  return !!(p && p.bmiBrak && (p.miara === \"BMI\" || p.miara === \"ΔbmiSDS\"));\n}\n/** Linia oceny „Przeglądu”: ikona, tytuł i pierwsze zdanie opisu tej samej oceny co pole oceny panelu. */\nfunction Ko_werdykt(w, naSzczegoly) {\n  if (!w || !w.tytul) return null;\n  var zdanie = Ko_pierwszeZdanie(w.opis);\n  var link = e(\"button\", { type: \"button\", class: \"vilda-ko-link vilda-ko-werdykt-link\", text: \"Szczegóły oceny\" });\n  link.addEventListener(\"click\", naSzczegoly);\n  return e(\"div\", { class: \"vilda-ko-werdykt vilda-ko-werdykt--\" + (w.cls || \"wait\") }, [\n    e(\"span\", { class: \"vilda-ko-werdykt-ic\", \"aria-hidden\": \"true\", text: w.ic || \"\" }),\n    e(\"span\", { class: \"vilda-ko-werdykt-txt\" }, [\n      e(\"span\", { class: \"vilda-ko-werdykt-t\", text: w.tytul }),\n      zdanie ? e(\"span\", { class: \"vilda-ko-werdykt-d\", text: zdanie }) : null\n    ]),\n    link\n  ]);\n}\n/** Karta leczenia otyłości. o: podsumowanie (element Cl w trybie karty — bez siatki pól), sekcja (element sekcji\n    w układzie „karta” albo null), panel (element Ml w trybie karty — panel bez belki — albo null), wy (obiekty\n    wyjściowe: podsumowanie, panel, sekcja), patientId. Zwraca kontener podsumowania jako kartę. */\nfunction Ko_karta(o) {\n  var karta = o.podsumowanie, wy = o.wy || {}, pods = wy.podsumowanie || {}, pan = wy.panel || {}, sek = wy.sekcja || {};\n  var pid = o.patientId, prz = o.panel ? pan.przeglad || null : null;\n  Sl(); // wygląd przełącznika (.vilda-oba-seg) wstrzykuje panel otyłości — tu na wypadek panelu, który się nie narysował\n  Ko_licznik += 1;\n  var id = \"vilda-ko-\" + Ko_licznik;\n  karta.classList.add(\"vilda-ko-karta\");\n  // Nagłówek: akcje nagłówka sekcji („+ Kontynuacja”; bez aktywnego cyklu także „Włączenie w DocPro →” i wyjaśnienie),\n  // pod nim komunikat tego przycisku.\n  if (pods.glowa && sek.akcje) pods.glowa.appendChild(sek.akcje);\n  if (pods.glowa && sek.komunikat) karta.insertBefore(sek.komunikat, pods.glowa.nextSibling);\n\n  var widoki = [], tabs = [], ro = null, szer = null;\n  var przeglad = e(\"div\", {}, [Ko_kafelki(pods, prz)]);\n  widoki.push({ id: \"przeglad\", nazwa: \"Przegląd\", tresc: przeglad });\n  if (o.sekcja) widoki.push({ id: \"wpisy\", nazwa: typeof sek.liczba == \"number\" ? \"Wpisy (\" + sek.liczba + \")\" : \"Wpisy\", tresc: o.sekcja });\n  var analiza = null;\n  if (o.panel) {\n    var cicha = [pods.lek, pods.substancja, typeof pods.punkty == \"number\"\n      ? Ko_punkty(pods.punkty) + (pods.cykle > 1 ? \" w cyklu (\" + pods.punktyRazem + \" łącznie)\" : \"\") : \"\"].filter(Boolean);\n    analiza = e(\"div\", {}, [cicha.length ? e(\"p\", { class: \"vilda-ko-cicha\", text: cicha.join(\" · \") }) : null, o.panel]);\n    widoki.push({ id: \"analiza\", nazwa: \"Analiza\", tresc: analiza });\n  }\n  var seg = e(\"div\", { class: \"vilda-oba-seg vilda-ko-seg\", role: \"tablist\", \"aria-label\": \"Leczenie otyłości — widok karty\" });\n  var panele = widoki.map(function (w) {\n    var idTab = id + \"-tab-\" + w.id, idPanel = id + \"-\" + w.id;\n    var b = e(\"button\", { type: \"button\", role: \"tab\", id: idTab, \"aria-controls\": idPanel, \"aria-selected\": \"false\", \"data-widok\": w.id, text: w.nazwa });\n    b.addEventListener(\"click\", function () { wybierz(w.id, true); });\n    seg.appendChild(b);\n    tabs.push(b);\n    return e(\"div\", { class: \"vilda-ko-widok vilda-ko-widok--\" + w.id, role: \"tabpanel\", id: idPanel, \"aria-labelledby\": idTab }, [w.tresc]);\n  });\n  function wybierz(w, pamietaj) {\n    if (!widoki.some(function (x) { return x.id === w; })) w = \"przeglad\";\n    widoki.forEach(function (x, j) {\n      tabs[j].setAttribute(\"aria-selected\", x.id === w ? \"true\" : \"false\");\n      panele[j].hidden = x.id !== w;\n    });\n    if (pamietaj) Ko_widoki[pid] = w;\n    if (w === \"przeglad\") Ko_podpisy(przeglad);\n  }\n  function naSzczegoly() {\n    wybierz(\"analiza\", true);\n    // Linia opisuje bieżący cykl — panel wraca do niego (własny przycisk przełącznika cykli), gdy wybrano inny cykl.\n    var biezacy = analiza && analiza.querySelector('.vilda-ob-seg [data-biezacy=\"true\"]');\n    if (biezacy && biezacy.getAttribute(\"aria-selected\") !== \"true\") biezacy.click();\n    var pole = analiza && analiza.querySelector(\".vilda-oba-verdict\");\n    if (!pole) return;\n    try { Kl_przewin(pole); } catch (x) { Ot(\"karta leczenie szczegoly\", x); }\n    pole.setAttribute(\"tabindex\", \"-1\");\n    try { pole.focus({ preventScroll: true }); } catch (x) { /* brak fokusu */ }\n  }\n  var linia = analiza ? Ko_werdykt(prz && prz.werdykt, naSzczegoly) : null;\n  if (linia) przeglad.appendChild(linia);\n  karta.appendChild(seg);\n  panele.forEach(function (p) { karta.appendChild(p); });\n  wybierz(Ko_widoki[pid] || \"przeglad\", false);\n  // Podpisy kafelków: przeliczenie przy zmianie szerokości (także pierwsze pokazanie zakładki i widoku).\n  try {\n    if (typeof i.ResizeObserver == \"function\") {\n      ro = new i.ResizeObserver(function () {\n        if (!przeglad.isConnected) { ro.disconnect(); return; } // karta zastąpiona przebudową grupy\n        var w = przeglad.clientWidth;\n        if (!w || w === szer) return;\n        szer = w;\n        Ko_podpisy(przeglad);\n      });\n      ro.observe(przeglad);\n    }\n  } catch (x) { /* bez obserwatora — podpisy w jednej linii albo zawinięte przez przeglądarkę */ }\n  return karta;\n}\n/* P-KARTA-LECZENIE, etap 3 (makieta hybrydy zaakceptowana przez właściciela 2026-11-19, „Etap 3, karta leczenia GH”\n   2026-11-21; plan: docs/KARTA_LECZENIE_PLAN.md, opis: docs/clinical/ALGORITHMS.md). Grupa GH w zakładce „Leczenie”\n   — podsumowanie (wl), „Dane analityczne” (kl) i „Trend leczenia GH” (Pl, dotąd na dole „Siatek centylowych”) — jest\n   jedną miętową kartą leczenia GH, kontenerem podsumowania: nagłówek ze znacznikiem, stanem, „kurs k z N”\n   i „🔄 zmiana preparatu” (jak dotąd) oraz cichym tekstem „Program … · N punktów kontrolnych” (GH nie ma działania\n   w Karcie — wpis GH jest w DocPro — więc bez przycisków); pod nim, w każdym widoku, „Preparaty (historia)”, ramka\n   P-GH-BEZ-STARTU albo informacja W2; dalej przełącznik „Przegląd | Trend dawki | Analiza” i widoki:\n   - Przegląd: cztery kafelki (Preparat i dawka, Czas leczenia, Tempo wzrastania, Odpowiedź (ΔhSDS)) — wartości\n     z obiektów wyjściowych wl i kl, z tych samych obliczeń co pola podsumowania i kafelki panelu, nigdy z tekstu DOM;\n   - Trend dawki: blok Pl w trybie karty (bez nagłówka i górnego marginesu) w białej ramce wykresu — tylko gdy Pl rysuje\n     trend z punktów GH (Kg_punktyTrendu, ten sam filtr co w Pl); wtedy „Siatki centylowe” trendu nie rysują;\n   - Analiza: panel „Dane analityczne” (kl) rozwinięty, bez belki, z cichą linią „program · preparat · ostatnia kontrola”.\n   Bieżący kurs (P-GH-WZNOWIENIE), jak podsumowanie i panel. Wybrany widok — pamięć Kg_widoki per pacjent (osobna od\n   otyłości), przetrwa odświeżenie Karty po synchronizacji; nowe otwarcie Karty — „Przegląd”. Notatka GH bez punktu\n   („↗ Trend dawki / punkt GH”) otwiera Kartę opcją activeTab „leczenie” + widokGh „trend”. Gdy karta się nie złoży\n   (wyjątek, podsumowanie bez rysunku) — bloki jak w etapie 1, a trend zostaje w „Siatkach centylowych”. */\nvar Kg_licznik = 0;\nvar Kg_widoki = {};\n/** Nowe otwarcie Karty pacjenta: widok karty leczenia GH od „Przeglądu” (Kl_leczenie woła razem z Ko_zapomnij). */\nfunction Kg_zapomnij(patientId) {\n  delete Kg_widoki[patientId];\n}\n/** Punkty GH, z których Pl rysuje „Trend leczenia GH”: Włączenie, Kontynuacja i Zakończenie z liczbową dawką. Jeden\n    filtr dla Pl i karty leczenia GH — widok „Trend dawki” jest dokładnie wtedy, gdy Pl rysuje trend z punktów. */\nfunction Kg_punktyTrendu(t) {\n  if (!Array.isArray(t)) return [];\n  return t.filter(function (u) {\n    return u && (u.type === \"start\" || u.type === \"continue\" || u.type === \"end\") && typeof u.dose == \"number\" && isFinite(u.dose);\n  });\n}\n/** Karta ma „Trend dawki”: Pl narysuje trend z punktów GH tego pacjenta (ten sam warunek pacjenta co w Pl). Bez punktu\n    z dawką Pl zostaje w „Siatkach centylowych” i rysuje tam ewentualny trend z wpisów Terminarza, jak dotąd. */\nfunction Kg_maTrend(patientId, t) {\n  return !!patientId && patientId !== \"__vilda_activity__\" && patientId !== \"__vilda_external__\" && Kg_punktyTrendu(t).length > 0;\n}\n/** Kafelek „Preparat i dawka”: części „Aktualnej dawki” z tych samych danych i gałęzi, z których wl składa jej tekst.\n    Increlex (dawka na podanie 2× na dobę, Gwl_inc): „2 × X mg” + „na dobę”, podpis „Y mg/kg na podanie” (bez dawki\n    dobowej w mg — „Y” + „mg/kg na podanie”); inne preparaty — liczba i jednostka punktu („0,033” + „mg/kg/d”). Brak\n    dawki — null (kafelek „—”). */\nfunction Kg_dawkaCz(increlex, inc, d, jednostka) {\n  if (increlex) {\n    if (inc && inc.dobowa) return { v: inc.dobowa, j: \"na dobę\", sub: inc.podanie || \"\" };\n    if (inc && inc.podanieV) return { v: inc.podanieV, j: \"mg/kg na podanie\", sub: \"\" };\n    return null;\n  }\n  return d && typeof d.dose == \"number\" && isFinite(d.dose) ? { v: qt(d.dose, 3), j: jednostka, sub: \"\" } : null;\n}\n/** Cichy tekst nagłówka: „Program SNP · 7 punktów kontrolnych” — program jak pole „Program” (z tym samym dymkiem pełnej\n    nazwy), punkty jak pole „Punkty kontrolne” (przy wznowieniu „3 punkty kontrolne w kursie (10 łącznie)”); bez\n    programu — same punkty. */\nfunction Kg_cichyNaglowek(pods) {\n  var czesci = [];\n  if (pods.program) {\n    var prog = e(\"span\", { class: \"vilda-kg-program\", text: \"Program \" + pods.program });\n    if (pods.programPelny) prog.setAttribute(\"title\", pods.programPelny);\n    czesci.push(prog);\n  }\n  if (typeof pods.punkty == \"number\") {\n    czesci.push(e(\"span\", { text: Ko_punkty(pods.punkty) + (pods.kursy > 1 ? \" w kursie (\" + pods.punktyRazem + \" łącznie)\" : \"\") }));\n  }\n  if (!czesci.length) return null;\n  var wezly = [];\n  czesci.forEach(function (c, j) {\n    if (j) wezly.push(\" · \");\n    wezly.push(c);\n  });\n  return e(\"span\", { class: \"vilda-kg-cichy\" }, wezly);\n}\n/** Cicha linia „Analizy”: pełna nazwa programu (dymek pola „Program”), preparat i ostatnia kontrola; brak części — bez niej. */\nfunction Kg_cichaAnaliza(pods) {\n  return [pods.programPelny, pods.preparat, pods.ostatnia ? \"ostatnia kontrola w wieku \" + pods.ostatnia : \"\"].filter(Boolean).join(\" · \");\n}\n/** Kolor wartości kafelka jak kafelek panelu (good/bad); jednostka i podpis bez zmian. */\nfunction Kg_kolor(kafel, cls) {\n  if (cls) kafel.classList.add(\"vilda-kg-kafel--\" + cls);\n  return kafel;\n}\n/** Cztery kafelki „Przeglądu” (Ko_kafel z etapu 2) z obiektów wyjściowych podsumowania (pods = wyjście wl) i panelu\n    (prz = przeglad z wyjścia kl); brak wartości — „—”, jak w kafelkach panelu. */\nfunction Kg_kafelki(pods, prz) {\n  var p = prz || {}, kreska = \"—\", d = pods.dawkaCz || null, prep = pods.preparat || \"\";\n  var czas = !!(prz && p.czasV && p.czasV !== kreska);\n  return e(\"div\", { class: \"vilda-ko-kafelki\" }, [\n    Ko_kafel(\"Preparat i dawka\", d ? d.v : kreska, d ? d.j : \"\", [d && d.sub ? { t: d.sub } : null, prep ? { t: prep, sep: \" · \" } : null]),\n    Ko_kafel(p.czasK || \"Czas leczenia\", czas ? p.czasV : kreska, czas ? p.czasJ : \"\", [p.czasOd ? { t: p.czasOd } : null]),\n    Kg_kolor(Ko_kafel(\"Tempo wzrastania\", p.tempoV || kreska, p.tempoJ || \"\", [p.tempoSub ? { t: p.tempoSub } : null]), p.tempoCls),\n    Kg_kolor(Ko_kafel(\"Odpowiedź (ΔhSDS)\", p.dhsdsV || kreska, \"\", p.dhsdsSds\n      ? [{ t: p.dhsdsSds }, p.dhsdsOd ? { t: \"od 1. punktu\", sep: \" · \" } : null]\n      : [p.dhsdsSub ? { t: p.dhsdsSub } : null]), p.dhsdsCls)\n  ]);\n}\n/** Karta leczenia GH. o: podsumowanie (element wl w trybie karty — bez siatki pól), panel (element kl w trybie karty —\n    panel bez belki — albo null), trend (blok Pl w ramce albo null), poTrendzie (rejestruje jednorazowe wywołanie po\n    narysowaniu trendu, gdy jeszcze go nie ma), wy ({ podsumowanie, panel } — obiekty wyjściowe wl i kl), patientId, widok\n    (widok na start z opcji otwarcia Karty, np. „trend”), wyjscie (dostaje pokaz(widok): widok, przewinięcie do karty\n    i fokus na widoku przełącznika). Zwraca kontener podsumowania jako kartę. */\nfunction Kg_karta(o) {\n  var karta = o.podsumowanie, wy = o.wy || {}, pods = wy.podsumowanie || {}, pan = wy.panel || {};\n  var pid = o.patientId, prz = o.panel ? pan.przeglad || null : null;\n  Sl(); // wygląd przełącznika (.vilda-oba-seg) wstrzykuje panel otyłości — pacjent z samym GH go nie ma\n  Kg_licznik += 1;\n  var id = \"vilda-kg-\" + Kg_licznik;\n  karta.classList.add(\"vilda-kg-karta\");\n  var cichy = Kg_cichyNaglowek(pods);\n  if (cichy && pods.glowa) pods.glowa.appendChild(cichy);\n\n  var widoki = [], tabs = [], ro = null, szer = null;\n  var przeglad = e(\"div\", {}, [Kg_kafelki(pods, prz)]);\n  widoki.push({ id: \"przeglad\", nazwa: \"Przegląd\", tresc: przeglad });\n  if (o.trend) widoki.push({ id: \"trend\", nazwa: \"Trend dawki\", tresc: o.trend });\n  if (o.panel) {\n    var cicha = Kg_cichaAnaliza(pods);\n    widoki.push({ id: \"analiza\", nazwa: \"Analiza\", tresc: e(\"div\", {}, [cicha ? e(\"p\", { class: \"vilda-ko-cicha\", text: cicha }) : null, o.panel]) });\n  }\n  var seg = e(\"div\", { class: \"vilda-oba-seg vilda-kg-seg\", role: \"tablist\", \"aria-label\": (pods.odznaka || \"Leczenie GH\") + \" — widok karty\" });\n  var panele = widoki.map(function (w) {\n    var idTab = id + \"-tab-\" + w.id, idPanel = id + \"-\" + w.id;\n    var b = e(\"button\", { type: \"button\", role: \"tab\", id: idTab, \"aria-controls\": idPanel, \"aria-selected\": \"false\", \"data-widok\": w.id, text: w.nazwa });\n    b.addEventListener(\"click\", function () { wybierz(w.id, true); });\n    seg.appendChild(b);\n    tabs.push(b);\n    return e(\"div\", { class: \"vilda-kg-widok vilda-kg-widok--\" + w.id, role: \"tabpanel\", id: idPanel, \"aria-labelledby\": idTab }, [w.tresc]);\n  });\n  function wybierz(w, pamietaj) {\n    if (!widoki.some(function (x) { return x.id === w; })) w = \"przeglad\";\n    widoki.forEach(function (x, j) {\n      tabs[j].setAttribute(\"aria-selected\", x.id === w ? \"true\" : \"false\");\n      panele[j].hidden = x.id !== w;\n    });\n    if (pamietaj) Kg_widoki[pid] = w;\n    if (w === \"przeglad\") Ko_podpisy(przeglad);\n  }\n  karta.appendChild(seg);\n  panele.forEach(function (p) { karta.appendChild(p); });\n  var start = o.widok && widoki.some(function (x) { return x.id === o.widok; }) ? o.widok : Kg_widoki[pid] || \"przeglad\";\n  wybierz(start, start === o.widok);\n  if (o.wyjscie) {\n    o.wyjscie.pokaz = function (w) {\n      if (!karta.isConnected) return;\n      wybierz(w, true);\n      var b = tabs.filter(function (t) { return t.getAttribute(\"aria-selected\") === \"true\"; })[0];\n      var przewin = function () {\n        if (!karta.isConnected || !b || b.getAttribute(\"aria-selected\") !== \"true\") return;\n        try { Kl_przewin(karta); } catch (x) { Ot(\"karta leczenie gh przewiniecie\", x); }\n        try { b.focus({ preventScroll: true }); } catch (x) { /* brak fokusu */ }\n      };\n      przewin();\n      // Trend rysuje się po odczycie notatek (IGF-1): dopóki go nie ma, Karta bywa za krótka, by przewinąć kartę na górę\n      // widoku — wtedy jeszcze raz po narysowaniu (o ile lekarz nie zmienił w tym czasie widoku).\n      if (typeof o.poTrendzie == \"function\") o.poTrendzie(przewin);\n    };\n  }\n  // Podpisy kafelków: przeliczenie przy zmianie szerokości (także pierwsze pokazanie zakładki i widoku). Wykres trendu\n  // to SVG z viewBox (szerokość 100%), więc rysuje się poprawnie także w widoku ukrytym przy budowie karty.\n  try {\n    if (typeof i.ResizeObserver == \"function\") {\n      ro = new i.ResizeObserver(function () {\n        if (!przeglad.isConnected) { ro.disconnect(); return; } // karta zastąpiona nową Kartą\n        var w = przeglad.clientWidth;\n        if (!w || w === szer) return;\n        szer = w;\n        Ko_podpisy(przeglad);\n      });\n      ro.observe(przeglad);\n    }\n  } catch (x) { /* bez obserwatora — podpisy w jednej linii albo zawinięte przez przeglądarkę */ }\n  return karta;\n}\n/** Grupa GH zakładki „Leczenie” (Kl_leczenie): karta leczenia GH, a gdy się nie złoży (wyjątek, podsumowanie bez\n    rysunku) — bloki jak w etapie 1 (podsumowanie z polami i „Dane analityczne” z belką; trend zostaje w „Siatkach”).\n    Obiekt wyjściowy bloku, który się nie narysował, jest czyszczony (pasek nie pokazuje jego wartości).\n    Zwraca { el, dane, trend, pokaz } albo null (brak punktów GH). */\nfunction Kg_grupa(o, s) {\n  var pts = s.ghTherapyPoints;\n  function bloki(tryb) {\n    var wy = { podsumowanie: tryb ? { karta: true } : {}, panel: tryb ? { karta: true } : {} }, pods, panel;\n    try { pods = wl(pts, wy.podsumowanie); } catch (x) { pods = null; wy.podsumowanie = {}; }\n    try { panel = kl(pts, o.plec, o.zaawansowane, s.timestampISO, o.siatka, wy.panel); } catch (x) { panel = null; wy.panel = {}; }\n    return { pods: pods, panel: panel, wy: wy };\n  }\n  var b = bloki(true);\n  if (!b.pods && !b.panel) return null;\n  if (b.pods) {\n    try {\n      // Pl rysuje trend po odczycie notatek (asynchronicznie) — karta na niego nie czeka; poRysunku zgłasza koniec rysunku.\n      var narysowany = false, poRysunku = null;\n      var trend = Kg_maTrend(o.patientId, pts) ? e(\"div\", { class: \"vilda-kg-ramka\" }, [Pl(o.patientId, pts, {\n        karta: true,\n        poRysunku: function () {\n          narysowany = true;\n          var f = poRysunku;\n          poRysunku = null;\n          if (f) f();\n        }\n      })]) : null;\n      var wyj = {};\n      var karta = Kg_karta({\n        podsumowanie: b.pods, panel: b.panel, trend: trend, wy: b.wy, patientId: o.patientId, widok: o.widokGh, wyjscie: wyj,\n        poTrendzie: function (f) { if (trend && !narysowany) poRysunku = f; }\n      });\n      return { el: e(\"div\", { class: \"vilda-kl-gh\" }, [karta]), dane: Kl_daneGh(b.wy.podsumowanie, b.wy.panel), trend: !!trend, pokaz: wyj.pokaz || null };\n    } catch (x) { Ot(\"karta leczenie gh\", x); }\n  }\n  b = bloki(false);\n  if (!b.pods && !b.panel) return null;\n  return { el: e(\"div\", { class: \"vilda-kl-gh\" }, [b.pods, b.panel]), dane: Kl_daneGh(b.wy.podsumowanie, b.wy.panel), trend: false, pokaz: null };\n}\n/** Opcje otwarcia Karty z notatki GH bez punktu (activeTab „leczenie” + widokGh „trend”): gdy Karta nie ma karty GH\n    z „Trendem dawki” — „Siatki centylowe”, jak dotąd (tam jest wtedy trend z Terminarza). Inne opcje bez zmian. */\nfunction Kg_opcjeKarty(r, kl) {\n  if (!r || r.widokGh !== \"trend\" || r.activeTab !== \"leczenie\") return r;\n  return kl && kl.trendGh ? r : Object.assign({}, r, { activeTab: \"traj\", widokGh: null });\n}\n/** Po otwarciu Karty z notatki GH: karta GH na „Trendzie dawki”, przewinięcie do karty i fokus na tym widoku. */\nfunction Kg_poOtwarciu(kl, r) {\n  if (!kl || typeof kl.pokazGh != \"function\" || !r || r.activeTab !== \"leczenie\" || !r.widokGh) return;\n  var w = r.widokGh;\n  i.setTimeout(function () {\n    try { kl.pokazGh(w); } catch (x) { Ot(\"karta leczenie gh widok\", x); }\n  }, 60);\n}\nfunction Pl(t,a,Kg_o){var Kg_k=!!(Kg_o&&Kg_o.karta),n=e(\"div\",Kg_k?{class:\"vilda-kg-trend\"}:"
+    },
+    {
+      "offset": 531896,
+      "before": "",
+      "after": "Kg_k||"
+    },
+    {
+      "offset": 533555,
+      "before": "}var l=[];Array.isArray(a)&&(l=a.filter(function(u){return u&&(u.type===\"start\"||u.type===\"continue\"||u.type===\"end\")&&typeof u.dose==\"number\"&&isFinite(u.dose)}",
+      "after": ",Kg_k&&typeof Kg_o.poRysunku==\"function\"&&Kg_o.poRysunku()}var l=[],Gw_nr=Gw_numerKursu(a);Array.isArray(a)&&(l=Kg_punktyTrendu(a"
+    },
+    {
+      "offset": 534246,
+      "before": "",
+      "after": "var Gw_n=Gw_nr(u);Gw_n!==void 0&&(h.Gw_kurs=Gw_n);"
+    },
+    {
+      "offset": 534300,
+      "before": "var d=\"\";if(Array.isArray(a))for(var c=0;c<a.length;c+=1){var s=a[c];if(s&&s.program&&(d=s.program,s.type===\"start\"))break}",
+      "after": "/* P-GH-PREPARAT-BIEZACY: program bieżący kursu (blok Gp_*). */var d=Gp_program(Gw_punktyProgramu(a));"
+    },
+    {
+      "offset": 560639,
+      "before": "",
+      "after": "KlL=Kl_leczenie({patientId:t,rekord:s,plec:S,zaawansowane:y,siatka:h,notatki:GdNotatki,user:m,widokGh:r&&r.widokGh,homeContext:HomePatientRequested?{actorLifetimeVersion:1,isCurrent:HomePatientIsCurrent,onDialog:HomePatientDialog}:null,notificationIsCurrent:function(){return remReadCurrent(CareReadOwner)&&Eo&&Eo.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())},captureNavigation:function(){var NavigationCard=Eo,NavigationOwner=CareReadOwner;return UiIntentCardNavigation(NavigationCard,function(){return Eo===NavigationCard&&CareReadOwner===NavigationOwner&&remReadCurrent(NavigationOwner)&&NavigationCard&&NavigationCard.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())})},zakladka:at(Kl_IKONA,\"Leczenie\"),tlo:GdTlo}),Kg_opcje=r=Kg_opcjeKarty(r,KlL),"
+    },
+    {
+      "offset": 560697,
+      "before": "",
+      "after": ",KlL&&!HomePatientRequested?KlL.zakladka:null"
+    },
+    {
+      "offset": 565896,
+      "before": "Tw=Tf?Tf.wartosc+(Tf.odstep?\" (\"+Tf.odstep+(Tf.pozaOknem?\", poza oknem oceny normy\":\"\")+\")\":\"\"):St(ut)+\" cm/rok\";ce.push(xt(\"Tempo wzrastania\",Tw,Ee,Ie)",
+      "after": "/* P-STATUS-KAFLE-ROWNE (decyzja wlasciciela 2026-11-23): w duzej czcionce sama wartosc, odstep i „poza oknem oceny normy\" w podpisie — jak w kafelkach wzrostu, masy i BMI. Dlugi opis w polu wartosci wydluzal caly rzad kafelkow. */Tw=Tf?Tf.wartosc:St(ut)+\" cm/rok\",TwS=Tf&&Tf.odstep?Tf.odstep+(Tf.pozaOknem?\" \\xB7 poza oknem oceny normy\":\"\"):null,TwK=xt(\"Tempo wzrastania\",Tw,TwS||Ee,Ie);TwS&&Ee&&TwK.appendChild(e(\"div\",{class:\"vilda-patient-stat-extra\",text:Ee}));ce.push(TwK"
+    },
+    {
+      "offset": 567787,
+      "before": "",
+      "after": "\".vhv-tile.vhv-odm{opacity:.78}\",\n"
+    },
+    {
+      "offset": 568549,
+      "before": "if(Bh0.wartosc==null",
+      "after": "// P-STATUS-KAFLE-ROWNE (2026-11-23): sama strzalka zamiast dopisku „kliknij, aby rozwinac\"; „nie policzono\" tez sie rozwija.\nvar BhOdm=Bh0.wartosc==null,BhMa=(Bh0.linie&&Bh0.linie.length)||(Bh0.szczegoly&&Bh0.szczegoly.length);\nif(!BhMa"
+    },
+    {
+      "offset": 568647,
+      "before": "Bh3.push(e(\"div\",{class:\"vilda-patient-stat-sub\",style:\"margin-top:3px;\",text:\"kliknij, aby rozwin\\u0105\\u0107\"}));",
+      "after": ""
+    },
+    {
+      "offset": 568849,
+      "before": "",
+      "after": ":BhOdm?\"vilda-patient-stat vhv-tile vhv-odm\""
+    },
+    {
+      "offset": 568929,
+      "before": "",
+      "after": ",\"aria-expanded\":\"false\""
+    },
+    {
+      "offset": 569318,
+      "before": "",
+      "after": ";Bh5.setAttribute(\"aria-expanded\",Bh9?\"false\":\"true\")"
+    },
+    {
+      "offset": 573124,
+      "before": "Lt(s.ghTherapyPoints,\"GH\",\"#0F6E56\"",
+      "after": "Gw_pasy(s.ghTherapyPoints,function(pe){return Lt(pe,\"GH\",\"#0F6E56\")}"
+    },
+    {
+      "offset": 573836,
+      "before": "Yt,ke].filter(Boolean",
+      "after": "].concat(Yt||[],ke||[]"
+    },
+    {
+      "offset": 578002,
+      "before": "",
+      "after": ",ghKursy:ae._vildaCmpCtx.ghKursy"
+    },
+    {
+      "offset": 582405,
+      "before": "try{",
+      "after": "/* P-KARTA-LECZENIE, etap 3: trend z punktow GH rysuje karta leczenia GH (widok „Trend dawki”) — wtedy nie tutaj; bez punktu z dawka Pl zostaje tu (trend z Terminarza). */try{KlL&&KlL.trendGh||"
+    },
+    {
+      "offset": 594644,
+      "before": "[Et,Bt,pt,kt,GdLabTab,CarePatientTab].forEach(function(Lt){Lt.getAttribute(\"data-tab\")===ct?Lt.classList.add(\"vilda-patient-tab--active\"):Lt.classList.remove(\"vilda-patient-tab--active\")}),[Nt,Ct,sa,ca,GdLabHost,CarePatientHost].forEach(function(Lt){Lt.getAttribute(\"data-tab\")===ct?Lt.classList.remove(\"vilda-patient-tab-content--hidden\"):Lt.classList.add(\"vilda-patient-tab-content--hidden\")});",
+      "after": "\n  if(HomePatientRequested&&ct===\"leczenie\")ct=\"treatment\";\n  const active=Ft.querySelector(\".vilda-patient-tab--active\");\n  if(!active||active.getAttribute(\"data-tab\")!==ct)GdZachowajPrzewiniecieZakladek(Ft);\n  [Et,KlL&&KlL.zakladka,Bt,pt,kt,GdLabTab,CarePatientTab].filter(Boolean).forEach(function(tab){\n    tab.classList.toggle(\"vilda-patient-tab--active\",tab.getAttribute(\"data-tab\")===ct);\n  });\n  [Nt,KlL&&!HomePatientRequested&&KlL.tresc,Ct,sa,ca,GdLabHost,CarePatientHost].filter(Boolean).forEach(function(panel){\n    panel.classList.toggle(\"vilda-patient-tab-content--hidden\",panel.getAttribute(\"data-tab\")!==ct);\n  });\n  "
+    },
+    {
+      "offset": 595101,
+      "before": "}",
+      "after": ";\n}\nKlL&&KlL.zakladka.addEventListener(\"click\",function(){ua(\"leczenie\");HomeTab({screen:\"card\",patientId:t,tab:HomePatientRequested?\"treatment\":\"leczenie\"})});"
+    },
+    {
+      "offset": 596346,
+      "before": "",
+      "after": "leczenie\"&&KlL||r.activeTab===\""
+    },
+    {
+      "offset": 596679,
+      "before": "r&&r.activeTab",
+      "after": "Kl_zakladka(r&&r.activeTab,KlL)"
+    },
+    {
+      "offset": 598807,
+      "before": "function(){try{return wl(s.ghTherapyPoints)}catch{return null}}(),function(){try{return kl(s.ghTherapyPoints,S,y,s.timestampISO,h)}catch{return null}}(),function(){try{return Ob_dz(t,s,S,h,GdNotatki,m,HomePatientRequested?{actorLifetimeVersion:1,isCurrent:HomePatientIsCurrent,onDialog:HomePatientDialog}:null,function(){return remReadCurrent(CareReadOwner)&&Eo&&Eo.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())},function(){var NavigationCard=Eo,NavigationOwner=CareReadOwner;return UiIntentCardNavigation(NavigationCard,function(){return Eo===NavigationCard&&CareReadOwner===NavigationOwner&&remReadCurrent(NavigationOwner)&&NavigationCard&&NavigationCard.isConnected&&(!HomePatientRequested||HomePatientIsCurrent())})})}catch(Ob_dzE){Ot(\"karta dziennik otylosci\",Ob_dzE);return null}}(),Ft,Nt",
+      "after": "KlL?(HomePatientRequested?KlL.tresc:KlL.paski):null,Ft,Nt,KlL&&!HomePatientRequested?KlL.tresc:null"
+    },
+    {
+      "offset": 600865,
+      "before": "Cs.slice(2,Cs.indexOf(Ft))",
+      "after": "KlL ? KlL.grupy : []"
+    },
+    {
+      "offset": 601121,
+      "before": "",
+      "after": ":r&&r.activeTab===\"leczenie\"?\"treatment\""
+    },
+    {
+      "offset": 603219,
+      "before": "ct||\"antro\")}};}",
+      "after": "Kl_zakladka(ct,KlL)||\"antro\")}};}Kg_poOtwarciu(KlL,r);"
+    },
+    {
+      "offset": 782947,
+      "before": ")!important;}\",\".vilda-patients2 .pl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}\",\"@media (max-width:700px){.vilda-patients2 .pl-grid{grid-template-columns:1fr;}}\",\".vilda-auth-root .vilda-patients2 .pl-tile,.vilda-patients2 .pl-tile{display:flex!important;flex-direction:column!important;gap:10px!important;width:100%!important;min-width:0;border:1px solid rgba(255,255,255,.8)!important;border-radius:20px!important;padding:16px 16px 14px!important;cursor:pointer!important;font-family:inherit!important;color:#0e2a30!important;text-align:left!important;height:auto!important;min-height:0!important;background:rgba(255,255,255,.66)!important;-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:0 10px 30px rgba(3,42,48,.1),inset 0 1px 0 rgba(255,255,255,.7)!important;transition:transform .14s, box-shadow .14s;}\",\".vilda-auth-root .vilda-patients2 .pl-tile:hover,.vilda-patients2 .pl-tile:hover{transform:translateY(-2px);box-shadow:0 16px 36px rgba(3,42,48,.16),inset 0 1px 0 rgba(255,255,255,.8)!important;background:rgba(255,255,255,.74)!important;}\",\".vilda-patients2 .pl-th{display:flex;align-items:center;gap:12px;width:100%;min-width:0;}\",\".vilda-patients2 .pl-lic{flex:0 0 auto;width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:rgba(0,131,141,.12);}\",\".vilda-patients2 .pl-tnm{font-weight:800;font-size:1.02rem;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}\",\".vilda-patients2 .pl-num{flex:0 0 auto;font-size:1.5rem;font-weight:800;color:#00838d;line-height:1;text-align:right;}\",\".vilda-patients2 .pl-num small{display:block;font-size:.62rem;font-weight:700;color:#8aa3a9;text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}\",\".vilda-patients2 .pl-tmt{font-size:.78rem;color:#56727b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}\",\".vilda-patients2 .pl-tf{display:flex;align-items:center;gap:8px;margin-top:2px;width:100%;}\",\".vilda-patients2 .pl-avs{display:flex;align-items:center;min-height:28px;}\",\".vilda-patients2 .pl-avs .av{width:28px;height:28px;border-radius:50%;border:2px solid #fff;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.68rem;font-weight:700;margin-left:-8px;box-shadow:0 3px 8px rgba(3,42,48,.18);}\",\".vilda-patients2 .pl-avs .av:first-child{margin-left:0;}\",\".vilda-patients2 .pl-open{margin-left:auto;font-size:.78rem;font-weight:700;color:#00838d;}\",\".vilda-auth-root .vilda-patients2 .pl-tile--new,.vilda-patients2 .pl-tile--new{border:1.5px dashed rgba(0,131,141,.4)!important;align-items:center!important;justify-content:center!important;color:#00838d!important;font-weight:800!important;min-height:118px!important;background:rgba(255,255,255,.35",
+      "after": ""
+    }
+  ]
+}

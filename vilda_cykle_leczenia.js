@@ -1520,6 +1520,131 @@
     return pid && wczytany.pid === pid && wczytany.punkty ? wczytany.punkty : null;
   }
 
+  // ── Pomiary z dziennika w całej aplikacji (P-OTYLOSC-STRONA, temat D; makieta zaakceptowana 2026-11-20) ────────
+  /**
+   * Pomiary z dziennika pacjenta wczytanego na stronie (punktyWczytanego) do dopisania przy pomiarach `osCzasu`
+   * (wizyty i bieżący pomiar formularza) — dla siatki i podsumowania „Podsumowanie wyników”, „Poprzednich pomiarów”
+   * obliczeń wzrostowych, analizy trajektorii, PDF siatek i karty „Porównanie z poprzednim pomiarem”. Te same reguły
+   * co w Karcie pacjenta (pomiaryDoSiatek: wizyta wygrywa w tym samym miesiącu). Opcje:
+   *  • patientId — pacjent, którego dane pokazuje konsument; inny niż odczytany dziennik → [];
+   *  • doWiekuMies — bez pomiarów po tym wieku (odtworzenie dawnej wizyty nie bierze danych z późniejszego okresu).
+   * Bez dziennika, bez sejfu albo przy innym pacjencie — [] (konsument zostaje przy samych wizytach).
+   */
+  function pomiaryStrony(osCzasu, opcje) {
+    var o = opcje || {};
+    var punkty = punktyWczytanego();
+    if (!punkty || !punkty.length) return [];
+    if (o.patientId && o.patientId !== wczytany.pid) return [];
+    var lista = pomiaryDoSiatek(osCzasu, punkty);
+    var doWieku = o.doWiekuMies == null ? NaN : Number(o.doWiekuMies);
+    return isFinite(doWieku) ? lista.filter(function (p) { return p.ageMonths <= doWieku + 1e-9; }) : lista;
+  }
+
+  /**
+   * Masy od pacjenta w odcinku między dwoma pomiarami (karta „Porównanie z poprzednim pomiarem”): wpisy dziennika
+   * pacjenta strony z masą od pacjenta, odMies < wiek ≤ doMies, rosnąco. `osCzasu` — pomiary wizyt (wizyta wygrywa
+   * w tym samym miesiącu). Liczy się tylko do pokazania; zmiana w tabeli zostaje liczona między wizytami.
+   */
+  function pomiaryOdcinka(osCzasu, odMies, doMies, opcje) {
+    var od = Number(odMies), dok = Number(doMies);
+    if (!isFinite(od) || !isFinite(dok) || dok <= od) return [];
+    return pomiaryStrony(osCzasu, opcje).filter(function (p) {
+      return p.zrodloMasy === 'pacjent' && Number(p.weight) > 0 && p.ageMonths > od + 1e-9 && p.ageMonths <= dok + 1e-9;
+    });
+  }
+
+  /** „od pacjenta 12.11.2026: 74,6 kg” (bez daty — „od pacjenta: 74,6 kg”). */
+  function opisMasyOdPacjenta(p) {
+    var d = dataPL(p && p.dateISO);
+    return 'od pacjenta' + (d ? ' ' + d : '') + ': ' + liczbaPL(p && p.weight, 1) + ' kg';
+  }
+
+  /** „w odcinku 1 pomiar od pacjenta”, „2 pomiary”, „5 pomiarów”. */
+  function opisOdcinka(n) {
+    var d = n % 10, s = n % 100;
+    var slowo = n === 1 ? 'pomiar' : d >= 2 && d <= 4 && !(s >= 12 && s <= 14) ? 'pomiary' : 'pomiarów';
+    return 'w odcinku ' + n + ' ' + slowo + ' od pacjenta';
+  }
+
+  /**
+   * PDF „Generuj siatkę OLAF” (buildCentilePageCanvas, temat D; makieta 2026-11-20): pomiary z dziennika pacjenta
+   * strony na siatce wzrostu i masy — masa (wzrost) od pacjenta pustym rombem, wpis z gabinetu poza wizytą czarną
+   * kropką jak wizyta, bez linii przebiegu. Pod siatkami legenda „● dane z gabinetu  ◇ dane od pacjenta” (tylko gdy
+   * jest romb). Ramka podsumowania na siatce — bez zmian. `g` — geometria strony:
+   * { minX, maxX, height|weight: {px, py, pw, ph, minY, maxY}, legend: {x, y}, current: {ageMonths, weight, height},
+   *   measurements }. Zwraca liczbę narysowanych rombów.
+   */
+  function rysujPdf(ctx, g) {
+    if (!ctx || !g) return 0;
+    var hist = Array.isArray(g.measurements) ? g.measurements : [];
+    var cur = g.current || {};
+    var cam = Number(cur.ageMonths);
+    var os = hist.concat(isFinite(cam) ? [{ ageMonths: cam, weight: cur.weight, height: cur.height }] : []);
+    var pozniej = isFinite(cam) && hist.some(function (m) {
+      var am = Number(m && m.ageMonths);
+      if (!isFinite(am) && m && isFinite(Number(m.ageYears))) am = Number(m.ageYears) * 12;
+      return isFinite(am) && am > cam + 1e-9;
+    });
+    var lista = pomiaryStrony(os, { doWiekuMies: pozniej ? cam : null });
+    if (!lista.length) return 0;
+    var romby = 0;
+    ['height', 'weight'].forEach(function (met) {
+      var p = g[met];
+      if (!p || !(g.maxX > g.minX) || !(p.maxY > p.minY)) return;
+      lista.forEach(function (x) {
+        var zr = zrodloMetryki(x, met);
+        var v = Number(x[met]);
+        if (!zr || x.ageMonths < g.minX || x.ageMonths > g.maxX || v < p.minY || v > p.maxY) return;
+        var px = p.px + (x.ageMonths - g.minX) * p.pw / (g.maxX - g.minX);
+        var py = p.py + p.ph - (v - p.minY) * p.ph / (p.maxY - p.minY);
+        ctx.save();
+        ctx.beginPath();
+        if (zr === 'pacjent') {
+          var r = 14;
+          ctx.moveTo(px, py - r); ctx.lineTo(px + r, py); ctx.lineTo(px, py + r); ctx.lineTo(px - r, py); ctx.closePath();
+          ctx.fillStyle = '#ffffff'; ctx.fill();
+          ctx.lineWidth = 4; ctx.strokeStyle = '#000000'; ctx.stroke();
+          romby++;
+        } else {
+          ctx.arc(px, py, 8, 0, 2 * Math.PI);
+          ctx.fillStyle = '#000000'; ctx.fill();
+        }
+        ctx.restore();
+      });
+    });
+    if (romby && g.legend) rysujLegendePdf(ctx, g.legend.x, g.legend.y);
+    return romby;
+  }
+
+  /** Legenda PDF wyśrodkowana w punkcie (x, y): „● dane z gabinetu   ◇ dane od pacjenta”. */
+  function rysujLegendePdf(ctx, x, y) {
+    if (!ctx || !isFinite(x) || !isFinite(y)) return;
+    ctx.save();
+    ctx.font = '30px sans-serif';
+    ctx.fillStyle = '#333333';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    var t1 = 'dane z gabinetu', t2 = 'dane od pacjenta';
+    var w1 = ctx.measureText(t1).width, w2 = ctx.measureText(t2).width;
+    var calosc = 16 + 14 + w1 + 60 + 28 + 14 + w2;
+    var x0 = x - calosc / 2;
+    ctx.beginPath(); ctx.arc(x0 + 8, y, 8, 0, 2 * Math.PI); ctx.fillStyle = '#000000'; ctx.fill();
+    ctx.fillStyle = '#333333'; ctx.fillText(t1, x0 + 30, y);
+    var xr = x0 + 30 + w1 + 60 + 14;
+    ctx.beginPath(); ctx.moveTo(xr, y - 12); ctx.lineTo(xr + 12, y); ctx.lineTo(xr, y + 12); ctx.lineTo(xr - 12, y); ctx.closePath();
+    ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#000000'; ctx.stroke();
+    ctx.fillStyle = '#333333'; ctx.fillText(t2, xr + 28, y);
+    ctx.restore();
+  }
+
+  /** Źródło wartości pomiaru dla metryki: 'pacjent' albo 'gabinet' (bez wartości — null). */
+  function zrodloMetryki(p, metryka) {
+    if (!p) return null;
+    if (metryka === 'height') return Number(p.height) > 0 ? (p.zrodloWzrostu === 'pacjent' ? 'pacjent' : 'gabinet') : null;
+    if (metryka === 'weight') return Number(p.weight) > 0 ? (p.zrodloMasy === 'pacjent' ? 'pacjent' : 'gabinet') : null;
+    return null;
+  }
+
   if (w.document && typeof w.document.addEventListener === 'function' && typeof w.setTimeout === 'function') {
     try {
       // Wczytanie pacjenta i wpisy z innego urządzenia (synchronizacja) — odczyt od nowa; czyszczenie stanu,
@@ -1568,7 +1693,14 @@
     wczytaj: wczytaj,
     zapisz: zapisz,
     punktyWczytanego: punktyWczytanego,
-    odswiezWczytanego: odswiezWczytanego
+    odswiezWczytanego: odswiezWczytanego,
+    pomiaryStrony: pomiaryStrony,
+    pomiaryOdcinka: pomiaryOdcinka,
+    rysujPdf: rysujPdf,
+    rysujLegendePdf: rysujLegendePdf,
+    opisMasyOdPacjenta: opisMasyOdPacjenta,
+    opisOdcinka: opisOdcinka,
+    zrodloMetryki: zrodloMetryki
   });
 }(typeof window !== 'undefined' ? window : this));
 
@@ -1585,6 +1717,14 @@
  *
  * Wejście: sekcja({ patientId, stan, urodzenieISO, onZmiana }) — stan z VildaDziennikOtylosci.zloz;
  * onZmiana() wołane po każdym udanym zapisie (Karta przelicza wtedy kafelki i ocenę).
+ *
+ * P-KARTA-LECZENIE, etap 2 (makieta hybrydy zaakceptowana 2026-11-19): opcja uklad: 'karta' — sekcja w karcie
+ * leczenia otyłości (zakładka „Leczenie” Karty, widok „Wpisy”). Bez nagłówka: tytuł i „+ Kontynuacja” stoją
+ * w nagłówku karty. Akcje nagłówka (ten sam przycisk „+ Kontynuacja” z tą samą obsługą; bez aktywnego cyklu także
+ * „Włączenie w DocPro →” i wyjaśnienie), komunikat tego przycisku i liczbę wpisów (jak „Pokaż wszystkie wpisy (N)”)
+ * sekcja oddaje w opcji wyjscie: { akcje, komunikat, liczba }. Objaśnienia sekcji (wstęp i podpowiedzi) stoją pod
+ * łączem rozwijanym „Jak działa dziennik leczenia ⌄”. Wpisy, przyciski i komunikaty — bez zmian. Bez opcji uklad
+ * sekcja wygląda i działa dokładnie jak dotąd (DocPro, inne miejsca).
  */
 (function (w) {
   'use strict';
@@ -1593,6 +1733,7 @@
   var POKAZ_NA_START = 5;
   var rozwiniete = {};
   var usunieteRozwiniete = {};
+  var jakRozwiniete = {};
   var ostatnieUsuniecie = {};
 
   function Dz() { return w.VildaDziennikOtylosci; }
@@ -2212,9 +2353,14 @@
     var widoczne = stan.wpisy.filter(function (x) { return x.punkt; });
     var usuniete = stan.wpisy.filter(function (x) { return x.stan === 'usuniety'; });
     if (!widoczne.length && !usuniete.length) return null;
+    // P-KARTA-LECZENIE, etap 2: układ „karta” (opis wyżej, przy wejściu modułu).
+    var karta = o.uklad === 'karta';
 
     var msg = el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true });
-    ctx.navigationError = function (message) { if (aktualny(ctx) && msg.isConnected) komunikat(msg, 'err', message); };
+    // W karcie przycisk „+ Kontynuacja” stoi w nagłówku karty, widoczny w każdym widoku — jego wyjaśnienie (brak
+    // aktywnego cyklu) idzie do komunikatu oddanego razem z przyciskiem, a nie do komunikatu sekcji ukrytej w „Wpisach”.
+    var msgDodaj = karta ? el('div', { class: 'vdo-msg', role: 'status', 'aria-live': 'polite', hidden: true }) : msg;
+    ctx.navigationError = function (message) { if (aktualny(ctx) && msgDodaj.isConnected) komunikat(msgDodaj, 'err', message); };
     function zBledem(p) {
       return Promise.resolve(p).catch(function (e) { komunikat(msg, 'err', (e && e.message) || 'Nie zapisano zmiany.'); });
     }
@@ -2227,7 +2373,7 @@
     dodaj.addEventListener('click', function () {
       if (!aktualny(ctx)) return;
       if (!aktywnyCykl(ctx.stan)) {
-        komunikat(msg, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie („Włączenie w DocPro →”).');
+        komunikat(msgDodaj, 'warn', 'Brak aktywnego cyklu leczenia — nowy cykl zaczyna się od Włączenia, które dodajesz w DocPro przy wizycie („Włączenie w DocPro →”).');
         return;
       }
       formularz(ctx, null);
@@ -2282,8 +2428,10 @@
       });
       dolne.push(t);
     }
+    var dawne = null;
     if (stan.wpisy.some(function (x) { return x.stan === 'migawka' || (x.wersje && x.wersje.some(function (v) { return v.op === 'migracja'; })); })) {
-      dolne.push(el('p', { class: 'vdo-hint', text: 'Wpisy z dawnych wizyt przeniesione ze źródłem „gabinet”.' }));
+      dawne = el('p', { class: 'vdo-hint', text: 'Wpisy z dawnych wizyt przeniesione ze źródłem „gabinet”.' });
+      if (!karta) dolne.push(dawne);
     }
     if (usuniete.length) {
       var otwarte = !!usunieteRozwiniete[o.patientId];
@@ -2331,26 +2479,64 @@
       ])
       : null;
 
+    var wstep = el('p', { class: 'vdo-intro', text: 'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.' });
+    var akcje = el('div', { class: 'vdo-head-actions' + (karta ? ' vdo-zewn' : '') }, [
+      el('div', { class: 'vdo-head-buttons' }, [
+        dodaj,
+        aktywny ? null : el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Włączenie w DocPro →', onclick: function () { if (aktualny(ctx)) doDocPro(ctx, 'wlaczenie', null); } })
+      ]),
+      aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.' })
+    ]);
+    var podpowiedz = el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro — „Edytuj w DocPro →” przy wpisie otwiera go od razu na tym wpisie. Tu — Kontynuacje.' });
+
+    if (karta) {
+      if (o.wyjscie && typeof o.wyjscie === 'object') {
+        o.wyjscie.akcje = akcje;
+        o.wyjscie.komunikat = msgDodaj;
+        o.wyjscie.liczba = widoczne.length;
+      }
+      return el('section', { class: 'vdo vdo-karta', 'aria-label': 'Wpisy leczenia' }, [
+        jakDziala(o.patientId, [wstep, podpowiedz, dawne]),
+        konflikty,
+        cofnij,
+        msg,
+        lista
+      ].concat(dolne));
+    }
     return el('section', { class: 'vdo', 'aria-labelledby': 'vdoTytul-' + o.patientId }, [
       el('div', { class: 'vdo-head' }, [
         el('div', {}, [
           el('h3', { id: 'vdoTytul-' + o.patientId, class: 'vdo-title', text: 'Wpisy leczenia' }),
-          el('p', { class: 'vdo-intro', text: 'Dziennik leczenia jest oddzielony od wizyt w gabinecie. Wpis z masą od pacjenta nie tworzy wizyty i nie zmienia jej pomiarów.' })
+          wstep
         ]),
-        el('div', { class: 'vdo-head-actions' }, [
-          el('div', { class: 'vdo-head-buttons' }, [
-            dodaj,
-            aktywny ? null : el('button', { type: 'button', class: 'vdo-btn vdo-btn-docpro', text: 'Włączenie w DocPro →', onclick: function () { if (aktualny(ctx)) doDocPro(ctx, 'wlaczenie', null); } })
-          ]),
-          aktywny ? null : el('span', { id: 'vdoAddWhy', class: 'vdo-hint', text: 'Brak aktywnego cyklu — nowy cykl zaczyna się od Włączenia przy wizycie.' })
-        ])
+        akcje
       ]),
-      el('p', { class: 'vdo-hint', text: 'Włączenie, Zakończenie i zmianę leku edytujesz w monitorze DocPro — „Edytuj w DocPro →” przy wpisie otwiera go od razu na tym wpisie. Tu — Kontynuacje.' }),
+      podpowiedz,
       konflikty,
       cofnij,
       msg,
       lista
     ].concat(dolne));
+  }
+
+  // P-KARTA-LECZENIE, etap 2: objaśnienia sekcji w karcie — pod łączem rozwijanym (stan per pacjent, jak „Pokaż
+  // wszystkie”, więc przebudowa karty po zapisie wpisu go nie zwija).
+  function jakDziala(patientId, akapity) {
+    var id = 'vdoJak-' + patientId;
+    var otwarte = !!jakRozwiniete[patientId];
+    var tresc = el('div', { id: id, class: 'vdo-jak-tresc' }, akapity);
+    tresc.hidden = !otwarte;
+    var przycisk = el('button', { type: 'button', class: 'vdo-jak', 'aria-expanded': otwarte ? 'true' : 'false', 'aria-controls': id }, [
+      'Jak działa dziennik leczenia',
+      el('span', { class: 'vdo-jak-chev', 'aria-hidden': 'true', text: '⌄' })
+    ]);
+    przycisk.addEventListener('click', function () {
+      var teraz = tresc.hidden;
+      tresc.hidden = !teraz;
+      jakRozwiniete[patientId] = teraz;
+      przycisk.setAttribute('aria-expanded', teraz ? 'true' : 'false');
+    });
+    return el('div', { class: 'vdo-jak-blok' }, [przycisk, tresc]);
   }
 
   w.VildaDziennikOtylosciUI = Object.freeze({
@@ -2359,3 +2545,275 @@
     _internal: Object.freeze({ podpowiedzOkna: podpowiedzOkna, aktywnyCykl: aktywnyCykl, celSkoku: celSkoku, powodKrotki: powodKrotki })
   });
 }(typeof window !== 'undefined' ? window : this));
+
+/*
+ * „Poprzednie pomiary” na stronie głównej (window.VildaAdvDziennik) — pomiary z dziennika leczenia w „Poprzednich pomiarach” karty
+ * „Zaawansowane obliczenia wzrostowe” (strona główna). P-OTYLOSC-STRONA, temat D projektu
+ * „Leczenie otyłości — wpisy poza wizytą”; makieta zaakceptowana przez właściciela 2026-11-20:
+ * pomiary od pacjenta oznaczone w istniejącej liście, bez osobnej tabeli.
+ *
+ * CO ROBI
+ *   • Bierze pomiary z dziennika leczenia pacjenta wczytanego na stronie
+ *     (VildaDziennikOtylosci.pomiaryStrony — wizyta wygrywa w tym samym miesiącu życia, jak w Karcie
+ *     pacjenta) i wstawia je między wiersze #advMeasurements jako bloki TYLKO DO ODCZYTU, w kolejności
+ *     wieku, z odznaką „pomiar od pacjenta” (wpis z gabinetu poza wizytą — „wpis leczenia z gabinetu”).
+ *   • Blok ma ten sam układ co wiersz (Wiek (lata), Wiek (miesiące), Wzrost / Waga, Wiek kostny),
+ *     ale wartości są tekstem, nie polami <input>, i nie ma przycisku usuwania. Wpis poprawia się
+ *     w Karcie pacjenta („Wpisy leczenia”).
+ *   • Odtworzenie dawnej wizyty (w liście jest późniejszy wiersz) nie pokazuje wpisów po jej wieku.
+ *   • Po zmianie dziennika (wczytanie pacjenta, zapis wpisu, synchronizacja) bloki rysują się od nowa,
+ *     a karta zaawansowana liczy analizę trajektorii z nowymi pomiarami (gdy jest na ekranie).
+ *
+ * CZEGO NIE ROBI
+ *   • Blok NIE jest .measure-row: collectAdvancedMeasurements(), obliczenia wierszy, autozapis
+ *     (vilda_persist_runtime.js) i zapis wizyty go nie widzą. Moduł nie zmienia żadnego wiersza ani pola.
+ *   • Nagłówek („6 pomiarów”, „3 od pacjenta”) i zwijanie listy prowadzi vilda_adv_history_collapse.js —
+ *     liczy bloki, ale ich nie tworzy; zwinięta lista chowa je regułą CSS kontenera.
+ *
+ * BEZPIECZNIKI
+ *   • Brak #advMeasurements z nagłówkiem #advHistoryToggle (inna strona, DocPro) albo modułu dziennika —
+ *     moduł nic nie robi. Kod stoi w tym pliku, a nie w osobnym: nowy plik przekroczyłby budżet instalacji SW.
+ *   • Przebudowa tylko przy zmianie treści albo kolejności (podpis), bo obserwator listy reaguje także
+ *     na wstawienie bloku — bez podpisu byłaby pętla.
+ */
+(function (w) {
+  'use strict';
+  if (!w || !w.document) return;
+  if (w.VildaAdvDziennik && w.VildaAdvDziennik.__init) return;
+
+  var doc = w.document;
+  var KLASA = 'adv-dz-row';
+  var NBSP = '\u00a0';
+  var podpis = '';
+
+  function zglos(krok, blad) {
+    try {
+      if (typeof w.vildaLogSwallowedCatch === 'function') w.vildaLogSwallowedCatch('vilda_cykle_leczenia.js#adv-dziennik', blad, { step: krok });
+    } catch (e) { /* logowanie nie może wywrócić karty */ }
+  }
+
+  function el(id) { return typeof doc.getElementById === 'function' ? doc.getElementById(id) : null; }
+  function tekst(v) { return v == null ? '' : String(v).trim(); }
+  function liczba(v) {
+    var n = parseFloat(tekst(v).replace(',', '.'));
+    return isFinite(n) ? n : null;
+  }
+  function liczbaPl(v) { return String(v).replace('.', ','); }
+
+  // ---------------------------------------------------------------------------------------
+  // Czyste funkcje — testowane jednostkowo przez __internals.
+  // ---------------------------------------------------------------------------------------
+
+  /** Wiek wiersza w pełnych miesiącach (jak collectAdvancedMeasurements: round(lata·12 + mies.)); bez wieku — null. */
+  function wiekMies(lata, miesiace) {
+    var y = liczba(lata), m = liczba(miesiace);
+    if (y == null && m == null) return null;
+    return Math.round((y || 0) * 12 + (m || 0));
+  }
+
+  /** „13 l. 7 mies.”, „13 l.” — jak podsumowanie listy (twarde spacje przed jednostką). */
+  function wiekOpis(am) {
+    var y = Math.floor(am / 12), m = am % 12;
+    return y + NBSP + 'l.' + (m ? ' ' + m + NBSP + 'mies.' : '');
+  }
+
+  function odPacjenta(p) {
+    return !!p && (p.zrodloMasy === 'pacjent' || p.zrodloWzrostu === 'pacjent');
+  }
+
+  /**
+   * Gdzie wstawić blok o wieku `am` między wiersze o wiekach `wieki` (null — wiersz w toku): indeks
+   * pierwszego wiersza starszego niż blok, a gdy takiego nie ma — -1 (po ostatnim wypełnionym wierszu).
+   */
+  function miejsceBloku(wieki, am) {
+    for (var i = 0; i < wieki.length; i++) if (wieki[i] != null && wieki[i] > am) return i;
+    return -1;
+  }
+
+  /**
+   * Pomiary z dziennika do pokazania: `wiersze` — [{ ageMonths, weight }] wypełnionych wierszy, `biezacy` —
+   * pomiar formularza { ageMonths, weight, dateISO } albo null. Gdy jest wiersz późniejszy niż bieżący pomiar
+   * (odtworzenie dawnej wizyty), bez wpisów po wieku bieżącego.
+   */
+  function pomiaryDoListy(D, wiersze, biezacy) {
+    if (!D || typeof D.pomiaryStrony !== 'function') return [];
+    var os = wiersze.slice();
+    var pozniej = !!biezacy && wiersze.some(function (x) { return x.ageMonths > biezacy.ageMonths; });
+    if (biezacy) os.push(biezacy);
+    var lista = D.pomiaryStrony(os, { doWiekuMies: pozniej ? biezacy.ageMonths : null });
+    return Array.isArray(lista) ? lista : [];
+  }
+
+  // ---------------------------------------------------------------------------------------
+  // DOM.
+  // ---------------------------------------------------------------------------------------
+
+  function wiersze(lista) {
+    return Array.prototype.filter.call(lista.children || [], function (n) {
+      return n && n.classList && n.classList.contains('measure-row');
+    });
+  }
+
+  function poleWiersza(r, sel) {
+    var p = r.querySelector(sel);
+    return p ? tekst(p.value) : '';
+  }
+
+  function wiekWiersza(r) {
+    var maWartosc = poleWiersza(r, '.adv-height') !== '' || poleWiersza(r, '.adv-weight') !== '' || poleWiersza(r, '.adv-bone-age') !== '';
+    return maWartosc ? wiekMies(poleWiersza(r, '.adv-age-years'), poleWiersza(r, '.adv-age-months')) : null;
+  }
+
+  function biezacyPomiar() {
+    var am = wiekMies(el('age') && el('age').value, el('ageMonths') && el('ageMonths').value);
+    if (am == null) return null;
+    var dob = w.VildaDobAge;
+    return { ageMonths: am, weight: liczba(el('weight') && el('weight').value),
+      dateISO: dob && typeof dob.readMeasuredAtISO === 'function' ? dob.readMeasuredAtISO() : null };
+  }
+
+  function pole(etykieta, wartosc) {
+    var box = doc.createElement('span');
+    box.className = 'adv-dz-field';
+    var nazwa = doc.createElement('span');
+    nazwa.className = 'adv-dz-label';
+    nazwa.textContent = etykieta;
+    var v = doc.createElement('span');
+    v.className = 'adv-dz-value';
+    v.textContent = wartosc;
+    box.appendChild(nazwa);
+    box.appendChild(v);
+    return box;
+  }
+
+  function blok(p) {
+    var D = w.VildaDziennikOtylosci;
+    var pac = odPacjenta(p);
+    var am = Math.round(p.ageMonths);
+    var data = p.dateISO && D && typeof D.dataPL === 'function' ? D.dataPL(p.dateISO) : '';
+    var b = doc.createElement('div');
+    b.className = KLASA;
+    b.setAttribute('role', 'group');
+    b.setAttribute('data-origin', pac ? 'pacjent' : 'gabinet');
+    b.setAttribute('data-age-months', String(am));
+    if (p.dateISO) b.setAttribute('data-date', p.dateISO);
+    b.setAttribute('aria-label', (pac ? 'Pomiar od pacjenta' : 'Wpis leczenia z gabinetu') + ', wiek ' + wiekOpis(am).replace(/\u00a0/g, ' ')
+      + (data ? ', ' + data : '') + ' — tylko do odczytu, poprawiasz w Karcie pacjenta.');
+    b.title = (pac ? 'Pomiar od pacjenta' : 'Wpis z gabinetu') + ' z „Wpisów leczenia”' + (data ? ' · ' + data : '') + ' · poprawiasz w Karcie pacjenta';
+    var sep = doc.createElement('div');
+    sep.className = 'measure-row-sep adv-dz-sep';
+    var odznaka = doc.createElement('span');
+    odznaka.className = 'adv-dz-badge';
+    odznaka.textContent = pac ? 'pomiar od pacjenta' : 'wpis leczenia z gabinetu';
+    var gora = doc.createElement('div');
+    gora.className = 'measure-row-top adv-dz-top';
+    gora.appendChild(pole('Wiek (lata):', String(Math.floor(am / 12))));
+    gora.appendChild(pole('Wiek (miesiące):', String(am % 12)));
+    gora.appendChild(pole('Wzrost (cm):', Number(p.height) > 0 ? liczbaPl(p.height) : '—'));
+    var dol = doc.createElement('div');
+    dol.className = 'measure-row-bot adv-dz-bot';
+    dol.appendChild(pole('Waga (kg):', Number(p.weight) > 0 ? liczbaPl(p.weight) : '—'));
+    dol.appendChild(pole('Wiek kostny (lata):', ''));
+    b.appendChild(sep);
+    b.appendChild(odznaka);
+    b.appendChild(gora);
+    b.appendChild(dol);
+    return b;
+  }
+
+  function rysuj() {
+    var lista = el('advMeasurements');
+    if (!lista) return;
+    try {
+      var ws = wiersze(lista);
+      var wieki = ws.map(wiekWiersza);
+      var pelne = [];
+      ws.forEach(function (r, i) {
+        if (wieki[i] != null) pelne.push({ ageMonths: wieki[i], weight: liczba(poleWiersza(r, '.adv-weight')) });
+      });
+      var pomiary = pomiaryDoListy(w.VildaDziennikOtylosci, pelne, biezacyPomiar());
+      var nowy = JSON.stringify([wieki, pomiary.map(function (p) {
+        return [p.ageMonths, p.weight, p.height, p.zrodloMasy, p.zrodloWzrostu, p.dateISO];
+      })]);
+      var obecne = Array.prototype.filter.call(lista.children || [], function (n) {
+        return n && n.classList && n.classList.contains(KLASA);
+      });
+      if (nowy === podpis && obecne.length === pomiary.length) return;
+      podpis = nowy;
+      obecne.forEach(function (n) { lista.removeChild(n); });
+      var ostatni = null;
+      ws.forEach(function (r, i) { if (wieki[i] != null) ostatni = r; });
+      pomiary.forEach(function (p) {
+        var b = blok(p);
+        var i = miejsceBloku(wieki, p.ageMonths);
+        if (i >= 0) {
+          lista.insertBefore(b, ws[i]);
+        } else if (ostatni) {
+          var po = ostatni;
+          while (po.nextSibling && po.nextSibling.classList && po.nextSibling.classList.contains(KLASA)) po = po.nextSibling;
+          lista.insertBefore(b, po.nextSibling);
+        } else {
+          lista.appendChild(b);
+        }
+      });
+      var C = w.VildaAdvHistoryCollapse;
+      if (C && typeof C.odswiez === 'function') C.odswiez();
+    } catch (blad) {
+      zglos('rysuj', blad);
+    }
+  }
+
+  var zaplanowane = false;
+  function zaplanuj() {
+    if (zaplanowane) return;
+    zaplanowane = true;
+    var uruchom = function () { zaplanowane = false; rysuj(); };
+    if (typeof w.requestAnimationFrame === 'function') w.requestAnimationFrame(uruchom);
+    else w.setTimeout(uruchom, 0);
+  }
+
+  function poZmianieDziennika(ev) {
+    if (!(ev && ev.detail && ev.detail.source === 'obesity-dziennik')) return;
+    podpis = '';
+    rysuj();
+    try {
+      var forma = el('advancedGrowthForm');
+      if (forma && forma.offsetParent !== null && typeof w.calculateGrowthAdvanced === 'function') w.calculateGrowthAdvanced();
+    } catch (blad) {
+      zglos('przeliczenie', blad);
+    }
+  }
+
+  function start() {
+    var lista = el('advMeasurements');
+    // Tylko lista ze zwijanym nagłówkiem (strona główna); DocPro ma własną kartę i monitor.
+    if (!lista || !el('advHistoryToggle')) return;
+    if (typeof w.MutationObserver === 'function') {
+      new w.MutationObserver(function (zmiany) {
+        // Własne bloki pomijamy; wiersz dodany albo usunięty — rysunek od nowa.
+        var wiersz = zmiany.some(function (z) {
+          return Array.prototype.some.call(z.addedNodes || [], function (n) { return n.nodeType === 1 && !(n.classList && n.classList.contains(KLASA)); })
+            || Array.prototype.some.call(z.removedNodes || [], function (n) { return n.nodeType === 1 && !(n.classList && n.classList.contains(KLASA)); });
+        });
+        // Od razu (mikrozadanie obserwatora), nie w następnej klatce: przebudowa wierszy nie zostawia listy bez bloków.
+        if (wiersz) rysuj();
+      }).observe(lista, { childList: true });
+    }
+    ['input', 'change'].forEach(function (typ) { doc.addEventListener(typ, zaplanuj, { capture: true, passive: true }); });
+    ['vilda:patient-loaded', 'vilda:state-restored', 'vilda:persist-restored', 'vilda:json-imported', 'vilda:sync-merged'].forEach(function (n) {
+      doc.addEventListener(n, zaplanuj);
+    });
+    doc.addEventListener('vilda:therapy-points-changed', poZmianieDziennika);
+    if (typeof w.addEventListener === 'function') w.addEventListener('vilda:user-state-cleared', function () { podpis = ''; zaplanuj(); });
+    zaplanuj();
+  }
+
+  w.VildaAdvDziennik = Object.freeze({
+    __init: true,
+    odswiez: function () { podpis = ''; rysuj(); },
+    __internals: Object.freeze({ wiekMies: wiekMies, wiekOpis: wiekOpis, odPacjenta: odPacjenta, miejsceBloku: miejsceBloku, pomiaryDoListy: pomiaryDoListy })
+  });
+
+  if (doc.readyState === 'loading' && typeof doc.addEventListener === 'function') doc.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})(typeof window !== 'undefined' ? window : this);

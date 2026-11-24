@@ -17,6 +17,24 @@
 // P-GH-NOWE-ID-MONITOR (2026-10-21): dzisiejszy monitor bierze id nowego punktu z VildaGhPunkty.noweId(), więc nowe id
 // ma inną postać niż w BAZA; wynik kanoniczny zastępuje je tym samym znacznikiem (NOWE_ID, POSTACI_ID niżej), a wzorzec
 // zostaje bez zmian.
+// P-GH-WZNOWIENIE, część 2 (decyzje właściciela 2026-11-20, W2): reguła rodzaju punktu to reguła KURSÓW
+// (VildaGhPunkty.sprawdzRodzaj z VildaTrajectoryAnalysis.ghKursy) zamiast „najwyżej jedno Włączenie i jedno Zakończenie”.
+// wplywRegulyKursow(p) mówi, czy reguła kursów zmienia wynik przypadku względem BAZA (każda odmowa „zajęty typ” ma inny
+// tekst; część zapisów i odmów na wartościach jest dziś odmową reguły kursów). Pole kategorieRegulaKursow to skróty
+// kategorii policzone z BAZA tylko z przypadków z modułem dawki, których reguła kursów nie zmienia; test porównuje z nim
+// drzewo robocze, a przypadki zmienione sprawdza jako odmowy z tekstem reguły kursów. Klasyfikacja woła API z drzewa
+// roboczego (vilda_gh_punkty.js i vilda_trajectory_analysis.js), nie kopię reguły.
+// P-GH-PROGRAM-BIEZACY (zmiana kliniczna, decyzja właściciela 2026-11-23): #therProg poza edycją = program bieżący kursu
+// (jak Karta pacjenta), nie program Włączenia. wplywProgramuBiezacego(p) mówi, które przypadki to zmienia (nowy punkt
+// z karty na liście z innym programem ostatniego punktu); zProgramemNowego(wynik, program) zamienia program nowego punktu
+// w wyniku. Test porównuje te przypadki z wynikiem wzorca z programem bieżącym, a skróty kategorii liczy z ich wyniku
+// z programem cofniętym do programu Włączenia — muszą dać skróty BAZA. Wzorzec (plik) bez zmian.
+// P-GH-PROGRAM-EDYCJA (zmiana kliniczna, decyzja właściciela 2026-11-23, pytanie 17): #therProg przy edycji = program
+// edytowanego punktu (bez programu — program bieżący kursu z chwili punktu), nie program Włączenia. wplywProgramuEdycji(p)
+// mówi, które przypadki to zmienia (edycja z zapisem punktu o innym programie niż Włączenie); zProgramemEdytowanego(wynik,
+// indeks, program) zamienia program edytowanego punktu w wyniku od zapisu (wpis M) dalej. Test porównuje te przypadki
+// z wynikiem wzorca z programem edytowanego punktu, a skróty kategorii liczy z wyniku z programem cofniętym do programu
+// Włączenia — muszą dać skróty BAZA. Wzorzec (plik) bez zmian.
 // Siatkę, wykonanie przypadku i postać kanoniczną wyniku eksportuje ten plik. Test używa tych samych funkcji, ale na
 // plikach z drzewa roboczego. Dane wyłącznie FIKCYJNE.
 import { createHash } from 'node:crypto';
@@ -27,6 +45,7 @@ import { fileURLToPath } from 'node:url';
 import {
   ZEGAR_KROK, ZEGAR_START, idDawneMonitora, idDeterministyczne, utworzAtrapeMonitoraGh,
 } from '../support/gh-monitor-atrapa.mjs';
+import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 export const korzen = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 export const PLIK_WZORCA = 'tests/fixtures/gh-punkty-wzorzec.json';
@@ -363,6 +382,144 @@ export function siatka() {
   return wynik.sort((a, b) => kolejnosc.get(a.kategoria) - kolejnosc.get(b.kategoria));
 }
 
+/* ---------- Reguła kursów (P-GH-WZNOWIENIE, część 2) ---------- */
+
+let apiKursow = null;
+function api() {
+  if (!apiKursow) {
+    const w = {};
+    loadBrowserScript('vilda_gh_punkty.js', w);
+    loadBrowserScript('vilda_trajectory_analysis.js', w);
+    apiKursow = w.VildaGhPunkty;
+  }
+  return apiKursow;
+}
+// Wartość pola liczbowego tak, jak zobaczy ją monitor (type="number": tylko liczba HTML, inaczej pusty tekst).
+const LICZBA_POLA = /^-?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+const polePliczbowe = (v) => {
+  const t = v === null || v === undefined ? '' : String(v);
+  return LICZBA_POLA.test(t) ? t : '';
+};
+/** Rodzaj, wiek (pola formularza) i wykluczenie punktu, z którymi monitor woła regułę rodzaju w tym przypadku. */
+export function rodzajPrzypadku(p) {
+  if (p.sciezka === 'Z1') return { typ: p.typ, lata: p.pola.age, miesiace: p.pola.ageMonths, opcje: { pomin: null } };
+  if (p.sciezka === 'Z4') return { typ: p.pola.ghRetroType, lata: p.pola.ghRetroAge, miesiace: p.pola.ghRetroAgeMonths, opcje: {} };
+  if (p.sciezka === 'Z2') {
+    // Formularz edycji: wiek z pól przypadku, a bez nich — z edytowanego punktu (O() wpisuje ageYears i ageMonths).
+    const punkt = LISTY[p.lista].find((x) => idTekst(x) === String(p.cel)) || {};
+    const lata = 'ghEditAge' in p.pola ? p.pola.ghEditAge : punkt.ageYears;
+    const miesiace = 'ghEditAgeMonths' in p.pola ? p.pola.ghEditAgeMonths : punkt.ageMonths;
+    return { typ: p.typ, lata, miesiace, opcje: { pomin: p.cel } };
+  }
+  return null;
+}
+/**
+ * Czy reguła kursów zmienia wynik przypadku względem BAZA: null — bez zmian; { kod, komunikat } — dziś odmowa reguły
+ * kursów (dotąd: odmowa „zajęty typ” z innym tekstem, zapis albo odmowa na wartościach). Odmowa „wartosci” (wiek bez
+ * wartości) daje ten sam tekst co dotąd sprawdzenie wartości — bez zmiany.
+ */
+export function wplywRegulyKursow(p) {
+  const r = rodzajPrzypadku(p);
+  if (!r || !p.modulDawki) return null;
+  const A = api();
+  const wynik = A.sprawdzRodzaj(LISTY[p.lista], r.typ, {
+    ...r.opcje, wiekM: A.wiekMiesZPol(polePliczbowe(r.lata), polePliczbowe(r.miesiace)),
+  });
+  if (p.powod === 'typ' && wynik.ok) throw new Error(`${p.id}: reguła kursów przyjmuje punkt, którego dawna reguła nie przyjmowała`);
+  if (wynik.ok || wynik.kod === 'wartosci') return null;
+  return { kod: wynik.kod, komunikat: wynik.komunikat };
+}
+
+/* ---------- Program bieżący (P-GH-PROGRAM-BIEZACY) ---------- */
+
+// Program, z którym BAZA zapisuje nowy punkt z karty przy niepustej liście: F() wpisuje do #therProg program punktu
+// Włączenia, a bez niego — pierwszego punktu (komentarz w polaKarty; siatka ma jeden kurs).
+function programDotad(lista) {
+  const w = lista.find((x) => x.type === 'start');
+  return (w && w.program) || (lista[0] && lista[0].program) || null;
+}
+const programyPola = new Map();
+// #therProg monitora z drzewa roboczego po wczytaniu listy (poza edycją): świeża atrapa, prawdziwe F().
+function programPola(lista) {
+  if (!programyPola.has(lista)) {
+    programyPola.set(lista, utworzAtrapeMonitoraGh({ punkty: kopia(LISTY[lista]) }).pole('therProg').value);
+  }
+  return programyPola.get(lista);
+}
+/**
+ * Czy program bieżący (P-GH-PROGRAM-BIEZACY, decyzja właściciela 2026-11-23) zmienia wynik przypadku względem BAZA:
+ * null — bez zmian; { dotad, teraz } — nowy punkt z karty (Z1, z modułem dawki) na liście, której program bieżący
+ * (program ostatniego punktu wg wieku) różni się od programu Włączenia: zapis jak w BAZA, tylko nowy punkt ma program
+ * `teraz` zamiast `dotad`. Edycja (Z2 — od P-GH-PROGRAM-EDYCJA program edytowanego punktu, wplywProgramuEdycji niżej),
+ * punkt wsteczny (Z4 — program z formularza),
+ * usuwanie (Z5), odmowy i przypadki zmienione regułą kursów (odmowa) — bez zmian. Program `teraz` czyta prawdziwy
+ * monitor z drzewa roboczego (#therProg po wczytaniu listy), nie kopia reguły.
+ */
+export function wplywProgramuBiezacego(p) {
+  if (p.sciezka !== 'Z1' || !p.modulDawki || p.powod || p.lista === 'pusta' || wplywRegulyKursow(p)) return null;
+  const dotad = programDotad(LISTY[p.lista]);
+  const teraz = programPola(p.lista);
+  return teraz !== dotad ? { dotad, teraz } : null;
+}
+/** Wynik JSON z programem nowego punktu (id = znacznik NOWE_ID) zamienionym na `program`: lista, moduł i dziennik;
+    kolejność kluczy bez zmian. */
+export function zProgramemNowego(wynikJson, program) {
+  const zamien = (v) => {
+    if (Array.isArray(v)) return v.map(zamien);
+    if (!v || typeof v !== 'object') return v;
+    const o = {};
+    for (const k of Object.keys(v)) o[k] = zamien(v[k]);
+    if (o.id === NOWE_ID && 'program' in o) o.program = program;
+    return o;
+  };
+  return zamien(wynikJson);
+}
+
+/* ---------- Program przy edycji (P-GH-PROGRAM-EDYCJA) ---------- */
+
+const programyEdycji = new Map();
+// #therProg monitora z drzewa roboczego podczas edycji punktu `cel` listy (świeża atrapa, prawdziwe O() i F(), bez zapisu).
+function programEdycji(lista, cel) {
+  const klucz = `${lista}\n${cel}`;
+  if (!programyEdycji.has(klucz)) {
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: kopia(LISTY[lista]) });
+    atrapa.edytuj(cel);
+    programyEdycji.set(klucz, atrapa.pole('therProg').value);
+  }
+  return programyEdycji.get(klucz);
+}
+/**
+ * Czy program przy edycji (P-GH-PROGRAM-EDYCJA, decyzja właściciela 2026-11-23, pytanie 17) zmienia wynik przypadku
+ * względem BAZA: null — bez zmian; { indeks, dotad, teraz } — edycja z zapisem (Z2, z modułem dawki, bez odmowy i bez
+ * zmiany regułą kursów) punktu, którego program różni się od programu Włączenia (siatka: jeden kurs, programDotad):
+ * zapis jak w BAZA, tylko edytowany punkt (pozycja `indeks` listy, pierwszy o równym String(id), jak O()) ma program
+ * `teraz` zamiast `dotad`. Program `teraz` czyta prawdziwy monitor z drzewa roboczego (#therProg podczas edycji), nie
+ * kopia reguły. Nowy punkt z karty (Z1 — wplywProgramuBiezacego), punkt wsteczny (Z4), usuwanie (Z5) i odmowy — bez zmian.
+ */
+export function wplywProgramuEdycji(p) {
+  if (p.sciezka !== 'Z2' || !p.modulDawki || p.powod || wplywRegulyKursow(p)) return null;
+  const indeks = LISTY[p.lista].findIndex((x) => idTekst(x) === String(p.cel));
+  const dotad = programDotad(LISTY[p.lista]);
+  const teraz = programEdycji(p.lista, p.cel);
+  return teraz !== dotad ? { indeks, dotad, teraz } : null;
+}
+/** Wynik JSON z programem punktu na pozycji `indeks` zamienionym na `program` w liście i module oraz we wpisach
+    dziennika od zapisu (pierwszy wpis M) dalej — wcześniejsze zdarzenie (odczyt listy przed zapisem) ma punkt sprzed
+    edycji. Kolejność kluczy bez zmian. */
+export function zProgramemEdytowanego(wynikJson, indeks, program) {
+  const zamien = (l) => (Array.isArray(l) && l[indeks] && typeof l[indeks] === 'object' && 'program' in l[indeks]
+    ? l.map((x, j) => (j === indeks ? { ...x, program } : x)) : l);
+  const odZapisu = wynikJson.dziennik.findIndex((w) => w.rodzaj === 'M');
+  const dziennik = wynikJson.dziennik.map((w, j) => {
+    if (odZapisu < 0 || j < odZapisu) return w;
+    const o = { ...w };
+    if ('okno' in o) o.okno = zamien(o.okno);
+    if ('wartosc' in o) o.wartosc = zamien(o.wartosc);
+    return o;
+  });
+  return { ...wynikJson, lista: zamien(wynikJson.lista), modul: zamien(wynikJson.modul), dziennik };
+}
+
 /* ---------- Wynik kanoniczny ---------- */
 
 // Nowe id na zegarze atrapy. Numer wywołania zegara zależy od tego, ile punktów dodano wcześniej na tej samej atrapie,
@@ -571,6 +728,7 @@ export function zbudujWzorzec(zrodla = zrodlaBazy(), postacId = 'monitor') {
     listy: LISTY,
     kategorie: podsumowanieKategorii(przypadki, wyniki),
     kategorieZModulemDawki: podsumowanieKategorii(przypadki.filter((p) => p.modulDawki), wyniki),
+    kategorieRegulaKursow: podsumowanieKategorii(przypadki.filter((p) => p.modulDawki && !wplywRegulyKursow(p)), wyniki),
     przypadki: przypadki.filter((p) => reprezentatywne.has(p.id)).map((p) => ({ wejscie: p, wynik: wyniki.get(p.id) })),
   };
 }
@@ -593,9 +751,11 @@ export function zapiszTekst(wzorzec) {
   };
   const kategorie = Object.entries(wzorzec.kategorie).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
   const zModulem = Object.entries(wzorzec.kategorieZModulemDawki).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
+  const kursy = Object.entries(wzorzec.kategorieRegulaKursow).map(([k, v]) => `    ${j(k)}: ${j(v)}`).join(',\n');
   const listy = Object.entries(wzorzec.listy).map(([k, v]) => `    ${j(k)}: ${lista(v, '    ')}`).join(',\n');
   return `{\n  "opis": ${lista(wzorzec.opis, '  ')},\n  "baza": ${j(wzorzec.baza)},\n  "pliki": ${j(wzorzec.pliki)},\n`
     + `  "listy": {\n${listy}\n  },\n  "kategorie": {\n${kategorie}\n  },\n  "kategorieZModulemDawki": {\n${zModulem}\n  },\n`
+    + `  "kategorieRegulaKursow": {\n${kursy}\n  },\n`
     + `  "przypadki": [\n${wzorzec.przypadki.map(przypadek).join(',\n')}\n  ]\n}\n`;
 }
 
