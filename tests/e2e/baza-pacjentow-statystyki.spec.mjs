@@ -191,6 +191,111 @@ test('leczenie GH: tempo w 1. roku, para „przed → 1. rok”, zmiana hSDS, pr
   expect(await database.locator('.pt-row').evaluateAll((rows) => rows.map((row) => row.dataset.patientId).sort())).toEqual([ids.c, ids.d].sort());
 });
 
+// P-BAZA-STATYSTYKI, etap 3: leczenie otyłości — cykle, tygodnie leczenia i BMI z silników aplikacji;
+// pomiar po 6 mies. u pacjentki f istnieje tylko jako wpis między wizytami (dziennik w notatkach pacjenta).
+test('leczenie otyłości: zmiana masy po 12 tyg. i po 6 mies., progi redukcji, BMI dzieci, leki i wykres pacjentów', async ({ page }) => {
+  const { frame, database, ids } = await przygotujStatystyki(page);
+  await otworzStatystyki(database);
+  const E = OCZEKIWANE.otylosc;
+  const ob = database.locator('.pt-ob');
+  await expect(ob, 'przed policzeniem z kart sekcja nie pokazuje liczb').toContainText('Pojawi się po policzeniu z kart.');
+  await expect(ob.locator('.pt-stat-tile')).toHaveCount(0);
+
+  // Wpisy między wizytami czyta dopiero przycisk — raz na pacjenta z bazy.
+  await frame.evaluate(() => {
+    const vault = window.VildaVault, original = vault.listPatientNotesForPatient;
+    window.__statNotatki = 0;
+    vault.listPatientNotesForPatient = function (...args) { window.__statNotatki += 1; return original.apply(this, args); };
+  });
+  await database.locator('.pt-stat-check').click();
+  await expect(ob.locator('.pt-stat-card-hint')).toHaveText(E.leki);
+  expect(await frame.evaluate(() => window.__statNotatki), 'jeden odczyt wpisów na pacjenta z bazy').toBe(OCZEKIWANE.razem);
+
+  const okno = (klucz) => ob.locator(`.pt-stat-tile[data-window="${klucz}"]`);
+  await expect(okno('w12').locator('.pt-stat-label')).toHaveText('Zmiana masy po 12 tyg.');
+  await expect(okno('w12').locator('.pt-stat-value')).toHaveText(E.w12.srednia);
+  await expect(okno('w12').locator('.pt-stat-sub')).toHaveText(E.w12.opis);
+  await expect(okno('m6').locator('.pt-stat-label')).toHaveText('Zmiana masy po 6 mies.');
+  await expect(okno('m6').locator('.pt-stat-value'), 'średnia zawiera pomiar z wpisu dziennika (f: −12,0%)').toHaveText(E.m6.srednia);
+  await expect(okno('m6').locator('.pt-stat-sub')).toHaveText(E.m6.opis);
+  const prog = ob.locator('.pt-stat-tile[data-tile="threshold"]');
+  await expect(prog.locator('.pt-stat-label')).toHaveText(E.prog.etykieta);
+  await expect(prog.locator('.pt-stat-value')).toHaveText(E.prog.wartosc);
+  await expect(prog.locator('.pt-stat-sub')).toHaveText(E.prog.opis);
+
+  // BMI dzieci: d i h mają BMI po 26 tyg.; BMI-SDS tylko d (h nie ma płci) — liczony silnikiem BMI strony na tych samych punktach.
+  const sds = await frame.evaluate(() => {
+    const zrodlo = typeof window.bmiSource === 'string' && window.bmiSource ? window.bmiSource.toUpperCase() : null;
+    const z = (masaKg, wzrostCm, wiekMies) => window.VildaBmi.policz({ bmi: window.VildaBmi.bmi({ masaKg, wzrostCm }), plec: 'F', wiekMies, zrodlo, populacja: 'OGOLNA' }).sds;
+    const delta = z(57.0, 147.0, 143) - z(60.0, 145.0, 137), tekst = Math.abs(delta).toFixed(2).replace('.', ',');
+    return { delta, tekst: (Number(Math.abs(delta).toFixed(2)) === 0 ? '' : delta > 0 ? '+' : '−') + tekst };
+  });
+  expect(Number.isFinite(sds.delta), 'strona Start ma siatki BMI').toBe(true);
+  const bmi = ob.locator('.pt-stat-tile[data-tile="bmi"]');
+  await expect(bmi.locator('.pt-stat-label')).toHaveText('Dzieci: zmiana BMI po 6 mies.');
+  await expect(bmi.locator('.pt-stat-value')).toHaveText(E.bmiDzieci);
+  await expect(bmi.locator('.pt-stat-sub')).toHaveText(`n = 2 · BMI-SDS ${sds.tekst} (n = 1)`);
+
+  // Leki: od najliczniejszego; kropka „po 6 mies.” przy większej redukcji leży dalej w prawo.
+  const lek = (nazwa) => ob.locator(`.pt-ob-row[data-drug="${nazwa}"]`);
+  expect(await ob.locator('.pt-ob-row').evaluateAll((rows) => rows.map((row) => row.dataset.drug))).toEqual(Object.keys(E.leki12i6));
+  for (const [nazwa, [opis, liczby]] of Object.entries(E.leki12i6)) {
+    await expect(lek(nazwa).locator('.pt-gh-n')).toHaveText(opis);
+    await expect(lek(nazwa).locator('.pt-gh-figure')).toHaveText(liczby);
+  }
+  const srodek = async (wiersz, klasa) => wiersz.locator(`line.${klasa}`).evaluate((node) => {
+    const box = node.getBoundingClientRect(); return box.left + box.width / 2;
+  });
+  const saxenda12 = await srodek(lek('Saxenda'), 'pt-gh-dot--before'), saxenda6 = await srodek(lek('Saxenda'), 'pt-gh-dot--first');
+  const wegovy12 = await srodek(lek('Wegovy'), 'pt-gh-dot--before'), wegovy6 = await srodek(lek('Wegovy'), 'pt-gh-dot--first');
+  expect(saxenda6).toBeGreaterThan(saxenda12);   // −1,0 za −0,5
+  expect(wegovy12).toBeGreaterThan(saxenda6);    // −5,1 za −1,0
+  expect(wegovy6).toBeGreaterThan(wegovy12);     // −12,0 za −5,1
+  await expect(ob.locator('.pt-ob-scale span')).toHaveText(E.skala);
+
+  // Wykres „każdy pacjent”: h +3,0 (przyrost, nad zerem), d −5,0 i f −12,0 (pod zerem), od najmniejszej redukcji.
+  await expect(ob.locator('.pt-ob-tick')).toHaveText(E.podzialka);
+  const wykres = await ob.locator('.pt-ob-fall').evaluate((fall) => {
+    const plot = fall.querySelector('.pt-ob-fall-plot');
+    const zero = plot.querySelector('.pt-ob-zero').getBoundingClientRect().top;
+    const etykieta = Array.from(fall.querySelectorAll('.pt-ob-tick')).find((node) => node.textContent === '0%').getBoundingClientRect();
+    return {
+      zero, zeroEtykieta: etykieta.top + etykieta.height / 2,
+      slupki: Array.from(plot.querySelectorAll('rect')).map((rect) => {
+        const box = rect.getBoundingClientRect();
+        return { przyrost: rect.classList.contains('pt-ob-bar--gain'), lewo: box.left, gora: box.top, dol: box.bottom, wysokosc: box.height };
+      }),
+    };
+  });
+  expect(wykres.slupki.map((slupek) => slupek.przyrost)).toEqual([true, false, false]);
+  expect(wykres.slupki[1].lewo).toBeGreaterThan(wykres.slupki[0].lewo);
+  expect(wykres.slupki[2].lewo).toBeGreaterThan(wykres.slupki[1].lewo);
+  expect(Math.abs(wykres.slupki[0].dol - wykres.zero), 'przyrost stoi na linii zera').toBeLessThan(1);
+  expect(Math.abs(wykres.slupki[1].gora - wykres.zero), 'ubytek wisi pod linią zera').toBeLessThan(1);
+  expect(wykres.slupki[2].wysokosc / wykres.slupki[1].wysokosc, '−12,0% wobec −5,0%').toBeCloseTo(2.4, 1);
+  expect(wykres.slupki[0].wysokosc / wykres.slupki[1].wysokosc, '+3,0% wobec −5,0%').toBeCloseTo(0.6, 1);
+  // Podziałka stoi przy swoich liniach: etykieta „0%” na wysokości linii zera.
+  expect(Math.abs(wykres.zeroEtykieta - wykres.zero)).toBeLessThan(4);
+  await bezPrzewijaniaPoziomego(page, frame);
+
+  // Grupy pacjentów: lek, okno, próg, przyrost i powody braku wyniku.
+  const grupa = async (akcja, etykieta, klucze) => {
+    await akcja();
+    await expect(database.locator('.pt-groupbar .lt')).toHaveText(`Grupa ze statystyk: ${etykieta}`);
+    expect(await database.locator('.pt-row').evaluateAll((rows) => rows.map((row) => row.dataset.patientId).sort())).toEqual(klucze.map((klucz) => ids[klucz]).sort());
+    await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
+    await expect(ob.locator('.pt-stat-tile'), 'wynik z kart zostaje po powrocie').toHaveCount(4);
+  };
+  await grupa(() => lek('Wegovy').click(), 'Otyłość · Wegovy · 2 osoby', ['e', 'f']);
+  await grupa(() => okno('m6').click(), 'Otyłość · masa po 6 mies. · 3 osoby', ['d', 'f', 'h']);
+  await grupa(() => prog.click(), 'Otyłość · redukcja o ≥ 5% po 6 mies. · 2 osoby', ['d', 'f']);
+  await grupa(() => ob.locator('.pt-ob-gaps [data-reason="gained"]').click(), 'Otyłość · przyrost masy po 6 mies. · 1 osoba', ['h']);
+  await grupa(() => ob.locator('.pt-ob-gaps[data-window="w12"] [data-reason="no-start"]').click(), 'Otyłość · po 12 tyg. · brak Włączenia z masą · 1 osoba', ['g']);
+  await grupa(() => ob.locator('.pt-ob-gaps[data-window="m6"] [data-reason="too-early"]').click(), 'Otyłość · po 6 mies. · leczenie krótsze niż 20 tyg. · 1 osoba', ['e']);
+  await expect(ob.locator('.pt-ob-gaps[data-window="w12"] button')).toHaveCount(1);
+  await expect(ob.locator('.pt-ob-gaps[data-window="m6"] button')).toHaveCount(2);
+});
+
 test.describe('telefon', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -224,5 +329,18 @@ test.describe('telefon', () => {
     const kropka = await database.locator('.pt-gh-row[data-program="SNP"] line.pt-gh-dot--first').boundingBox();
     expect(Math.round(kropka.width), 'kropka 12 px niezależnie od szerokości').toBe(12);
     expect(Math.round(kropka.height)).toBe(12);
+
+    // Etap 3: sekcja leczenia otyłości — kafle jeden pod drugim, podziałka wykresu w skali 1:1.
+    const ob = database.locator('.pt-ob');
+    await expect(ob.locator('.pt-stat-tile')).toHaveCount(4);
+    const kafleOtylosci = await ob.locator('.pt-stat-tile').evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().left)));
+    expect(new Set(kafleOtylosci).size, 'jedna kolumna').toBe(1);
+    const podzialka = await ob.locator('.pt-ob-fall-axis').boundingBox(), slupki = await ob.locator('.pt-ob-fall-plot').boundingBox();
+    expect(Math.round(podzialka.width)).toBe(46);
+    expect(Math.round(podzialka.height)).toBe(132);
+    expect(Math.round(slupki.height)).toBe(132);
+    expect(slupki.x + slupki.width, 'wykres mieści się w karcie').toBeLessThanOrEqual(390);
+    const kropkaLeku = await ob.locator('.pt-ob-row[data-drug="Wegovy"] line.pt-gh-dot--first').boundingBox();
+    expect(Math.round(kropkaLeku.width)).toBe(12);
   });
 });

@@ -47392,3 +47392,84 @@ lata, grupy pacjentów; telefon — bez przewijania w bok, kropki 12 px).
 **Wersje.** `vilda_patients_list.js` 6 → 7, `vilda_patients_list.css` 5 → 6, `vilda_chrome.js` 325 → 326
 i `vilda_session_bridge.js` 241 → 242 (wstrzykują pliki z nowym `?v=`), SW 1.1.580 → 1.1.581 — `npm run podbij-wersje`.
 Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 3 — Baza pacjentów: statystyki leczenia otyłości (SW 1.1.582, `vilda_patients_list.js` 8, `vilda_patients_list.css` 7, 2026-11-24)
+
+**Zmiana kliniczna: MOŻLIWA — nowa statystyka opisowa bazy (zmiana masy ciała i BMI u leczonych z powodu otyłości).**
+Wynik pojedynczego pacjenta, zapis karty, dziennik leczenia, kryteria ChPL, normy i progi — bez zmian. Model nie zna reguł
+leczenia: cykle dzieli `VildaCykleLeczenia.podziel` (P-OTYLOSC-CYKLE), tygodnie leczenia liczy
+`ObesityResponseCriteria.tygodnieOceny` (jak Karta pacjenta), BMI i BMI-SDS liczy `VildaBmi` (P-BMI), granicę
+dziecko/dorosły daje `VildaBmi.dorosly`, a punkty leczenia składa `VildaDziennikOtylosci.wczytaj` (P-OTYLOSC-DZIENNIK).
+Nowe są definicje okien pomiaru, dwie proste wielkości (zmiana masy w % i tempo w kg/mies.) oraz uśrednienie po pacjentach
+— do akceptacji właściciela.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów; etap 3 — leczenie otyłości, okna „po 12 tygodniach i po 6 miesiącach”.
+2026-11-24: „rób etap 3 — leczenie otyłości”.
+
+**Źródła i jednostki.** Masa w kg, wzrost w cm. Tygodnie leczenia: z dat obu punktów (zaokrąglone do pełnych tygodni),
+a bez dat — z różnicy wieku (miesiące × 4,345) — funkcja silnika kryteriów, bez własnego liczenia. BMI punktu: z masy
+i wzrostu (`VildaBmi.bmi`), a bez nich z zapisanego BMI — jak w Karcie pacjenta. BMI-SDS: siatka zapisana w karcie
+(`zscore.dataSource`; bez niej — bieżące źródło strony), populacja z karty (`clinical.downSyndrome` → siatki zespołu Downa),
+reguły siatek jak w P-BMI. Progi „redukcja o co najmniej X%” nie są wpisane w model: to szczeble wspólne wszystkim drabinkom
+pasm aplikacji z pliku danych `vilda_postepy_doroslego_dane.js` (P-POSTEPY) — dziś 5 i 10%; są drabinką prezentacyjną, nie
+kryterium odstawienia leku (to ma jedno miejsce: `obesity_response_criteria.js`).
+
+**Definicje (model: `obesityPatient`, `obesityCohort`, `obesityThresholds` w `vilda_patients_list.js`).**
+1. **Leczony** — pacjent ma co najmniej jeden punkt leczenia otyłości (Włączenie, Kontynuacja, Zakończenie): wizyty z zapisu
+   karty (`obesityTherapyPoints`) razem z wpisami między wizytami z dziennika leczenia (notatki pacjenta kategorii
+   `leczenie-otylosci`) — ta sama projekcja, którą pokazuje Karta pacjenta.
+2. **Cykl** — liczy się pierwszy cykl z punktem Włączenia; masa Włączenia jest punktem odniesienia. Kolejny cykl (np. po
+   zmianie leku) nie wchodzi do wyniku, bo jego masa wyjściowa jest już skutkiem wcześniejszego leczenia.
+3. **Okna** — „po 12 tyg.”: pomiar masy z 9–15 tyg. od Włączenia, najbliższy 12. tygodnia; „po 6 mies.”: pomiar z 20–32 tyg.,
+   najbliższy 26. tygodnia. Przy równej odległości od celu — wcześniejszy. Szerokość okna ±25%, jak okno roczne tempa
+   wzrastania (9–15 mies. dla 12).
+4. **Zmiana masy %** = (masa − masa Włączenia) / masa Włączenia × 100; ujemna = ubytek (ta sama wielkość, co `zmianaMasyPct`
+   w P-POSTEPY). **Tempo** = zmiana w kg / (tygodnie / 4,348), w kg/mies. (miesiąc = 365,25 / 12 dni).
+5. **Dziecko** — wiek przy Włączeniu poniżej granicy dorosłości silnika BMI (18 lat; zespół Downa 20 lat). U dziecka masa rośnie
+   ze wzrostem, dlatego dodatkowo liczy się **zmiana BMI %** i **zmiana BMI-SDS**: z najbliższego celowi pomiaru w tym samym
+   oknie, który ma BMI (wpis z samą masą nie ma BMI — wtedy bierze się wizytę ze wzrostem z tego okna). BMI-SDS wymaga płci
+   i siatki; tablice siatek ładują strony Start, DocPro i Klirens — na pozostałych kafel mówi, skąd otworzyć Bazę.
+6. **Redukcja o co najmniej próg** — zmiana masy ≤ −próg (z zapasem na zaokrąglenie dzielenia); liczona w dłuższym oknie,
+   a gdy nikt go jeszcze nie ma — w krótszym. To samo okno pokazują kafel BMI dzieci i wykres pacjentów.
+7. **Kto nie wchodzi do średniej** (osobno dla każdego okna, z listą pacjentów): „brak Włączenia z masą”, „brak pomiaru
+   w 9–15 tyg.” / „w 20–32 tyg.” (są późniejsze pomiary, ale żaden w oknie), „leczenie krótsze niż 9 tyg.” / „niż 20 tyg.”.
+8. **Uśrednianie** — średnia arytmetyczna i mediana po pacjentach (każdy pacjent raz). „Wg leku”: krótka nazwa leku punktu
+   Włączenia (`VildaCykleLeczenia.nazwaLeku`; bez niej — pierwsza nazwa w cyklu; brak — „bez leku”). Grupa z mniej niż 5
+   pacjentami z wynikiem jest oznaczona „mała grupa”.
+
+**Jeden przebieg po kartach.** „Policz z kart (N)” czyta dla każdego pacjenta najnowszy zapis karty i — nowe w tym etapie —
+jego wpisy między wizytami (jeden odczyt notatek pacjenta). Gdy wpisów nie da się odczytać, pacjent liczy się z punktów
+zapisu wizyty, a notka pod sekcją podaje, u ilu pacjentów tak było.
+
+**Rysowanie.** „Wg leku”: hantla „po 12 tyg. → po 6 mies.” na skali od zera (albo od przyrostu) do największej redukcji,
+w trzech równych krokach. „Każdy pacjent”: jeden słupek to jeden pacjent, od najmniejszej do największej redukcji; przyrost
+masy nad linią zera w innym kolorze. Słupki to SVG rozciągnięty na szerokość, a podziałka — osobny SVG w skali 1:1, żeby
+liczby się nie rozciągały. Bez stylów na elementach (geometria w atrybutach SVG i klasach arkusza). Kliknięcie kafla, leku
+albo powodu braku otwiera listę tych pacjentów.
+
+**Przypadki syntetyczne (prawdziwe silniki).**
+- dorosła, Wegovy: Włączenie 01.10.2025 100,0 kg; 24.12.2025 (12 tyg.) 94,0 kg → −6,0%; 01.04.2026 (26 tyg.) 88,0 kg → −12,0%,
+  tempo −12 / (26 / 4,348) = −2,0 kg/mies.;
+- dziecko 11 l. 5 mies., Saxenda: Włączenie 60,0 kg / 145 cm; po 13 tyg. 58,2 / 146 → −3,0%; po 26 tyg. 57,0 / 147 → −5,0%,
+  BMI 28,54 → 26,38 = −7,57%;
+- dziecko, wpis z samą masą w 12. tyg. (77,6 kg) i wizyta ze wzrostem w 14. tyg. (77,0 kg / 161 cm) po Włączeniu 80,0 / 160
+  → masa −3,0% z 12. tyg., BMI z 14. tyg.;
+- pomiary w 9., 13. i 15. tyg. → wybrany 13.; w 10. i 14. → wybrany 10.; w 19., 22., 31. i 33. tyg. → okno 6 mies. bierze 22.;
+- tylko pomiar w 6. tyg. → „leczenie krótsze niż…” w obu oknach; tylko w 18. tyg. → „brak pomiaru w 9–15 tyg.” i „leczenie
+  krótsze niż 20 tyg.”; tylko w 40. tyg. → „brak pomiaru” w obu; sama Kontynuacja albo Włączenie bez masy → „brak Włączenia
+  z masą”;
+- Włączenie, pomiar w 12. tyg. (−4,0%), Zakończenie w 17. tyg., potem nowe Włączenie innym lekiem → wynik i lek z pierwszego
+  cyklu, okno 6 mies. bez wyniku;
+- 95,0 → 90,25 kg w 26. tyg. (dokładnie −5%) → próg 5% osiągnięty.
+
+**Strażnicy.** `tests/unit/baza-statystyki-otylosc.test.mjs` (12: model na prawdziwych silnikach cykli, tygodni i BMI —
+dorosła i dziecko, wybór pomiaru w oknie, BMI z innej wizyty niż masa, punkty bez dat, powody braku, pierwszy cykl, brak
+silników, progi z pliku pasm, kohorta, leki, mała grupa, próg dokładnie osiągnięty);
+`tests/e2e/baza-pacjentow-statystyki.spec.mjs` (6; nowy test na prawdziwym sejfie: 5 leczonych, pomiar po 6 mies. u jednej
+pacjentki tylko we wpisie dziennika, średnie −2,8% i −4,7%, progi 2 z 3, BMI dzieci −4,5% i BMI-SDS równy wynikowi silnika
+BMI strony, leki, wykres pacjentów, grupy; jeden odczyt wpisów na pacjenta dopiero po przycisku; telefon — jedna kolumna
+kafli, podziałka 1:1, bez przewijania w bok).
+
+**Wersje.** `vilda_patients_list.js` 7 → 8, `vilda_patients_list.css` 6 → 7, `vilda_chrome.js` 326 → 327
+i `vilda_session_bridge.js` 242 → 243 (wstrzykują pliki z nowym `?v=`), SW 1.1.581 → 1.1.582 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
