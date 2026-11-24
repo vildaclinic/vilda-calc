@@ -3088,6 +3088,10 @@ wszystkie w scalaniu notatek pacjenta (`Le`), obok istniejącego uzupełniania p
   `node tools/treatment-sync-hydration-vault-delta.mjs`.
 - Zmienione straże: `tools/diagnosis-mutation-vault-delta.mjs` (zdejmuje nową warstwę przed swoją),
   `tests/unit/diagnosis-mutation-vault-boundary.test.mjs`, `tests/unit/klirens-existing-note-update-vault.test.mjs`.
+- Straż zapisów budowanych z poprzedniego rekordu (`tests/unit/notatka-pozniejsza-zapis.test.mjs`, E3-PR0b2b): zapis
+  `Object.assign({}, stored, { bodyCipher })` z `TreatmentHydrateSyncRecord` jest na jej liście jawnie — przenosi pola
+  chwil poprzedniego rekordu, więc wolno mu to tylko dlatego, że nie zmienia pól widocznych (równe pola odczytu poza
+  `treatmentContext` i polami chwil), numeru wersji ani chwili zapisu. Straż sprawdza te trzy warunki w źródle funkcji.
 - Kotwice 1–3 istnieją też w sejfie gałęzi `agent/nowa-strona-glowna`; przeniesienie warstwy tam to zmiana stałej `BASE`.
 - Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
 

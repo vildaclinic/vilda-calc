@@ -48362,7 +48362,9 @@ przenieść po zmianie stałej `BASE`.
 
 **Strażnicy.** `tests/unit/treatment-sync-hydration-vault.test.mjs` (5; prawdziwy sejf i WebCrypto: przypadki wyżej;
 bez poprawki trzy z nich są czerwone); `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs` (3; dokładne
-zdjęcie i nałożenie warstwy, blok natywny bez zmian). Poza repozytorium: odtworzenie zgłoszenia na kodzie obu wersji
-aplikacji (sejf sprzed raty 1 jako telefon, potem jego aktualizacja).
+zdjęcie i nałożenie warstwy, blok natywny bez zmian); `tests/unit/notatka-pozniejsza-zapis.test.mjs` — nowy zapis jest
+jawnie na liście zapisów budowanych z poprzedniego rekordu, z warunkami: te same pola widoczne, ten sam numer wersji,
+ta sama chwila zapisu (test działania sprawdza, że w magazynie zmienia się wyłącznie szyfrogram). Poza repozytorium:
+odtworzenie zgłoszenia na kodzie obu wersji aplikacji (sejf sprzed raty 1 jako telefon, potem jego aktualizacja).
 
 **Wersje.** `vilda_vault.js` 289 → 290, wstrzykujące `vilda_chrome.js` 334 → 335 i `vilda_session_bridge.js` 250 → 251; SW 1.1.589 → 1.1.590 — `npm run podbij-wersje`. Bez zmian w interfejsie i bez nowego pliku w pamięci offline.
