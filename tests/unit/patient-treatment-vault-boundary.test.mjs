@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { applyPatientTreatmentDelta, restorePatientTreatmentBaseline } from '../../tools/patient-treatment-vault-delta.mjs';
+import { restoreDiagnosisMutationBaseline } from '../../tools/diagnosis-mutation-vault-delta.mjs';
 
-const source = readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8');
+// The diagnosis-removal layer wraps this one; this file checks the layer below it.
+const source = restoreDiagnosisMutationBaseline(readFileSync(new URL('../../vilda_vault.js', import.meta.url), 'utf8'));
 const manifest = JSON.parse(readFileSync(new URL('../../runtime/patient-treatment-v1/manifest.json', import.meta.url), 'utf8'));
 const digest = value => createHash('sha256').update(value).digest('hex');
 function nativePart(value) {

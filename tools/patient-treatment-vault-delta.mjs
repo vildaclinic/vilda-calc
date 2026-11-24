@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { restoreDiagnosisMutationBaseline } from './diagnosis-mutation-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = '3bebcc8ed48cd321ef5b2d2d5058fddebc40211d756f4978583a0f5d18cb9928';
@@ -48,6 +49,8 @@ export function applyPatientTreatmentDelta(source, repository = ROOT) {
   return source;
 }
 export function restorePatientTreatmentBaseline(source, repository = ROOT) {
+  // The diagnosis-removal layer wraps this one and is reduced first.
+  source = restoreDiagnosisMutationBaseline(source, repository);
   if (!source.includes(START)) return source;
   const { manifest, hooks } = definition(repository);
   if (digest(source) !== manifest.integratedVaultSHA256) fail('unexpected generated image');
@@ -58,7 +61,7 @@ export function restorePatientTreatmentBaseline(source, repository = ROOT) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   if (!args.length) {
-    const source = readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8');
+    const source = restoreDiagnosisMutationBaseline(readFileSync(resolve(ROOT, 'vilda_vault.js'), 'utf8'));
     if (applyPatientTreatmentDelta(restorePatientTreatmentBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Patient treatment: readable model, scoped actors and exact vault delta verified.\n');
   } else if (args.length === 3 && args[0] === '--rebuild') {

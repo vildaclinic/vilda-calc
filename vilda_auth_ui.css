@@ -4088,6 +4088,38 @@ textarea.vdo-input {
   opacity: var(--opacity-disabled-label);
 }
 
+/* P-ROZPOZNANIA, rata 3: „Usuń rozpoznanie” — osobny, cichy przycisk na końcu formularza, pod „Anuluj”, za cienką
+   linią: rzadka, nieodwracalna czynność nie stoi obok zapisu i nie przesuwa „Zapisz” ani „Anuluj”. */
+.vilda-kr-usuwanie {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--space-4px);
+  padding-top: var(--space-12px);
+  border-top: var(--border-hairline) solid var(--line-teal-soft);
+}
+
+.vilda-kr-arkusz .vilda-kr-usun {
+  width: auto !important;
+  max-width: 100%;
+  min-height: 44px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--space-8px) var(--space-14px) !important;
+  border: 1.5px solid var(--danger-strong) !important;
+  border-radius: var(--radius-12) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: var(--danger-strong) !important;
+  font-size: 14px;
+  font-weight: 500;
+  transform: none !important;
+}
+
+.vilda-kr-arkusz .vilda-kr-usun:disabled {
+  cursor: default;
+  opacity: var(--opacity-disabled-label);
+}
+
 @media (min-width: 700px) {
   .vilda-kr-arkusz {
     max-width: 520px;
