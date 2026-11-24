@@ -71,7 +71,8 @@
     Promise.resolve().then(function () { return current(view) ? view.vault.getPatient(view.patientId) : null; }).then(function (record) {
       if (!current(view) || ticket !== view.identityRead) return;
       var name = profileName(record, view.patientId); if (!name) return;
-      view.patientName = name; view.identityLabel.textContent = name;
+      view.patientName = name;
+      if (view.identityLabel) view.identityLabel.textContent = name;
       if (view.treatmentOptions) view.treatmentOptions.patientLabel = name;
     }).catch(function () { /* Identity presentation never replaces clinical state. */ });
   }
@@ -149,6 +150,7 @@
     wipe(view.root);
     view.root = null; view.panels = null; view.tabs = null; view.treatment = null;
     view.identityLabel = null; view.treatmentOptions = null; view.patientName = '';
+    view.nativeActions = null; view.measurementContext = null;
   }
   function close(view) {
     if (!current(view)) return false;
@@ -163,7 +165,7 @@
     return true;
   }
   function showMenu(view) {
-    if (!current(view)) return;
+    if (!current(view) || !view.menu) return;
     if (!view.menu.hidden) { hideMenu(view, true); return; }
     view.menu.hidden = false; view.menuToggle.setAttribute('aria-expanded', 'true');
     view.menuBack = view.registerBack(function () { hideMenu(view, true); });
@@ -261,7 +263,7 @@
     if (!host) return;
     var original = Array.from(host.children), grids = original.filter(function (item) { return item.classList.contains('vilda-patient-stats-grid'); });
     var title = node('div', 'vhome-b1-section-heading'); title.appendChild(node('h3', '', 'Status'));
-    title.appendChild(node('p', '', 'Zapisane wyniki i kontekst pacjenta.'));
+    if (!view.workspaceHeader) title.appendChild(node('p', '', 'Zapisane wyniki i kontekst pacjenta.'));
     var groups = [title];
     var missingSex = native.referenceSex === '';
     if (missingSex) {
@@ -286,14 +288,20 @@
     if (grids[0] && native.measureNodes.length) {
       var measure = node('section', 'vhome-b1-status-measure');
       var encounter = native.inline && w.VildaHomeEncounter?.state(native.patientId);
-      var date = dateLabel(encounter?.visitId ? encounter.sourceMeasurementDate : native.measuredAtISO);
+      var measurementDate = encounter?.visitId ? encounter.sourceMeasurementDate : native.measuredAtISO;
+      var date = dateLabel(measurementDate);
+      var visitDate = encounter?.dateCertain && dateLabel(encounter.date) ? encounter.date : null;
+      var ageLabel = typeof native.ageLabel === 'string' ? native.ageLabel : '';
+      var sameVisitDate = !!(view.workspaceHeader && encounter?.mode === 'browse' && visitDate && measurementDate === visitDate);
+      view.measurementContext = Object.freeze({ patientId: view.patientId, ageLabel: ageLabel,
+        measurementDateISO: date ? measurementDate : null, visitDateISO: visitDate, sameVisitDate: sameVisitDate });
       var label = encounter?.mode === 'new' ? 'Ostatni pomiar' : 'Pomiar';
       var context = node('div', 'vhome-b1-status-context');
       context.appendChild(node('strong', '', date ? label + ' · ' + date : 'Zapisany pomiar'));
-      if (native.ageLabel) context.appendChild(node('span', '', native.ageLabel));
-      measure.appendChild(context);
+      if (ageLabel) context.appendChild(node('span', '', ageLabel));
+      if (!sameVisitDate) measure.appendChild(context);
       var ageNote = original.find(function (item) { return item.classList.contains('vilda-patient-age-note'); });
-      if (ageNote) measure.appendChild(ageNote);
+      if (ageNote && !(view.workspaceHeader && visitDate && date && ageLabel)) measure.appendChild(ageNote);
       measure.appendChild(grids[0]); groups.push(measure);
       if (missingSex) measure.appendChild(node('p', 'vilda-patient-empty-msg',
         'Uzupełnij płeć w kartotece, aby wyświetlić wyniki zależne od płci.'));
@@ -323,11 +331,14 @@
     if (!missingSex && growthNodes.length) {
       var growth = node('section', 'vhome-b1-status-growth');
       var head = node('div', 'vhome-b1-section-heading'); head.appendChild(node('h3', '', 'Wzrastanie i dane rodzinne'));
-      var analysis = button('Pełna analiza', function () {
-        if (!current(view)) return;
-        if (view.inline) view.inline.onAnalysis();
-        else { view.close(); w.VildaHomeGrowth?.open?.('analysis'); }
-      }, 'vhome-b1-text-button'); head.appendChild(analysis); growth.appendChild(head);
+      if (!view.workspaceHeader) {
+        var analysis = button('Pełna analiza', function () {
+          if (!current(view)) return;
+          if (view.inline) view.inline.onAnalysis();
+          else { view.close(); w.VildaHomeGrowth?.open?.('analysis'); }
+        }, 'vhome-b1-text-button'); head.appendChild(analysis);
+      }
+      growth.appendChild(head);
       var grid = node('div', 'vilda-patient-stats-grid'); growthNodes.forEach(function (item) { grid.appendChild(item); });
       growth.appendChild(grid); groups.push(growth);
     }
@@ -352,6 +363,9 @@
     var root = native.root, view = {
       root: root, patientId: native.patientId, patientName: profileName(native.patientRecord, native.patientId) || native.patientName || 'Pacjent', openerId: native.openerId || '', vault: vault, token: token, loaded: loadedSequence(), ownerCurrent: native.isCurrent,
       homeOwner: w.VildaHomePatient?.captureOwner?.() || null, inline: native.inline || null,
+      workspaceHeader: native.inline?.workspaceHeader === true,
+      nativeActions: native.inline?.workspaceHeader === true ? { edit: native.actions.edit, versions: native.actions.versions } : null,
+      measurementContext: null,
       disposed: false, selected: native.activeTab || 'antro', close: native.close, changed: native.onChanged, disposeNativeViews: native.disposeNativeViews,
       registerBack: native.registerBack, legacy: native.legacyPanels.filter(Boolean), legacySummary: native.legacySummary || '',
       tabs: [], panels: [], treatment: null, note: null, treatmentFocus: native.focusNoteId || null, dialogCleanups: new Set(), menuBack: null, observer: null, back: null, mounted: false,
@@ -360,29 +374,32 @@
     };
     active = view; var suffix = String(++serial);
     root.classList.add('vhome-native-patient-card'); root.dataset.homePatientId = view.patientId;
-    var header = node('header', 'vhome-b1-heading'), identity = node('div', 'vhome-b1-heading-copy');
-    view.identityLabel = node('span', 'vhome-b1-identity', view.patientName);
-    identity.appendChild(node('h2', '', 'Karta pacjenta')); identity.appendChild(view.identityLabel);
-    var actions = node('div', 'vhome-b1-actions'), menuWrap = node('div', 'vhome-b1-menu-wrap');
-    view.menuToggle = button('Działania ⌄', function () { showMenu(view); }, 'vhome-b1-menu-toggle');
-    view.menuToggle.setAttribute('aria-haspopup', 'menu'); view.menuToggle.setAttribute('aria-expanded', 'false');
-    view.menu = node('div', 'vhome-b1-action-menu'); view.menu.id = 'vhomePatientNativeActions-' + suffix;
-    view.menu.hidden = true; view.menu.setAttribute('role', 'menu'); view.menuToggle.setAttribute('aria-controls', view.menu.id);
-    [['edit','Edytuj pacjenta'],['newMeasure',native.homeNavigation ? 'Rozpocznij nową wizytę' : 'Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
-      if (view.inline && (entry[0] === 'load' || entry[0] === 'return' || (native.homeNavigation && entry[0] === 'newMeasure'))) return;
-      var item = native.actions[entry[0]]; if (!item) return;
-      if (view.inline && entry[0] === 'visits' && w.VildaHomeGabinet?.openVisitHistory) {
-        item = button(entry[1], function () {
-          if (current(view)) w.VildaHomeEncounter.history(view.patientId, view.patientName);
-        }, item.className);
-      }
-      if (entry[1]) { item.replaceChildren(d.createTextNode(entry[1])); item.setAttribute('aria-label', entry[1]); }
-      item.setAttribute('role', 'menuitem'); item.dataset.homePatientAction = entry[0];
-      item.addEventListener('click', function () { hideMenu(view, false); }); view.menu.appendChild(item);
-    });
-    menuWrap.append(view.menuToggle, view.menu); actions.appendChild(menuWrap);
-    actions.appendChild(button('×', function () { close(view); }, 'vhome-b1-close'));
-    actions.lastElementChild.setAttribute('aria-label', 'Zamknij kartę pacjenta'); header.append(identity, actions);
+    var header = null, menuWrap = null;
+    if (!view.workspaceHeader) {
+      header = node('header', 'vhome-b1-heading'); var identity = node('div', 'vhome-b1-heading-copy');
+      view.identityLabel = node('span', 'vhome-b1-identity', view.patientName);
+      identity.appendChild(node('h2', '', 'Karta pacjenta')); identity.appendChild(view.identityLabel);
+      var actions = node('div', 'vhome-b1-actions'); menuWrap = node('div', 'vhome-b1-menu-wrap');
+      view.menuToggle = button('Działania ⌄', function () { showMenu(view); }, 'vhome-b1-menu-toggle');
+      view.menuToggle.setAttribute('aria-haspopup', 'menu'); view.menuToggle.setAttribute('aria-expanded', 'false');
+      view.menu = node('div', 'vhome-b1-action-menu'); view.menu.id = 'vhomePatientNativeActions-' + suffix;
+      view.menu.hidden = true; view.menu.setAttribute('role', 'menu'); view.menuToggle.setAttribute('aria-controls', view.menu.id);
+      [['edit','Edytuj pacjenta'],['newMeasure',native.homeNavigation ? 'Rozpocznij nową wizytę' : 'Nowy pomiar'],['visits','Historia wizyt'],['versions','Historia wersji'],['load',null],['return',null]].forEach(function (entry) {
+        if (view.inline && (entry[0] === 'load' || entry[0] === 'return' || (native.homeNavigation && entry[0] === 'newMeasure'))) return;
+        var item = native.actions[entry[0]]; if (!item) return;
+        if (view.inline && entry[0] === 'visits' && w.VildaHomeGabinet?.openVisitHistory) {
+          item = button(entry[1], function () {
+            if (current(view)) w.VildaHomeEncounter.history(view.patientId, view.patientName);
+          }, item.className);
+        }
+        if (entry[1]) { item.replaceChildren(d.createTextNode(entry[1])); item.setAttribute('aria-label', entry[1]); }
+        item.setAttribute('role', 'menuitem'); item.dataset.homePatientAction = entry[0];
+        item.addEventListener('click', function () { hideMenu(view, false); }); view.menu.appendChild(item);
+      });
+      menuWrap.append(view.menuToggle, view.menu); actions.appendChild(menuWrap);
+      actions.appendChild(button('×', function () { close(view); }, 'vhome-b1-close'));
+      actions.lastElementChild.setAttribute('aria-label', 'Zamknij kartę pacjenta'); header.append(identity, actions);
+    }
     var mobile = node('div', 'vhome-b1-mobile-nav'), label = node('label', '', 'Sekcja karty');
     view.mobile = node('select', 'vhome-b1-mobile-select'); view.mobile.id = 'vhomePatientNativeSection-' + suffix; label.htmlFor = view.mobile.id;
     mobile.append(label, view.mobile);
@@ -441,13 +458,17 @@
       event.preventDefault(); view.tabs[index].focus({ preventScroll: true }); choose(view, view.tabs[index].dataset.tab);
     });
     workspace.append(nav, view.scroller);
-    var footer = node('footer', 'vhome-b1-footer'); footer.appendChild(node('span', 'vhome-b1-footer-note', 'Dokumentacja tego pacjenta'));
-    footer.appendChild(button('Zamknij kartę', function () { close(view); }));
-    statusGroups(view, native); root.replaceChildren(header, mobile, workspace, footer);
+    var children = [mobile, workspace];
+    if (!view.workspaceHeader) {
+      var footer = node('footer', 'vhome-b1-footer'); footer.appendChild(node('span', 'vhome-b1-footer-note', 'Dokumentacja tego pacjenta'));
+      footer.appendChild(button('Zamknij kartę', function () { close(view); }));
+      children.unshift(header); children.push(footer);
+    }
+    statusGroups(view, native); root.replaceChildren.apply(root, children);
     view.outside = function (event) { if (view.menu && !view.menu.hidden && !menuWrap.contains(event.target)) hideMenu(view, false); };
     d.addEventListener('pointerdown', view.outside);
     root.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && !view.menu.hidden) { event.preventDefault(); event.stopImmediatePropagation(); hideMenu(view, true); }
+      if (event.key === 'Escape' && view.menu && !view.menu.hidden) { event.preventDefault(); event.stopImmediatePropagation(); hideMenu(view, true); }
     }, true);
     view.ownerChanged = function () { if (view.mounted && !current(view)) destroy(view); };
     view.profileChanged = function (event) { if (event.detail?.patientId === view.patientId) refreshProfile(view); };
@@ -476,9 +497,11 @@
         // The connected hidden treatment host may perform its guarded read.
         // Status must include persisted generic therapies on first opening.
         mountTreatment(view);
-        var shell = root.parentElement, heading = header.querySelector('h2');
-        heading.id = 'vhomePatientNativeHeading-' + suffix;
-        if (shell?.classList.contains('vilda-auth-card')) shell.setAttribute('aria-labelledby', heading.id);
+        var shell = root.parentElement, heading = header?.querySelector('h2');
+        if (heading) {
+          heading.id = 'vhomePatientNativeHeading-' + suffix;
+          if (shell?.classList.contains('vilda-auth-card')) shell.setAttribute('aria-labelledby', heading.id);
+        }
         if (view.reminderSlot) w.VildaHomeRemindersRuntime?.mountOverview?.(view.reminderSlot, view.patientId);
         view.fit = function () {
           if (!shell?.isConnected) return;
@@ -491,12 +514,25 @@
         if (!view.inline) { view.fit(); w.addEventListener('resize', view.fit); w.visualViewport?.addEventListener('resize', view.fit); }
         view.observer = new w.MutationObserver(function () { if (!current(view)) destroy(view); });
         view.observer.observe(d.documentElement, { childList: true, subtree: true });
+        if (view.workspaceHeader && current(view)) d.dispatchEvent(new w.CustomEvent('vilda:home-patient-inline-mounted', { detail: { patientId: view.patientId } }));
       },
       destroy: function () { destroy(view); },
       isCurrent: function () { return current(view); }
     });
   }
   w.VildaHomePatientNative = Object.freeze({ decorate: decorate, describeLegacy: describeLegacy,
+    runInlineAction: function (key) {
+      var view = active;
+      if (!view?.workspaceHeader || !view.inline || !view.mounted || !current(view)) return null;
+      if (blocked(view) || (key !== 'edit' && key !== 'versions')) return false;
+      var action = view.nativeActions?.[key];
+      if (!action || action.disabled || action.isConnected || typeof action.click !== 'function') return false;
+      action.click(); return true;
+    },
+    getInlineMeasurementContext: function (patientId) {
+      var view = active;
+      return view?.workspaceHeader && view.inline && view.mounted && view.patientId === patientId && current(view) ? view.measurementContext : null;
+    },
     selectInline: function (key) { return !!active?.inline && choose(active, key); },
     releaseInline: function (force) {
       if (!active?.inline) return true;

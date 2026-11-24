@@ -9,7 +9,7 @@
   let sequence = 0, selecting = false, frame = 0, pendingNote = null, pendingOfficeRecord = null;
   let rapid = null, rapidHeader, entryView = 'launch';
   let registration = null, registrationHost;
-  let displayedVisit = null;
+  let displayedVisit = null, measurementAge = null, pendingPatientAction = null;
   const labels = {overview: 'Przegląd', analysis: 'Analiza'};
   const entryTrails = {
     start: [null,'Ekran startowy'], office: ['Ekran startowy'],
@@ -21,8 +21,6 @@
     overview: '<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="5" rx="1"/>',
     analysis: '<path d="M3 3v17h18M6 15l4-5 4 2 6-7"/>',
     history: '<path d="M3 11a9 9 0 1 1 2 7M2 4v7h7m3-4v5l4 2"/>',
-    calendar: '<path d="M8 3v4m8-4v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/>',
-    lock: '<path d="M7 10V7a5 5 0 0 1 10 0v3M6 10h12a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/>',
     edit: '<path d="m14 6 4 4M4 20l4.5-1 11-11a2 2 0 0 0-3-3l-11 11L4 20z"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/>',
     start: '<path d="M12 5v14M5 12h14"/>', save: '<path d="m4 12 5 5L20 6"/>',
@@ -76,6 +74,35 @@
     const mode = w.VildaHomeEncounter.state(id).mode;
     return mode !== 'new' && mode !== 'edit';
   }
+  function ageInHeader(status, date) {
+    if (status.mode === 'browse' && date && date === status.sourceMeasurementDate && status.sourceSnapshotId) {
+      const context = w.VildaHomePatientNative?.getInlineMeasurementContext?.(target);
+      if (context?.sameVisitDate && context.measurementDateISO === date) {
+        measurementAge = {patientId: target, snapshotId: status.sourceSnapshotId, label: context.ageLabel};
+      }
+      if (measurementAge?.patientId === target && measurementAge.snapshotId === status.sourceSnapshotId && measurementAge.label) {
+        return measurementAge.label;
+      }
+      // The selected measurement may be visible before its overview mounts.
+      // Use the age or date of birth from that loaded visit in the meantime.
+      const saved = w.lastLoadedData;
+      if (saved?.visit?.patientId === target && saved.visit.visitId === status.visitId && saved.user) {
+        const {age, ageMonths, dobISO} = saved.user;
+        if (Number.isFinite(age) && Number.isFinite(ageMonths ?? 0)) {
+          return w.VildaDobAge.describeAge({years: age, ageMonths: ageMonths ?? 0});
+        }
+        const recordedAge = dobISO && w.VildaDobAge.ageFromDobISO(dobISO, new Date(date + 'T12:00:00'));
+        if (recordedAge) return w.VildaDobAge.describeAge(recordedAge);
+      }
+    } else measurementAge = null;
+    const identity = patientPresentation();
+    const birth = identity ? identity.dobISO : w.VildaDobAge?.readISO();
+    const day = date ? new Date(date + 'T12:00:00') : new Date();
+    const age = birth && w.VildaDobAge.ageFromDobISO(birth, day);
+    if (age) return w.VildaDobAge.describeAge(age);
+    const years = field('age'), months = field('ageMonths');
+    return years || months ? w.VildaDobAge.describeAge({years: Number(years), ageMonths: Number(months)}) + (identity ? ' w zapisie' : '') : '';
+  }
   function headerState() {
     const status = w.VildaHomeEncounter.state(target);
     const shell = w.parent?.VildaShell, route = shell?.peekPatientReturnRoute?.();
@@ -84,23 +111,20 @@
     breadcrumb.querySelector('span').textContent = parentLabel;
     breadcrumb.setAttribute('aria-label', 'Wróć do: ' + parentLabel);
     const draft = status.mode === 'new' || status.mode === 'edit';
-    const identity = patientPresentation();
-    const birth = identity ? identity.dobISO : w.VildaDobAge?.readISO(), day = draft && status.date ? new Date(status.date + 'T12:00:00') : new Date();
-    const age = birth && w.VildaDobAge.ageFromDobISO(birth, day);
-    const years = field('age'), months = field('ageMonths');
-    const ageText = age ? w.VildaDobAge.describeAge(age) : years || months ? w.VildaDobAge.describeAge({years: Number(years), ageMonths: Number(months)}) + (identity ? ' w zapisie' : '') : '';
+    const date = status.dateCertain && status.date ? status.date : '';
+    const age = header.querySelector('.gb-identity-meta');
     header.querySelector('h1').textContent = patientName();
-    header.querySelector('.gb-identity-meta').textContent = [ageText, birth && 'ur. ' + birth.split('-').reverse().join('.')].filter(Boolean).join(' · ');
+    age.textContent = ageInHeader(status, date);
+    age.hidden = !age.textContent;
     const stateLabel = draft ? (status.mode === 'edit' ? 'Edycja wizyty' : 'Nowa wizyta') :
       status.visitId ? 'Ostatnia wizyta' : 'Karta pacjenta';
     const context = header.querySelector('.gb-visit-context');
     const readOnly = !draft && !!status.visitId;
     context.hidden = !draft && !readOnly;
     const contextLabel = context.querySelector('[data-state-label]');
-    contextLabel.textContent = readOnly ? '' : stateLabel;
-    contextLabel.hidden = readOnly;
+    contextLabel.textContent = readOnly ? 'Wizyta' : stateLabel;
+    contextLabel.hidden = readOnly && !date;
     context.querySelector('.gb-readonly-badge').hidden = !readOnly;
-    const date = status.dateCertain && status.date ? status.date : '';
     const formatted = date.split('-').reverse().join('.');
     const time = context.querySelector('time');
     if (date) time.dateTime = date; else time.removeAttribute('datetime');
@@ -150,8 +174,7 @@
   function openVisitHistory(id, options) {
     if (!root || !owns(id) || target !== id || screen === 'start' || !options.isCurrent()) return false;
     if (historyView) return true;
-    const focus = d.activeElement?.closest('[role="menuitem"]') ? overview.querySelector('.vhome-b1-menu-toggle') :
-      header.querySelector('[data-visit-actions]');
+    const focus = header.querySelector('[data-visit-actions]');
     const scroll = w.scrollY;
     function back(restore = true) {
       dismissHistory();
@@ -214,6 +237,7 @@
     const pane = w.frameElement;
     if (pane?.classList.contains('app-pane')) {
       pane.toggleAttribute('data-vhome-workspace', Boolean(value));
+      pane.toggleAttribute('data-vhome-patient', view === 'overview' || view === 'analysis');
       const directory = view === 'registration' ? 'registration' : view === 'start' ? '' : null;
       if (directory === null) pane.removeAttribute('data-vhome-directory');
       else if (pane.getAttribute('data-vhome-directory') !== directory) pane.setAttribute('data-vhome-directory', directory);
@@ -228,7 +252,7 @@
       header.querySelector('h1').textContent = '';
       header.querySelector('.gb-identity-meta').textContent = '';
       header.querySelector('.gb-visit-context').hidden = true;
-      displayedVisit = null;
+      displayedVisit = null; measurementAge = null; pendingPatientAction = null;
       setVisitMenu(false);
       showMessage('');
     }
@@ -240,6 +264,7 @@
     if (target && !selecting && selected() !== target) {
       dismissHistory(); detach(true); target = null; screen = 'start';
     }
+    if (pendingPatientAction && (screen !== 'overview' || historyView || !pendingPatientAction.isCurrent())) pendingPatientAction = null;
     root.hidden = false;
     if (registration) {
       setScreen('registration');
@@ -286,7 +311,7 @@
     headerState();
     if (screen === 'overview' && !w.VildaHomePatient.isInlineOpen()) {
       w.VildaHomePatient.openInline(overview, {
-        activeTab: section,
+        activeTab: section, workspaceHeader: true,
         onClose: closePatientCard,
         onAnalysis: () => { if (showAnalysis()) w.VildaHomeGrowth?.open('analysis'); }
       });
@@ -405,6 +430,17 @@
     pendingNote = focusNoteId ? {patientId: id, id: focusNoteId} : null;
     target = id; screen = 'overview'; showMessage(''); render();
     return true;
+  }
+  function openPatientAction(key) {
+    const id = target;
+    setVisitMenu(false, true);
+    pendingPatientAction = null;
+    if (!owns(id) || (screen !== 'overview' && !showOverview())) return;
+    if (w.VildaHomePatientNative?.runInlineAction?.(key) === null) {
+      const current = capturePatientScreen(id), visitId = w.VildaHomeEncounter.state(id).visitId;
+      const isCurrent = () => current() && w.VildaHomeEncounter.state(id).visitId === visitId;
+      pendingPatientAction = {key, isCurrent};
+    }
   }
   async function selectPatient(id, mode, context) {
     const section = context?.section;
@@ -647,19 +683,22 @@
     };
     root.innerHTML = '<div id="vhomeGabinetStart"></div><div id="vhomeGabinetHeader" hidden>' +
       '<div class="gb-header-top"><nav class="gb-breadcrumb" aria-label="Ścieżka nawigacji"><button type="button" data-start>' + icon('home') +
-      '<span>Gabinet</span></button>' + icon('chevron') + '<span aria-current="page">Karta pacjenta</span></nav></div>' +
-      '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-identity-meta"></div>' +
-      '<div class="gb-visit-context" hidden><span class="gb-visit-source">' + icon('calendar') +
-      '<span data-state-label></span> <time></time></span><span class="gb-readonly-badge" hidden>' + icon('lock') + '<span>Dane wizyty · tylko odczyt</span></span></div></div>' +
-      '<div class="gb-card-actions" role="group" aria-label="Działania wizyty"><div class="gb-visit-actions">' +
+      '<span>Gabinet</span></button>' + icon('chevron') + '<span aria-current="page">Karta pacjenta</span></nav>' +
+      '<div class="gb-card-actions" role="group" aria-label="Działania karty pacjenta"><div class="gb-visit-actions">' +
       '<button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Opcje ' + icon('down') + '</button>' +
-      '<div id="gbVisitActions" role="group" aria-label="Opcje wizyty" hidden>' +
+      '<div id="gbVisitActions" role="group" aria-label="Opcje karty pacjenta" hidden>' +
       '<button type="button" data-edit-visit hidden>' + icon('edit') + '<span>Edytuj wizytę</span></button>' +
       '<button type="button" data-history>' + icon('history') + '<span>Historia wizyt</span></button>' +
-      '<button type="button" data-trash-visit hidden>' + icon('trash') + '<span>Przenieś wizytę do kosza</span></button></div></div>' +
+      '<button type="button" data-trash-visit hidden>' + icon('trash') + '<span>Przenieś wizytę do kosza</span></button>' +
+      '<div class="gb-patient-actions" role="group" aria-label="Kartoteka"><span class="gb-action-group-label" aria-hidden="true">Kartoteka</span>' +
+      '<button type="button" data-patient-action="edit">Edytuj pacjenta</button>' +
+      '<button type="button" data-patient-action="versions">Historia wersji</button></div></div></div>' +
       '<button type="button" class="gb-primary" data-home-encounter><span class="gb-action-copy" data-action-caption></span>' +
       '<span class="gb-action-copy gb-action-reserve" aria-hidden="true" data-longest="Zapisz zmiany"></span></button></div></div>' +
-      '<div class="gb-patient-nav"><div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div></div>' +
+      '<div class="gb-person-line"><div class="gb-identity"><h1></h1><div class="gb-visit-summary"><span class="gb-identity-meta" hidden></span>' +
+      '<div class="gb-visit-context" hidden><span class="gb-visit-source"><span data-state-label></span> <time></time></span>' +
+      '<span class="gb-readonly-badge" hidden><span>Tylko odczyt</span></span></div></div></div>' +
+      '<div class="gb-patient-nav"><div class="gb-patient-tabs" role="tablist" aria-label="Karta pacjenta"></div></div></div></div>' +
       '<div id="gbRapidHeader" hidden><h1 id="gbRapidTitle">Analiza</h1></div>' +
       '<section id="vhomeGabinetRegistration" hidden aria-labelledby="gbRegistrationTitle"><div class="gb-registration-heading">' +
       '<h1 id="gbRegistrationTitle">Dodaj pacjenta</h1></div><div data-registration-form></div></section>' +
@@ -707,6 +746,9 @@
       setVisitMenu(false, true);
       if (owns(target)) w.VildaHomeEncounter.history(target, patientName());
     };
+    for (const action of header.querySelectorAll('[data-patient-action]')) {
+      action.onclick = () => openPatientAction(action.dataset.patientAction);
+    }
     header.querySelector('[data-edit-visit]').onclick = async () => {
       const expected = displayedVisit, id = target;
       setVisitMenu(false, true);
@@ -781,6 +823,13 @@
     schedule();
   });
   d.addEventListener('vilda:auth-hidden', () => clearRegistration(true));
+  d.addEventListener('vilda:home-patient-inline-mounted', event => {
+    if (event.detail?.patientId !== target || screen !== 'overview' || historyView) return;
+    const action = pendingPatientAction;
+    pendingPatientAction = null;
+    if (action?.isCurrent()) w.VildaHomePatientNative.runInlineAction(action.key);
+    schedule();
+  });
   ['vilda:auth-boot-settled','vilda:auth-hidden','vilda:session-changed','vilda:auth-loaded','vildaProAccessChanged',
     'vilda:main-session-restored','vilda:initial-main-session-restore-settled','vilda:intake-restore-readiness','vilda:data-applied','vilda:home-patient-inline-ready',
     'vilda:home-encounter-changed','vilda:user-state-cleared','vilda:patient-profile-presentation-ready'].forEach(name => d.addEventListener(name, schedule));

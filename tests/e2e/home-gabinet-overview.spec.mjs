@@ -13,7 +13,7 @@ async function openHistoryFromHeader(header) {
 
 async function headerGeometry(frame) {
   return frame.locator('#vhomeGabinetHeader').evaluate(header => {
-    return [header, ...header.querySelectorAll('[role="tab"]')].map(node => {
+    return [header, ...header.querySelectorAll('.gb-breadcrumb, [role="tab"], [data-visit-actions], [data-home-encounter]')].map(node => {
       const { x, y, width, height } = node.getBoundingClientRect();
       return [x, y, width, height];
     });
@@ -34,8 +34,11 @@ async function expectHeaderAppearance(frame) {
   await expect(active).toHaveCSS('border-bottom', '3px solid rgb(0, 131, 139)');
   await expect(inactive).toHaveCSS('color', 'rgb(86, 111, 117)');
   await expect(inactive).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)');
-  await expect(header.getByRole('button', { name: 'Opcje', exact: true })).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-  await expect(header.locator('[data-home-encounter]')).toHaveCSS('background-color', 'rgb(0, 124, 132)');
+  const options = header.getByRole('button', { name: 'Opcje', exact: true });
+  const primary = header.locator('[data-home-encounter]');
+  await expect(options).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(primary).toHaveCSS('background-color', 'rgb(0, 124, 132)');
+  for (const button of [options, primary]) await expect(button).toHaveCSS('height', '44px');
 }
 
 async function horizontalEdges(locator) {
@@ -151,6 +154,11 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     const header = page.locator('#vhomeGabinetHeader');
     if (!await header.isVisible()) await choosePatient(page, 'Antoni');
     else await expect(header).toContainText('Antoni');
+    for (const name of ['Przegląd', 'Analiza']) {
+      await header.getByRole('tab', { name, exact: true }).click();
+      await expect(page.locator('body > header')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+      await expect(page.locator('body > header')).toHaveCSS('backdrop-filter', 'none');
+    }
     const analysisTab = page.locator('#vhomeGabinetAnalysisTab');
     await analysisTab.click();
     await expect(analysisTab).toHaveAttribute('aria-selected', 'true');
@@ -457,14 +465,19 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
 test('Gabinet uses one patient header for overview and analysis and displays reminders only in the overview', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const today = new Date().toISOString().slice(0, 10);
-  await frame.evaluate(async ({ ids, today }) => {
+  const firstName = 'Antoni Konstantyn Władysław', lastName = 'Fikcyjny-Wieloczłonowy-Łęczyński-Kazimierzowski';
+  await frame.evaluate(async ({ ids, today, firstName, lastName }) => {
+    const profile = (await window.VildaVault.getPatient(ids.a)).profile;
+    const data = structuredClone(profile.data);
+    Object.assign(data.user, { firstName, lastName });
+    await window.VildaVault.savePatientProfile({ patientId: ids.a, expectedRevisionId: profile.revisionId, data });
     for (const [key, patientId] of Object.entries(ids)) {
       await window.VildaVault.savePatientNote({
         patientId, category: 'reminder-contact', title: 'Fikcyjne przypomnienie gabinetowe ' + key,
         dueDateISO: today,
       });
     }
-  }, { ids, today });
+  }, { ids, today, firstName, lastName });
   await choosePatient(frame, 'Antoni');
   const overview = frame.locator('#vhomeGabinetOverviewTab');
   const analysis = frame.locator('#vhomeGabinetAnalysisTab');
@@ -477,9 +490,42 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
   const workspaceBackground = () => frame.locator('body').evaluate(body => getComputedStyle(body).backgroundColor);
   async function checkPatientLayout(width, rightEdge) {
     await page.setViewportSize({ width, height: 900 });
+    if (width >= 992) await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
+    else await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
     await overview.click();
     await expect(overview).toHaveAttribute('aria-selected', 'true');
     await expect(patientCard.locator(':scope > .vhome-native-patient-card')).toBeVisible();
+    const header = frame.locator('#vhomeGabinetHeader');
+    await expect(header.locator('h1')).toHaveText(firstName + ' ' + lastName);
+    await expect(patientCard.locator('.vhome-b1-heading, .vhome-b1-menu-wrap, .vhome-b1-close, .vhome-b1-footer')).toHaveCount(0);
+    const mode = await frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a);
+    if (mode === 'browse') {
+      await expect(patientCard.locator('.vhome-b1-status-context, .vilda-patient-age-note')).toHaveCount(0);
+    } else {
+      await expect(patientCard.locator('.vhome-b1-status-context')).toContainText('Ostatni pomiar · 17.06.2026');
+      await expect(patientCard.locator('.vhome-b1-status-context > span')).toContainText('13 lat');
+    }
+    await expect(header.locator(':scope > .gb-header-top > .gb-breadcrumb + .gb-card-actions')).toBeVisible();
+    if (width >= 992) await expect(header.locator(':scope > .gb-person-line > .gb-identity + .gb-patient-nav')).toBeVisible();
+    await expect.poll(() => frame.locator('#gbWorkspaceHeader').evaluate(node => {
+      const box = node.getClientRects().length ? node : node.querySelector('#vhomeGabinetHeader > .gb-header-top');
+      const reserved = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gb-workspace-header-height'));
+      return Math.round(reserved * 100) === Math.round(box.getBoundingClientRect().height * 100);
+    })).toBe(true);
+    expect(await header.evaluate(node => document.documentElement.scrollWidth <= innerWidth && node.scrollWidth <= node.clientWidth)).toBe(true);
+    const options = header.getByRole('button', { name: 'Opcje', exact: true });
+    await options.click();
+    for (const name of ['Edytuj pacjenta', 'Historia wersji', 'Historia wizyt']) {
+      await expect(header.locator('#gbVisitActions').getByRole('button', { name, exact: true })).toBeVisible();
+      await expect(frame.getByRole('button', { name, exact: true })).toHaveCount(1);
+    }
+    if (mode === 'browse') {
+      await expect(header.locator('[data-edit-visit]')).toBeVisible();
+    } else await expect(header.locator('[data-edit-visit]')).toBeHidden();
+    await expect(header.locator('[data-trash-visit]')).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(options).toHaveAttribute('aria-expanded', 'false');
+    await expect(options).toBeFocused();
     await page.mouse.move(0, 0);
     await expectHeaderAppearance(frame);
     const before = await headerGeometry(frame);
@@ -509,7 +555,7 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     expect(await workspaceBackground()).toBe(canvas);
     expect(await toolbarPositions()).toEqual(toolbarBefore);
   }
-  for (const width of [1440, 1920, 834, 390]) {
+  for (const width of [1440, 1920, 834, 390, 320]) {
     await checkPatientLayout(width, summary);
     const comparison = frame.locator('#vhomeVisitComparison');
     await expect(comparison).toBeVisible();
@@ -537,7 +583,7 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
   await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
   // A visit can start without measurements. Its form grid is visible immediately.
   await expect(frame.locator('#weight')).toHaveValue('');
-  for (const width of [1440, 390]) await checkPatientLayout(width, frame.locator('#calcForm'));
+  for (const width of [1440, 390, 320]) await checkPatientLayout(width, frame.locator('#calcForm'));
   await overview.click();
   await frame.locator('#vhomePatientOverview select.vhome-b1-mobile-select').selectOption('reminders');
   const slot = frame.locator('#vhomePatientRemindersSlot');
@@ -662,8 +708,11 @@ test('Edytuj pacjenta saves identity and guardian independently and preserves th
     return value;
   });
   const card = frame.locator('#vhomePatientOverview');
-  await card.locator('.vhome-b1-menu-toggle').click();
-  await card.getByRole('menuitem', { name: 'Edytuj pacjenta', exact: true }).click();
+  const sharedHeader = frame.locator('#vhomeGabinetHeader');
+  await sharedHeader.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await expect(sharedHeader.getByRole('tab', { name: 'Analiza', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await sharedHeader.getByRole('button', { name: 'Opcje', exact: true }).click();
+  await sharedHeader.getByRole('button', { name: 'Edytuj pacjenta', exact: true }).click();
   const editor = frame.locator('.vilda-edit2');
   await expect(editor).toBeVisible();
   const guardian = 'Fikcyjna opiekunka aktualnej kartoteki';
@@ -677,7 +726,7 @@ test('Edytuj pacjenta saves identity and guardian independently and preserves th
     (await window.VildaVault.getPatient(id)).profile?.data?.guardian?.name, ids.a)).toBe(guardian);
   await expect(page.locator('#vildaPatientValue')).toContainText(firstName);
   await expect(frame.locator('#vhomeGabinetHeader h1')).toContainText(firstName);
-  await expect(frame.locator('#vhomePatientOverview .vhome-b1-identity')).toContainText(firstName);
+  await expect(card.locator('.vhome-b1-identity')).toHaveCount(0);
   await expect(page.locator('[data-menu-patient-name]').filter({ visible: true })).toContainText(firstName);
   expect(await frame.evaluate(async id =>
     (await window.VildaVault.getPatient(id)).profile.data.user, ids.a)).toMatchObject({ firstName, dobISO });
@@ -832,6 +881,12 @@ test('Edytuj wizytę corrects only the chosen historical record and returns to t
   await expect(frame.locator('#weight')).toHaveValue('55');
   const directEdit = await frame.evaluate(id => window.VildaHomeEncounter.state(id), ids.a);
   expect(directEdit).toMatchObject({mode:'edit', visitId:seed.latestId, snapshotId:seed.latestSnapshot, revision:seed.latestRevision});
+  await trigger.click();
+  for (const name of ['Edytuj pacjenta', 'Historia wersji', 'Historia wizyt', 'Przenieś wizytę do kosza']) {
+    await expect(header.locator('#gbVisitActions').getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
 });
 
 test('comparison follows clinical visit dates, offers an explicit measured baseline and corrects only the chosen visit', async ({ page }) => {
@@ -960,9 +1015,10 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   const newVisit = header.getByRole('button', { name: 'Nowa wizyta', exact: true });
   await expect(context.locator('.gb-visit-source time')).toHaveText('17.06.2026');
   await expect(context.locator('.gb-visit-source time')).toHaveAttribute('datetime', '2026-06-17');
-  await expect(context.locator('[data-state-label]')).toBeHidden();
+  await expect(context.locator('[data-state-label]')).toHaveText('Wizyta');
+  await expect(context.locator('[data-state-label]')).toBeVisible();
   const readOnly = context.locator('.gb-readonly-badge');
-  await expect(readOnly).toHaveText('Dane wizyty · tylko odczyt');
+  await expect(readOnly).toHaveText('Tylko odczyt');
   await expect(readOnly).toBeVisible();
   const narrowBadge = await readOnly.evaluate(node => {
     const bounds = node.getBoundingClientRect();
@@ -975,8 +1031,10 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   expect(await frame.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   await page.setViewportSize({ width: 390, height: 844 });
   const [optionsBox, newVisitBox] = await Promise.all([options.boundingBox(), newVisit.boundingBox()]);
-  expect(optionsBox.width).toBeCloseTo(newVisitBox.width, 0);
-  expect(optionsBox.height).toBeCloseTo(newVisitBox.height, 0);
+  expect(optionsBox.height).toBe(44);
+  expect(newVisitBox.height).toBe(44);
+  expect(optionsBox.x + optionsBox.width).toBeLessThanOrEqual(newVisitBox.x);
+  expect((await hitTestPositions(options.or(newVisit))).every(box => box.visible)).toBe(true);
   await options.click();
   await expect(header.getByRole('button', { name: 'Edytuj wizytę z 17.06.2026', exact: true })).toBeFocused();
   await page.keyboard.press('Escape');
@@ -1188,7 +1246,7 @@ test('a visit diagnosis shows its destination and can be removed only from its o
   await expect.poll(diagnosis).toMatchObject({ visitContext: { visitId: visit.visitId, clinicalDateISO: visit.date } });
   const note = await diagnosis();
   await header.getByRole('button', { name: 'Zapisz wizytę', exact: true }).click();
-  await expect(header.getByText('Dane wizyty · tylko odczyt', { exact: true })).toBeVisible();
+  await expect(header.getByText('Tylko odczyt', { exact: true })).toBeVisible();
   const visits = () => frame.evaluate(id => window.VildaVault.getPatientVisits(id), ids.a);
   const beforeRemoval = await visits();
   const edit = card.locator(`[data-treatment-diagnosis-id="${note.id}"]`).getByRole('button', { name: 'Edytuj', exact: true });
@@ -1220,16 +1278,25 @@ test('the native patient card starts a full visit and the embedded card keeps on
   const { frame, ids } = await prepare(page);
   await choosePatient(frame, 'Antoni');
   const overview = frame.locator('#vhomePatientOverview');
-  await overview.getByRole('button', { name: /Działania/ }).click();
-  const inlineMenu = overview.getByRole('menu');
-  await expect(inlineMenu.getByRole('menuitem', { name: /Nowy pomiar|Rozpocznij nową wizytę/ })).toHaveCount(0);
-  await expect(inlineMenu.getByRole('menuitem', { name: 'Historia wersji', exact: true })).toBeVisible();
-  await inlineMenu.press('Escape');
+  await expect(overview.locator('.vhome-b1-heading, .vhome-b1-menu-wrap, .vhome-b1-close, .vhome-b1-footer')).toHaveCount(0);
   const header = frame.locator('#vhomeGabinetHeader');
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
+  const sharedMenu = header.locator('#gbVisitActions');
+  for (const name of ['Edytuj pacjenta', 'Historia wersji', 'Historia wizyt']) {
+    await expect(sharedMenu.getByRole('button', { name, exact: true })).toBeVisible();
+  }
+  await expect(sharedMenu.getByRole('button', { name: /Nowy pomiar|Rozpocznij nową wizytę/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await header.getByRole('tab', { name: 'Analiza' }).click();
   await frame.evaluate(id => window.VildaAuthUI.showPatientCard(id, null, { homePatientPresentation: true }), ids.a);
   const full = frame.locator('.vilda-auth-card[role="dialog"]:has(.vhome-native-patient-card)');
+  await expect(full.locator('.vhome-b1-heading')).toBeVisible();
+  await expect(full.getByRole('button', { name: 'Zamknij kartę pacjenta', exact: true })).toBeVisible();
+  await expect(full.locator('.vhome-b1-footer').getByRole('button', { name: 'Zamknij kartę', exact: true })).toBeVisible();
   await full.getByRole('button', { name: /Działania/ }).click();
+  for (const name of ['Edytuj pacjenta', 'Rozpocznij nową wizytę', 'Historia wizyt', 'Historia wersji']) {
+    await expect(full.getByRole('menuitem', { name, exact: true })).toBeVisible();
+  }
   await full.getByRole('menuitem', { name: 'Rozpocznij nową wizytę', exact: true }).click();
   await expect(full).toBeHidden();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę', exact: true })).toBeVisible();
@@ -1336,8 +1403,9 @@ test('a saved consultation without measurements stays read-only until a new visi
   await expect(frame.locator('#height')).not.toBeEditable();
   await expect(weight).toHaveValue('');
   await expect(header.locator('.gb-visit-context time')).toHaveAttribute('datetime', persisted.date);
-  await expect(header.locator('.gb-visit-context [data-state-label]')).toBeHidden();
-  await expect(header.locator('.gb-readonly-badge')).toHaveText('Dane wizyty · tylko odczyt');
+  await expect(header.locator('.gb-visit-context [data-state-label]')).toHaveText('Wizyta');
+  await expect(header.locator('.gb-visit-context [data-state-label]')).toBeVisible();
+  await expect(header.locator('.gb-readonly-badge')).toHaveText('Tylko odczyt');
   await expect(header.locator('.gb-readonly-badge')).toBeVisible();
   expect(await decision()).toBe('saved');
 
