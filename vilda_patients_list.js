@@ -449,6 +449,459 @@
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const FALL_HEIGHT = 132, FALL_PAD = 8;
 
+  /* ── P-BAZA-STATYSTYKI, etap 4 (decyzja właściciela 2026-11-24): raport PDF i plik dla Excela ──
+   * Jeden model raportu (statsReport) z tych samych obiektów, które rysuje ekran: demographics,
+   * ghCohort, obesityCohort i kompletność kart. Z niego powstają OBA pliki — dokument pdfmake
+   * (statsDocument) i arkusze (statsWorkbook → xlsxParts) — więc liczby w plikach i na ekranie
+   * nie mogą się rozjechać. Pliki nie zawierają nazwisk, dat urodzenia ani identyfikatorów:
+   * raport to liczby zbiorcze, a arkusz „Pacjenci” ma jeden wiersz na pacjenta bez danych
+   * osobowych, w kolejności wieku (nie nazwiska). Model niczego nie liczy od nowa. */
+  const REPORT_TITLE = 'Statystyki Bazy pacjentów';
+  const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  function percentText(value) {
+    return formatDelta(value, 1) + (typeof value === 'number' && Number.isFinite(value) ? '%' : '');
+  }
+  function ghNote() {
+    return '1. rok: od punktu Włączenia do kontroli po 9–15 mies. (najbliższej 12 mies.), w pierwszym kursie leczenia. Kolejne lata liczą się tak samo od poprzedniej kontroli. Pacjent bez takiej pary nie wchodzi do średniej. Przy grupie mniejszej niż ' + SMALL_GROUP + ' osób średnia jest niestabilna.';
+  }
+  function obesityNote(journalFailed) {
+    return 'Zmiana masy od punktu Włączenia w pierwszym cyklu leczenia do pomiaru najbliższego '
+      + OBESITY_WINDOWS.map((period) => period.target + '. tygodnia (okno ' + period.min + '–' + period.max + ' tyg.)').join(' i ')
+      + '; liczą się wizyty i wpisy między wizytami. U dzieci masa rośnie ze wzrostem, dlatego osobno pokazana jest zmiana BMI. Pacjent bez pomiaru w oknie nie wchodzi do średniej. Przy grupie mniejszej niż ' + SMALL_GROUP + ' osób średnia jest niestabilna.'
+      + (journalFailed ? ' U ' + journalFailed + (journalFailed === 1 ? ' pacjenta' : ' pacjentów') + ' nie udało się odczytać wpisów między wizytami — policzono z zapisu wizyty.' : '');
+  }
+  function footNote(total) {
+    return 'Statystyki opisowe ' + total + (total === 1 ? ' pacjenta' : ' pacjentów')
+      + ' z bazy, bez osób spoza bazy. Policzone na tym urządzeniu; nic nie jest wysyłane. Nie są badaniem naukowym ani podstawą decyzji klinicznych.';
+  }
+  // Odsetki z progiem, BMI dzieci i wykres pacjentów pokazują dłuższe okno, a gdy nikt go nie ma — krótsze.
+  function obesityMainWindow(cohort) {
+    return OBESITY_WINDOWS.slice().reverse().find((item) => cohort.windows[item.key].n) || OBESITY_WINDOWS[OBESITY_WINDOWS.length - 1];
+  }
+  // Skala wykresu „każdy pacjent”: od zera albo przyrostu (góra) do największej redukcji (dół), linie co 5 albo 10%.
+  function fallScale(values) {
+    const high = Math.max(0, Math.ceil(Math.max.apply(null, values) / 5) * 5);
+    const low = Math.min(-10, Math.floor(Math.min.apply(null, values) / 5) * 5);
+    return { high, low, step: high - low > 30 ? 10 : 5 };
+  }
+  function two(value) { return String(value).padStart(2, '0'); }
+  function stampText(date) {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return '';
+    return two(date.getDate()) + '.' + two(date.getMonth() + 1) + '.' + date.getFullYear() + ', ' + two(date.getHours()) + ':' + two(date.getMinutes());
+  }
+  function reportFileName(date, extension) {
+    const day = date instanceof Date && Number.isFinite(date.getTime()) ? date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate()) : '';
+    return ['statystyki-bazy-pacjentow', day].filter(Boolean).join('-') + '.' + extension;
+  }
+  function statsReport(input) {
+    const source = input || {};
+    const model = source.model, cards = source.cards || null;
+    const stamp = source.stamp instanceof Date && Number.isFinite(source.stamp.getTime()) ? source.stamp : null;
+    const num = (value, digits) => finite(value) === null ? null : Number(value.toFixed(digits === undefined ? 2 : digits));
+    const col = (title, kind, extra) => Object.assign({ title, kind: kind || 'text' }, extra || {});
+    const rate = (title) => col(title, 'num', { digits: 1 });
+    const change = (title, digits) => col(title, 'num', { digits: digits === undefined ? 1 : digits, signed: true });
+    const sections = [];
+
+    // 1. Pacjenci — z nagłówków kart.
+    const patientFacts = [
+      { label: 'Pacjenci w bazie', value: model.total, unit: '', text: String(model.total), note: model.recent + ' z zapisem w ostatnich 12 mies.' },
+      { label: 'Średni wiek', value: model.withAge ? num(model.meanMonths / 12, 1) : null, unit: model.withAge ? 'lata' : '', text: model.withAge ? formatAge(model.meanMonths) : '—',
+        note: model.withAge ? 'mediana ' + formatAge(model.medianMonths) + ' · od ' + formatAge(model.minMonths) + ' do ' + formatAge(model.maxMonths) : 'brak dat urodzenia' }
+    ];
+    [['M', 'Chłopcy'], ['F', 'Dziewczęta']].forEach(([key, label]) => {
+      const average = model.meanMonthsBySex[key];
+      patientFacts.push({ label, value: model.sex[key], unit: '', text: String(model.sex[key]),
+        note: percent(model.sex[key], model.total) + '%' + (average === null ? '' : ' · średni wiek ' + formatAge(average)) });
+    });
+    sections.push({
+      key: 'patients', title: 'Pacjenci', hint: '', facts: patientFacts, chart: null,
+      tables: [{
+        key: 'age', title: 'Wiek i płeć',
+        columns: [col('Przedział wieku'), col('Chłopcy', 'int'), col('Dziewczęta', 'int'), col('Płeć nieznana', 'int'), col('Razem', 'int'), col('', 'bar')],
+        rows: model.bands.map((band) => [band.label, band.M, band.F, band.unknown, band.total,
+          [{ value: band.M, color: 'boys' }, { value: band.F, color: 'girls' }, { value: band.unknown, color: 'unknown' }]]),
+        barMax: Math.max.apply(null, model.bands.map((band) => band.total).concat([1])),
+        note: 'Słupki: niebieski — chłopcy, pomarańczowy — dziewczęta, szary — płeć nieznana.'
+      }],
+      notes: ['Wiek na dziś, liczony z daty urodzenia.' + (model.missingDob.length ? ' Bez daty urodzenia: ' + model.missingDob.length + ' (poza wiekiem).' : '')]
+    });
+
+    if (cards) {
+      // 2. Leczenie hormonem wzrostu.
+      const gh = cards.gh, ghSection = { key: 'gh', title: 'Leczenie hormonem wzrostu', hint: '', facts: [], tables: [], notes: [], chart: null };
+      if (!gh || !gh.treated) ghSection.notes.push('W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.');
+      else {
+        ghSection.hint = 'leczonych: ' + gh.treated + ' · ' + gh.programs.map((item) => item.program + ' ' + item.treated).join(' · ');
+        ghSection.facts.push({ label: 'Leczonych', value: gh.treated, unit: '', text: String(gh.treated), note: '', only: 'sheet' });
+        if (!gh.engineReady) ghSection.notes.push('Tempa nie policzono, bo na stronie, z której liczono, nie wczytał się moduł tempa wzrastania.');
+        else {
+          ghSection.facts.push(
+            { label: 'Tempo w 1. roku leczenia', value: num(gh.first.mean), unit: 'cm/rok', text: gh.first.n ? formatVelocity(gh.first.mean) + ' cm/rok' : '—',
+              note: gh.first.n ? 'mediana ' + formatVelocity(gh.first.median) + ' · n = ' + gh.first.n : 'żaden pacjent nie ma kontroli po 9–15 mies.' },
+            { label: 'Przed leczeniem → 1. rok', value: null, unit: '', only: 'pdf',
+              text: gh.paired.n ? formatVelocity(gh.paired.before) + ' → ' + formatVelocity(gh.paired.first) + ' cm/rok' : '—',
+              note: gh.paired.n ? 'n = ' + gh.paired.n + ' z pomiarem 9–15 mies. przed Włączeniem' : 'brak pomiarów 9–15 mies. przed Włączeniem' },
+            { label: 'Tempo przed leczeniem (pary)', value: num(gh.paired.before), unit: 'cm/rok', text: '', note: 'n = ' + gh.paired.n, only: 'sheet' },
+            { label: 'Tempo w 1. roku (pary)', value: num(gh.paired.first), unit: 'cm/rok', text: '', note: 'n = ' + gh.paired.n, only: 'sheet' },
+            { label: 'Zmiana hSDS w 1. roku', value: num(gh.deltaSds.mean, 3), unit: gh.deltaSds.n ? 'SD' : '', text: formatDelta(gh.deltaSds.mean),
+              note: gh.deltaSds.n ? 'mediana ' + formatDelta(gh.deltaSds.median) + ' · n = ' + gh.deltaSds.n
+                : gh.sdsReady ? 'brak pary hSDS (płeć, wiek lub siatka)' : 'siatki wzrostu nie były wczytane na stronie, z której liczono' }
+          );
+          ghSection.tables.push({
+            key: 'gh-programs', title: 'Wg programu',
+            columns: [col('Program'), col('Leczonych', 'int'), col('Z tempem (n)', 'int'), rate('1. rok (cm/rok)'), col('Pary (n)', 'int'), rate('Przed leczeniem'), rate('1. rok — pary'), col('Uwaga')],
+            rows: gh.programs.map((item) => [item.program, item.treated, item.n, num(item.mean), item.paired.n,
+              item.paired.n ? num(item.paired.before) : null, item.paired.n ? num(item.paired.first) : null, item.small ? 'mała grupa' : ''])
+          });
+          if (gh.years.length) {
+            ghSection.tables.push({
+              key: 'gh-years', title: 'Kolejne lata leczenia',
+              columns: [col('Rok leczenia'), rate('Średnie tempo (cm/rok)'), col('n', 'int'), col('', 'bar')],
+              rows: gh.years.map((item) => [item.year + '. rok', num(item.mean), item.n, [{ value: item.mean, color: 'teal' }]]),
+              barMax: Math.max.apply(null, gh.years.map((item) => item.mean).concat([1]))
+            });
+          }
+          const without = GH_REASONS.filter(([key]) => (gh.missing[key] || []).length);
+          if (without.length) {
+            ghSection.tables.push({ key: 'gh-missing', title: 'Bez tempa w 1. roku', columns: [col('Powód'), col('Pacjentów', 'int')],
+              rows: without.map(([key, label]) => [label, gh.missing[key].length]) });
+          }
+          ghSection.notes.push(ghNote());
+        }
+      }
+      sections.push(ghSection);
+
+      // 3. Leczenie otyłości.
+      const ob = cards.obesity, obSection = { key: 'obesity', title: 'Leczenie otyłości', hint: '', facts: [], tables: [], notes: [], chart: null };
+      if (!ob || !ob.treated) obSection.notes.push('W bazie nie ma pacjentów z punktami leczenia otyłości.');
+      else {
+        obSection.hint = 'leczonych: ' + ob.treated + ' · ' + ob.drugs.map((item) => item.drug + ' ' + item.treated).join(' · ');
+        obSection.facts.push({ label: 'Leczonych', value: ob.treated, unit: '', text: String(ob.treated), note: 'dzieci: ' + ob.children + ' · dorośli: ' + ob.adults, only: 'sheet' });
+        if (!ob.engineReady) obSection.notes.push('Zmiany masy nie policzono, bo na stronie, z której liczono, nie wczytał się moduł cykli leczenia.');
+        else {
+          OBESITY_WINDOWS.forEach((range) => {
+            const part = ob.windows[range.key];
+            obSection.facts.push({ label: 'Zmiana masy ' + range.after, value: num(part.mean), unit: part.n ? '%' : '', text: percentText(part.mean),
+              note: part.n ? 'mediana ' + percentText(part.median) + ' · n = ' + part.n + ' · ' + formatDelta(part.kgPerMonth, 1) + ' kg/mies.'
+                : 'żaden pacjent nie ma pomiaru w ' + range.min + '–' + range.max + ' tyg.' });
+          });
+          const range = obesityMainWindow(ob), main = ob.windows[range.key];
+          if (main.thresholds.length) {
+            const first = main.thresholds[0], rest = main.thresholds.slice(1);
+            obSection.facts.push({ label: 'Redukcja o ≥ ' + first.threshold + '% ' + range.after, value: main.n ? first.n : null, unit: main.n ? 'z ' + main.n : '',
+              text: main.n ? first.n + ' z ' + main.n : '—',
+              note: main.n ? percent(first.n, main.n) + '%' + rest.map((item) => ' · o ≥ ' + item.threshold + '%: ' + item.n + ' (' + percent(item.n, main.n) + '%)').join('') : 'brak pomiarów w oknie' });
+          }
+          const kids = main.bmi;
+          obSection.facts.push({ label: 'Dzieci: zmiana BMI ' + range.after, value: num(kids.mean), unit: kids.n ? '%' : '', text: percentText(kids.mean),
+            note: kids.n ? 'n = ' + kids.n + (kids.sdsN ? ' · BMI-SDS ' + formatDelta(kids.sds, 2) + (kids.sdsN < kids.n ? ' (n = ' + kids.sdsN + ')' : '')
+              : ob.sdsReady ? ' · BMI-SDS: brak płci, wieku lub siatki' : ' · BMI-SDS: siatki nie były wczytane')
+              : ob.children ? 'brak pomiaru ze wzrostem w oknie' : 'brak leczonych dzieci' });
+          const thresholds = main.thresholds.map((item) => item.threshold);
+          obSection.tables.push({
+            key: 'ob-windows', title: 'Zmiana masy ciała',
+            columns: [col('Okno'), change('Średnia (%)'), change('Mediana (%)'), col('n', 'int'), change('Tempo (kg/mies.)')]
+              .concat(thresholds.map((threshold) => col('Redukcja o ≥ ' + threshold + '% (n)', 'int')), [col('Przyrost masy (n)', 'int')]),
+            rows: OBESITY_WINDOWS.map((period) => {
+              const part = ob.windows[period.key];
+              return [period.after, num(part.mean), num(part.median), part.n, num(part.kgPerMonth)]
+                .concat(part.thresholds.map((item) => part.n ? item.n : null), [part.n ? part.gained.length : null]);
+            })
+          });
+          if (ob.children) {
+            obSection.tables.push({
+              key: 'ob-bmi', title: 'Dzieci: zmiana BMI',
+              columns: [col('Okno'), change('Zmiana BMI (%)'), col('n', 'int'), change('Zmiana BMI-SDS', 2), col('n (BMI-SDS)', 'int')],
+              rows: OBESITY_WINDOWS.map((period) => {
+                const bmi = ob.windows[period.key].bmi;
+                return [period.after, num(bmi.mean), bmi.n, num(bmi.sds, 3), bmi.sdsN];
+              })
+            });
+          }
+          obSection.tables.push({
+            key: 'ob-drugs', title: 'Wg leku (zmiana masy)',
+            columns: [col('Lek'), col('Leczonych', 'int')].concat(
+              OBESITY_WINDOWS.reduce((list, period) => list.concat([change(period.after.charAt(0).toUpperCase() + period.after.slice(1) + ' (%)'), col('n', 'int')]), []), [col('Uwaga')]),
+            rows: ob.drugs.map((item) => [item.drug, item.treated].concat(
+              OBESITY_WINDOWS.reduce((list, period) => list.concat([num(item.windows[period.key].mean), item.windows[period.key].n]), []), [item.small ? 'mała grupa' : '']))
+          });
+          const missingRows = [];
+          OBESITY_WINDOWS.forEach((period) => OBESITY_REASONS.forEach((key) => {
+            const count = (ob.missing[period.key][key] || []).length;
+            if (count) missingRows.push([period.after, obesityReason(key, period), count]);
+          }));
+          if (missingRows.length) obSection.tables.push({ key: 'ob-missing', title: 'Bez wyniku', columns: [col('Okno'), col('Powód'), col('Pacjentów', 'int')], rows: missingRows });
+          if (main.n) obSection.chart = { kind: 'fall', title: 'Każdy pacjent ' + range.after, values: main.people.map((person) => num(person.pct)) };
+          obSection.notes.push(obesityNote(ob.journalFailed));
+        }
+      }
+      sections.push(obSection);
+    }
+
+    // 4. Kompletność danych.
+    const dataRows = [
+      ['Data urodzenia', model.total - model.missingDob.length, model.total],
+      ['Płeć', model.total - model.missingSex.length, model.total]
+    ];
+    if (cards) {
+      const read = cards.total - cards.failed;
+      CARD_ITEMS.forEach(([key, label]) => dataRows.push([label, read - (cards.missing[key] || []).length, read]));
+    }
+    sections.push({
+      key: 'data', title: 'Kompletność danych', hint: '', facts: [], chart: null,
+      tables: [{ key: 'data', title: 'Ile kart ma dane', columns: [col('Dane'), col('Mają', 'int'), col('Razem', 'int'), col('Odsetek (%)', 'int')],
+        rows: dataRows.map((row) => row.concat([percent(row[1], row[2])])) }],
+      notes: cards ? (cards.failed ? ['Nie udało się odczytać kart: ' + cards.failed + '.'] : []) : ['Leczenie i kompletność kart nie były liczone.']
+    });
+
+    // Arkusz „Pacjenci”: jeden wiersz na pacjenta, bez nazwiska, daty urodzenia i identyfikatora.
+    let people = null;
+    if (cards && Array.isArray(cards.details)) {
+      const ageOf = typeof source.ageMonths === 'function' ? source.ageMonths : () => null;
+      const byId = new Map(cards.details.map((item) => [item.id, item]));
+      const ghReasons = new Map(GH_REASONS.concat([['no-engine', 'moduł tempa niewczytany']]));
+      const columns = [col('Lp.', 'int'), col('Płeć'), col('Wiek (lata)', 'num', { digits: 1 }), col('Przedział wieku')]
+        .concat(CARD_ITEMS.map(([, label]) => col(label)), [
+          col('GH: program'), rate('GH: tempo przed leczeniem (cm/rok)'), rate('GH: tempo 1. rok (cm/rok)'), rate('GH: tempo 2. rok'), rate('GH: tempo 3. rok'), rate('GH: tempo 4. rok'),
+          change('GH: zmiana hSDS w 1. roku', 2), col('GH: uwaga'), col('Otyłość: lek'), col('Otyłość: grupa')],
+        OBESITY_WINDOWS.reduce((list, period) => list.concat([
+          col('Otyłość ' + period.after + ': tydzień pomiaru', 'int'), change('Otyłość ' + period.after + ': zmiana masy (%)'), change('Otyłość ' + period.after + ': tempo (kg/mies.)'),
+          change('Otyłość ' + period.after + ': zmiana BMI (%)'), change('Otyłość ' + period.after + ': zmiana BMI-SDS', 2), col('Otyłość ' + period.after + ': uwaga')]), []));
+      const rows = (Array.isArray(source.patients) ? source.patients : []).filter((record) => record && !record.__ext).map((record) => {
+        const header = record.header || {}, sex = sexKey(header.sex);
+        const computed = header.dobISO ? ageOf(header.dobISO) : null;
+        const months = typeof computed === 'number' && Number.isFinite(computed) && computed >= 0 ? computed : null;
+        const band = months === null ? null : AGE_BANDS.find((item) => Math.floor(months / 12) >= item.from && (item.to === null || Math.floor(months / 12) <= item.to));
+        const detail = byId.get(record.patientId) || null, card = detail && detail.card, gh = detail && detail.gh, ob = detail && detail.ob;
+        const cells = [sex === 'M' ? 'M' : sex === 'F' ? 'K' : '', months === null ? null : num(months / 12, 1), band ? band.label : '']
+          .concat(CARD_ITEMS.map(([key]) => card ? (card[key] ? 'tak' : 'nie') : ''), [
+            gh ? gh.program || 'bez programu' : '', gh ? num(gh.before) : null,
+            gh && gh.years.length > 0 ? num(gh.years[0]) : null, gh && gh.years.length > 1 ? num(gh.years[1]) : null,
+            gh && gh.years.length > 2 ? num(gh.years[2]) : null, gh && gh.years.length > 3 ? num(gh.years[3]) : null,
+            gh ? num(gh.deltaSds, 3) : null, gh && gh.reason ? ghReasons.get(gh.reason) || '' : '',
+            ob ? ob.drug || 'bez leku' : '', ob ? (ob.child === true ? 'dziecko' : ob.child === false ? 'dorosły' : '') : ''],
+          OBESITY_WINDOWS.reduce((list, period) => {
+            const part = ob && ob.windows[period.key], reason = ob && ob.reasons[period.key];
+            return list.concat([part ? part.weeks : null, part ? num(part.pct) : null, part ? num(part.kgPerMonth) : null, part ? num(part.bmiPct) : null, part ? num(part.bmiSds, 3) : null,
+              reason ? (reason === 'no-engine' ? 'moduł cykli niewczytany' : obesityReason(reason, period)) : '']);
+          }, []));
+        return { months, sex: sex || 'Z', cells };
+      }).sort((x, y) => (x.months === null ? Infinity : x.months) - (y.months === null ? Infinity : y.months) || x.sex.localeCompare(y.sex));
+      people = { columns, rows: rows.map((row, index) => [index + 1].concat(row.cells)) };
+    }
+    return { title: REPORT_TITLE, stamp, total: model.total, counted: Boolean(cards), sections, closing: footNote(model.total), people };
+  }
+  /* Arkusze: „Podsumowanie” (te same sekcje, co raport) i „Pacjenci”. Wiersz to { bold, cells };
+   * liczba zostaje liczbą (Excel policzy z niej dalej), brak wartości — pustą komórką. */
+  const PRIVACY_NOTE = 'Plik nie zawiera nazwisk, dat urodzenia ani identyfikatorów pacjentów.';
+  function statsWorkbook(report) {
+    const rows = [];
+    const push = (cells, bold) => rows.push({ bold: Boolean(bold), cells: cells || [] });
+    push([report.title], true);
+    push(['Stan na', stampText(report.stamp)]);
+    push(['Pacjentów w bazie', report.total]);
+    report.sections.forEach((section) => {
+      push([]);
+      push([section.title], true);
+      section.facts.filter((fact) => fact.only !== 'pdf').forEach((fact) => {
+        push([fact.label, fact.value === null || fact.value === undefined ? (fact.text && fact.text !== '—' ? fact.text : '') : fact.value, fact.unit || '', fact.note || '']);
+      });
+      section.tables.forEach((table) => {
+        const visible = table.columns.map((column, index) => column.kind === 'bar' ? -1 : index).filter((index) => index !== -1);
+        push([]);
+        push([table.title], true);
+        push(visible.map((index) => table.columns[index].title), true);
+        table.rows.forEach((row) => push(visible.map((index) => row[index] === undefined ? null : row[index])));
+      });
+      if (section.notes.length) push([]);
+      section.notes.forEach((note) => push([note]));
+    });
+    push([]);
+    push([report.closing]);
+    push([PRIVACY_NOTE]);
+    const sheets = [{ name: 'Podsumowanie', freeze: false, widths: [46, 16, 16, 18, 16, 18, 18, 18, 18], rows }];
+    if (report.people) {
+      sheets.push({
+        name: 'Pacjenci', freeze: true,
+        widths: report.people.columns.map((column) => column.kind === 'text' ? 24 : column.kind === 'int' && column.title === 'Lp.' ? 6 : 18),
+        rows: [{ bold: true, cells: report.people.columns.map((column) => column.title) }].concat(report.people.rows.map((cells) => ({ bold: false, cells })))
+      });
+    }
+    return sheets;
+  }
+  /* Plik .xlsx to archiwum ZIP z kilkoma dokumentami XML (Office Open XML). Tu powstają same
+   * dokumenty — { ścieżka: treść } — a archiwum składa widok lokalną biblioteką JSZip.
+   * Teksty idą jako inlineStr (bez tablicy wspólnych napisów), styl 1 to pogrubienie. */
+  function xmlText(value) {
+    // XML 1.0 dopuszcza tabulator, nową linię, CR i znaki od spacji; pozostałe znaki sterujące i samotne surogaty odpadają.
+    let clean = '';
+    for (const char of String(value)) {
+      const code = char.codePointAt(0);
+      if (code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 0xD7FF) || (code >= 0xE000 && code <= 0xFFFD) || code >= 0x10000) clean += char;
+    }
+    return clean.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function columnName(index) {
+    let name = '';
+    for (let rest = index + 1; rest > 0; rest = Math.floor((rest - 1) / 26)) name = String.fromCharCode(65 + (rest - 1) % 26) + name;
+    return name;
+  }
+  function xlsxParts(sheets) {
+    const list = Array.isArray(sheets) ? sheets : [];
+    const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    const main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const office = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const pack = 'http://schemas.openxmlformats.org/package/2006/relationships';
+    const types = 'application/vnd.openxmlformats-officedocument.spreadsheetml.';
+    const used = new Set();
+    const names = list.map((sheet, index) => {
+      // Nazwa arkusza: do 31 znaków, bez [ ] : * ? / \ i bez powtórzeń.
+      let name = String(sheet.name || '').replace(/[[\]:*?/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31).trim() || 'Arkusz ' + (index + 1);
+      while (used.has(name.toLowerCase())) name = name.slice(0, 28) + ' ' + (index + 1);
+      used.add(name.toLowerCase());
+      return name;
+    });
+    const parts = {}, sheetXml = [];
+    list.forEach((sheet, index) => {
+      const rows = (sheet.rows || []).map((row, r) => {
+        const cells = (row.cells || []).map((value, c) => {
+          if (value === null || value === undefined || value === '') return '';
+          const ref = ' r="' + columnName(c) + (r + 1) + '"' + (row.bold ? ' s="1"' : '');
+          if (typeof value === 'number') return Number.isFinite(value) ? '<c' + ref + '><v>' + String(value) + '</v></c>' : '';
+          return '<c' + ref + ' t="inlineStr"><is><t xml:space="preserve">' + xmlText(value) + '</t></is></c>';
+        }).join('');
+        return '<row r="' + (r + 1) + '">' + cells + '</row>';
+      }).join('');
+      const widths = Array.isArray(sheet.widths) ? sheet.widths : [];
+      sheetXml.push(head + '<worksheet xmlns="' + main + '">'
+        + '<sheetViews><sheetView workbookViewId="0"' + (index === 0 ? ' tabSelected="1"' : '') + '>'
+        + (sheet.freeze ? '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' : '') + '</sheetView></sheetViews>'
+        + (widths.length ? '<cols>' + widths.map((width, c) => '<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + width + '" customWidth="1"/>').join('') + '</cols>' : '')
+        + '<sheetData>' + rows + '</sheetData></worksheet>');
+    });
+    // Kolejność części jak w plikach zapisywanych przez arkusze kalkulacyjne: najpierw opis pakietu, na końcu arkusze.
+    parts['[Content_Types].xml'] = head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      + '<Default Extension="xml" ContentType="application/xml"/>'
+      + '<Override PartName="/xl/workbook.xml" ContentType="' + types + 'sheet.main+xml"/>'
+      + list.map((sheet, index) => '<Override PartName="/xl/worksheets/sheet' + (index + 1) + '.xml" ContentType="' + types + 'worksheet+xml"/>').join('')
+      + '<Override PartName="/xl/styles.xml" ContentType="' + types + 'styles+xml"/></Types>';
+    parts['_rels/.rels'] = head + '<Relationships xmlns="' + pack + '"><Relationship Id="rId1" Type="' + office + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    parts['xl/workbook.xml'] = head + '<workbook xmlns="' + main + '" xmlns:r="' + office + '"><bookViews><workbookView/></bookViews><sheets>'
+      + names.map((name, index) => '<sheet name="' + xmlText(name) + '" sheetId="' + (index + 1) + '" r:id="rId' + (index + 1) + '"/>').join('') + '</sheets></workbook>';
+    parts['xl/_rels/workbook.xml.rels'] = head + '<Relationships xmlns="' + pack + '">'
+      + list.map((sheet, index) => '<Relationship Id="rId' + (index + 1) + '" Type="' + office + '/worksheet" Target="worksheets/sheet' + (index + 1) + '.xml"/>').join('')
+      + '<Relationship Id="rId' + (list.length + 1) + '" Type="' + office + '/styles" Target="styles.xml"/></Relationships>';
+    parts['xl/styles.xml'] = head + '<styleSheet xmlns="' + main + '">'
+      + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+      + '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+      + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+      + '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
+      + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+      + '</styleSheet>';
+    sheetXml.forEach((xml, index) => { parts['xl/worksheets/sheet' + (index + 1) + '.xml'] = xml; });
+    return parts;
+  }
+  /* Dokument pdfmake (A4, czcionka Roboto z polskimi znakami — te same pliki, co wydruk postępów
+   * dorosłego). Strzałek w tej czcionce nie ma, więc zastępuje je „»”, jak w tamtym wydruku.
+   * Wykresy to SVG z samych kształtów; liczby stoją w tekście i w tabelach. */
+  const PDF_COLORS = { teal: '#00838d', ink: '#0f2b33', muted: '#5a6b72', line: '#d7e9ec', soft: '#f3f9fa', boys: '#2a78d6', girls: '#eb6834', unknown: '#8aa0a6' };
+  const PDF_WIDTH = 515, PDF_BAR = 110;
+  function pdfText(value) { return String(value === null || value === undefined ? '' : value).replace(/[→➡›]/g, '»'); }
+  function reportCell(value, column) {
+    if (value === null || value === undefined || value === '') return column.kind === 'text' ? '' : '—';
+    if (column.kind === 'num' && typeof value === 'number') return column.signed ? formatDelta(value, column.digits) : value.toFixed(column.digits).replace('.', ',');
+    return String(value);
+  }
+  function barSvg(segments, max) {
+    let x = 0;
+    const rects = (Array.isArray(segments) ? segments : []).map((segment) => {
+      const width = max > 0 && segment.value > 0 ? Math.min(segment.value / max, 1) * PDF_BAR : 0;
+      if (!width) return '';
+      const rect = '<rect x="' + x.toFixed(1) + '" y="1" width="' + width.toFixed(1) + '" height="7" fill="' + (PDF_COLORS[segment.color] || PDF_COLORS.teal) + '"/>';
+      x += width;
+      return rect;
+    }).join('');
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + PDF_BAR + '" height="9" viewBox="0 0 ' + PDF_BAR + ' 9">' + rects + '</svg>';
+  }
+  function fallSvg(values) {
+    const height = 96, pad = 5, scale = fallScale(values);
+    const y = (value) => pad + (scale.high - value) / (scale.high - scale.low) * (height - 2 * pad);
+    const rule = (value, color, width) => '<line x1="0" x2="' + PDF_WIDTH + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" stroke="' + color + '" stroke-width="' + width + '"/>';
+    let shapes = '';
+    for (let tick = scale.high; tick >= scale.low; tick -= scale.step) if (tick !== 0) shapes += rule(tick, PDF_COLORS.line, 0.6);
+    const slot = PDF_WIDTH / Math.max(values.length, 16);
+    values.forEach((value, index) => {
+      shapes += '<rect x="' + (index * slot + slot * 0.14).toFixed(1) + '" y="' + Math.min(y(0), y(value)).toFixed(1) + '" width="' + (slot * 0.72).toFixed(1)
+        + '" height="' + Math.max(Math.abs(y(value) - y(0)), 0.6).toFixed(1) + '" fill="' + (value > 0 ? PDF_COLORS.girls : PDF_COLORS.teal) + '"/>';
+    });
+    shapes += rule(0, PDF_COLORS.muted, 0.8);
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + PDF_WIDTH + '" height="' + height + '" viewBox="0 0 ' + PDF_WIDTH + ' ' + height + '">' + shapes + '</svg>';
+  }
+  function statsDocument(report) {
+    const C = PDF_COLORS, content = [];
+    const small = (text, extra) => Object.assign({ text: pdfText(text), fontSize: 8.5, color: C.muted }, extra || {});
+    content.push({ columns: [
+      { width: '*', stack: [{ text: pdfText(report.title), fontSize: 16, bold: true, color: C.teal },
+        small('Zestawienie opisowe · ' + report.total + (report.total === 1 ? ' pacjent' : ' pacjentów') + ' z bazy', { fontSize: 9.5 })] },
+      { width: 'auto', stack: [{ text: pdfText(report.stamp ? 'Stan na ' + stampText(report.stamp) : ''), alignment: 'right' }, small('bez danych osobowych', { alignment: 'right' })] }
+    ] });
+    content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_WIDTH, y2: 0, lineWidth: 1.2, lineColor: C.teal }], margin: [0, 6, 0, 2] });
+    const tiles = (facts) => ({
+      table: { widths: facts.map(() => '*'), body: [facts.map((fact) => ({
+        stack: [{ text: pdfText(fact.label).toUpperCase(), fontSize: 7, bold: true, color: C.muted, characterSpacing: 0.3 },
+          { text: pdfText(fact.text), fontSize: 15, bold: true, margin: [0, 2, 0, 1] }, small(fact.note, { fontSize: 8 })],
+        fillColor: C.soft
+      }))] },
+      layout: {
+        hLineWidth: () => 0, vLineWidth: (index, node) => index === 0 || index === node.table.widths.length ? 0 : 5, vLineColor: () => '#ffffff',
+        paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 7, paddingBottom: () => 7
+      },
+      margin: [0, 2, 0, 0]
+    });
+    const table = (item) => {
+      const align = (column) => column.kind === 'text' || column.kind === 'bar' ? 'left' : 'right';
+      const body = [item.columns.map((column) => ({ text: pdfText(column.title), bold: true, fontSize: 8, color: C.muted, alignment: align(column) }))];
+      item.rows.forEach((row) => body.push(item.columns.map((column, index) => column.kind === 'bar'
+        ? { svg: barSvg(row[index], item.barMax), width: PDF_BAR, margin: [0, 2, 0, 0] }
+        : { text: pdfText(reportCell(row[index], column)), alignment: align(column) })));
+      const stack = [{ text: pdfText(item.title), bold: true, fontSize: 10, margin: [0, 9, 0, 2] },
+        { table: { headerRows: 1, widths: item.columns.map((column, index) => column.kind === 'bar' ? PDF_BAR : index === 0 ? '*' : 'auto'), body }, layout: 'lightHorizontalLines', fontSize: 9 }];
+      if (item.note) stack.push(small(item.note, { fontSize: 8, margin: [0, 3, 0, 0] }));
+      return { stack, unbreakable: item.rows.length <= 12 };
+    };
+    report.sections.forEach((section) => {
+      const head = [{ text: pdfText(section.title), fontSize: 12.5, bold: true, margin: [0, 13, 0, 1] }];
+      if (section.hint) head.push(small(section.hint, { fontSize: 9, margin: [0, 0, 0, 3] }));
+      const shown = section.facts.filter((fact) => fact.only !== 'sheet');
+      if (shown.length) head.push(tiles(shown));
+      // Nagłówek sekcji nie zostaje sam na dole strony: idzie razem z pierwszą (krótką) tabelą.
+      const blocks = section.tables.map(table);
+      if (blocks.length && blocks[0].unbreakable) head.push(blocks.shift());
+      content.push({ stack: head, unbreakable: true });
+      blocks.forEach((block) => content.push(block));
+      if (section.chart && section.chart.kind === 'fall') {
+        const scale = fallScale(section.chart.values);
+        content.push({ unbreakable: true, stack: [
+          { text: pdfText(section.chart.title), bold: true, fontSize: 10, margin: [0, 9, 0, 3] },
+          { svg: fallSvg(section.chart.values), width: PDF_WIDTH },
+          small('Jeden słupek to jeden pacjent, od najmniejszej do największej redukcji masy; pomarańczowy słupek to przyrost. Linie co ' + scale.step
+            + '%: od ' + formatDelta(scale.high, 0) + '% (góra) do ' + formatDelta(scale.low, 0) + '% (dół), ciemna linia to 0%.', { fontSize: 8, margin: [0, 2, 0, 0] })
+        ] });
+      }
+      section.notes.forEach((note) => content.push(small(note, { margin: [0, 5, 0, 0] })));
+    });
+    content.push(small(report.closing, { margin: [0, 14, 0, 0] }));
+    return {
+      pageSize: 'A4', pageOrientation: 'portrait', pageMargins: [40, 40, 40, 44],
+      defaultStyle: { font: 'Roboto', fontSize: 9.5, color: C.ink, lineHeight: 1.2 },
+      info: { title: report.title },
+      footer: (page, pages) => ({ text: 'Strona ' + page + ' z ' + pages, alignment: 'center', fontSize: 8, color: C.muted, margin: [0, 14, 0, 0] }),
+      content
+    };
+  }
   function create(options) {
     const opts = options || {};
     const doc = win.document;
@@ -498,6 +951,9 @@
     let ghHint = null;
     let obHost = null;       // sekcja „Leczenie otyłości”
     let obHint = null;
+    let exportBusy = null;   // 'pdf' albo 'xlsx' w trakcie przygotowania pliku
+    let exportNote = '';     // ostatni komunikat o pliku (pasek „z kart”)
+    let zipLoading = null;   // jedna obietnica wczytania lokalnej biblioteki JSZip
     let cardsProgress = null;
     const timeFormatter = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
     const rowHeights = new Map(Array.isArray(initial.rowHeights) ? initial.rowHeights : []);
@@ -1167,7 +1623,86 @@
         return { points: saved, failed: true };
       }
     }
-    function fillCards() {
+    /* ── P-BAZA-STATYSTYKI, etap 4: raport PDF i plik dla Excela ───────────────────
+     * Oba pliki powstają na tym urządzeniu z modelu statsReport. PDF składa pdfmake — te same
+     * lokalne pliki i ta sama funkcja wczytania, co wydruk postępów dorosłego; plik .xlsx pakuje
+     * lokalna biblioteka JSZip. Zapis: zwykłe pobranie, a na iPhonie w trybie aplikacji arkusz
+     * udostępniania (tam pobranie nie działa) — ta sama reguła, co w wydruku postępów. */
+    function ensureZip() {
+      if (win.JSZip) return Promise.resolve(win.JSZip);
+      if (zipLoading) return zipLoading;
+      zipLoading = new Promise((resolve, reject) => {
+        const script = doc.createElement('script');
+        script.src = 'jszip.min.js?v=1'; script.async = true;
+        script.setAttribute('data-vilda-jszip', 'statystyki');
+        script.onload = () => { if (win.JSZip) resolve(win.JSZip); else reject(new Error('biblioteka plików nie wstała')); };
+        script.onerror = () => reject(new Error('nie udało się wczytać biblioteki plików'));
+        (doc.head || doc.body || doc.documentElement).appendChild(script);
+      }).catch((error) => { zipLoading = null; throw error; });   // następne kliknięcie ma prawo spróbować jeszcze raz
+      return zipLoading;
+    }
+    function saveFile(blob, name, type) {
+      const print = win.VildaPostepyDoroslegoWydruk;
+      const abilities = print && typeof print.mozliwosci === 'function' ? print.mozliwosci() : null;
+      if (abilities && abilities.iosStandalone) {
+        const nav = win.navigator, file = typeof win.File === 'function' ? new win.File([blob], name, { type }) : null;
+        if (!file || !nav || typeof nav.share !== 'function' || typeof nav.canShare !== 'function' || !nav.canShare({ files: [file] })) {
+          return Promise.reject(new Error('ta przeglądarka nie pozwala zapisać pliku z aplikacji'));
+        }
+        // Zamknięcie arkusza udostępniania to nie awaria.
+        return nav.share({ files: [file], title: name }).then(() => 'shared', (error) => {
+          if (error && (error.name === 'AbortError' || error.name === 'NotAllowedError')) return 'cancelled';
+          throw error;
+        });
+      }
+      const url = win.URL.createObjectURL(blob), link = doc.createElement('a');
+      link.href = url; link.download = name;
+      doc.body.appendChild(link);
+      link.click();
+      // Adres zwalniany po chwili — natychmiastowe zwolnienie potrafi przerwać pobieranie.
+      win.setTimeout(() => { try { doc.body.removeChild(link); win.URL.revokeObjectURL(url); } catch { /* posprzątane */ } }, 4000);
+      return Promise.resolve('saved');
+    }
+    async function pdfBlob(report) {
+      const print = win.VildaPostepyDoroslegoWydruk;
+      if (!print || typeof print.zapewnijPdfmake !== 'function') throw new Error('moduł PDF nie jest wczytany na tej stronie');
+      const pdfMake = await print.zapewnijPdfmake();
+      return new Promise((resolve, reject) => {
+        try {
+          pdfMake.createPdf(statsDocument(report)).getBlob((blob) => { if (blob) resolve(blob); else reject(new Error('nie udało się złożyć PDF')); });
+        } catch (error) { reject(error); }
+      });
+    }
+    async function sheetBlob(report) {
+      const JSZip = await ensureZip();
+      const archive = new JSZip(), parts = xlsxParts(statsWorkbook(report));
+      Object.keys(parts).forEach((path) => archive.file(path, parts[path], { createFolders: false }));
+      return archive.generateAsync({ type: 'blob', mimeType: XLSX_TYPE, compression: 'DEFLATE' });
+    }
+    async function exportFile(kind) {
+      const saved = savedCards();
+      if (exportBusy || cardsBusy || !saved || !alive()) return;
+      exportBusy = kind;
+      exportNote = kind === 'pdf' ? 'Przygotowuję raport PDF…' : 'Przygotowuję plik dla Excela…';
+      fillBar();
+      let message;
+      try {
+        const stamp = new Date(saved.at);
+        const report = statsReport({ model: demographics(patients, { ageMonths: ageFromVault }), cards: saved, patients: basePatients(), ageMonths: ageFromVault, stamp });
+        const name = reportFileName(stamp, kind);
+        const blob = kind === 'pdf' ? await pdfBlob(report) : await sheetBlob(report);
+        const outcome = await saveFile(blob, name, kind === 'pdf' ? 'application/pdf' : XLSX_TYPE);
+        message = outcome === 'cancelled' ? 'Udostępnianie przerwane.' : (outcome === 'shared' ? 'Udostępniono plik ' : 'Zapisano plik ') + name + '.';
+      } catch (error) {
+        message = 'Nie udało się przygotować pliku' + (error && error.message ? ': ' + error.message : '') + '.';
+      }
+      exportBusy = null; exportNote = message;
+      if (!alive() || !cardsBar) return;
+      fillBar();
+      const again = cardsBar.querySelector('[data-export="' + kind + '"]');
+      if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
+    }
+    function fillBar() {
       if (!cardsBar) return;
       clear(cardsBar); cardsProgress = null;
       const base = basePatients(), saved = savedCards();
@@ -1182,10 +1717,24 @@
         cardsBar.appendChild(el('span', null, 'Karty policzone' + (Number.isFinite(when.getTime()) ? ' o ' + timeFormatter.format(when) : '')
           + (saved.failed ? ' · nie udało się odczytać: ' + saved.failed : '') + '.'));
         cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz ponownie', checkCards));
+        [['pdf', 'Raport PDF'], ['xlsx', 'Eksport do Excela']].forEach(([kind, label]) => {
+          const save = button('pt-secondary pt-stat-export', label, () => exportFile(kind));
+          save.setAttribute('data-export', kind);
+          save.disabled = Boolean(exportBusy);
+          cardsBar.appendChild(save);
+        });
+        const status = el('p', 'pt-stat-export-status', exportNote || 'Raport i plik dla Excela zawierają liczby z tego ekranu, bez nazwisk i dat urodzenia.');
+        status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+        cardsBar.appendChild(status);
       } else {
-        cardsBar.appendChild(el('span', null, 'Leczenie hormonem wzrostu, leczenie otyłości i kompletność kart liczą się z zapisów kart i wpisów między wizytami. Policzenie odszyfrowuje je po kolei na tym urządzeniu i przy dużej bazie może chwilę potrwać.'));
+        cardsBar.appendChild(el('span', null, 'Leczenie hormonem wzrostu, leczenie otyłości i kompletność kart liczą się z zapisów kart i wpisów między wizytami. Policzenie odszyfrowuje je po kolei na tym urządzeniu i przy dużej bazie może chwilę potrwać. Po policzeniu można zapisać raport PDF i plik dla Excela.'));
         cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz z kart (' + base.length + ')', checkCards));
       }
+    }
+    function fillCards() {
+      if (!cardsBar) return;
+      fillBar();
+      const saved = savedCards();
       if (cardsHost) {
         clear(cardsHost);
         if (saved && !cardsBusy) CARD_ITEMS.forEach(([key, label]) => {
@@ -1216,7 +1765,9 @@
       const missing = {}; CARD_ITEMS.forEach(([key]) => { missing[key] = []; });
       const deps = ghDeps(), treated = [];
       const obDeps = obesityDeps(), obese = [];
+      const details = [];      // wynik każdej karty — do arkusza „Pacjenci” (etap 4)
       let failed = 0, journalFailed = 0;
+      exportNote = '';
       cardsBusy = { done: 0, total: base.length };
       fillCards();
       for (const record of base) {
@@ -1225,7 +1776,7 @@
         try {
           const snapshot = await vault.getLatestSnapshot(record.patientId);
           if (run !== cardsRun) return;
-          if (!snapshot || !snapshot.payload) failed += 1;
+          if (!snapshot || !snapshot.payload) { failed += 1; details.push({ id: record.patientId, card: null, gh: null, ob: null }); }
           else {
             const result = cardCompleteness(snapshot.payload);
             CARD_ITEMS.forEach(([key]) => { if (!result[key]) missing[key].push(record.patientId); });
@@ -1236,16 +1787,18 @@
             if (therapy.failed) journalFailed += 1;
             const ob = obesityPatient(snapshot.payload, therapy.points, obDeps);
             if (ob) obese.push({ id: record.patientId, ob });
+            details.push({ id: record.patientId, card: result, gh, ob });
           }
         } catch {
           if (run !== cardsRun) return;
           failed += 1;
+          if (!details.some((item) => item.id === record.patientId)) details.push({ id: record.patientId, card: null, gh: null, ob: null });
         }
         cardsBusy.done += 1; updateCardsProgress();
       }
       cardsBusy = null;
       if (!alive()) return;
-      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed, missing,
+      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed, missing, details,
         gh: Object.assign(ghCohort(treated), { sdsReady: deps.sdsReady, engineReady: Boolean(annualWindow(deps.tempo)) }),
         obesity: Object.assign(obesityCohort(obese, { thresholds: obDeps.thresholds }),
           { sdsReady: obDeps.sdsReady, engineReady: Boolean(obDeps.cykle && obDeps.tygodnie), journalFailed }) };
@@ -1376,12 +1929,9 @@
         });
         host.appendChild(gaps);
       }
-      host.appendChild(el('p', 'pt-stat-note', '1. rok: od punktu Włączenia do kontroli po 9–15 mies. (najbliższej 12 mies.), w pierwszym kursie leczenia. Kolejne lata liczą się tak samo od poprzedniej kontroli. Pacjent bez takiej pary nie wchodzi do średniej. Przy grupie mniejszej niż ' + SMALL_GROUP + ' osób średnia jest niestabilna.'));
+      host.appendChild(el('p', 'pt-stat-note', ghNote()));
     }
     /* ── P-BAZA-STATYSTYKI, etap 3: leczenie otyłości ───────────────────────────── */
-    function percentText(value) {
-      return formatDelta(value, 1) + (typeof value === 'number' && Number.isFinite(value) ? '%' : '');
-    }
     // Skala wierszy „wg leku”: od zera (albo od przyrostu) w lewo do największej redukcji w prawo, w trzech równych krokach.
     function obesityScale(cohort) {
       const values = [];
@@ -1397,10 +1947,7 @@
      * Słupki rysuje SVG rozciągnięty na szerokość (viewBox 0–1000), a podziałkę — drugi SVG w skali
      * 1:1 (jednostka = piksel), żeby liczby nie rozciągały się razem ze słupkami. */
     function fall(people) {
-      const values = people.map((person) => person.pct);
-      const high = Math.max(0, Math.ceil(Math.max.apply(null, values) / 5) * 5);
-      const low = Math.min(-10, Math.floor(Math.min.apply(null, values) / 5) * 5);
-      const step = high - low > 30 ? 10 : 5;
+      const scale = fallScale(people.map((person) => person.pct)), high = scale.high, low = scale.low, step = scale.step;
       const y = (value) => Math.round((FALL_PAD + (high - value) / (high - low) * (FALL_HEIGHT - 2 * FALL_PAD)) * 10) / 10;
       const svg = (className, width, stretch) => {
         const node = doc.createElementNS(SVG_NS, 'svg');
@@ -1464,8 +2011,7 @@
         if (part.n) tile.setAttribute('aria-label', 'Średnia zmiana masy ciała ' + range.after + ': ' + percentText(part.mean) + ', ' + people(part.n) + '. Pokaż listę');
         tiles.appendChild(tile);
       });
-      // Odsetki z progiem, BMI dzieci i wykres pacjentów pokazują dłuższe okno, a gdy nikt go nie ma — krótsze.
-      const range = OBESITY_WINDOWS.slice().reverse().find((item) => cohort.windows[item.key].n) || OBESITY_WINDOWS[OBESITY_WINDOWS.length - 1];
+      const range = obesityMainWindow(cohort);
       const main = cohort.windows[range.key];
       if (main.thresholds.length) {
         const first = main.thresholds[0], rest = main.thresholds.slice(1);
@@ -1566,10 +2112,7 @@
         gained.appendChild(show);
         host.appendChild(gained);
       }
-      host.appendChild(el('p', 'pt-stat-note', 'Zmiana masy od punktu Włączenia w pierwszym cyklu leczenia do pomiaru najbliższego '
-        + OBESITY_WINDOWS.map((period) => period.target + '. tygodnia (okno ' + period.min + '–' + period.max + ' tyg.)').join(' i ')
-        + '; liczą się wizyty i wpisy między wizytami. U dzieci masa rośnie ze wzrostem, dlatego osobno pokazana jest zmiana BMI. Pacjent bez pomiaru w oknie nie wchodzi do średniej. Przy grupie mniejszej niż ' + SMALL_GROUP + ' osób średnia jest niestabilna.'
-        + (cohort.journalFailed ? ' U ' + cohort.journalFailed + (cohort.journalFailed === 1 ? ' pacjenta' : ' pacjentów') + ' nie udało się odczytać wpisów między wizytami — policzono z zapisu wizyty.' : '')));
+      host.appendChild(el('p', 'pt-stat-note', obesityNote(cohort.journalFailed)));
     }
     function renderStats() {
       cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; cardsProgress = null;
@@ -1666,8 +2209,7 @@
       fillCards();
       wrap.appendChild(dataCard);
 
-      wrap.appendChild(el('p', 'pt-stat-note pt-stat-note--foot', 'Statystyki opisowe ' + model.total + (model.total === 1 ? ' pacjenta' : ' pacjentów')
-        + ' z bazy, bez osób spoza bazy. Policzone na tym urządzeniu; nic nie jest wysyłane. Nie są badaniem naukowym ani podstawą decyzji klinicznych.'));
+      wrap.appendChild(el('p', 'pt-stat-note pt-stat-note--foot', footNote(model.total)));
       scroll.appendChild(wrap);
     }
 
@@ -2057,5 +2599,6 @@
     return { root, read, destroy, mount, refreshDuplicates, deferRefresh };
   }
   function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
-  win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds });
+  win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
+    statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName });
 })(typeof window !== 'undefined' ? window : null);
