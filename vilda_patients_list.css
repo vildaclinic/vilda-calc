@@ -872,3 +872,80 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
     flex: 1 1 100%;
   }
 }
+
+/* P-BAZA-SEKCJE (decyzja właściciela 2026-11-24): sekcje „Rozpoznania” i „Kompletność danych” są domyślnie zwinięte
+   do jednego wiersza — tytuł, jedno zdanie podsumowania i „Rozwiń”. Cały wiersz jest przyciskiem w nagłówku sekcji. */
+.pt-stat-fold-heading {
+  display: flex;
+}
+
+.pt-stat-fold {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-6px) var(--space-16px);
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-6px) 0;
+  border: 0;
+  border-radius: var(--radius-8);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pt-stat-fold-title {
+  flex: 0 1 auto;
+}
+
+.pt-stat-fold .pt-stat-card-hint {
+  flex: 1 1 auto;
+  font-weight: 400;
+  text-align: right;
+}
+
+.pt-stat-fold-mark {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pt-stat-fold-mark::after {
+  content: " ▾";
+}
+
+.pt-stat-card--fold.is-open .pt-stat-fold-mark::after {
+  content: " ▴";
+}
+
+.pt-stat-fold:hover .pt-stat-fold-mark {
+  text-decoration: underline;
+}
+
+.pt-stat-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-14px);
+}
+
+/* Przy wybranej płci zostają dwa kafelki — wypełniają cały wiersz. */
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-tiles--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .pt-stat-fold .pt-stat-card-hint {
+    flex-basis: 100%;
+    order: 3;
+    text-align: left;
+  }
+
+  .pt-stat-fold-title {
+    flex: 1 1 auto;
+  }
+}

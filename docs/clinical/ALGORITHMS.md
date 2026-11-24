@@ -48539,3 +48539,73 @@ mieści się w polu); `tests/unit/baza-statystyki-grupy.test.mjs` i `tests/e2e/b
 dostosowane do pola `range` i nowego układu filtrów na telefonie.
 
 **Wersje.** `vilda_patients_list.js` 13 → 14, `vilda_patients_list.css` 11 → 12, wstrzykujące `vilda_chrome.js` 336 → 337 i `vilda_session_bridge.js` 252 → 253; SW 1.1.591 → 1.1.592 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## P-BAZA-SEKCJE — Baza pacjentów: zwijane „Rozpoznania” i „Kompletność danych”, bez pustej sekcji drugiego leczenia, bez elementów oczywistych przy filtrze (SW 1.1.593, `vilda_patients_list.js` 15, `vilda_patients_list.css` 13, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Żadna liczba statystyk się nie zmienia. Zmienia się to, które sekcje i kafelki widać.
+
+**Decyzja właściciela.** 2026-11-24: „jak lekarz wybierze np. leczeni z powodu otyłości to pole »Leczenie hormonem wzrostu —
+W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.« nie powinno się raczej pokazywać (leczenia
+przeciwotyłościowego i hormonem wzrostu jednocześnie się nie stosuje) i odwrotnie. Dodatkowo pole Kompletność danych
+i Rozpoznania powinny być domyślnie zwinięte do jednego wiersza z opcją powiększenia. Sprawdź czy w tych selektorach nie ma
+innych kombinacji wykluczających się.”
+
+**1. Sekcja drugiego leczenia w zakresie jednego leczenia (`scopeHiddenSections`).** Gdy „Zakres” to „leczeni z powodu
+otyłości”, sekcji „Leczenie hormonem wzrostu” nie ma — i odwrotnie — **o ile nikt w zakresie nie ma punktów drugiego
+leczenia**. „Leczeni” znaczy „leczeni kiedykolwiek” (P-BAZA-ZAKRES), więc pacjent leczony kolejno jednym i drugim ma w karcie
+punkty obu leczeń: wtedy sekcja zostaje, bo są w niej dane z kart (propozycja wykonawcy do potwierdzenia: danych się nie
+chowa). Ta sama reguła obowiązuje w raporcie PDF i w pliku dla Excela pobranym z zawężonych Statystyk (`statsReport`,
+pole `omit`) — plik ma te same sekcje co ekran.
+W pozostałych zakresach (płeć, wiek, lista, rozpoznanie, ostatni zapis) pusta sekcja leczenia zostaje — brak leczonych
+jest tam informacją — ale mówi o grupie: „W tej grupie nie ma pacjentów z punktami leczenia…” zamiast „W bazie…”
+(ekran i raport). W statystykach całej bazy komunikat „W bazie…” jest bez zmian.
+
+**2. Sekcje zwijane.** „Rozpoznania” i „Kompletność danych” są domyślnie zwinięte do jednego wiersza: tytuł, jedno zdanie
+podsumowania i „Rozwiń” / „Zwiń”. Cały wiersz jest przyciskiem w nagłówku sekcji (`aria-expanded`, `aria-controls`;
+działa myszą, dotykiem i klawiaturą). Wybór lekarza zostaje do końca pracy z Bazą w tej sesji (pamięć widoku
+`state.sections` — przerysowanie, wybór rozpoznania, powrót z listy i odświeżenie po synchronizacji go nie zmieniają);
+nie jest nigdzie utrwalany.
+- Zdanie „Rozpoznań”: „z aktywnym rozpoznaniem: X z N (P%)”, a bez listy: „brak rozpoznań”, „nie udało się odczytać”,
+  „trwa liczenie”.
+- Zdanie „Kompletności danych”: „z brakami: K z N pozycji” — w ilu pozycjach (data urodzenia, płeć oraz pozycje z kart:
+  pomiary wzrostu, wzrost rodziców, masa urodzeniowa) choć jednemu pacjentowi brakuje danych — albo „bez braków
+  w N pozycjach”; przed policzeniem kart z dopiskiem „karty: trwa liczenie”.
+Sekcje leczenia i „Wiek i płeć” nie są zwijane.
+
+**3. Przegląd kombinacji filtrów („Zakres”, „Lista pacjentów”, „Płeć”, „Wiek”, rozpoznanie).**
+
+| Kombinacja | Co się działo | Rozstrzygnięcie |
+|---|---|---|
+| „leczeni z powodu otyłości” ↔ sekcja „Leczenie hormonem wzrostu” (i odwrotnie) | pusta sekcja z komunikatem „W bazie nie ma…” | sekcji nie ma (pkt 1) |
+| „Płeć” ↔ kafelki „Chłopcy” / „Dziewczęta” | jeden kafelek zawsze 100% (powtarzał liczbę i średni wiek grupy), drugi zawsze 0 | przy wybranej płci kafelków płci nie ma; zostają dwa kafelki na całą szerokość |
+| okno ostatniego zapisu ↔ dopisek „N z zapisem w ostatnich 12 mies.” | zawsze wszyscy (3, 6, 12 mies.) albo nikt (bez zapisu od ponad 12 / 24 mies.) | dopisku nie ma przy zakresie z rodziny „Ostatni zapis karty” |
+| dowolny zakres ↔ pusta sekcja leczenia | „W bazie nie ma pacjentów…” w statystykach grupy | „W tej grupie nie ma pacjentów…” |
+| wybory, które dają zero pacjentów (np. „leczeni hormonem wzrostu” i rozpoznanie E66; lista automatyczna leczonych z powodu otyłości i „leczeni hormonem wzrostu”) | — | bez zmian: pola są jednokrotnego wyboru, więc sprzecznego wyboru w jednym polu nie da się zrobić; pusty wynik pokazuje „Brak pacjentów w tym zakresie” z „Cała baza” |
+| „Wiek” ↔ wykres „Wiek i płeć”; „Płeć” ↔ legenda wykresu i wiersz „Płeć” w kompletności; „Wiek” ↔ wiersz „Data urodzenia” | elementy poprawne, lecz mało mówiące (jeden słupek, 100%) | bez zmian (do decyzji właściciela) |
+| okno ostatniego zapisu **i** leczenie naraz (np. leczeni GH bez zapisu od ponad 12 mies.) | niemożliwe: obie rodziny są w jednym polu „Zakres” | bez zmian; do decyzji właściciela — osobne pole „Leczenie” |
+| lista automatyczna „leczeni” (domyślnie: obecnie leczeni — ostatni punkt nie jest Zakończeniem) ↔ „Zakres: leczeni…” (leczeni kiedykolwiek) | dwa pola o podobnej nazwie mają różne definicje | bez zmian; łączone dają część wspólną (obecnie leczeni) |
+
+**Przypadek syntetyczny (dane fikcyjne; osiem osób a–h z bazy testowej, rozpoznania jak w racie 2).**
+- Wejście w Statystyki: „Rozpoznania — z aktywnym rozpoznaniem: 5 z 8 (63%) — Rozwiń”, „Kompletność danych — z brakami:
+  5 z 5 pozycji — Rozwiń”; treść obu sekcji ukryta. Bez rozpoznań w bazie: „Rozpoznania — brak rozpoznań”.
+- „leczeni hormonem wzrostu” i wiek 6–9 lat → c (bez leczenia otyłości): sekcji „Leczenie otyłości” nie ma na ekranie ani
+  w pliku. „leczeni z powodu otyłości” i wiek 18+ → f: sekcji „Leczenie hormonem wzrostu” nie ma.
+- „leczeni z powodu otyłości”, cały wiek → d, e, f, g, h; d i e mają w karcie punkty GH → sekcja „Leczenie hormonem
+  wzrostu” zostaje („leczonych: 2 · SNP 1 · ZT 1”).
+- Wiek 0–2 lata → a (bez leczenia): obie sekcje leczenia z „W tej grupie nie ma pacjentów z punktami leczenia…”.
+- Płeć „chłopcy” → kafelki „Pacjenci w grupie” i „Średni wiek”; okna 3 / 6 / 12 mies. → kafelek bez dopisku o zapisie.
+
+**Prywatność i cykl życia danych.** Bez nowych danych, miejsc zapisu i kontaktu z siecią; stan zwinięcia żyje w pamięci
+widoku Bazy.
+
+**Zgodność wstecz.** Raport całej bazy i raport grupy z paska listy mają sekcje jak dotąd (zmienia się tylko komunikat
+pustej sekcji leczenia w raporcie grupy). `statsReport` bez pola `omit` działa jak dotąd.
+
+**Strażnicy.** `tests/unit/baza-statystyki-sekcje.test.mjs` (4; plik produkcyjny: reguła chowania sekcji, pacjent z obu
+leczeniami, zakresy spoza leczenia, brak wyniku kart); `tests/unit/baza-statystyki-eksport.test.mjs` (+1: komunikat
+grupy i `omit` w raporcie i arkuszu); `tests/e2e/baza-pacjentow-statystyki-sekcje.spec.mjs` (5; prawdziwy szyfrowany sejf,
+fikcyjne osoby: stan domyślny i podsumowania, rozwijanie myszą i klawiaturą, trwałość wyboru po wyborze rozpoznania,
+powrocie z listy i odświeżeniu widoku; brak rozpoznań; sekcje leczenia na ekranie i w pliku; kafelki przy płci i oknie
+zapisu; telefon). Testy treści sekcji (`baza-pacjentow-statystyki*.spec.mjs`) rozwijają je pomocnikiem `otworzStatystyki`.
+
+**Wersje.** `vilda_patients_list.js` 14 → 15, `vilda_patients_list.css` 12 → 13, wstrzykujące `vilda_chrome.js` 337 → 338 i `vilda_session_bridge.js` 253 → 254; SW 1.1.592 → 1.1.593 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.

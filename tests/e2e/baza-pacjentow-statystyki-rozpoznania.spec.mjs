@@ -39,7 +39,9 @@ test('sekcja „Rozpoznania”: grupy według kodu, podkody kategorii, „bez ro
   await gotowe(database);
 
   const dx = sekcja(database);
-  await expect(dx.locator('h3')).toHaveText('Rozpoznania');
+  // P-BAZA-SEKCJE: tytuł jest w przycisku zwijania sekcji (nagłówek h3); sekcję rozwija otworzStatystyki.
+  await expect(dx.locator('h3 .pt-stat-fold-title')).toHaveText('Rozpoznania');
+  await expect(dx.locator('h3 .pt-stat-fold')).toHaveAttribute('aria-expanded', 'true');
   await expect(dx.locator('.pt-stat-card-hint')).toHaveText(ROZPOZNANIA.podpowiedz);
   // Nazwę kategorii (E66 — Otyłość) daje katalog ICD-10 doczytany przez statystyki; pozostałe etykiety to nazwy z rozpoznań.
   await expect(dx.locator('.pt-dx-row[data-dx="c:E66"] .pt-dx-title')).toHaveText('Otyłość');

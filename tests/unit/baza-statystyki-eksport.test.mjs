@@ -165,6 +165,25 @@ describe('Model raportu (statsReport)', () => {
     expect(sekcja(raport, 'gh')).toMatchObject({ facts: [], tables: [], notes: ['W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.'] });
     expect(sekcja(raport, 'obesity')).toMatchObject({ facts: [], tables: [], chart: null, notes: ['W bazie nie ma pacjentów z punktami leczenia otyłości.'] });
   });
+
+  // P-BAZA-SEKCJE: raport grupy mówi o grupie, a sekcji drugiego leczenia w zakresie jednego leczenia nie ma — jak na ekranie.
+  it('raport grupy: pusta grupa leczonych to „W tej grupie…”, a sekcja z listy omit nie trafia do raportu ani do arkusza', () => {
+    const { L, wejscie } = srodowisko();
+    const pusteGh = { ...wejscie.cards, gh: Object.assign(L.ghCohort([]), { sdsReady: false, engineReady: true }) };
+    const grupa = L.statsReport({ ...wejscie, cards: pusteGh, scope: 'dziewczęta' });
+    expect(sekcja(grupa, 'gh').notes).toEqual(['W tej grupie nie ma pacjentów z punktami leczenia hormonem wzrostu.']);
+    const zakres = 'leczeni z powodu otyłości';
+    const pominiete = L.scopeHiddenSections({ range: 'ob' }, pusteGh);
+    expect(pominiete).toEqual(['gh']);
+    const raport = L.statsReport({ ...wejscie, cards: pusteGh, scope: zakres, omit: pominiete });
+    expect(raport.sections.map((s) => s.key)).not.toContain('gh');
+    expect(raport.sections.map((s) => s.key)).toContain('obesity');
+    const napisy = L.statsWorkbook(raport)[0].rows.flatMap((wiersz) => wiersz.cells).filter((komorka) => typeof komorka === 'string');
+    expect(napisy).not.toContain('Leczenie hormonem wzrostu');
+    expect(napisy).toContain('Leczenie otyłości');
+    // Bez listy omit raport ma obie sekcje, jak dotąd.
+    expect(L.statsReport({ ...wejscie, cards: pusteGh, scope: zakres }).sections.map((s) => s.key)).toContain('gh');
+  });
 });
 
 describe('Arkusze (statsWorkbook) — bez danych osobowych', () => {

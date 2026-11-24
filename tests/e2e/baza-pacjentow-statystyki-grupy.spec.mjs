@@ -67,8 +67,8 @@ test('filtry zakresu: płeć, wiek, lista pacjentów i rozpoznanie łączą się
   await expect(filtr(database, 'sex')).toBeFocused();
   await expect(filtr(database, 'sex')).toHaveClass(/\bon\b/);
   await expect(kafel(frame, database, 'Pacjenci w grupie').locator('.pt-stat-value')).toHaveText('4');
-  await expect(kafel(frame, database, 'Chłopcy').locator('.pt-stat-value')).toHaveText('4');
-  await expect(kafel(frame, database, 'Dziewczęta').locator('.pt-stat-value')).toHaveText('0');
+  // Przy wybranej płci nie ma kafelków płci — powtarzałyby liczbę grupy i zero (P-BAZA-SEKCJE).
+  await expect(database.locator('.pt-stats > .pt-stat-tiles > .pt-stat-tile > .pt-stat-label')).toHaveText(['Pacjenci w grupie', 'Średni wiek']);
   await expect(database.locator('.pt-gh .pt-stat-card-hint')).toHaveText('leczonych: 3 · SNP 2 · bez programu 1');
   await expect(database.locator('.pt-ob .pt-stat-card-hint')).toContainText('leczonych: 2');
   await expect(database.locator('.pt-stat-meter', { hasText: 'Co najmniej 2 pomiary wzrostu' }).locator('.pt-stat-meter-figure')).toHaveText('3 / 4');

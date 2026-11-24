@@ -92,7 +92,8 @@ test('pole „Zakres”: pozycje w dwóch rodzinach z licznikami; okna ostatnieg
   await expect(zakres(database)).toBeFocused();
   await expect(zakres(database)).toHaveClass(/\bon\b/);
   await expect(kafel(frame, database, 'Pacjenci w grupie').locator('.pt-stat-value')).toHaveText('2');
-  await expect(kafel(frame, database, 'Pacjenci w grupie').locator('.pt-stat-sub')).toHaveText('0 z zapisem w ostatnich 12 mies.');
+  // Przy oknie ostatniego zapisu kafelek nie powtarza „z zapisem w ostatnich 12 mies.” (P-BAZA-SEKCJE).
+  await expect(kafel(frame, database, 'Pacjenci w grupie').locator('.pt-stat-sub')).toHaveCount(0);
   await expect(database.locator('.pt-gh .pt-stat-card-hint')).toHaveText('leczonych: 1 · SNP 1');
 
   // Bez zapisu od ponad 24 mies.: tylko j. Z zapisem w ostatnich 3 mies.: osiem osób a–h.

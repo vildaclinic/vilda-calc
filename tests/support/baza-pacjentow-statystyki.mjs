@@ -174,10 +174,19 @@ export async function przygotujStatystyki(page) {
   return { frame, database, ids };
 }
 
-export async function otworzStatystyki(database) {
+// P-BAZA-SEKCJE: „Rozpoznania” i „Kompletność danych” są domyślnie zwinięte do jednego wiersza. Testy treści tych
+// sekcji pracują na rozwiniętych (rozwin: true — domyślnie); stan domyślny sprawdza baza-pacjentow-statystyki-sekcje.spec.mjs.
+export async function rozwinSekcje(database, klucze = ['dx', 'data']) {
+  for (const klucz of klucze) {
+    const przycisk = database.locator(`.pt-stat-card--fold[data-fold="${klucz}"] .pt-stat-fold`);
+    if (await przycisk.count() && await przycisk.getAttribute('aria-expanded') === 'false') await przycisk.click();
+  }
+}
+export async function otworzStatystyki(database, { rozwin = true } = {}) {
   await database.locator('.pt-viewseg [data-view="stats"]').click();
   await expect(database).toHaveAttribute('data-view', 'stats');
   await expect(database.locator('.pt-stats')).toBeVisible();
+  if (rozwin) await rozwinSekcje(database);
 }
 
 // P-ROZPOZNANIA, rata 2: rozpoznania (fikcyjne) dopisane tym samym magazynem, którego używa Karta pacjenta.
