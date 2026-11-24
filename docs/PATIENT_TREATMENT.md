@@ -147,6 +147,26 @@ wywołującego, a porównanie treści, CAS oraz deduplikator uwzględniają kont
 rozszerzenia nie usuwa istniejącego kontekstu. Nie łączymy osobno pól dwóch
 równoległych epizodów.
 
+### Synchronizacja po aktualizacji starszego urządzenia
+
+Starszy klient mógł odebrać rozpoznanie lub epizod jako zwykłą notatkę
+`treatment` i zapisać ją bez `treatmentContext`. Klient znający dokumentację
+leczenia, lecz bez modelu wizyt, mógł zachować ten kontekst i pominąć
+`visitContext`. Po aktualizacji pełna synchronizacja i zaszyfrowana delta
+notatki mogą uzupełnić brakujące pola z poprawnej kopii.
+
+Uzupełnienie wymaga zgodności identyfikatora notatki i pacjenta, rewizji,
+chwili zapisu oraz pól odczytu poza uzupełnianymi polami i znacznikami zmian
+treści i stanu. Dotyczy wyłącznie nieobecnych pól `treatmentContext` i
+`visitContext` we wpisach leczenia. Istniejące wartości muszą zgadzać się
+z ładunkiem. Powiązanie podlega walidacji formatu wizyty, a kontekst leczenia
+z nowszego formatu pozostaje nieprzezroczysty. Rewizje kartoteki mają odrębny
+model niezmiennych dokumentów i osobne zasady scalania `profileContext`.
+
+Sejf wykonuje uzupełnienie pod blokadą notatki po rozstrzygnięciu usunięć.
+Zapisuje nowy szyfrogram, zachowuje rewizję i czas zapisu i emituje pojedyncze
+zdarzenie `merge`. Kolejne pobranie tej samej kopii nie wymaga zapisu.
+
 Eksport pacjenta, kopia konta i delty korzystają z istniejących ścieżek notatek.
 Import pacjenta zachowuje ID notatek i zmienia wyłącznie zewnętrzny `patientId`
 na docelowego pacjenta. Tak samo działa natywne scalenie kart, więc powiązania
@@ -172,3 +192,10 @@ Opcjonalną granicę edycji i usuwania rozpoznań odtwarza odrębna warstwa
 `tools/diagnosis-mutation-vault-delta.mjs`. Przypina ona dokładny wcześniejszy
 obraz staged-documentation i odwraca wyłącznie zadeklarowane hooki. Historyczne
 źródła wcześniejszych warstw i chroniony blok natywny pozostają identyczne.
+
+Nad warstwą edycji i usuwania leży warstwa uzupełniania synchronizacji
+`runtime/treatment-sync-hydration-v1`. Nakłada się ją za pomocą
+`node tools/treatment-sync-hydration-vault-delta.mjs --build BAZA.js WYNIK.js`
+na obraz po warstwie usuwania rozpoznania. Polecenie bez argumentów sprawdza
+dokładne odtworzenie warstwy i jej trzech punktów włączenia. Straż warstwy
+usuwania rozpoznania zdejmuje uzupełnianie przed sprawdzeniem własnego obrazu.

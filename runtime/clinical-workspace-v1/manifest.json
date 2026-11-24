@@ -1,7 +1,7 @@
 {
   "namespace": "vilda-clinical-workspace-runtime",
   "version": 1,
-  "baseVaultSHA256": "dfc9c8624eb3a219a9d14855590b8c2cdb217e90725e6d6e96ce6ff20f5bc65d",
+  "baseVaultSHA256": "d1b2bf2327ed118748782ecf761383e579652a98d340f9d48a6712e331058f1c",
   "sourceFragmentSHA256": "db44a488a8d1f83174479e73a479b7b3f258ee899a74ea11b7a1cd70f7fdcae1",
   "fragmentSHA256": "b21e0f30357267e97aa9948814d48717fe7ffa7b19c68078d6cdddbabeb100d9",
   "moduleTreeSHA256": "0278bf7106c27008499d80c14acf3e2d733cccb52f3b06debbd91c443874cb25",
@@ -1126,5 +1126,5 @@
     "byteLength": 3267501
   },
   "nativeIntegrationBaseVaultSHA256": "989fec00e7cbcb8478c972b666cb2a97479e5eb0decf9364bb2cae58b03143c6",
-  "publicVaultSHA256": "907660eb896d9c22677bcb9e5ddfaee1170ad333b5a1bb6b3307827fa8f7f44d"
+  "publicVaultSHA256": "9f541616ca915b72a688cd50acf48c8b057b938bcea2afb9f4132db398e8dd54"
 }

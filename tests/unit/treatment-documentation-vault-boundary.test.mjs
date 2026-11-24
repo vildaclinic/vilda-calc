@@ -5,6 +5,7 @@ import { applyTreatmentDocumentationDelta, restoreTreatmentDocumentationBaseline
 import { restoreDocumentOutcomesBaseline } from '../../tools/document-outcomes-vault-delta.mjs';
 import { restoreStagedDocumentationBaseline } from '../../tools/staged-documentation-vault-delta.mjs';
 import { applyDiagnosisMutationDelta, restoreDiagnosisMutationBaseline } from '../../tools/diagnosis-mutation-vault-delta.mjs';
+import { restoreTreatmentSyncHydrationBaseline } from '../../tools/treatment-sync-hydration-vault-delta.mjs';
 const source=restoreStagedDocumentationBaseline(readFileSync(new URL('../../vilda_vault.js',import.meta.url),'utf8'));
 const manifest=JSON.parse(readFileSync(new URL('../../runtime/treatment-documentation-v1/manifest.json',import.meta.url),'utf8'));
 const hash=value=>createHash('sha256').update(value).digest('hex');
@@ -12,7 +13,7 @@ const native=value=>value.slice(value.indexOf('/* BEGIN VILDA CLINICAL WORKSPACE
   value.indexOf('/* END VILDA CLINICAL WORKSPACE NATIVE V1 */')+'/* END VILDA CLINICAL WORKSPACE NATIVE V1 */'.length);
 describe('strict treatment-document durability outer layer',()=>{
   it('replays diagnosis mutation over the exact staged image without changing the sealed native block',()=>{
-    const integrated=readFileSync(new URL('../../vilda_vault.js',import.meta.url),'utf8');
+    const integrated=restoreTreatmentSyncHydrationBaseline(readFileSync(new URL('../../vilda_vault.js',import.meta.url),'utf8'));
     const base=restoreDiagnosisMutationBaseline(integrated);
     expect(hash(base)).toBe('e64bcc70d51fe290c4301db52207782c695f2502df6946f8be75c4d456457198');
     expect(applyDiagnosisMutationDelta(base)).toBe(integrated);

@@ -1103,11 +1103,24 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       // odłączenie terminu z historii planu i odłączenie oryginału od planu: nowa chwila zapisu unieważnia kotwicę
       'Object.assign({}, parent, { bodyCipher, rev: (parent.rev || 0) + 1, updatedAtISO: new Date().toISOString() }',
       'Object.assign({}, original.stored, { bodyCipher, updatedAtISO: new Date().toISOString(), rev: (original.stored.rev || 0) + 1 }',
+      // Uzupełnienie brakującego kontekstu leczenia lub wizyty z tej samej wersji zapisu.
+      'Object.assign({}, stored, { bodyCipher }',
     ]);
     const h = wytnijFunkcje(sejfTekst, 'CareMvpHydrateSyncRecord');
     expect(h, 'hydracja tylko przy równych polach odczytu poza careContext i polami chwil')
       .toContain("keys.every(function (key) { return key === 'careContext' || Bnp_POLA_CHWIL.indexOf(key) >= 0 || CareMvpSyncEqual(decoded[key], incoming[key]); })");
     expect(wytnijFunkcje(sejfTekst, 'CareMvpSyncHydrationCandidate'), 'hydracja przy tej samej chwili zapisu i rev').toContain('stored.updatedAtISO === incoming.updatedAtISO');
+    const t = wytnijFunkcje(sejfTekst, 'TreatmentHydrateSyncRecord');
+    expect(t, 'uzupełnienie dotyczy tylko pól nieobecnych w lokalnym szyfrogramie')
+      .toContain("if (!Object.hasOwn(plain, 'treatmentContext'))")
+      .toContain("if (!Object.hasOwn(plain, 'visitContext') && Object.hasOwn(incoming, 'visitContext'))");
+    expect(t, 'pozostałe pola odczytu są równe, z wyjątkiem znaczników zmian treści i stanu')
+      .toContain('keys.every(function (key) { return Object.hasOwn(additions, key) || Bnp_POLA_CHWIL.includes(key) || CareMvpSyncEqual(decoded[key], incoming[key]); })');
+    const kandydat = wytnijFunkcje(sejfTekst, 'TreatmentSyncHydrationCandidate');
+    expect(kandydat, 'uzupełnienie tej samej wersji notatki tego samego pacjenta')
+      .toContain('stored.id === incoming.id && stored.patientId === incoming.patientId')
+      .toContain('stored.updatedAtISO === incoming.updatedAtISO')
+      .toContain('(stored.rev || 0) === incoming.rev');
     // Zapis planu we fragmencie natywnym składa rekord z poprzedniego z nową chwilą zapisu „teraz” i przed nowym
     // szyfrogramem usuwa pola chwil treści i stanu poprzedniego rekordu (jak Bnp_bezChwil; działanie — test niżej).
     const i = sejfTekst.indexOf('async function seal(note, before, hidden) {');

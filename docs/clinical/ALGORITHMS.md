@@ -48211,3 +48211,18 @@ składa wersję z listy pól, więc pola nie pokazuje; bez nowych zapisów rekor
 ważne, czerwone na bazie powtórzone na `ac0869f2` (te same 51 + 2 + 1, wszystkie na asercji), a skróty kontroli granicy
 przeliczone dla sejfu po scaleniu. SW 1.1.586 to numer, który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b.
 Bez nowego pliku w pamięci offline.
+
+## Uzupełnianie dokumentacji leczenia po synchronizacji z wcześniejszej wersji
+
+Do gałęzi nowej strony głównej przeniesiono regułę zgodności z PR
+[#1065](https://github.com/vildaclinic/vilda-calc/pull/1065). Przy tej samej
+wersji tej samej notatki i zgodności pozostałych pól urządzenie odzyskuje
+brakujący kontekst rozpoznania lub epizodu oraz brakujące przypisanie
+do wizyty. Rewizja i czas zapisania pozostają źródłowe. Wyliczenia, normy
+i interpretacja kliniczna korzystają z dotychczasowych reguł.
+
+Przypadki regresyjne obejmują rozpoznanie i epizod po pełnym pobraniu,
+zaszyfrowaną deltę notatki, zachowanie przypisania zapisanego wcześniej,
+przebieg z odbiorcą znającym już leczenie oraz powtórną synchronizację.
+Zobacz [regułę w dokumentacji leczenia](../PATIENT_TREATMENT.md) i
+`tests/unit/treatment-sync-hydration-vault.test.mjs`.
