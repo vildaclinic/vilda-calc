@@ -282,8 +282,12 @@ Warstwa sejfu: `VILDA TREATMENT SYNC HYDRATION V1` —
 `runtime/treatment-sync-hydration-v1/vault-fragment.js`, `manifest.json`,
 `tools/treatment-sync-hydration-vault-delta.mjs`; trzy punkty włączenia obok
 uzupełniania planów opieki w scalaniu notatek. Te same kotwice ma sejf gałęzi
-nowej strony głównej, więc warstwę da się tam nałożyć po zmianie samej stałej
-`BASE` (tamten sejf ma ten sam błąd).
+nowej strony głównej i tamten sejf ma ten sam błąd. Nałożenie warstwy tam
+wymaga jednak więcej niż zmiany stałej `BASE` (sprostowanie z 2026-11-24):
+notatki tamtej gałęzi niosą też `visitContext` i `profileContext`, więc reguła
+„równe pola odczytu poza `treatmentContext`” nie uzupełni rozpoznania
+należącego do wizyty — porównanie i uzupełnianie trzeba tam rozszerzyć o te
+konteksty.
 
 Eksport pacjenta, kopia konta i delty korzystają z istniejących ścieżek notatek.
 Import pacjenta zachowuje ID notatek i zmienia wyłącznie zewnętrzny `patientId`

@@ -591,6 +591,68 @@
       records: { active: activeRecords, closed: closedRecords }, groups: result
     };
   }
+  /* ── P-BAZA-GRUPY (makieta statystyk; decyzja właściciela 2026-11-24: „praca nad grupami pacjentów z makiety”) ──
+   * Zakres statystyk z filtrów: tylko pacjenci z zapisem w ostatnich 12 miesiącach, pacjenci wybranej listy,
+   * jedna płeć, jeden przedział wieku — oraz rozpoznanie wybrane w sekcji „Rozpoznania” (rata 2). Filtry łączą się
+   * spójnikiem „i”: pacjent jest w zakresie, gdy spełnia wszystkie wybrane. Model jest czysty i niczego nie liczy
+   * inaczej niż demographics: ta sama reguła „zapisu w ostatnich 12 mies.”, ten sam wiek na dziś z pełnej daty
+   * urodzenia i te same przedziały; pacjent bez daty urodzenia nie wchodzi do żadnego przedziału wieku, a pacjent
+   * bez płci — do żadnej płci. Liczą się wyłącznie pacjenci z bazy. */
+  const SCOPE_SEX = { M: 'chłopcy', F: 'dziewczęta' };
+  const SCOPE_RECENT = 'z zapisem w ostatnich 12 mies.';
+  function scopeFilters(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    return {
+      recent: source.recent === true,
+      listId: typeof source.listId === 'string' && source.listId ? source.listId : null,
+      listName: typeof source.listName === 'string' ? source.listName : '',
+      sex: source.sex === 'M' || source.sex === 'F' ? source.sex : null,
+      band: AGE_BANDS.some((band) => band.key === source.band) ? source.band : null
+    };
+  }
+  function scopeActive(filters) { return Boolean(filters && (filters.recent || filters.listId || filters.sex || filters.band)); }
+  // Klucz pamięci wyniku dla zakresu; dx — grupa rozpoznania ({ key }) albo null.
+  function scopeKey(filters, dx) {
+    const f = scopeFilters(filters);
+    return [f.recent ? 'r' : '', f.listId ? 'l:' + f.listId : '', f.sex ? 's:' + f.sex : '', f.band ? 'b:' + f.band : '', dx && dx.key ? 'd:' + dx.key : ''].filter(Boolean).join('|');
+  }
+  // Opis zakresu dla banera, nagłówka raportu i nazwy grupy — w kolejności filtrów na ekranie, rozpoznanie na końcu.
+  function scopeLabel(filters, dx) {
+    const f = scopeFilters(filters), band = AGE_BANDS.find((item) => item.key === f.band);
+    return [f.recent ? SCOPE_RECENT : '', f.listId ? 'lista „' + (f.listName || 'bez nazwy') + '”' : '', f.sex ? SCOPE_SEX[f.sex] : '',
+      band ? band.label : '', dx && dx.label ? String(dx.label) : ''].filter(Boolean).join(' · ');
+  }
+  /* Identyfikatory pacjentów z bazy, którzy spełniają wszystkie filtry. options: now, ageMonths (jak w demographics),
+   * listIds — członkowie wybranej listy (tablica albo Set), ids — pacjenci grupy rozpoznania. Wybrana lista bez
+   * wczytanych członków daje null: zakresu nie da się jeszcze policzyć (to nie jest „zero pacjentów”). */
+  function scopeMembers(patientRecords, filters, options) {
+    const settings = options || {}, f = scopeFilters(filters);
+    const now = settings.now instanceof Date ? settings.now : new Date();
+    const ageOf = typeof settings.ageMonths === 'function' ? settings.ageMonths : (dobISO) => monthsFromDob(dobISO, now);
+    const asSet = (value) => value instanceof Set ? value : Array.isArray(value) ? new Set(value) : null;
+    const listIds = asSet(settings.listIds), groupIds = asSet(settings.ids);
+    if (f.listId && !listIds) return null;
+    const yearAgo = new Date(now.getTime()); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    const band = AGE_BANDS.find((item) => item.key === f.band) || null;
+    return (Array.isArray(patientRecords) ? patientRecords : []).filter((record) => {
+      if (!record || record.__ext) return false;
+      if (groupIds && !groupIds.has(record.patientId)) return false;
+      if (f.listId && !listIds.has(record.patientId)) return false;
+      const header = record.header || {};
+      if (f.sex && sexKey(header.sex) !== f.sex) return false;
+      if (f.recent) {
+        const saved = record.lastSavedAtISO ? new Date(record.lastSavedAtISO).getTime() : NaN;
+        if (!Number.isFinite(saved) || saved < yearAgo.getTime()) return false;
+      }
+      if (band) {
+        const computed = header.dobISO ? ageOf(header.dobISO) : null;
+        if (typeof computed !== 'number' || !Number.isFinite(computed) || computed < 0) return false;
+        const years = Math.floor(computed / 12);
+        if (years < band.from || (band.to !== null && years > band.to)) return false;
+      }
+      return true;
+    }).map((record) => record.patientId);
+  }
   /* ── P-BAZA-STATYSTYKI, etap 4 (decyzja właściciela 2026-11-24): raport PDF i plik dla Excela ──
    * Jeden model raportu (statsReport) z tych samych obiektów, które rysuje ekran: demographics,
    * ghCohort, obesityCohort i kompletność kart. Z niego powstają OBA pliki — dokument pdfmake
@@ -1105,7 +1167,14 @@
       cards: initial.cards && typeof initial.cards === 'object' ? initial.cards : null,
       cardCache: initial.cardCache && typeof initial.cardCache === 'object' ? initial.cardCache : null,
       // P-ROZPOZNANIA, rata 2: statystyki zawężone do grupy pacjentów z wybranym rozpoznaniem (tylko pamięć widoku).
-      scope: initial.scope && Array.isArray(initial.scope.ids) ? { key: String(initial.scope.key || ''), label: String(initial.scope.label || ''), ids: initial.scope.ids.slice() } : null
+      scope: initial.scope && Array.isArray(initial.scope.ids) ? { key: String(initial.scope.key || ''), label: String(initial.scope.label || ''), ids: initial.scope.ids.slice() } : null,
+      // P-BAZA-GRUPY: filtry zakresu statystyk (lista pacjentów, płeć, wiek, zapis w ostatnich 12 mies.) — tylko pamięć widoku.
+      filters: scopeFilters(initial.filters),
+      // P-BAZA-GRUPY: pasek grupy — formularz „Zapisz jako listę” albo komunikat po zapisie lub po pliku grupy.
+      groupTask: initial.group && initial.groupTask && ['form', 'note'].includes(initial.groupTask.mode) ? {
+        mode: initial.groupTask.mode, name: String(initial.groupTask.name || ''), note: String(initial.groupTask.note || ''),
+        failed: Boolean(initial.groupTask.failed), listId: typeof initial.groupTask.listId === 'string' && initial.groupTask.listId ? initial.groupTask.listId : null
+      } : null
     };
     // Earlier versions used the same input for names of lists and patients.
     if (state.filter === 'lists' && !state.listId && !Object.prototype.hasOwnProperty.call(initial, 'listQuery')) {
@@ -1140,6 +1209,11 @@
     let dxHint = null;
     const dxOpen = {};        // rozwinięte kategorie rozpoznań (klucz grupy)
     let scopeCache = null;    // wynik kart policzony dla bieżącego zakresu
+    let scopeMemo = null;     // pacjenci bieżącego zakresu w obrębie jednego rysowania ({ ids } albo { pending })
+    let filterMembers = null; // członkowie listy wybranej w filtrze: { id, ids: Set }
+    let filterFailed = null;  // identyfikator listy, której członków nie udało się wczytać
+    let filterNote = '';      // komunikat pod filtrami (np. wybrana lista już nie istnieje) — do zmiany filtrów
+    let filterStamp = 0;      // numer kolejnego odczytu członków listy (część klucza pamięci zakresu)
     let catalogueLoading = null; // jedna obietnica wczytania katalogu ICD-10 (nazwy kategorii)
     let catalogueLookup = null;
     let cardsProgress = null;
@@ -1304,9 +1378,35 @@
     duplicates.appendChild(duplicateText); duplicates.appendChild(duplicateButton); root.appendChild(duplicates);
     const groupBar = el('div', 'pt-groupbar');
     const groupText = el('span', 'lt');
-    const groupBack = button('pt-secondary', '← Statystyki', () => { if (!busy) { state.group = null; chooseView('stats'); } });
-    const groupClear = button('pt-secondary', 'Pokaż wszystkich', () => { if (!busy) { state.group = null; render(); scroll.scrollTop = 0; } });
-    groupBar.appendChild(groupText); groupBar.appendChild(groupBack); groupBar.appendChild(groupClear); root.appendChild(groupBar);
+    // P-BAZA-GRUPY: grupę ze statystyk można zapisać jako listę pacjentów i pobrać jej plik dla Excela.
+    const groupSave = button('pt-secondary pt-group-save', 'Zapisz jako listę', () => openGroupSave());
+    groupSave.setAttribute('aria-label', 'Zapisz grupę jako listę pacjentów');
+    const groupExport = button('pt-secondary pt-group-export', 'Eksport do Excela', () => { if (state.group) exportFile('xlsx', state.group); });
+    groupExport.setAttribute('aria-label', 'Eksport grupy do Excela');
+    const groupBack = button('pt-secondary', '← Statystyki', () => { if (!busy) { state.group = null; state.groupTask = null; chooseView('stats'); } });
+    const groupClear = button('pt-secondary', 'Pokaż wszystkich', () => { if (!busy) { state.group = null; state.groupTask = null; render(); scroll.scrollTop = 0; } });
+    const groupForm = doc.createElement('form');
+    groupForm.className = 'pt-group-form'; groupForm.noValidate = true;
+    const groupField = el('label', 'pt-group-field');
+    groupField.appendChild(el('span', null, 'Nazwa listy'));
+    const groupInput = el('input');
+    groupInput.type = 'text'; groupInput.maxLength = 80; groupInput.autocomplete = 'off';
+    groupInput.addEventListener('input', () => { if (state.groupTask && state.groupTask.mode === 'form') state.groupTask.name = groupInput.value; });
+    groupField.appendChild(groupInput);
+    const groupConfirm = button('pt-primary pt-group-confirm', 'Zapisz listę');
+    groupConfirm.type = 'submit';
+    const groupCancel = button('pt-secondary', 'Anuluj', () => { if (!busy) { state.groupTask = null; syncControls(); if (!groupSave.hidden) groupSave.focus(); } });
+    groupForm.appendChild(groupField); groupForm.appendChild(groupConfirm); groupForm.appendChild(groupCancel);
+    groupForm.addEventListener('submit', (event) => { event.preventDefault(); saveGroupList(); });
+    const groupNote = el('p', 'pt-group-note');
+    groupNote.setAttribute('role', 'status'); groupNote.setAttribute('aria-live', 'polite');
+    const groupOpen = button('pt-secondary pt-group-open', 'Otwórz listę', () => {
+      if (busy || !state.groupTask || !state.groupTask.listId) return;
+      const id = state.groupTask.listId;
+      state.group = null; state.groupTask = null; chooseList(id);
+    });
+    [groupText, groupSave, groupExport, groupBack, groupClear, groupForm, groupNote, groupOpen].forEach((node) => groupBar.appendChild(node));
+    root.appendChild(groupBar);
     if (opts.legacyNotice) root.appendChild(opts.legacyNotice);
     const scroll = el('div', 'pt-scroll'); root.appendChild(scroll);
     const footer = el('div', 'pt-list-footer');
@@ -1354,7 +1454,19 @@
       const grouped = !stats && Boolean(state.group) && ['all', 'base', 'ext'].includes(state.filter);
       groupBar.hidden = !grouped;
       if (grouped) groupText.textContent = 'Grupa ze statystyk: ' + state.group.label + ' · ' + peopleLabel(state.group.ids.length);
-      groupBack.disabled = busy; groupClear.disabled = busy;
+      const task = grouped ? state.groupTask : null, form = Boolean(task && (task.mode === 'form' || task.mode === 'saving'));
+      const lock = busy || Boolean(exportBusy);
+      // Po udanym zapisie przycisk znika — drugie kliknięcie założyłoby drugą taką samą listę.
+      groupSave.hidden = !grouped || form || !mayUseLists() || Boolean(task && task.listId);
+      groupExport.hidden = !grouped || form;
+      groupForm.hidden = !form;
+      if (form && doc.activeElement !== groupInput) groupInput.value = task.name || '';
+      groupNote.hidden = !(task && task.note);
+      groupNote.textContent = task && task.note || '';
+      groupNote.classList.toggle('pt-group-note--error', Boolean(task && task.failed));
+      groupNote.setAttribute('role', task && task.failed ? 'alert' : 'status');
+      groupOpen.hidden = !(task && task.listId && mayUseLists());
+      [groupSave, groupExport, groupBack, groupClear, groupConfirm, groupCancel, groupOpen, groupInput].forEach((node) => { node.disabled = lock; });
       Object.keys(tabNodes).forEach((key) => {
         const active = state.filter === key;
         tabNodes[key].classList.toggle('on', active);
@@ -1395,7 +1507,8 @@
       if (busy) return;
       if (key === 'lists' && !desktop) { openPicker(); return; }
       state.filter = key; state.listId = null; state.adding = false; state.selected = {};
-      state.sourceFilter = 'all'; state.group = null; state.scope = null; memberCache = null; closeSort(); closePicker(false);
+      state.sourceFilter = 'all'; state.group = null; state.groupTask = null; state.scope = null; state.filters = scopeFilters(null); scopeCache = null;
+      memberCache = null; closeSort(); closePicker(false);
       render(); scroll.scrollTop = 0;
     }
     function chooseView(key) {
@@ -1417,10 +1530,39 @@
       const target = root.querySelector(state.scope ? '.pt-scope-clear' : '.pt-dx-row');
       if (target && !root.contains(doc.activeElement)) target.focus();
     }
+    // P-BAZA-GRUPY: „Cała baza” zdejmuje rozpoznanie i wszystkie filtry naraz.
+    function clearScope() {
+      if (busy) return;
+      state.scope = null; state.filters = scopeFilters(null);
+      scopeCache = null; exportNote = ''; filterNote = ''; filterFailed = null;
+      state.view = 'stats';
+      render(); scroll.scrollTop = 0;
+      const target = root.querySelector('.pt-filter-select');
+      if (target && !root.contains(doc.activeElement)) target.focus();
+    }
+    // Zmiana jednego filtra; value '' — filtr wyłączony. Liczenie z kart się nie powtarza: zakres tylko wybiera z wyniku.
+    function setFilter(key, value) {
+      if (busy) return;
+      const next = Object.assign({}, state.filters);
+      if (key === 'recent') next.recent = value === 'recent';
+      else if (key === 'list') {
+        const entry = value && listCache ? listCache.find(({ list }) => list.id === value) : null;
+        next.listId = value || null; next.listName = entry ? entry.list.name || '' : '';
+      } else if (key === 'sex') next.sex = value || null;
+      else if (key === 'band') next.band = value || null;
+      state.filters = scopeFilters(next);
+      scopeCache = null; exportNote = ''; filterNote = ''; filterFailed = null;
+      render();
+      const again = root.querySelector('.pt-filter-select[data-filter-key="' + key + '"]');
+      if (again && !again.disabled) again.focus();
+    }
     // Wybór słupka albo wiersza „brakuje” otwiera zwykłą listę zawężoną do tych pacjentów.
     function showGroup(label, ids) {
       if (busy || !ids || !ids.length) return;
-      state.group = { label, ids: ids.slice() };
+      // Grupa otwarta z zawężonych statystyk niesie w nazwie także ich zakres — nazwa trafia do listy i do pliku grupy.
+      const within = state.view === 'stats' && scopeOn() ? scopeLabelNow() : '';
+      state.group = { label: within && within !== label ? within + ' · ' + label : label, ids: ids.slice() };
+      state.groupTask = null;
       state.view = 'list'; state.filter = 'base'; state.listId = null; state.query = '';
       state.adding = false; state.selected = {}; memberCache = null;
       render(); scroll.scrollTop = 0;
@@ -1449,9 +1591,9 @@
       if (destroyed || typeof opts.registerBack !== 'function') return;
       let handler = null;
       if (picker) handler = () => { closePicker(true); render(); };
-      else if (state.view === 'stats' && state.scope) handler = () => chooseScope(null);
+      else if (state.view === 'stats' && scopeOn()) handler = () => clearScope();
       else if (state.view === 'stats') handler = () => chooseView('list');
-      else if (state.group && ['all', 'base', 'ext'].includes(state.filter)) handler = () => { if (!busy) { state.group = null; chooseView('stats'); } };
+      else if (state.group && ['all', 'base', 'ext'].includes(state.filter)) handler = () => { if (!busy) { state.group = null; state.groupTask = null; chooseView('stats'); } };
       else if (state.adding) handler = () => { if (!busy) { state.adding = false; state.selected = {}; render(); } };
       else if (state.listId) handler = backToCatalog;
       else if (state.filter === 'lists' || state.filter === 'dup') handler = () => chooseTab('all');
@@ -1717,10 +1859,21 @@
     function basePatients() { return patients.filter((patient) => !patient.__ext); }
     // P-ROZPOZNANIA, rata 2: zakres statystyk. Bez zakresu — cała baza; z zakresem — pacjenci wybranej grupy,
     // którzy nadal są w bazie. Liczenie z kart i jego pamięć zawsze obejmują całą bazę; zakres tylko wybiera z wyniku.
+    // P-BAZA-GRUPY: do rozpoznania doszły filtry (lista pacjentów, płeć, wiek, zapis w ostatnich 12 mies.); łączą się „i”.
+    function scopeOn() { return Boolean(state.scope) || scopeActive(state.filters); }
+    function scopeLabelNow() { return scopeLabel(state.filters, state.scope); }
+    function scopeKeyNow() { return scopeKey(state.filters, state.scope) + (filterMembers && filterMembers.id === state.filters.listId ? '#' + filterMembers.stamp : ''); }
+    // true — wybrana lista nie ma jeszcze wczytanych członków, więc zakresu nie da się policzyć.
+    function scopePending() { return Boolean(state.filters.listId) && !(filterMembers && filterMembers.id === state.filters.listId); }
     function scopeIds() {
-      if (!state.scope) return null;
-      const known = new Set(basePatients().map((patient) => patient.patientId));
-      return new Set(state.scope.ids.filter((id) => known.has(id)));
+      if (!scopeOn()) return null;
+      if (scopeMemo) return scopeMemo;
+      const matched = scopeMembers(basePatients(), state.filters, {
+        ageMonths: ageFromVault, ids: state.scope ? state.scope.ids : null,
+        listIds: filterMembers && filterMembers.id === state.filters.listId ? filterMembers.ids : null
+      });
+      scopeMemo = new Set(matched || []);
+      return scopeMemo;
     }
     function shownPatients() { const ids = scopeIds(); return ids ? patients.filter((patient) => ids.has(patient.patientId)) : patients; }
     function shownBase() { const ids = scopeIds(), base = basePatients(); return ids ? base.filter((patient) => ids.has(patient.patientId)) : base; }
@@ -1788,18 +1941,22 @@
     }
     // Wynik kart dla bieżącego zakresu: te same funkcje (cardsResult, ghCohort, obesityCohort) na kartach grupy,
     // z pamięci wyników — bez ponownego czytania sejfu.
-    function shownCards() {
-      const saved = savedCards();
-      if (!saved || !state.scope) return saved;
-      if (scopeCache && scopeCache.of === saved && scopeCache.key === state.scope.key) return scopeCache.value;
-      const base = shownBase(), result = cardsResult(base, state.cardCache && state.cardCache.items ? state.cardCache.items : {});
-      const value = Object.assign({}, saved, {
+    function cardsFor(saved, base) {
+      const result = cardsResult(base, state.cardCache && state.cardCache.items ? state.cardCache.items : {});
+      return Object.assign({}, saved, {
         total: base.length, failed: result.failed, missing: result.missing, details: result.details,
         gh: Object.assign(ghCohort(result.treated), { sdsReady: saved.gh.sdsReady, engineReady: saved.gh.engineReady }),
         obesity: Object.assign(obesityCohort(result.obese, { thresholds: saved.thresholds || [] }),
           { sdsReady: saved.obesity.sdsReady, engineReady: saved.obesity.engineReady, journalFailed: result.partial })
       });
-      scopeCache = { of: saved, key: state.scope.key, value };
+    }
+    function shownCards() {
+      const saved = savedCards();
+      if (!saved || !scopeOn()) return saved;
+      const key = scopeKeyNow();
+      if (scopeCache && scopeCache.of === saved && scopeCache.key === key) return scopeCache.value;
+      const value = cardsFor(saved, shownBase());
+      scopeCache = { of: saved, key, value };
       return value;
     }
     // Rozpoznania w bieżącym zakresie; null — nie policzono, niedostępne albo nieudany odczyt.
@@ -1937,26 +2094,47 @@
       Object.keys(parts).forEach((path) => archive.file(path, parts[path], { createFolders: false }));
       return archive.generateAsync({ type: 'blob', mimeType: XLSX_TYPE, compression: 'DEFLATE' });
     }
-    async function exportFile(kind) {
-      const saved = savedCards();
+    /* group — grupa z paska na liście ({ label, ids }): plik powstaje dla niej, a komunikat trafia do paska grupy.
+     * Bez group — bieżący zakres statystyk (cała baza albo zawężenie filtrami i rozpoznaniem). Ten sam model raportu. */
+    async function exportFile(kind, group) {
+      const saved = savedCards(), own = group && Array.isArray(group.ids) ? group : null;
+      const tell = (note, failed) => {
+        if (own) { if (state.group === own) state.groupTask = { mode: 'note', name: '', note, failed: Boolean(failed), listId: null }; }
+        else exportNote = note;
+      };
+      if (own && !saved && !exportBusy && alive()) {
+        tell('Plik grupy powstaje z policzonych statystyk. Wróć do Statystyk, poczekaj na policzenie kart i otwórz grupę ponownie.', true);
+        syncControls(); return;
+      }
       if (exportBusy || cardsBusy || !saved || !alive()) return;
       exportBusy = kind;
-      exportNote = kind === 'pdf' ? 'Przygotowuję raport PDF…' : 'Przygotowuję plik dla Excela…';
-      fillBar();
-      let message;
+      tell(kind === 'pdf' ? 'Przygotowuję raport PDF…' : 'Przygotowuję plik dla Excela…');
+      if (own) syncControls(); else fillBar();
+      let message, failed = false;
       try {
-        const stamp = new Date(saved.at), shown = shownCards(), dx = saved.dx && saved.dx.index ? saved.dx.index : null;
-        const report = statsReport({ model: demographics(shownPatients(), { ageMonths: ageFromVault }), cards: shown, patients: shownBase(), ageMonths: ageFromVault, stamp,
-          scope: state.scope ? state.scope.label : '', diagnoses: shownDiagnoses(shown), diagnosesOf: dx ? dx.of : null });
-        const name = reportFileName(stamp, kind, Boolean(state.scope));
+        const stamp = new Date(saved.at), dx = saved.dx && saved.dx.index ? saved.dx.index : null;
+        const ids = own ? new Set(own.ids) : null;
+        const base = own ? basePatients().filter((patient) => ids.has(patient.patientId)) : shownBase();
+        const shown = own ? cardsFor(saved, base) : shownCards();
+        const label = own ? String(own.label || '') : scopeLabelNow(), narrowed = own ? true : scopeOn();
+        const report = statsReport({ model: demographics(own ? base : shownPatients(), { ageMonths: ageFromVault }), cards: shown, patients: base, ageMonths: ageFromVault, stamp,
+          scope: narrowed ? label : '', diagnoses: dx && !saved.dx.failed ? diagnosisCohort(base, dx, { lookup: catalogueLookup }) : null, diagnosesOf: dx ? dx.of : null });
+        const name = reportFileName(stamp, kind, narrowed);
         const blob = kind === 'pdf' ? await pdfBlob(report) : await sheetBlob(report);
         const outcome = await saveFile(blob, name, kind === 'pdf' ? 'application/pdf' : XLSX_TYPE);
-        message = outcome === 'cancelled' ? 'Udostępnianie przerwane.' : (outcome === 'shared' ? 'Udostępniono plik ' : 'Zapisano plik ') + name + '.';
+        message = outcome === 'cancelled' ? 'Udostępnianie przerwane.' : (outcome === 'shared' ? 'Udostępniono plik ' : 'Zapisano plik ') + name + '.'
+          + (own && outcome !== 'cancelled' ? ' Plik nie zawiera nazwisk ani dat urodzenia.' : '');
       } catch (error) {
-        message = 'Nie udało się przygotować pliku' + (error && error.message ? ': ' + error.message : '') + '.';
+        message = 'Nie udało się przygotować pliku' + (error && error.message ? ': ' + error.message : '') + '.'; failed = true;
       }
-      exportBusy = null; exportNote = message;
-      if (!alive() || !cardsBar) return;
+      exportBusy = null; tell(message, failed);
+      if (!alive()) return;
+      if (own) {
+        syncControls();
+        if (!groupExport.hidden && (doc.activeElement === doc.body || !doc.activeElement)) groupExport.focus();
+        return;
+      }
+      if (!cardsBar) return;
       fillBar();
       const again = cardsBar.querySelector('[data-export="' + kind + '"]');
       if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
@@ -2530,35 +2708,114 @@
       }
       host.appendChild(el('p', 'pt-stat-note', obesityNote(cohort.journalFailed)));
     }
-    function renderStats() {
+    /* P-BAZA-GRUPY: pasek filtrów zakresu nad statystykami. Zwykłe pola wyboru (klawiatura, czytnik ekranu i telefon
+     * obsługują je same). Lista pacjentów jest tylko przy dostępie do list; jej pozycje dochodzą po odczycie katalogu. */
+    function filterBar(sequence) {
+      const bar = el('div', 'pt-filters'), base = basePatients();
+      bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zakres statystyk');
+      function field(key, labelText, options, value) {
+        const holder = el('label', 'pt-filter');
+        holder.appendChild(el('span', 'pt-filter-label', labelText));
+        const node = doc.createElement('select');
+        node.className = 'pt-filter-select' + (value ? ' on' : '');
+        node.setAttribute('data-filter-key', key);
+        const fill = (rows) => {
+          clear(node);
+          rows.forEach(([id, text]) => { const option = doc.createElement('option'); option.value = id; option.textContent = text; node.appendChild(option); });
+          node.value = value;
+        };
+        fill(options);
+        node.disabled = busy;
+        node.addEventListener('change', () => setFilter(key, node.value));
+        holder.appendChild(node); bar.appendChild(holder);
+        return fill;
+      }
+      const recent = scopeMembers(base, { recent: true }, { ageMonths: ageFromVault }).length;
+      field('recent', 'Zakres', [['', 'cała baza (' + base.length + ')'], ['recent', SCOPE_RECENT + ' (' + recent + ')']], state.filters.recent ? 'recent' : '');
+      if (mayUseLists()) {
+        const chosen = state.filters.listId || '';
+        const rows = (entries) => [['', 'wszystkie']].concat(entries.map(({ list }) => [list.id, list.name || '(bez nazwy)']));
+        const known = chosen ? [{ list: { id: chosen, name: state.filters.listName || 'wybrana lista' } }] : [];
+        const fill = field('list', 'Lista pacjentów', rows(listCache || known), chosen);
+        if (!listCache) getCatalog().then((entries) => {
+          if (!guardedRead(sequence) || !mayUseLists() || !bar.isConnected) return;
+          fill(rows(!chosen || entries.some(({ list }) => list.id === chosen) ? entries : entries.concat(known)));
+        }).catch(() => { /* pole zostaje z samym „wszystkie”; błąd odczytu list pokazuje zakładka „Listy” */ });
+      }
+      field('sex', 'Płeć', [['', 'wszyscy'], ['M', SCOPE_SEX.M], ['F', SCOPE_SEX.F]], state.filters.sex || '');
+      field('band', 'Wiek', [['', 'wszystkie']].concat(AGE_BANDS.map((band) => [band.key, band.label])), state.filters.band || '');
+      return bar;
+    }
+    // Członkowie listy wybranej w filtrze — ten sam odczyt, którego używa zakładka „Listy” (także listy automatyczne).
+    function loadFilterMembers(sequence) {
+      const id = state.filters.listId;
+      loadMembers(id).then((result) => {
+        if (!guardedRead(sequence) || state.filters.listId !== id) return;
+        if (!result) {
+          state.filters = scopeFilters(Object.assign({}, state.filters, { listId: null, listName: '' }));
+          filterMembers = null; filterNote = 'Wybranej listy już nie ma. Statystyki pokazują zakres bez niej.';
+        } else {
+          filterStamp += 1;
+          filterMembers = { id, ids: new Set(result.members.memberIds || []), stamp: filterStamp };
+          state.filters.listName = result.list.name || '';
+        }
+        scopeCache = null; render();
+      }).catch(() => { if (guardedRead(sequence) && state.filters.listId === id) { filterFailed = id; render(); } });
+    }
+    function renderStats(sequence) {
       cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; cardsProgress = null; dxHost = null; dxHint = null;
-      // Grupa, z której zniknęli wszyscy pacjenci (usunięci, przeniesieni poza bazę), wraca do całej bazy.
-      if (state.scope && !shownBase().length) { state.scope = null; scopeCache = null; }
-      const model = demographics(shownPatients(), { ageMonths: ageFromVault });
-      if (!model.total) {
+      const base = basePatients();
+      if (!base.length) {
         empty(scroll, 'Brak pacjentów w bazie', 'Statystyki pojawią się po dodaniu pierwszego pacjenta.', '+ Dodaj pacjenta', () => { if (opts.onAddPatient) opts.onAddPatient(); });
         return;
       }
-      const wrap = el('div', 'pt-stats');
-
+      // Filtr listy bez dostępu do list przestaje zawężać.
+      if (state.filters.listId && !mayUseLists()) {
+        state.filters = scopeFilters(Object.assign({}, state.filters, { listId: null, listName: '' }));
+        filterMembers = null; scopeMemo = null; scopeCache = null;
+      }
+      // Rozpoznanie, z którego zniknęli wszyscy pacjenci (usunięci, przeniesieni poza bazę), przestaje zawężać.
       if (state.scope) {
-        const scope = state.scope, members = shownBase().map((patient) => patient.patientId);
+        const known = new Set(base.map((patient) => patient.patientId));
+        if (!state.scope.ids.some((id) => known.has(id))) { state.scope = null; scopeCache = null; scopeMemo = null; }
+      }
+      const wrap = el('div', 'pt-stats');
+      wrap.appendChild(filterBar(sequence));
+      if (filterNote) {
+        const note = el('p', 'pt-stat-note pt-filters-note', filterNote);
+        note.setAttribute('role', 'status'); wrap.appendChild(note);
+      }
+      if (scopePending()) {
+        if (filterFailed === state.filters.listId) empty(wrap, 'Nie udało się wczytać listy „' + (state.filters.listName || 'wybrana lista') + '”.', 'Spróbuj ponownie albo wybierz inny zakres.', 'Ponów', () => { filterFailed = null; render(); });
+        else { wrap.appendChild(el('div', 'pt-loading', 'Wczytywanie listy…')); loadFilterMembers(sequence); }
+        scroll.appendChild(wrap);
+        return;
+      }
+      const model = demographics(shownPatients(), { ageMonths: ageFromVault });
+      if (!model.total) {
+        empty(wrap, 'Brak pacjentów w tym zakresie', 'Żaden pacjent z bazy nie spełnia wszystkich wybranych filtrów: ' + scopeLabelNow() + '.', 'Cała baza', () => clearScope());
+        scroll.appendChild(wrap);
+        return;
+      }
+
+      if (scopeOn()) {
+        const label = scopeLabelNow(), members = shownBase().map((patient) => patient.patientId);
         const banner = el('div', 'pt-scope');
         banner.setAttribute('role', 'status');
         const text = el('div', 'pt-scope-text');
         text.appendChild(el('span', 'pt-scope-kicker', 'Statystyki grupy'));
-        text.appendChild(el('strong', 'pt-scope-name', scope.label));
-        text.appendChild(el('span', 'pt-scope-count', peopleLabel(members.length) + ' z tym rozpoznaniem'));
+        text.appendChild(el('strong', 'pt-scope-name', label));
+        text.appendChild(el('span', 'pt-scope-count', peopleLabel(members.length) + (scopeActive(state.filters) ? ' w tym zakresie' : ' z tym rozpoznaniem')));
         banner.appendChild(text);
         const actions = el('div', 'pt-scope-actions');
-        actions.appendChild(button('pt-secondary pt-scope-list', 'Pokaż listę', () => showGroup(scope.label, members)));
-        actions.appendChild(button('pt-secondary pt-scope-clear', 'Cała baza', () => chooseScope(null)));
+        actions.appendChild(button('pt-secondary pt-scope-list', 'Pokaż listę', () => showGroup(label, members)));
+        actions.appendChild(button('pt-secondary pt-scope-clear', 'Cała baza', () => clearScope()));
         banner.appendChild(actions);
         wrap.appendChild(banner);
       }
 
       const tiles = el('div', 'pt-stat-tiles');
-      tiles.appendChild(statTile(state.scope ? 'Pacjenci w grupie' : 'Pacjenci w bazie', String(model.total), '', model.recent + ' z zapisem w ostatnich 12 mies.'));
+      tiles.appendChild(statTile(scopeOn() ? 'Pacjenci w grupie' : 'Pacjenci w bazie', String(model.total), '', model.recent + ' z zapisem w ostatnich 12 mies.'));
       if (model.withAge) {
         const meanAge = ageParts(model.meanMonths);
         tiles.appendChild(statTile('Średni wiek', meanAge[0], meanAge[1],
@@ -2666,6 +2923,7 @@
     function invalidateLists() {
       if (listReader && listReader !== vault && typeof listReader.dispose === 'function') listReader.dispose();
       listReader = null; listCache = null; catalogPromise = null; memberCache = null; memberPromises.clear();
+      filterMembers = null; filterFailed = null; scopeMemo = null;
     }
     function getMembers(list) {
       const id = typeof list === 'string' ? list : list.id;
@@ -2814,6 +3072,46 @@
         syncControls(); restorePosition();
       }).catch(() => { if (guardedRead(sequence)) errorMessage(scroll, 'Nie udało się wczytać listy.', () => { memberCache = null; render(); }); });
     }
+    /* P-BAZA-GRUPY: „Zapisz jako listę” — grupa ze statystyk staje się zwykłą listą ręczną. Jeden zapis w sejfie
+     * (savePatientList z gotowym składem), ten sam, którego używa edytor list; lista synchronizuje się jak każda inna. */
+    function openGroupSave() {
+      if (busy || !state.group || !mayUseLists()) return;
+      state.groupTask = { mode: 'form', name: state.group.label.slice(0, 80), note: '', failed: false, listId: null };
+      syncControls();
+      groupInput.value = state.groupTask.name;
+      groupInput.focus(); groupInput.select();
+    }
+    async function saveGroupList() {
+      const group = state.group, task = state.groupTask;
+      if (busy || !alive() || !group || !task || task.mode !== 'form' || !mayUseLists()) return;
+      const name = groupInput.value.trim(), ids = group.ids.filter((id) => byId.has(id));
+      if (!name) {
+        state.groupTask = { mode: 'form', name: '', note: 'Podaj nazwę listy.', failed: true, listId: null };
+        syncControls(); groupInput.focus(); return;
+      }
+      if (!ids.length) {
+        state.groupTask = { mode: 'note', name: '', note: 'W tej grupie nie ma już pacjentów z bazy.', failed: true, listId: null };
+        syncControls(); return;
+      }
+      busy = true;
+      state.groupTask = { mode: 'saving', name, note: 'Zapisuję listę…', failed: false, listId: null };
+      syncControls();
+      let next;
+      try {
+        const saved = await vault.savePatientList({ name, description: 'Grupa ze statystyk · ' + dateFormatter.format(new Date()), memberIds: ids });
+        if (!saved || !saved.id) throw new Error('sejf nie potwierdził zapisu');
+        next = { mode: 'note', name: '', note: 'Zapisano listę „' + (saved.name || name) + '” · ' + peopleLabel(ids.length) + '.', failed: false, listId: saved.id };
+      } catch (error) {
+        next = { mode: 'form', name, note: 'Nie udało się zapisać listy' + (error && error.message ? ': ' + error.message : '') + '.', failed: true, listId: null };
+      }
+      busy = false;
+      if (!alive()) return;
+      invalidateLists();
+      if (state.group === group) state.groupTask = next;
+      syncControls();
+      const focus = next.listId ? groupOpen : next.mode === 'form' ? groupInput : groupSave;
+      if (state.group === group && !focus.hidden && !focus.disabled) focus.focus();
+    }
     function listMutationFailure(error) {
       if (alive() && typeof win.alert === 'function') win.alert('Nie udało się zapisać zmiany listy: ' + (error && error.message || error));
     }
@@ -2871,11 +3169,12 @@
     function render() {
       if (destroyed) return;
       const sequence = ++readSequence;
+      scopeMemo = null;
       syncControls();
       if (rowWindow) { rowWindow.destroy(); rowWindow = null; }
       clear(scroll);
       if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
-      if (state.view === 'stats') { count.textContent = ''; renderStats(); restorePosition(); return; }
+      if (state.view === 'stats') { count.textContent = ''; renderStats(sequence); restorePosition(); return; }
       ++cardsRun; cardsBusy = null; statsCounted = false; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; dxHost = null; dxHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
@@ -3047,5 +3346,6 @@
   function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
   win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
     statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName,
-    journalIndex, cardsPlan, cardsResult, diagnosisIndex, diagnosisCohort });
+    journalIndex, cardsPlan, cardsResult, diagnosisIndex, diagnosisCohort,
+    scopeFilters, scopeActive, scopeKey, scopeLabel, scopeMembers });
 })(typeof window !== 'undefined' ? window : null);

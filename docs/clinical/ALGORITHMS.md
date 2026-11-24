@@ -48355,8 +48355,10 @@ wersja zapisu przechodzi na drugie urządzenie zwykłą drogą.
 **Sejf ma nową zewnętrzną warstwę** `VILDA TREATMENT SYNC HYDRATION V1` (skróty warstw pod nią i obraz bazy dla
 repozytorium źródeł modułu bez zmian); po następnym bloku natywnym nakłada się ją na końcu
 (`node tools/treatment-sync-hydration-vault-delta.mjs --build`). Opis łatek: `docs/ZRODLA_ARTEFAKTOW.md`,
-„Łatka P-ROZPOZNANIA, rata 4”. Sejf gałęzi nowej strony głównej ma ten sam błąd i te same kotwice — warstwę da się tam
-przenieść po zmianie stałej `BASE`.
+„Łatka P-ROZPOZNANIA, rata 4”. Sejf gałęzi nowej strony głównej ma ten sam błąd i te same kotwice. Przeniesienie warstwy
+tam to jednak więcej niż zmiana stałej `BASE` (sprostowanie z 2026-11-24): notatki tamtej gałęzi niosą też `visitContext`
+i `profileContext`, więc reguła „równe pola odczytu poza `treatmentContext`” nie uzupełni rozpoznania należącego do wizyty —
+porównanie i uzupełnianie trzeba tam rozszerzyć o te konteksty i objąć strażą.
 
 **Prywatność.** Bez nowych danych i miejsc zapisu; opis rozpoznania zostaje w zaszyfrowanej treści notatki.
 
@@ -48368,3 +48370,87 @@ ta sama chwila zapisu (test działania sprawdza, że w magazynie zmienia się wy
 odtworzenie zgłoszenia na kodzie obu wersji aplikacji (sejf sprzed raty 1 jako telefon, potem jego aktualizacja).
 
 **Wersje.** `vilda_vault.js` 289 → 290, wstrzykujące `vilda_chrome.js` 334 → 335 i `vilda_session_bridge.js` 250 → 251; SW 1.1.589 → 1.1.590 — `npm run podbij-wersje`. Bez zmian w interfejsie i bez nowego pliku w pamięci offline.
+
+## P-BAZA-GRUPY — Baza pacjentów: filtry zakresu w Statystykach, „Zapisz jako listę” i „Eksport do Excela” dla grupy (SW 1.1.591, `vilda_patients_list.js` 13, `vilda_patients_list.css` 11, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Żaden wzór, próg ani definicja z etapów 1–4 i z raty 2 rozpoznań się nie zmienia.
+Nowe jest tylko to, **dla kogo** liczą się te same statystyki (filtry zakresu) i co można zrobić z grupą pacjentów
+(zapisać ją jako listę, pobrać jej plik).
+
+**Decyzja właściciela.** Makieta Statystyk przyjęta 2026-11-23 (pasek „Zakres · Lista pacjentów · Płeć · Wiek” nad
+kafelkami; na pasku grupy „Zapisz jako listę pacjentów” i „Eksport do Excela”). 2026-11-24: „jedziemy z tym: praca nad
+grupami pacjentów z makiety”.
+
+**Filtry zakresu (`scopeFilters`, `scopeMembers`).** Cztery pola wyboru nad kafelkami Statystyk:
+1. **Zakres** — „cała baza (N)” albo „z zapisem w ostatnich 12 mies. (M)”. Reguła jest ta sama, co w kafelku „Z zapisem
+   w ostatnich 12 mies.” z etapu 1: data ostatniego zapisu karty (`lastSavedAtISO`) nie starsza niż rok od dziś.
+2. **Lista pacjentów** — „wszystkie” albo jedna z zapisanych list. Członków daje ten sam odczyt, którym lista jest
+   otwierana w Bazie (`getPatientListMembers`: ręczni członkowie i pacjenci spełniający regułę listy, bez wykluczonych).
+   Pole jest widoczne tylko przy dostępie do list pacjentów (ten sam warunek, co listy w Bazie); bez dostępu filtr listy
+   nie zawęża. Listy, której już nie ma, filtr nie zawęża i mówi to wprost.
+3. **Płeć** — „wszyscy”, „chłopcy”, „dziewczęta”; z nagłówka karty, tak jak w kafelkach płci. Pacjent bez wpisanej płci
+   nie należy do żadnej z dwóch płci.
+4. **Wiek** — „wszystkie” albo jeden z przedziałów etapu 1 (0–2, 3–5, 6–9, 10–13, 14–17, 18+ lat). Wiek jest **wiekiem na
+   dziś** z pełnej daty urodzenia (ta sama funkcja, co w wykresie wieku). Pacjent bez daty urodzenia nie wchodzi do
+   żadnego przedziału.
+
+Filtry łączą się spójnikiem **„i”** — pacjent jest w zakresie, gdy spełnia wszystkie wybrane — i łączą się tak samo
+z rozpoznaniem wybranym w sekcji „Rozpoznania” (rata 2). Liczą się wyłącznie pacjenci z bazy (osoby spoza bazy nie).
+Zakres wybiera pacjentów z **gotowego wyniku całej bazy**: `demographics`, `cardsResult`, `ghCohort`, `obesityCohort`
+i `diagnosisCohort` liczą te same rzeczy na mniejszym zbiorze, z pamięci wyników — zmiana filtra nie czyta kart ani
+notatek z sejfu (jedyny odczyt to członkowie wybranej listy). Dopóki członkowie listy się wczytują, zakresu nie da się
+policzyć: ekran pokazuje „Wczytywanie listy…”, a nie zero pacjentów. Zakres, w którym nie ma nikogo, zostawia filtry na
+ekranie, mówi „Brak pacjentów w tym zakresie” i podaje wybrane filtry; „Cała baza” zdejmuje wszystkie naraz.
+
+**Opis zakresu (`scopeLabel`).** Baner „Statystyki grupy”, nagłówek raportu i nazwa grupy na liście niosą ten sam opis,
+w kolejności pól na ekranie i z rozpoznaniem na końcu, np. `lista „Fikcyjna lista kontrolna” · dziewczęta · E66 — Otyłość`.
+Kafelek liczby pacjentów nazywa się wtedy „Pacjenci w grupie”. Raport PDF i plik dla Excela pobrane z zawężonych
+Statystyk dotyczą zakresu (wiersz „Grupa pacjentów”, nazwa pliku `…-grupa-RRRR-MM-DD`), tak jak dotąd przy rozpoznaniu.
+Przy małej grupie średnie są niestabilne — działa to samo ostrzeżenie o małej grupie, co dotąd.
+
+**Grupa ze statystyk → lista pacjentów („Zapisz jako listę”).** Pasek grupy nad listą pacjentów (po kliknięciu słupka
+wieku, wiersza rozpoznania, „Pokaż listę” itp.) dostaje przycisk „Zapisz jako listę”. Formularz podpowiada nazwę grupy
+(do 80 znaków); pusta nazwa nie zapisuje. Zapis zakłada **listę ręczną** (bez reguły) z dokładnie tymi pacjentami grupy,
+którzy są w bazie, jednym zapisem `savePatientList({ name, description, memberIds })`; opis listy to „Grupa ze statystyk ·
+data”. Lista jest **stanem na chwilę zapisu** — nie zmienia się, gdy zmienią się statystyki; dalej zachowuje się jak
+każda lista ręczna (dodawanie, usuwanie, przypinanie, synchronizacja). Po zapisie pasek mówi „Zapisano listę „…” ·
+N osób” i daje „Otwórz listę”. Przycisk jest widoczny tylko przy dostępie do list pacjentów.
+
+**Plik grupy („Eksport do Excela”).** Ten sam przycisk-pasek daje plik `.xlsx` **tej grupy** — ten sam model raportu
+(`statsReport` → `statsWorkbook`) na pacjentach grupy, z nazwą grupy w wierszu „Grupa pacjentów” i nazwą pliku
+`statystyki-bazy-pacjentow-grupa-RRRR-MM-DD.xlsx`. Plik powstaje z policzonych statystyk (bez ponownego czytania sejfu);
+gdy karty nie są jeszcze policzone, pasek mówi, żeby wrócić do Statystyk i poczekać. Raport PDF grupy pobiera się, jak
+dotąd, z zawężonych Statystyk.
+
+**Przypadek syntetyczny (dane fikcyjne; osiem osób z bazy testowej a–h, zegar testu 17.06.2026).** Lista „Fikcyjna lista
+kontrolna” = c, d, e, f. Rozpoznania jak w racie 2 (aktywne E66: d, e, f).
+- Płeć „chłopcy” → b, c, e, g: 4 osoby; leczenie GH „leczonych: 3 · SNP 2 · bez programu 1”; leczenie otyłości
+  „leczonych: 2”; co najmniej 2 pomiary wzrostu 3 / 4.
+- „chłopcy” i wiek „6–9 lat” → c: 1 osoba (h jest w tym przedziale, ale nie ma wpisanej płci); GH „leczonych: 1 · SNP 1”.
+- Lista i „chłopcy” → c, e: 2 osoby; GH „leczonych: 2 · SNP 2”.
+- Lista, „dziewczęta” i rozpoznanie E66 → d, f: 2 osoby; leczenie otyłości „leczonych: 2 · Saxenda 1 · Wegovy 1”.
+- Dodatkowo wiek „0–2 lata” → nikt: „Brak pacjentów w tym zakresie”.
+- Grupa „6–9 lat” (c, h) zapisana jako lista: jedna lista ręczna z członkami c i h, opis „Grupa ze statystyk ·
+  17.06.2026”; plik grupy: „Pacjentów w grupie” 2, „Leczonych” 1 (GH: c, SNP) i 1 (otyłość: h, Saxenda), arkusz
+  „Pacjenci” z 2 wierszami.
+
+**Prywatność i cykl życia danych.** Wybrane filtry (`state.filters`) i stan paska grupy (`state.groupTask`) żyją w pamięci
+RAM widoku Bazy, razem z resztą stanu statystyk; nie trafiają do `localStorage`, `sessionStorage`, IndexedDB ani adresu
+strony. Zapisana lista jest zwykłą listą pacjentów: nazwa, opis i członkowie są w całości w zaszyfrowanej treści rekordu
+listy w sejfie i synchronizują się tak jak inne listy. Nazwa podpowiadana z grupy może zawierać rozpoznanie (np. „E66 —
+Otyłość”) — pozostaje w szyfrogramie. Plik grupy nie zawiera nazwisk, dat urodzenia ani identyfikatorów (pasek mówi to po
+zapisie); w grupie złożonej z bardzo niewielu osób liczby są bliskie danym pojedynczego pacjenta — plik należy traktować
+jak dokumentację medyczną. Bez nowego kontaktu z siecią.
+
+**Zgodność wstecz.** Bez zmian w sejfie i w zapisie list (istniejące `savePatientList`, `listPatientLists`,
+`getPatientListMembers`). Bez dostępu do list pacjentów: nie ma pola „Lista pacjentów” ani „Zapisz jako listę”; pozostałe
+filtry i plik grupy działają.
+
+**Strażnicy.** `tests/unit/baza-statystyki-grupy.test.mjs` (12; plik produkcyjny: normalizacja filtrów, opis i klucz
+zakresu, członkowie zakresu wg płci, wieku, ostatniego zapisu, listy i rozpoznania, zgodność z `demographics`, lista
+jeszcze niewczytana, łączenie „i”, nagłówek i nazwa pliku grupy); `tests/e2e/baza-pacjentow-statystyki-grupy.spec.mjs`
+(4; prawdziwy szyfrowany sejf, fikcyjne osoby: filtry łączone z listą i rozpoznaniem bez odczytu sejfu, plik zakresu,
+pusty zakres i „Cała baza”; zapis grupy jako listy i plik grupy bez danych osobowych; widok bez dostępu do list; telefon
+390 px — bez przewijania w poziomie, pola 44 px i 16 px pisma).
+
+**Wersje.** `vilda_patients_list.js` 12 → 13, `vilda_patients_list.css` 10 → 11, wstrzykujące `vilda_chrome.js` 335 → 336 i `vilda_session_bridge.js` 251 → 252; SW 1.1.590 → 1.1.591 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.

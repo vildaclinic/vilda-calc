@@ -3092,7 +3092,9 @@ wszystkie w scalaniu notatek pacjenta (`Le`), obok istniejącego uzupełniania p
   `Object.assign({}, stored, { bodyCipher })` z `TreatmentHydrateSyncRecord` jest na jej liście jawnie — przenosi pola
   chwil poprzedniego rekordu, więc wolno mu to tylko dlatego, że nie zmienia pól widocznych (równe pola odczytu poza
   `treatmentContext` i polami chwil), numeru wersji ani chwili zapisu. Straż sprawdza te trzy warunki w źródle funkcji.
-- Kotwice 1–3 istnieją też w sejfie gałęzi `agent/nowa-strona-glowna`; przeniesienie warstwy tam to zmiana stałej `BASE`.
+- Kotwice 1–3 istnieją też w sejfie gałęzi `agent/nowa-strona-glowna`. Przeniesienie warstwy tam wymaga zmiany stałej
+  `BASE` **i** rozszerzenia reguły (sprostowanie z 2026-11-24): tamte notatki niosą także `visitContext` i `profileContext`,
+  więc ścisła równość pól odczytu poza `treatmentContext` nie uzupełni rozpoznania należącego do wizyty.
 - Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
 
 Strażnicy: `tests/unit/treatment-sync-hydration-vault.test.mjs`, `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs`.
