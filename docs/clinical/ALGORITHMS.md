@@ -48315,3 +48315,56 @@ synchronizacji przeniesiony z tamtej gałęzi bez zmian; `tests/e2e/karta-rozpoz
 konflikt, „Notatki” z powiązanym epizodem, formularz z „Notatek”, telefon).
 
 **Wersje.** `vilda_vault.js` 288 → 289, `vilda_auth_ui.js` 584 → 585, `vilda_auth_ui.css` 92 → 93, wstrzykujące `vilda_chrome.js` 333 → 334 i `vilda_session_bridge.js` 249 → 250; SW 1.1.588 → 1.1.589 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## P-ROZPOZNANIA, rata 4 — rozpoznania wpisane na jednym urządzeniu widać na drugim także wtedy, gdy drugie dostało je na starszej wersji aplikacji (SW 1.1.590, `vilda_vault.js` 290, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Poprawka synchronizacji zapisu: to, co lekarz wpisał, ma być widoczne na każdym
+jego urządzeniu.
+
+**Zgłoszenie właściciela.** 2026-11-24: rozpoznania wpisane u pacjenta na komputerze w pracy nie są widoczne na telefonie.
+
+**Przyczyna.** Między urządzeniami z wersją aplikacji od raty 1 rozpoznania synchronizują się poprawnie. Urządzenie,
+które pobrało synchronizację, zanim samo się zaktualizowało, zapisało rozpoznanie jako zwykłą notatkę (tytuł
+„Rozpoznanie · …”, treść z kodem) bez zaszyfrowanego opisu rozpoznania, którego starsza wersja nie zna. Po aktualizacji
+ta sama wersja notatki nie była już dla scalania „nowsza”, więc opis nie wracał: wpis był w „Notatkach”, a sekcja
+„Rozpoznania pacjenta” i statystyki — puste. Na urządzeniu, na którym rozpoznanie wpisano, nic nie zginęło (starsza
+kopia bez opisu nie nadpisuje pełnej — tak było od raty 1). Odtworzone na prawdziwym kodzie obu wersji.
+
+**Reguła.** Gdy synchronizacja przynosi dokładnie tę samą wersję tej samej notatki (ten sam identyfikator, pacjent,
+numer wersji, chwila zapisu i cała czytelna treść), a tutejsza kopia nie ma opisu rozpoznania, tutejsza kopia przejmuje
+opis z synchronizacji. Bez nowej wersji i bez nowej chwili zapisu. Kopia, która opis już ma, inna wersja albo inna treść
+— bez zmian (zwykłe reguły scalania). Ta sama zasada od dawna uzupełnia plany opieki.
+
+**Co to znaczy w praktyce.** Po tej zmianie telefon uzupełnia rozpoznania sam przy najbliższej synchronizacji, w której
+serwer ma pełny zapis — czyli po tym, jak urządzenie, na którym je wpisano, zsynchronizuje się choć raz. Do tego czasu
+(i bez tej zmiany) działa obejście: na urządzeniu, na którym rozpoznanie jest widoczne, „Edytuj” → „Zapisz” — nowa
+wersja zapisu przechodzi na drugie urządzenie zwykłą drogą.
+
+**Przypadki syntetyczne (dane fikcyjne).**
+- Komputer: rozpoznanie „E66.0 — Fikcyjne rozpoznanie R4” i epizod leczenia, który je wskazuje. Telefon dostaje ten sam
+  stan bez opisów (tak, jak zostawia go starsza wersja) → sekcja rozpoznań pusta. Telefon scala pełny stan → rozpoznanie
+  i epizod widoczne, numery wersji i chwile zapisu bez zmian, dwa zgłoszenia zmiany notatki; drugie scalenie tego samego
+  stanu → nic nie zapisane.
+- To samo przez zaszyfrowaną deltę jednej notatki → rozpoznanie widoczne.
+- Ta sama wersja z innym tytułem → bez zmian; notatka zmieniona później na telefonie (wyższa wersja) → zostaje treść
+  z telefonu, bez opisu.
+- Telefon ma już opis, synchronizacja niesie tę samą wersję z innym opisem → bez zmian.
+- Opis w nowszym formacie → przeniesiony bez interpretowania (zapis „nieobsługiwany”, tylko do odczytu); zwykła notatka
+  bez zmian.
+
+**Sejf ma nową zewnętrzną warstwę** `VILDA TREATMENT SYNC HYDRATION V1` (skróty warstw pod nią i obraz bazy dla
+repozytorium źródeł modułu bez zmian); po następnym bloku natywnym nakłada się ją na końcu
+(`node tools/treatment-sync-hydration-vault-delta.mjs --build`). Opis łatek: `docs/ZRODLA_ARTEFAKTOW.md`,
+„Łatka P-ROZPOZNANIA, rata 4”. Sejf gałęzi nowej strony głównej ma ten sam błąd i te same kotwice — warstwę da się tam
+przenieść po zmianie stałej `BASE`.
+
+**Prywatność.** Bez nowych danych i miejsc zapisu; opis rozpoznania zostaje w zaszyfrowanej treści notatki.
+
+**Strażnicy.** `tests/unit/treatment-sync-hydration-vault.test.mjs` (5; prawdziwy sejf i WebCrypto: przypadki wyżej;
+bez poprawki trzy z nich są czerwone); `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs` (3; dokładne
+zdjęcie i nałożenie warstwy, blok natywny bez zmian); `tests/unit/notatka-pozniejsza-zapis.test.mjs` — nowy zapis jest
+jawnie na liście zapisów budowanych z poprzedniego rekordu, z warunkami: te same pola widoczne, ten sam numer wersji,
+ta sama chwila zapisu (test działania sprawdza, że w magazynie zmienia się wyłącznie szyfrogram). Poza repozytorium:
+odtworzenie zgłoszenia na kodzie obu wersji aplikacji (sejf sprzed raty 1 jako telefon, potem jego aktualizacja).
+
+**Wersje.** `vilda_vault.js` 289 → 290, wstrzykujące `vilda_chrome.js` 334 → 335 i `vilda_session_bridge.js` 250 → 251; SW 1.1.589 → 1.1.590 — `npm run podbij-wersje`. Bez zmian w interfejsie i bez nowego pliku w pamięci offline.

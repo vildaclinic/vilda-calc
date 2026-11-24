@@ -1,0 +1,31 @@
+{
+  "namespace": "vilda-treatment-sync-hydration-vault",
+  "version": 1,
+  "baseVaultSHA256": "46535d453ea21d342c7593830c4619584fe60298101271ffa8fb6ed52562db12",
+  "source": "runtime/treatment-sync-hydration-v1/vault-fragment.js",
+  "sourceSHA256": "f00ea28e9ed2309080f9ea940df34cb4827251b70063b3253dccf1fd289edc82",
+  "integratedVaultSHA256": "d9efa2e5b43f44b7a3c77567183cdae60580d1e934c06dbf018be456dbf3edb0",
+  "hooks": [
+    {
+      "name": "hydration-admit-pair",
+      "before": "&&!CareMvpMayMerge&&!CareMvpSyncHydrationCandidate(Ej,g)){",
+      "after": "&&!CareMvpMayMerge&&!CareMvpSyncHydrationCandidate(Ej,g)&&!TreatmentSyncHydrationCandidate(Ej,g)){",
+      "beforeSHA256": "e03e48a5fcc7a5fe8fc4b948fecc3777017f6f5cf3ebf511086df7de6caa200d",
+      "afterSHA256": "cc9d0bb9fce495b2a8396e6f0c322aecb74ac4c2a6f358149b61849084f1c8b7"
+    },
+    {
+      "name": "hydration-under-lock",
+      "before": "if(CareMvpRecovered){await P.putPatientNoteForUser(b,PatientClinicalWriteValue(b,CareMvpRecovered));Bses_pilnuj(e);Qch.push({id:g.id,patientId:g.patientId,action:\"merge\"});Nt++;Qdn.add(g.id);return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);}\n}\n",
+      "after": "if(CareMvpRecovered){await P.putPatientNoteForUser(b,PatientClinicalWriteValue(b,CareMvpRecovered));Bses_pilnuj(e);Qch.push({id:g.id,patientId:g.patientId,action:\"merge\"});Nt++;Qdn.add(g.id);return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);}\n}\nif(!CareMvpIncomingWins&&TreatmentSyncHydrationCandidate(M,g)){\nconst TreatmentRecovered=await TreatmentHydrateSyncRecord(M,g,function(){Bses_pilnuj(e)});Bses_pilnuj(e);\nif(TreatmentRecovered){await P.putPatientNoteForUser(b,PatientClinicalWriteValue(b,TreatmentRecovered));Bses_pilnuj(e);Qch.push({id:g.id,patientId:g.patientId,action:\"merge\"});Nt++;Qdn.add(g.id);return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);}\n}\n",
+      "beforeSHA256": "74b10fd0ca5c041b1e4adec84e5b1b1eb2b1bd1aa28af9a2286098d46641ad23",
+      "afterSHA256": "2389b459d3c8022c74388c7b33d403800011b70296ae13f36fbb9a9350079a07"
+    },
+    {
+      "name": "hydration-readable-source",
+      "before": "/* END VILDA DIAGNOSIS MUTATION V1 */\n",
+      "after": "/* END VILDA DIAGNOSIS MUTATION V1 */\n/* BEGIN VILDA TREATMENT SYNC HYDRATION V1 */\n/* Treatment documents on a device that met them before it knew them.\n *\n * An application version without this record type stores a synchronized\n * diagnosis as a readable note and drops its encrypted treatment context. The\n * same version of that note is never \"newer\" again, so after the application\n * update the document would stay a plain note on that device.\n *\n * When a sync payload carries exactly the stored version of the same note\n * (id, patient, revision, write time and every readable field) and only the\n * stored copy lacks the context, the stored copy adopts it. Nothing else\n * changes: no new revision and no new write time. A copy that already has a\n * context, a different version or different readable content is left to the\n * ordinary merge rules. Same shape as the care-plan hydration next to it. */\nfunction TreatmentSyncHydrationCandidate(stored, incoming) {\n  return !!(stored && incoming && stored.id === incoming.id && stored.patientId === incoming.patientId\n    && Number.isSafeInteger(incoming.rev) && incoming.rev >= 0 && (stored.rev || 0) === incoming.rev\n    && typeof incoming.updatedAtISO === 'string' && stored.updatedAtISO === incoming.updatedAtISO\n    && Object.prototype.hasOwnProperty.call(incoming, 'treatmentContext')\n    && incoming.treatmentContext && typeof incoming.treatmentContext === 'object' && !Array.isArray(incoming.treatmentContext));\n}\nasync function TreatmentHydrateSyncRecord(stored, incoming, assertSession) {\n  if (!TreatmentSyncHydrationCandidate(stored, incoming)) return null;\n  let plain;\n  try { plain = await G(stored.bodyCipher.iv, stored.bodyCipher.data); } catch { assertSession(); return null; }\n  assertSession();\n  if (!plain || typeof plain !== 'object' || Array.isArray(plain)\n      || Object.prototype.hasOwnProperty.call(plain, 'treatmentContext')) return null;\n  const decoded = await Ft(stored); assertSession();\n  const keys = Array.from(new Set(Object.keys(decoded).concat(Object.keys(incoming))));\n  // Content-time and state-time fields are not content (as in the care-plan hydration).\n  if (!keys.every(function (key) { return key === 'treatmentContext' || Bnp_POLA_CHWIL.indexOf(key) >= 0 || CareMvpSyncEqual(decoded[key], incoming[key]); })) return null;\n  const bodyCipher = await V(Object.assign({}, plain, TreatmentContextField(TreatmentContextState(incoming)))); assertSession();\n  return Object.assign({}, stored, { bodyCipher });\n}\n/* END VILDA TREATMENT SYNC HYDRATION V1 */\n",
+      "beforeSHA256": "d03ad7520028f2d6bc7999fd066bcbe05ea6171a37837d6c5e2152c19d84a53d",
+      "afterSHA256": "7bd2eb8fc1b3d9d836b5a03c6e9f35bc3526025c3d54e1393d4f47d2c67c2b56"
+    }
+  ]
+}

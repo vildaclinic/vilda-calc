@@ -4,6 +4,7 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 import { existingNoteUpdateSource, existingNoteCommitAnchor, existingNoteCommitReplacement, existingNoteExportAnchor, existingNoteExportReplacement, existingNoteRemoveExportAnchor, existingNoteRemoveExportReplacement, existingNoteDeleteReplacement, unpatchExistingNoteDeleteWriter, patchVaultExistingNote } from '../../tools/patch-vault-existing-note.mjs';
 import { applyPatientTreatmentDelta, restorePatientTreatmentBaseline } from '../../tools/patient-treatment-vault-delta.mjs';
 import { applyDiagnosisMutationDelta } from '../../tools/diagnosis-mutation-vault-delta.mjs';
+import { applyTreatmentSyncHydrationDelta } from '../../tools/treatment-sync-hydration-vault-delta.mjs';
 
 // The actual encrypted vault and its storage adapter, isolated in memory.
 // No existing account, browser storage, patient data, or remote service is used.
@@ -304,15 +305,16 @@ describe('Klirens — conditional update of one existing canonical note', () => 
     // Treatment adds reviewed owner guards to these same actors. Its exact
     // hash-pinned layer must round-trip before the original generator proves
     // the unchanged historical note mutation; arbitrary changes still fail.
-    // The diagnosis-removal layer wraps treatment and is reduced with it.
+    // The diagnosis-removal and sync-hydration layers wrap treatment and are reduced with it.
     const artifact = restorePatientTreatmentBaseline(deployed);
     const removeStart = artifact.indexOf(existingNoteDeleteReplacement), removeEnd = artifact.indexOf('async function ts(', removeStart);
     const removeBlock = artifact.slice(removeStart, removeEnd);
     const prior = artifact.replace(existingNoteUpdateSource, '').replace(existingNoteExportReplacement, existingNoteExportAnchor).replace(existingNoteRemoveExportReplacement, existingNoteRemoveExportAnchor).replace(existingNoteCommitReplacement, existingNoteCommitAnchor).replace(removeBlock, unpatchExistingNoteDeleteWriter(removeBlock));
     expect(patchVaultExistingNote(prior)).toBe(artifact);
     expect(patchVaultExistingNote(artifact)).toBe(artifact);
-    expect(applyDiagnosisMutationDelta(applyPatientTreatmentDelta(patchVaultExistingNote(prior)))).toBe(deployed);
-    expect(applyDiagnosisMutationDelta(applyPatientTreatmentDelta(patchVaultExistingNote(artifact)))).toBe(deployed);
+    const layers = image => applyTreatmentSyncHydrationDelta(applyDiagnosisMutationDelta(applyPatientTreatmentDelta(image)));
+    expect(layers(patchVaultExistingNote(prior))).toBe(deployed);
+    expect(layers(patchVaultExistingNote(artifact))).toBe(deployed);
     expect(() => patchVaultExistingNote('unrelated artifact')).toThrow(/Expected one vault anchor/);
   });
 });

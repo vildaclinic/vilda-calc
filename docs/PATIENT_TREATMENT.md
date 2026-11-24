@@ -248,6 +248,43 @@ wywołującego, a porównanie treści, CAS oraz deduplikator uwzględniają kont
 rozszerzenia nie usuwa istniejącego kontekstu. Nie łączymy osobno pól dwóch
 równoległych epizodów.
 
+### Urządzenie, które dostało zapis leczenia na starszej wersji aplikacji (P-ROZPOZNANIA rata 4)
+
+Wersja aplikacji sprzed zapisu leczenia przyjmuje z synchronizacji rozpoznanie
+jako zwykłą notatkę kategorii `treatment` (tytuł „Rozpoznanie · …”, treść
+z kodem), ale nie zapisuje `treatmentContext`, bo go nie zna. Po aktualizacji
+aplikacji ta sama wersja notatki (ten sam `rev` i `updatedAtISO`) nie jest już
+dla scalania „nowsza”, więc bez dodatkowej reguły kontekst nigdy by nie wrócił:
+urządzenie pokazywałoby wpis w „Notatkach”, a sekcja rozpoznań i statystyki
+byłyby puste. Zgłoszenie właściciela z 24.11.2026 (rozpoznania wpisane na
+komputerze, niewidoczne na telefonie).
+
+Reguła uzupełnienia (`TreatmentSyncHydrationCandidate`,
+`TreatmentHydrateSyncRecord` — ten sam kształt co istniejące uzupełnianie planów
+opieki `CareMvpHydrateSyncRecord`): gdy ładunek synchronizacji (pełny albo
+zaszyfrowana delta notatki) niesie **dokładnie tę samą wersję tej samej notatki**
+— to samo `id`, ten sam pacjent, `rev`, `updatedAtISO` i wszystkie czytelne pola
+— a tutejsza kopia nie ma `treatmentContext`, tutejsza kopia przejmuje kontekst
+z ładunku. Nic więcej się nie zmienia: bez nowej rewizji i bez nowej chwili
+zapisu; sejf zgłasza zmianę notatki (`action: 'merge'`), więc otwarta Karta
+odświeża sekcję. Reguła nie działa, gdy tutejsza kopia ma już kontekst (także
+inny), gdy różni się wersja albo czytelna treść (wtedy rozstrzygają zwykłe
+reguły scalania) i dla notatek bez kontekstu w ładunku. Kontekst w nowszym
+formacie jest przenoszony bez interpretowania, jak przy zwykłym scaleniu.
+
+Kierunek odwrotny był bezpieczny od raty 1: urządzenie z kontekstem nie traci
+go, gdy dostaje tę samą albo nowszą wersję bez pola. Pełna synchronizacja to
+pobranie i wysłanie, więc urządzenie z kompletnym zapisem przy najbliższej
+synchronizacji wysyła go na serwer, a urządzenie po aktualizacji uzupełnia go
+przy swoim następnym pobraniu.
+
+Warstwa sejfu: `VILDA TREATMENT SYNC HYDRATION V1` —
+`runtime/treatment-sync-hydration-v1/vault-fragment.js`, `manifest.json`,
+`tools/treatment-sync-hydration-vault-delta.mjs`; trzy punkty włączenia obok
+uzupełniania planów opieki w scalaniu notatek. Te same kotwice ma sejf gałęzi
+nowej strony głównej, więc warstwę da się tam nałożyć po zmianie samej stałej
+`BASE` (tamten sejf ma ten sam błąd).
+
 Eksport pacjenta, kopia konta i delty korzystają z istniejących ścieżek notatek.
 Import pacjenta zachowuje ID notatek i zmienia wyłącznie zewnętrzny `patientId`
 na docelowego pacjenta. Tak samo działa natywne scalenie kart, więc powiązania
@@ -296,4 +333,16 @@ node tools/patient-treatment-vault-delta.mjs --rebuild BAZA.js LECZENIE.js
 # nowy skrót LECZENIE.js → stała BASE w tools/diagnosis-mutation-vault-delta.mjs
 node tools/diagnosis-mutation-vault-delta.mjs --build LECZENIE.js vilda_vault.js   # zapisuje też manifest
 node tools/diagnosis-mutation-vault-delta.mjs                                      # kontrola bieżącego sejfu
+```
+
+Od raty 4 najbardziej zewnętrzna jest warstwa uzupełniania kontekstu przy
+synchronizacji (`VILDA TREATMENT SYNC HYDRATION V1`); jej bazą jest obraz
+warstwy usuwania rozpoznania, a `restoreDiagnosisMutationBaseline` zdejmuje ją
+jako pierwszą. Po poleceniach wyżej (wynik drugiego do pliku pośredniego
+`USUWANIE.js` zamiast `vilda_vault.js`):
+
+```bash
+# nowy skrót USUWANIE.js → stała BASE w tools/treatment-sync-hydration-vault-delta.mjs
+node tools/treatment-sync-hydration-vault-delta.mjs --build USUWANIE.js vilda_vault.js   # zapisuje też manifest
+node tools/treatment-sync-hydration-vault-delta.mjs                                      # kontrola bieżącego sejfu
 ```

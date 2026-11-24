@@ -1103,11 +1103,20 @@ describe('E3-PR0b2b — luki modułu planów z etapami: dowód kroku według chw
       // odłączenie terminu z historii planu i odłączenie oryginału od planu: nowa chwila zapisu unieważnia kotwicę
       'Object.assign({}, parent, { bodyCipher, rev: (parent.rev || 0) + 1, updatedAtISO: new Date().toISOString() }',
       'Object.assign({}, original.stored, { bodyCipher, updatedAtISO: new Date().toISOString(), rev: (original.stored.rev || 0) + 1 }',
+      // uzupełnienie opisu zapisu leczenia (P-ROZPOZNANIA rata 4): tylko przy równych polach odczytu, ta sama chwila
+      // zapisu i ten sam rev — pola widoczne bez zmian (działanie: tests/unit/treatment-sync-hydration-vault.test.mjs)
+      'Object.assign({}, stored, { bodyCipher }',
     ]);
     const h = wytnijFunkcje(sejfTekst, 'CareMvpHydrateSyncRecord');
     expect(h, 'hydracja tylko przy równych polach odczytu poza careContext i polami chwil')
       .toContain("keys.every(function (key) { return key === 'careContext' || Bnp_POLA_CHWIL.indexOf(key) >= 0 || CareMvpSyncEqual(decoded[key], incoming[key]); })");
     expect(wytnijFunkcje(sejfTekst, 'CareMvpSyncHydrationCandidate'), 'hydracja przy tej samej chwili zapisu i rev').toContain('stored.updatedAtISO === incoming.updatedAtISO');
+    const t = wytnijFunkcje(sejfTekst, 'TreatmentHydrateSyncRecord');
+    expect(t, 'uzupełnienie opisu leczenia tylko przy równych polach odczytu poza treatmentContext i polami chwil')
+      .toContain("keys.every(function (key) { return key === 'treatmentContext' || Bnp_POLA_CHWIL.indexOf(key) >= 0 || CareMvpSyncEqual(decoded[key], incoming[key]); })");
+    const kandydat = wytnijFunkcje(sejfTekst, 'TreatmentSyncHydrationCandidate');
+    expect(kandydat, 'uzupełnienie opisu leczenia przy tej samej chwili zapisu').toContain('stored.updatedAtISO === incoming.updatedAtISO');
+    expect(kandydat, 'uzupełnienie opisu leczenia przy tym samym rev').toContain('(stored.rev || 0) === incoming.rev');
     // Zapis planu we fragmencie natywnym składa rekord z poprzedniego z nową chwilą zapisu „teraz” i przed nowym
     // szyfrogramem usuwa pola chwil treści i stanu poprzedniego rekordu (jak Bnp_bezChwil; działanie — test niżej).
     const i = sejfTekst.indexOf('async function seal(note, before, hidden) {');

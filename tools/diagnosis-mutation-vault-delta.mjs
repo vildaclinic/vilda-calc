@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
+import { restoreTreatmentSyncHydrationBaseline } from './treatment-sync-hydration-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BASE = '4f625ec47639daac9527b320416853d264d9e1969b9e92db35ac7d0fff7d7caf';
@@ -78,6 +79,8 @@ export function applyDiagnosisMutationDelta(base, root = ROOT) {
   verify(JSON.parse(readFileSync(resolve(root,MANIFEST),'utf8')), built.manifest); return built.source;
 }
 export function restoreDiagnosisMutationBaseline(source, root = ROOT) {
+  // The treatment sync-hydration layer wraps this one and is reduced first.
+  source = restoreTreatmentSyncHydrationBaseline(source, root);
   if (!source.includes(START)) return source;
   if (hash(source) !== JSON.parse(readFileSync(resolve(root,MANIFEST),'utf8')).integratedVaultSHA256) fail('unexpected integrated image');
   const integrated = source;
@@ -93,7 +96,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     writeFileSync(resolve(ROOT,MANIFEST),JSON.stringify(built.manifest,null,2)+'\n');
     writeFileSync(resolve(output),built.source);
   } else if (command === undefined) {
-    const source = readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8');
+    const source = restoreTreatmentSyncHydrationBaseline(readFileSync(resolve(ROOT,'vilda_vault.js'),'utf8'));
     if (applyDiagnosisMutationDelta(restoreDiagnosisMutationBaseline(source)) !== source) fail('round trip differs');
     process.stdout.write('Diagnosis mutation: exact outer Vault layer verified.\n');
   } else fail('usage: node tools/diagnosis-mutation-vault-delta.mjs [--build BASE_FILE OUTPUT_FILE]');
