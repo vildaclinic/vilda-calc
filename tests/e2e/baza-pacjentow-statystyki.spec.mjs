@@ -313,14 +313,29 @@ test('raport PDF i plik dla Excela: pobranie z lokalnych bibliotek, liczby z ekr
   await expect(pasek.locator('[data-export]')).toHaveText(['Raport PDF', 'Eksport do Excela']);
   await expect(pasek.locator('.pt-stat-export-status')).toHaveText('Raport i plik dla Excela zawierają liczby z tego ekranu, bez nazwisk i dat urodzenia.');
 
-  const pobierz = async (rodzaj) => {
-    const [pobranie] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), pasek.locator(`[data-export="${rodzaj}"]`).click()]);
+  /* Czekamy na pobranie TEGO pliku, nie na „jakiekolwiek pobranie”: aplikacja sama zapisuje w tle kopię konta
+     (`wagaiwzrost_konto_….wiw`) i przy obciążonej maszynie to pobranie wpada w okno pomiaru — pierwsza wersja tego
+     testu padła tak w CI. Predykat usuwa wyścig (ten sam wzorzec, co POSTEPY-9 w postepy-doroslego-zakladka.spec.mjs). */
+  const pobierz = async (rodzaj, przedKliknieciem) => {
+    const [pobranie] = await Promise.all([
+      page.waitForEvent('download', { timeout: 60_000, predicate: (zdarzenie) => zdarzenie.suggestedFilename().endsWith(`.${rodzaj}`) }),
+      Promise.resolve(przedKliknieciem ? przedKliknieciem() : null).then(() => pasek.locator(`[data-export="${rodzaj}"]`).click()),
+    ]);
     const sciezka = await pobranie.path();
     return { nazwa: pobranie.suggestedFilename(), bajty: fs.readFileSync(sciezka) };
   };
+  // Kontrola negatywna: tuż przed kliknięciem startuje obce pobranie o nazwie kopii konta — test ma je przepuścić.
+  const obcePobranie = () => frame.evaluate(() => {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob(['x'], { type: 'application/octet-stream' }));
+    link.download = 'wagaiwzrost_konto_e2e.wiw';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  });
 
   // PDF: zegar testu stoi na 17.06.2026, więc data w nazwie jest stała; w nazwie nie ma nic poza datą.
-  const pdf = await pobierz('pdf');
+  const pdf = await pobierz('pdf', obcePobranie);
   expect(pdf.nazwa).toBe('statystyki-bazy-pacjentow-2026-06-17.pdf');
   expect(pdf.bajty.subarray(0, 5).toString('latin1')).toBe('%PDF-');
   expect(pdf.bajty.length, 'dokument z czcionką i trzema stronami').toBeGreaterThan(15_000);
