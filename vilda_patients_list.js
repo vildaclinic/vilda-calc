@@ -1,5 +1,7 @@
 /* Baza pacjentów: presentation and temporary navigation state only.
  * Patient records, list rules and mutations remain in VildaVault/AuthUI.
+ * The „Statystyki” view (P-BAZA-STATYSTYKI) only reads: patient headers for age and sex,
+ * and — on request — the newest saved state of each card for data completeness.
  * This file is the readable browser source; it has no build step. */
 (function (win) {
   'use strict';
@@ -20,6 +22,928 @@
     arrow: '<path d="m9 5 7 7-7 7"/>'
   };
 
+  /* P-BAZA-STATYSTYKI, etap 1 (decyzja właściciela 2026-11-23): statystyki opisowe bazy —
+   * wiek, płeć i kompletność danych. Model jest czysty (bez DOM i bez sejfu), żeby dało się
+   * go testować wprost. Zasady:
+   *   - liczą się wyłącznie pacjenci z bazy; osoby „spoza bazy” nie mają kart;
+   *   - wiek to wiek NA DZIŚ z pełnej daty urodzenia (ta sama zasada, co w wierszu listy:
+   *     wiek z zapisu pomiaru ani sam rok urodzenia nie udają wieku bieżącego) — pacjent bez
+   *     daty urodzenia nie wchodzi do średniej, mediany ani przedziałów i jest wykazany osobno;
+   *   - przedziały wieku w pełnych latach: 0–2, 3–5, 6–9, 10–13, 14–17, 18+. */
+  const AGE_BANDS = [
+    { key: '0-2', from: 0, to: 2, label: '0–2 lata' },
+    { key: '3-5', from: 3, to: 5, label: '3–5 lat' },
+    { key: '6-9', from: 6, to: 9, label: '6–9 lat' },
+    { key: '10-13', from: 10, to: 13, label: '10–13 lat' },
+    { key: '14-17', from: 14, to: 17, label: '14–17 lat' },
+    { key: '18+', from: 18, to: null, label: '18+ lat' }
+  ];
+  function sexKey(value) { return value === 'M' ? 'M' : value === 'F' || value === 'K' ? 'F' : null; }
+  // Wiek w pełnych miesiącach na dobę lokalną — jak calcAgeFromDOB w sejfie (DOB-AGE-1).
+  function monthsFromDob(dobISO, now) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dobISO || ''));
+    if (!match) return null;
+    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    let months = (now.getFullYear() - year) * 12 + (now.getMonth() + 1 - month);
+    if (now.getDate() < day) months -= 1;
+    return months >= 0 ? months : null;
+  }
+  function mean(values) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null; }
+  function median(values) {
+    if (!values.length) return null;
+    const ordered = values.slice().sort((a, b) => a - b), middle = Math.floor(ordered.length / 2);
+    return ordered.length % 2 ? ordered[middle] : (ordered[middle - 1] + ordered[middle]) / 2;
+  }
+  function demographics(patientRecords, options) {
+    const settings = options || {};
+    const now = settings.now instanceof Date ? settings.now : new Date();
+    const ageOf = typeof settings.ageMonths === 'function' ? settings.ageMonths : (dobISO) => monthsFromDob(dobISO, now);
+    const base = (Array.isArray(patientRecords) ? patientRecords : []).filter((record) => record && !record.__ext);
+    const yearAgo = new Date(now.getTime()); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    const bands = AGE_BANDS.map((band) => ({ key: band.key, label: band.label, M: 0, F: 0, unknown: 0, total: 0, ids: [] }));
+    const ages = [], agesBySex = { M: [], F: [] };
+    const sex = { M: 0, F: 0, unknown: 0 }, sexIds = { M: [], F: [] };
+    const missingDob = [], missingSex = [];
+    let recent = 0;
+    base.forEach((record) => {
+      const header = record.header || {};
+      const key = sexKey(header.sex);
+      if (key) { sex[key] += 1; sexIds[key].push(record.patientId); } else { sex.unknown += 1; missingSex.push(record.patientId); }
+      const saved = record.lastSavedAtISO ? new Date(record.lastSavedAtISO).getTime() : NaN;
+      if (Number.isFinite(saved) && saved >= yearAgo.getTime()) recent += 1;
+      const computed = header.dobISO ? ageOf(header.dobISO) : null;
+      const months = typeof computed === 'number' && Number.isFinite(computed) && computed >= 0 ? computed : null;
+      if (months === null) { missingDob.push(record.patientId); return; }
+      ages.push(months);
+      if (key) agesBySex[key].push(months);
+      const years = Math.floor(months / 12);
+      const band = bands[AGE_BANDS.findIndex((item) => years >= item.from && (item.to === null || years <= item.to))];
+      band[key || 'unknown'] += 1; band.total += 1; band.ids.push(record.patientId);
+    });
+    return {
+      total: base.length, recent, withAge: ages.length,
+      meanMonths: mean(ages), medianMonths: median(ages),
+      minMonths: ages.length ? Math.min.apply(null, ages) : null,
+      maxMonths: ages.length ? Math.max.apply(null, ages) : null,
+      sex, sexIds, meanMonthsBySex: { M: mean(agesBySex.M), F: mean(agesBySex.F) },
+      bands, missingDob, missingSex
+    };
+  }
+  /* Kompletność jednej karty — z najnowszego zapisu (payload). Trzy pytania, od których zależy,
+   * czy pacjent wejdzie do kolejnych statystyk: czy da się policzyć tempo wzrastania (co najmniej
+   * dwa pomiary wzrostu w różnym wieku), czy jest wzrost obojga rodziców i czy jest masa urodzeniowa. */
+  function positive(value) {
+    if (value == null || String(value).trim() === '') return false;
+    const parsed = Number(String(value).trim().replace(/\s+/g, '').replace(',', '.'));
+    return Number.isFinite(parsed) && parsed > 0;
+  }
+  function finite(value) { return typeof value === 'number' && Number.isFinite(value) ? value : null; }
+  function cardCompleteness(payload) {
+    const data = payload && typeof payload === 'object' ? payload : {};
+    const heights = new Set();
+    // Wiersze historii niosą wiek łączny w miesiącach; punkty leczenia i formularz — lata + miesiące.
+    const historyRow = (row) => {
+      if (!row || !positive(row.height)) return;
+      const months = finite(row.ageMonths) !== null ? row.ageMonths : finite(row.ageYears) !== null ? row.ageYears * 12 : null;
+      if (months !== null) heights.add(Math.round(months));
+    };
+    const pointRow = (row) => {
+      if (!row || !positive(row.height)) return;
+      if (finite(row.ageYears) === null && finite(row.ageMonths) === null) return;
+      heights.add(Math.round((finite(row.ageYears) || 0) * 12 + (finite(row.ageMonths) || 0)));
+    };
+    const list = (value) => Array.isArray(value) ? value : [];
+    list(data.advanced && data.advanced.data && data.advanced.data.measurements).forEach(historyRow);
+    list(data.growthBasic && data.growthBasic.data && data.growthBasic.data.measurements).forEach(historyRow);
+    list(data.ghTherapyPoints).forEach(pointRow);
+    list(data.obesityTherapyPoints).forEach(pointRow);
+    const user = data.user || {};
+    const formAge = (value) => value == null || String(value).trim() === '' ? null : finite(Number(value));
+    pointRow({ height: user.height, ageYears: formAge(user.age), ageMonths: formAge(user.ageMonths) });
+    const advanced = data.advanced || {}, birth = data.birth || {}, perinatal = data.perinatal || {};
+    return {
+      measurements: heights.size >= 2,
+      parents: positive(advanced.motherHeight) && positive(advanced.fatherHeight),
+      birthWeight: positive(birth.weight) || positive(perinatal.birthWeightG)
+    };
+  }
+  /* P-BAZA-STATYSTYKI, etap 2 (decyzja właściciela 2026-11-24): leczenie hormonem wzrostu.
+   * Model niczego nie liczy własnym wzorem: tempo daje silnik VildaTempoWzrastania (odcinek),
+   * kursy leczenia — VildaTrajectoryAnalysis.ghKursy, hSDS — VildaSdsWzrostu. Zależności są
+   * podawane z zewnątrz (deps), żeby model dało się sprawdzić na prawdziwych silnikach bez DOM.
+   *
+   * Definicje (te same pojęcia, co w reszcie aplikacji):
+   *   - leczony = karta ma co najmniej jeden punkt leczenia GH (Włączenie, Kontynuacja, Zakończenie);
+   *   - liczy się PIERWSZY kurs z punktem Włączenia (leczenie wznowione po Zakończeniu to osobny
+   *     kurs i nie jest „pierwszym rokiem”);
+   *   - odcinek roczny = dwa pomiary odległe o 9–15 mies., najbliżej 12 (okno roczne silnika tempa);
+   *   - 1. rok leczenia: od Włączenia do takiej kontroli; kolejne lata — łańcuchem od poprzedniej;
+   *   - tempo przed leczeniem: pomiar 9–15 mies. przed Włączeniem (najbliżej 12) → Włączenie;
+   *   - zmiana hSDS w 1. roku: hSDS kontroli − hSDS Włączenia, na siatce zapisanej w karcie.
+   * Pacjent bez pary w oknie nie wchodzi do średniej i jest wykazany z powodem. */
+  function therapyAge(point) {
+    if (!point || (finite(point.ageYears) === null && finite(point.ageMonths) === null)) return null;
+    return Math.round((finite(point.ageYears) || 0) * 12 + (finite(point.ageMonths) || 0));
+  }
+  function measureOf(value) {
+    if (!positive(value)) return null;
+    return Number(String(value).trim().replace(/\s+/g, '').replace(',', '.'));
+  }
+  function annualWindow(tempo) {
+    const limits = tempo && tempo.P;
+    if (!limits || typeof tempo.odcinek !== 'function') return null;
+    const min = finite(limits.ROCZNE_OKNO_MIN_M), max = finite(limits.ROCZNE_OKNO_MAX_M), target = finite(limits.ROCZNE_CEL_M);
+    return min === null || max === null || target === null ? null : { min, max, target };
+  }
+  // Punkt z okna rocznego, najbliższy 12 mies.; przy równej odległości — bliższy w czasie.
+  function annualPick(points, gapOf, range) {
+    let best = null, distance = Infinity, bestGap = Infinity;
+    points.forEach((point) => {
+      const gap = gapOf(point);
+      if (gap < range.min || gap > range.max) return;
+      const away = Math.abs(gap - range.target);
+      if (away < distance || (away === distance && gap < bestGap)) { best = point; distance = away; bestGap = gap; }
+    });
+    return best;
+  }
+  function ghPatient(payload, deps) {
+    const data = payload && typeof payload === 'object' ? payload : {};
+    const tools = deps || {};
+    const raw = (Array.isArray(data.ghTherapyPoints) ? data.ghTherapyPoints : [])
+      .filter((point) => point && (point.type === 'start' || point.type === 'continue' || point.type === 'end'));
+    if (!raw.length) return null;
+    const programOf = (points) => {
+      const found = points.find((point) => point && String(point.program || '').trim());
+      return found ? String(found.program).trim() : '';
+    };
+    const result = { program: '', firstYear: null, years: [], before: null, deltaSds: null, reason: null };
+    let coursePoints = null, start = null;
+    if (typeof tools.kursy === 'function') {
+      const course = (tools.kursy(raw) || []).find((item) => item && item.wlaczenie);
+      if (course) { coursePoints = course.punkty.slice(); start = course.wlaczenie; }
+    } else {
+      const ordered = raw.filter((point) => therapyAge(point) !== null).sort((x, y) => therapyAge(x) - therapyAge(y));
+      const from = ordered.findIndex((point) => point.type === 'start');
+      if (from !== -1) {
+        const rest = ordered.slice(from), end = rest.findIndex((point) => point.type === 'end');
+        coursePoints = end === -1 ? rest : rest.slice(0, end + 1); start = rest[0];
+      }
+    }
+    result.program = start && String(start.program || '').trim() ? String(start.program).trim() : programOf(coursePoints || raw);
+    const startAge = start ? therapyAge(start) : null, startHeight = start ? measureOf(start.height) : null;
+    if (!start || startAge === null || startHeight === null) { result.reason = 'no-start'; return result; }
+    const range = annualWindow(tools.tempo);
+    if (!range) { result.reason = 'no-engine'; return result; }
+    const measured = (point) => ({ ageMonths: therapyAge(point), height: measureOf(point.height), point });
+    const later = coursePoints.map(measured).filter((item) => item.ageMonths !== null && item.height !== null && item.ageMonths > startAge)
+      .sort((x, y) => x.ageMonths - y.ageMonths);
+    const velocity = (from, to) => {
+      const segment = tools.tempo.odcinek({ ageMonths: from.ageMonths, height: from.height }, { ageMonths: to.ageMonths, height: to.height });
+      return segment && finite(segment.cmPerYear) !== null ? segment.cmPerYear : null;
+    };
+    let anchor = { ageMonths: startAge, height: startHeight }, first = null;
+    for (;;) {
+      const from = anchor;
+      const next = annualPick(later, (item) => item.ageMonths - from.ageMonths, range);
+      const value = next ? velocity(from, next) : null;
+      if (value === null) break;
+      result.years.push(value);
+      if (!first) first = next;
+      anchor = next;
+    }
+    result.firstYear = result.years.length ? result.years[0] : null;
+    if (result.firstYear === null) result.reason = later.some((item) => item.ageMonths - startAge >= range.min) ? 'no-control' : 'too-early';
+
+    // Pomiary sprzed Włączenia: wiersze historii (wiek łączny w miesiącach) i punkty leczenia (lata + miesiące).
+    const earlier = new Map();
+    const keep = (ageMonths, height) => {
+      if (ageMonths === null || height === null || ageMonths >= startAge) return;
+      earlier.set(Math.round(ageMonths), { ageMonths: Math.round(ageMonths), height });
+    };
+    const rows = (value) => Array.isArray(value) ? value : [];
+    rows(data.ghTherapyPoints).forEach((point) => { if (point) keep(therapyAge(point), measureOf(point.height)); });
+    rows(data.obesityTherapyPoints).forEach((point) => { if (point) keep(therapyAge(point), measureOf(point.height)); });
+    [data.advanced && data.advanced.data && data.advanced.data.measurements, data.growthBasic && data.growthBasic.data && data.growthBasic.data.measurements]
+      .forEach((list) => rows(list).forEach((row) => {
+        if (!row) return;
+        keep(finite(row.ageMonths) !== null ? row.ageMonths : finite(row.ageYears) !== null ? row.ageYears * 12 : null, measureOf(row.height));
+      }));
+    const prior = annualPick(Array.from(earlier.values()), (item) => startAge - item.ageMonths, range);
+    if (prior) result.before = velocity(prior, { ageMonths: startAge, height: startHeight });
+
+    const sex = sexKey(data.user && data.user.sex);
+    if (first && sex && typeof tools.sds === 'function') {
+      const source = data.zscore && /^(OLAF|WHO|PALCZEWSKA)$/i.test(String(data.zscore.dataSource || '')) ? String(data.zscore.dataSource).toUpperCase() : tools.defaultSource || null;
+      const population = data.clinical && data.clinical.downSyndrome === true ? 'DS' : 'OGOLNA';
+      const at = (item) => tools.sds({ wzrost: item.height, plec: sex, wiekMies: item.ageMonths, zrodlo: source, populacja: population });
+      const before = at({ ageMonths: startAge, height: startHeight }), after = at(first);
+      if (finite(before) !== null && finite(after) !== null) result.deltaSds = after - before;
+    }
+    return result;
+  }
+  const GH_REASONS = [
+    ['no-start', 'brak Włączenia ze wzrostem'],
+    ['no-control', 'brak kontroli po 9–15 mies.'],
+    ['too-early', 'leczenie krótsze niż 9 mies.']
+  ];
+  const SMALL_GROUP = 5;
+  function ghCohort(entries) {
+    const list = (Array.isArray(entries) ? entries : []).filter((entry) => entry && entry.gh);
+    const summary = (values) => ({ n: values.length, mean: mean(values), median: median(values) });
+    const paired = (items) => {
+      const both = items.filter((entry) => entry.gh.firstYear !== null && entry.gh.before !== null);
+      return { n: both.length, before: mean(both.map((entry) => entry.gh.before)), first: mean(both.map((entry) => entry.gh.firstYear)) };
+    };
+    const withFirst = list.filter((entry) => entry.gh.firstYear !== null);
+    const programs = new Map();
+    list.forEach((entry) => {
+      const key = entry.gh.program || 'bez programu';
+      if (!programs.has(key)) programs.set(key, []);
+      programs.get(key).push(entry);
+    });
+    const years = [];
+    for (let index = 0; index < 4; index += 1) {
+      const values = list.filter((entry) => entry.gh.years.length > index).map((entry) => entry.gh.years[index]);
+      if (!values.length) break;
+      years.push({ year: index + 1, n: values.length, mean: mean(values) });
+    }
+    const missing = {};
+    GH_REASONS.forEach(([key]) => { missing[key] = list.filter((entry) => entry.gh.reason === key).map((entry) => entry.id); });
+    const delta = list.filter((entry) => entry.gh.deltaSds !== null).map((entry) => entry.gh.deltaSds);
+    return {
+      treated: list.length, ids: list.map((entry) => entry.id),
+      first: Object.assign(summary(withFirst.map((entry) => entry.gh.firstYear)), { ids: withFirst.map((entry) => entry.id) }),
+      paired: paired(list), deltaSds: summary(delta), years, missing,
+      programs: Array.from(programs.entries()).map(([program, items]) => {
+        const done = items.filter((entry) => entry.gh.firstYear !== null);
+        return { program, treated: items.length, ids: items.map((entry) => entry.id), n: done.length,
+          mean: mean(done.map((entry) => entry.gh.firstYear)), paired: paired(items), small: done.length > 0 && done.length < SMALL_GROUP };
+      }).sort((x, y) => y.treated - x.treated || x.program.localeCompare(y.program, 'pl'))
+    };
+  }
+  function formatVelocity(value) { return value === null || value === undefined || !Number.isFinite(value) ? '—' : value.toFixed(1).replace('.', ','); }
+  function formatDelta(value, digits) {
+    if (value === null || value === undefined || !Number.isFinite(value)) return '—';
+    const places = typeof digits === 'number' ? digits : 2;
+    const text = Math.abs(value).toFixed(places).replace('.', ',');
+    return (Number(Math.abs(value).toFixed(places)) === 0 ? '' : value > 0 ? '+' : '−') + text;
+  }
+  /* P-BAZA-STATYSTYKI, etap 3 (decyzja właściciela 2026-11-24): leczenie otyłości.
+   * Model nie zna reguł leczenia: cykle dzieli VildaCykleLeczenia.podziel, tygodnie leczenia liczy
+   * ObesityResponseCriteria.tygodnieOceny (z dat, a bez nich z wieku), BMI i BMI-SDS — VildaBmi,
+   * granicę dziecko/dorosły — VildaBmi.dorosly. Punkty to wizyty z zapisu karty RAZEM z wpisami
+   * między wizytami (dziennik leczenia), złożone przez VildaDziennikOtylosci — składa je widok.
+   *
+   * Definicje:
+   *   - leczony = ma co najmniej jeden punkt leczenia otyłości (Włączenie, Kontynuacja, Zakończenie);
+   *   - liczy się PIERWSZY cykl z punktem Włączenia; masa Włączenia jest punktem odniesienia;
+   *   - „po 12 tyg.” = pomiar masy z okna 9–15 tyg. od Włączenia, najbliższy 12. tygodnia;
+   *     „po 6 mies.” = pomiar z okna 20–32 tyg., najbliższy 26. tygodnia (okno ±25%, jak okno
+   *     roczne tempa wzrastania);
+   *   - zmiana masy % = (masa − masa Włączenia) / masa Włączenia × 100 (ujemna = ubytek) — ta sama
+   *     wielkość, co `zmianaMasyPct` w P-POSTEPY; tempo w kg/mies. = zmiana w kg / (tygodnie / 4,348);
+   *   - u dziecka (poniżej granicy dorosłości przy Włączeniu) dodatkowo zmiana BMI % i BMI-SDS:
+   *     z najbliższego w tym samym oknie pomiaru, który ma BMI (masa ze wzrostem albo zapisane BMI).
+   * Pacjent bez pomiaru w oknie nie wchodzi do średniej i jest wykazany z powodem. */
+  const OBESITY_WINDOWS = [
+    { key: 'w12', after: 'po 12 tyg.', target: 12, min: 9, max: 15 },
+    { key: 'm6', after: 'po 6 mies.', target: 26, min: 20, max: 32 }
+  ];
+  const OBESITY_REASONS = ['no-start', 'no-control', 'too-early'];
+  const WEEKS_PER_MONTH = 365.25 / 12 / 7;
+  function obesityReason(key, range) {
+    if (key === 'no-start') return 'brak Włączenia z masą';
+    return key === 'no-control' ? 'brak pomiaru w ' + range.min + '–' + range.max + ' tyg.' : 'leczenie krótsze niż ' + range.min + ' tyg.';
+  }
+  /* Progi „redukcja o co najmniej X%” nie są wpisane w model: to szczeble wspólne WSZYSTKIM
+   * drabinkom pasm aplikacji (VildaPostepyDoroslegoDane.ZESTAWY, P-POSTEPY) — dziś 5 i 10%. */
+  function obesityThresholds(bands) {
+    const sets = bands && bands.ZESTAWY && typeof bands.ZESTAWY === 'object'
+      ? Object.keys(bands.ZESTAWY).map((key) => bands.ZESTAWY[key] && bands.ZESTAWY[key].progi).filter((list) => Array.isArray(list) && list.length) : [];
+    if (!sets.length) return [];
+    return sets[0].filter((value) => typeof value === 'number' && Number.isFinite(value) && value > 0 && sets.every((list) => list.indexOf(value) !== -1))
+      .sort((x, y) => x - y);
+  }
+  function obesityPatient(payload, points, deps) {
+    const data = payload && typeof payload === 'object' ? payload : {};
+    const tools = deps || {};
+    const raw = (Array.isArray(points) ? points : [])
+      .filter((point) => point && (point.type === 'start' || point.type === 'continue' || point.type === 'end'));
+    if (!raw.length) return null;
+    const result = { drug: '', child: null, windows: {}, reasons: {} };
+    OBESITY_WINDOWS.forEach((range) => { result.windows[range.key] = null; result.reasons[range.key] = null; });
+    const stop = (reason) => { OBESITY_WINDOWS.forEach((range) => { result.reasons[range.key] = reason; }); return result; };
+    const drugOf = (list) => {
+      if (typeof tools.lek !== 'function') return '';
+      for (const point of list) {
+        const name = String(tools.lek(point) || '').trim();
+        if (name) return name;
+      }
+      return '';
+    };
+    if (typeof tools.cykle !== 'function' || typeof tools.tygodnie !== 'function') { result.drug = drugOf(raw); return stop('no-engine'); }
+    const split = tools.cykle(raw);
+    const cycle = ((split && split.cykle) || []).find((item) => item && item.wlaczenie);
+    const start = cycle ? cycle.wlaczenie : null;
+    result.drug = drugOf(start ? [start].concat(cycle.punkty) : raw);
+    const startWeight = start ? measureOf(start.weight) : null;
+    if (!start || startWeight === null) return stop('no-start');
+    const population = data.clinical && data.clinical.downSyndrome === true ? 'DS' : 'OGOLNA';
+    const startAge = therapyAge(start);
+    if (typeof tools.dorosly === 'function' && startAge !== null) result.child = !tools.dorosly(startAge, population);
+    // BMI punktu jak w Karcie pacjenta: z masy i wzrostu, a bez nich z zapisanego BMI.
+    const bmiOf = (point) => {
+      const weight = measureOf(point.weight), height = measureOf(point.height);
+      if (weight !== null && height !== null && typeof tools.bmi === 'function') {
+        const value = tools.bmi({ masaKg: weight, wzrostCm: height });
+        if (finite(value) !== null && value > 0) return value;
+      }
+      return finite(point.bmi) !== null && point.bmi > 0 ? point.bmi : null;
+    };
+    const later = cycle.punkty.slice(cycle.punkty.indexOf(start) + 1).map((point) => (
+      { point, weeks: finite(tools.tygodnie(start, point)), weight: measureOf(point.weight), bmi: bmiOf(point) }
+    )).filter((item) => item.weeks !== null && item.weeks > 0);
+    const weighed = later.filter((item) => item.weight !== null), withBmi = later.filter((item) => item.bmi !== null);
+    const startBmi = result.child === true ? bmiOf(start) : null;
+    const sex = sexKey(data.user && data.user.sex);
+    const source = data.zscore && /^(OLAF|WHO|PALCZEWSKA)$/i.test(String(data.zscore.dataSource || '')) ? String(data.zscore.dataSource).toUpperCase() : tools.defaultSource || null;
+    const sdsAt = (point, bmi) => {
+      const age = therapyAge(point);
+      if (!sex || age === null || typeof tools.bmiSds !== 'function') return null;
+      return finite(tools.bmiSds({ bmi, plec: sex, wiekMies: age, zrodlo: source, populacja: population }));
+    };
+    const startSds = startBmi !== null ? sdsAt(start, startBmi) : null;
+    OBESITY_WINDOWS.forEach((range) => {
+      const picked = annualPick(weighed, (item) => item.weeks, range);
+      if (!picked) { result.reasons[range.key] = weighed.some((item) => item.weeks >= range.min) ? 'no-control' : 'too-early'; return; }
+      const change = picked.weight - startWeight;
+      const entry = { weeks: picked.weeks, pct: change / startWeight * 100, kg: change, kgPerMonth: change / (picked.weeks / WEEKS_PER_MONTH), bmiPct: null, bmiSds: null };
+      const measured = startBmi !== null ? annualPick(withBmi, (item) => item.weeks, range) : null;
+      if (measured) {
+        entry.bmiPct = (measured.bmi - startBmi) / startBmi * 100;
+        const after = startSds !== null ? sdsAt(measured.point, measured.bmi) : null;
+        if (after !== null) entry.bmiSds = after - startSds;
+      }
+      result.windows[range.key] = entry;
+    });
+    return result;
+  }
+  function obesityCohort(entries, options) {
+    const list = (Array.isArray(entries) ? entries : []).filter((entry) => entry && entry.ob);
+    const thresholds = ((options && options.thresholds) || []).filter((value) => typeof value === 'number' && Number.isFinite(value) && value > 0);
+    const windowOf = (items, range) => {
+      const at = (entry) => entry.ob.windows[range.key];
+      const have = items.filter((entry) => at(entry));
+      const pct = have.map((entry) => at(entry).pct);
+      const kids = have.filter((entry) => entry.ob.child === true && at(entry).bmiPct !== null);
+      const scored = kids.filter((entry) => at(entry).bmiSds !== null);
+      return {
+        n: have.length, mean: mean(pct), median: median(pct), ids: have.map((entry) => entry.id),
+        kgPerMonth: mean(have.map((entry) => at(entry).kgPerMonth)),
+        gained: have.filter((entry) => at(entry).pct > 0).map((entry) => entry.id),
+        // „Co najmniej próg”: z zapasem na zaokrąglenie dzielenia (−5% zapisane jako −4,999…).
+        thresholds: thresholds.map((threshold) => {
+          const reached = have.filter((entry) => at(entry).pct <= -threshold + 1e-9);
+          return { threshold, n: reached.length, ids: reached.map((entry) => entry.id) };
+        }),
+        bmi: { n: kids.length, mean: mean(kids.map((entry) => at(entry).bmiPct)), sdsN: scored.length, sds: mean(scored.map((entry) => at(entry).bmiSds)) },
+        people: have.map((entry) => ({ id: entry.id, pct: at(entry).pct })).sort((x, y) => y.pct - x.pct)
+      };
+    };
+    const windows = {}, missing = {};
+    OBESITY_WINDOWS.forEach((range) => {
+      windows[range.key] = windowOf(list, range);
+      missing[range.key] = {};
+      OBESITY_REASONS.forEach((key) => { missing[range.key][key] = list.filter((entry) => entry.ob.reasons[range.key] === key).map((entry) => entry.id); });
+    });
+    const drugs = new Map();
+    list.forEach((entry) => {
+      const key = entry.ob.drug || 'bez leku';
+      if (!drugs.has(key)) drugs.set(key, []);
+      drugs.get(key).push(entry);
+    });
+    return {
+      treated: list.length, ids: list.map((entry) => entry.id),
+      children: list.filter((entry) => entry.ob.child === true).length, adults: list.filter((entry) => entry.ob.child === false).length,
+      windows, missing,
+      drugs: Array.from(drugs.entries()).map(([drug, items]) => {
+        const parts = {};
+        OBESITY_WINDOWS.forEach((range) => { const part = windowOf(items, range); parts[range.key] = { n: part.n, mean: part.mean }; });
+        return { drug, treated: items.length, ids: items.map((entry) => entry.id), windows: parts,
+          small: OBESITY_WINDOWS.some((range) => parts[range.key].n > 0 && parts[range.key].n < SMALL_GROUP) };
+      }).sort((x, y) => y.treated - x.treated || x.drug.localeCompare(y.drug, 'pl'))
+    };
+  }
+  const CARD_ITEMS = [
+    ['measurements', 'Co najmniej 2 pomiary wzrostu'],
+    ['parents', 'Wzrost obojga rodziców'],
+    ['birthWeight', 'Masa urodzeniowa']
+  ];
+  function formatAge(months) {
+    if (months === null || months === undefined || !Number.isFinite(months)) return '—';
+    if (months < 12) return Math.round(months) + ' mies.';
+    return (months / 12).toFixed(1).replace('.', ',') + ' roku';
+  }
+  function percent(part, whole) { return whole ? Math.round(part / whole * 100) : 0; }
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const FALL_HEIGHT = 132, FALL_PAD = 8;
+  const CARD_READERS = 4;   // liczba kart czytanych naraz przy liczeniu statystyk (pomiar: 4 naraz ≈ 2× szybciej niż po kolei, więcej nie pomaga)
+
+  /* ── P-BAZA-SZYBKIE (decyzja właściciela 2026-11-24): liczenie z kart przyrostowo ─────────────
+   * Wynik każdej karty zostaje w pamięci widoku do końca sesji; kolejne liczenie czyta tylko karty
+   * nowe i zmienione. Karta jest „ta sama”, gdy nie zmieniła się chwila jej zapisu (lastSavedAtISO)
+   * ANI znacznik wpisów między wizytami — dopisanie takiego wpisu nie zmienia chwili zapisu karty,
+   * więc sama chwila zapisu nie wystarcza. Wynik nieodczytanej karty nie jest pamiętany. */
+  function journalIndex(notes, isEntry) {
+    const byPatient = new Map();
+    (Array.isArray(notes) ? notes : []).forEach((note) => {
+      if (!note || typeof note.patientId !== 'string' || (typeof isEntry === 'function' && !isEntry(note))) return;
+      if (!byPatient.has(note.patientId)) byPatient.set(note.patientId, []);
+      byPatient.get(note.patientId).push(note);
+    });
+    return {
+      of: (patientId) => byPatient.get(patientId) || [],
+      // Znacznik: identyfikatory i chwile zmiany wpisów pacjenta — zmienia się po dopisaniu, poprawce i usunięciu wpisu.
+      mark: (patientId) => (byPatient.get(patientId) || []).map((note) => String(note.id) + '@' + (note.updatedAtISO || note.createdAtISO || '')).sort().join('|')
+    };
+  }
+  function cardsPlan(base, cached, markOf) {
+    const kept = {}, stale = [];
+    (Array.isArray(base) ? base : []).forEach((record) => {
+      const hit = cached && cached[record.patientId];
+      if (hit && hit.read === true && hit.stamp === (record.lastSavedAtISO || '') && hit.journal === markOf(record.patientId)) kept[record.patientId] = hit;
+      else stale.push(record);
+    });
+    return { kept, stale };
+  }
+  function cardsResult(base, items) {
+    const missing = {}; CARD_ITEMS.forEach(([key]) => { missing[key] = []; });
+    const treated = [], obese = [], details = [];
+    let failed = 0, partial = 0;
+    (Array.isArray(base) ? base : []).forEach((record) => {
+      const id = record.patientId, item = items && items[id];
+      if (!item || item.read !== true) { failed += 1; details.push({ id, card: null, gh: null, ob: null }); return; }
+      CARD_ITEMS.forEach(([key]) => { if (!item.card[key]) missing[key].push(id); });
+      if (item.gh) treated.push({ id, gh: item.gh });
+      if (item.ob) { obese.push({ id, ob: item.ob }); if (item.partial) partial += 1; }
+      details.push({ id, card: item.card, gh: item.gh, ob: item.ob });
+    });
+    return { total: details.length, failed, missing, details, treated, obese, partial };
+  }
+  /* ── P-BAZA-STATYSTYKI, etap 4 (decyzja właściciela 2026-11-24): raport PDF i plik dla Excela ──
+   * Jeden model raportu (statsReport) z tych samych obiektów, które rysuje ekran: demographics,
+   * ghCohort, obesityCohort i kompletność kart. Z niego powstają OBA pliki — dokument pdfmake
+   * (statsDocument) i arkusze (statsWorkbook → xlsxParts) — więc liczby w plikach i na ekranie
+   * nie mogą się rozjechać. Pliki nie zawierają nazwisk, dat urodzenia ani identyfikatorów:
+   * raport to liczby zbiorcze, a arkusz „Pacjenci” ma jeden wiersz na pacjenta bez danych
+   * osobowych, w kolejności wieku (nie nazwiska). Model niczego nie liczy od nowa. */
+  const REPORT_TITLE = 'Statystyki Bazy pacjentów';
+  const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  function percentText(value) {
+    return formatDelta(value, 1) + (typeof value === 'number' && Number.isFinite(value) ? '%' : '');
+  }
+  function ghNote() {
+    return '1. rok: od punktu Włączenia do kontroli po 9–15 mies. (najbliższej 12 mies.), w pierwszym kursie leczenia. Kolejne lata liczą się tak samo od poprzedniej kontroli. Pacjent bez takiej pary nie wchodzi do średniej. Przy grupie mniejszej niż ' + SMALL_GROUP + ' osób średnia jest niestabilna.';
+  }
+  function obesityNote(journalFailed) {
+    return 'Zmiana masy od punktu Włączenia w pierwszym cyklu leczenia do pomiaru najbliższego '
+      + OBESITY_WINDOWS.map((period) => period.target + '. tygodnia (okno ' + period.min + '–' + period.max + ' tyg.)').join(' i ')
+      + '; liczą się wizyty i wpisy między wizytami. U dzieci masa rośnie ze wzrostem, dlatego osobno pokazana jest zmiana BMI. Pacjent bez pomiaru w oknie nie wchodzi do średniej. Przy grupie mniejszej niż ' + SMALL_GROUP + ' osób średnia jest niestabilna.'
+      + (journalFailed ? ' U ' + journalFailed + (journalFailed === 1 ? ' pacjenta' : ' pacjentów') + ' nie udało się odczytać wpisów między wizytami — policzono z zapisu wizyty.' : '');
+  }
+  function footNote(total) {
+    return 'Statystyki opisowe ' + total + (total === 1 ? ' pacjenta' : ' pacjentów')
+      + ' z bazy, bez osób spoza bazy. Policzone na tym urządzeniu; nic nie jest wysyłane. Nie są badaniem naukowym ani podstawą decyzji klinicznych.';
+  }
+  // Odsetki z progiem, BMI dzieci i wykres pacjentów pokazują dłuższe okno, a gdy nikt go nie ma — krótsze.
+  function obesityMainWindow(cohort) {
+    return OBESITY_WINDOWS.slice().reverse().find((item) => cohort.windows[item.key].n) || OBESITY_WINDOWS[OBESITY_WINDOWS.length - 1];
+  }
+  // Skala wykresu „każdy pacjent”: od zera albo przyrostu (góra) do największej redukcji (dół), linie co 5 albo 10%.
+  function fallScale(values) {
+    const high = Math.max(0, Math.ceil(Math.max.apply(null, values) / 5) * 5);
+    const low = Math.min(-10, Math.floor(Math.min.apply(null, values) / 5) * 5);
+    return { high, low, step: high - low > 30 ? 10 : 5 };
+  }
+  function two(value) { return String(value).padStart(2, '0'); }
+  function stampText(date) {
+    if (!(date instanceof Date) || !Number.isFinite(date.getTime())) return '';
+    return two(date.getDate()) + '.' + two(date.getMonth() + 1) + '.' + date.getFullYear() + ', ' + two(date.getHours()) + ':' + two(date.getMinutes());
+  }
+  function reportFileName(date, extension) {
+    const day = date instanceof Date && Number.isFinite(date.getTime()) ? date.getFullYear() + '-' + two(date.getMonth() + 1) + '-' + two(date.getDate()) : '';
+    return ['statystyki-bazy-pacjentow', day].filter(Boolean).join('-') + '.' + extension;
+  }
+  function statsReport(input) {
+    const source = input || {};
+    const model = source.model, cards = source.cards || null;
+    const stamp = source.stamp instanceof Date && Number.isFinite(source.stamp.getTime()) ? source.stamp : null;
+    const num = (value, digits) => finite(value) === null ? null : Number(value.toFixed(digits === undefined ? 2 : digits));
+    const col = (title, kind, extra) => Object.assign({ title, kind: kind || 'text' }, extra || {});
+    const rate = (title) => col(title, 'num', { digits: 1 });
+    const change = (title, digits) => col(title, 'num', { digits: digits === undefined ? 1 : digits, signed: true });
+    const sections = [];
+
+    // 1. Pacjenci — z nagłówków kart.
+    const patientFacts = [
+      { label: 'Pacjenci w bazie', value: model.total, unit: '', text: String(model.total), note: model.recent + ' z zapisem w ostatnich 12 mies.' },
+      { label: 'Średni wiek', value: model.withAge ? num(model.meanMonths / 12, 1) : null, unit: model.withAge ? 'lata' : '', text: model.withAge ? formatAge(model.meanMonths) : '—',
+        note: model.withAge ? 'mediana ' + formatAge(model.medianMonths) + ' · od ' + formatAge(model.minMonths) + ' do ' + formatAge(model.maxMonths) : 'brak dat urodzenia' }
+    ];
+    [['M', 'Chłopcy'], ['F', 'Dziewczęta']].forEach(([key, label]) => {
+      const average = model.meanMonthsBySex[key];
+      patientFacts.push({ label, value: model.sex[key], unit: '', text: String(model.sex[key]),
+        note: percent(model.sex[key], model.total) + '%' + (average === null ? '' : ' · średni wiek ' + formatAge(average)) });
+    });
+    sections.push({
+      key: 'patients', title: 'Pacjenci', hint: '', facts: patientFacts, chart: null,
+      tables: [{
+        key: 'age', title: 'Wiek i płeć',
+        columns: [col('Przedział wieku'), col('Chłopcy', 'int'), col('Dziewczęta', 'int'), col('Płeć nieznana', 'int'), col('Razem', 'int'), col('', 'bar')],
+        rows: model.bands.map((band) => [band.label, band.M, band.F, band.unknown, band.total,
+          [{ value: band.M, color: 'boys' }, { value: band.F, color: 'girls' }, { value: band.unknown, color: 'unknown' }]]),
+        barMax: Math.max.apply(null, model.bands.map((band) => band.total).concat([1])),
+        note: 'Słupki: niebieski — chłopcy, pomarańczowy — dziewczęta, szary — płeć nieznana.'
+      }],
+      notes: ['Wiek na dziś, liczony z daty urodzenia.' + (model.missingDob.length ? ' Bez daty urodzenia: ' + model.missingDob.length + ' (poza wiekiem).' : '')]
+    });
+
+    if (cards) {
+      // 2. Leczenie hormonem wzrostu.
+      const gh = cards.gh, ghSection = { key: 'gh', title: 'Leczenie hormonem wzrostu', hint: '', facts: [], tables: [], notes: [], chart: null };
+      if (!gh || !gh.treated) ghSection.notes.push('W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.');
+      else {
+        ghSection.hint = 'leczonych: ' + gh.treated + ' · ' + gh.programs.map((item) => item.program + ' ' + item.treated).join(' · ');
+        ghSection.facts.push({ label: 'Leczonych', value: gh.treated, unit: '', text: String(gh.treated), note: '', only: 'sheet' });
+        if (!gh.engineReady) ghSection.notes.push('Tempa nie policzono, bo na stronie, z której liczono, nie wczytał się moduł tempa wzrastania.');
+        else {
+          ghSection.facts.push(
+            { label: 'Tempo w 1. roku leczenia', value: num(gh.first.mean), unit: 'cm/rok', text: gh.first.n ? formatVelocity(gh.first.mean) + ' cm/rok' : '—',
+              note: gh.first.n ? 'mediana ' + formatVelocity(gh.first.median) + ' · n = ' + gh.first.n : 'żaden pacjent nie ma kontroli po 9–15 mies.' },
+            { label: 'Przed leczeniem → 1. rok', value: null, unit: '', only: 'pdf',
+              text: gh.paired.n ? formatVelocity(gh.paired.before) + ' → ' + formatVelocity(gh.paired.first) + ' cm/rok' : '—',
+              note: gh.paired.n ? 'n = ' + gh.paired.n + ' z pomiarem 9–15 mies. przed Włączeniem' : 'brak pomiarów 9–15 mies. przed Włączeniem' },
+            { label: 'Tempo przed leczeniem (pary)', value: num(gh.paired.before), unit: 'cm/rok', text: '', note: 'n = ' + gh.paired.n, only: 'sheet' },
+            { label: 'Tempo w 1. roku (pary)', value: num(gh.paired.first), unit: 'cm/rok', text: '', note: 'n = ' + gh.paired.n, only: 'sheet' },
+            { label: 'Zmiana hSDS w 1. roku', value: num(gh.deltaSds.mean, 3), unit: gh.deltaSds.n ? 'SD' : '', text: formatDelta(gh.deltaSds.mean),
+              note: gh.deltaSds.n ? 'mediana ' + formatDelta(gh.deltaSds.median) + ' · n = ' + gh.deltaSds.n
+                : gh.sdsReady ? 'brak pary hSDS (płeć, wiek lub siatka)' : 'siatki wzrostu nie były wczytane na stronie, z której liczono' }
+          );
+          ghSection.tables.push({
+            key: 'gh-programs', title: 'Wg programu',
+            columns: [col('Program'), col('Leczonych', 'int'), col('Z tempem (n)', 'int'), rate('1. rok (cm/rok)'), col('Pary (n)', 'int'), rate('Przed leczeniem'), rate('1. rok — pary'), col('Uwaga')],
+            rows: gh.programs.map((item) => [item.program, item.treated, item.n, num(item.mean), item.paired.n,
+              item.paired.n ? num(item.paired.before) : null, item.paired.n ? num(item.paired.first) : null, item.small ? 'mała grupa' : ''])
+          });
+          if (gh.years.length) {
+            ghSection.tables.push({
+              key: 'gh-years', title: 'Kolejne lata leczenia',
+              columns: [col('Rok leczenia'), rate('Średnie tempo (cm/rok)'), col('n', 'int'), col('', 'bar')],
+              rows: gh.years.map((item) => [item.year + '. rok', num(item.mean), item.n, [{ value: item.mean, color: 'teal' }]]),
+              barMax: Math.max.apply(null, gh.years.map((item) => item.mean).concat([1]))
+            });
+          }
+          const without = GH_REASONS.filter(([key]) => (gh.missing[key] || []).length);
+          if (without.length) {
+            ghSection.tables.push({ key: 'gh-missing', title: 'Bez tempa w 1. roku', columns: [col('Powód'), col('Pacjentów', 'int')],
+              rows: without.map(([key, label]) => [label, gh.missing[key].length]) });
+          }
+          ghSection.notes.push(ghNote());
+        }
+      }
+      sections.push(ghSection);
+
+      // 3. Leczenie otyłości.
+      const ob = cards.obesity, obSection = { key: 'obesity', title: 'Leczenie otyłości', hint: '', facts: [], tables: [], notes: [], chart: null };
+      if (!ob || !ob.treated) obSection.notes.push('W bazie nie ma pacjentów z punktami leczenia otyłości.');
+      else {
+        obSection.hint = 'leczonych: ' + ob.treated + ' · ' + ob.drugs.map((item) => item.drug + ' ' + item.treated).join(' · ');
+        obSection.facts.push({ label: 'Leczonych', value: ob.treated, unit: '', text: String(ob.treated), note: 'dzieci: ' + ob.children + ' · dorośli: ' + ob.adults, only: 'sheet' });
+        if (!ob.engineReady) obSection.notes.push('Zmiany masy nie policzono, bo na stronie, z której liczono, nie wczytał się moduł cykli leczenia.');
+        else {
+          OBESITY_WINDOWS.forEach((range) => {
+            const part = ob.windows[range.key];
+            obSection.facts.push({ label: 'Zmiana masy ' + range.after, value: num(part.mean), unit: part.n ? '%' : '', text: percentText(part.mean),
+              note: part.n ? 'mediana ' + percentText(part.median) + ' · n = ' + part.n + ' · ' + formatDelta(part.kgPerMonth, 1) + ' kg/mies.'
+                : 'żaden pacjent nie ma pomiaru w ' + range.min + '–' + range.max + ' tyg.' });
+          });
+          const range = obesityMainWindow(ob), main = ob.windows[range.key];
+          if (main.thresholds.length) {
+            const first = main.thresholds[0], rest = main.thresholds.slice(1);
+            obSection.facts.push({ label: 'Redukcja o ≥ ' + first.threshold + '% ' + range.after, value: main.n ? first.n : null, unit: main.n ? 'z ' + main.n : '',
+              text: main.n ? first.n + ' z ' + main.n : '—',
+              note: main.n ? percent(first.n, main.n) + '%' + rest.map((item) => ' · o ≥ ' + item.threshold + '%: ' + item.n + ' (' + percent(item.n, main.n) + '%)').join('') : 'brak pomiarów w oknie' });
+          }
+          const kids = main.bmi;
+          obSection.facts.push({ label: 'Dzieci: zmiana BMI ' + range.after, value: num(kids.mean), unit: kids.n ? '%' : '', text: percentText(kids.mean),
+            note: kids.n ? 'n = ' + kids.n + (kids.sdsN ? ' · BMI-SDS ' + formatDelta(kids.sds, 2) + (kids.sdsN < kids.n ? ' (n = ' + kids.sdsN + ')' : '')
+              : ob.sdsReady ? ' · BMI-SDS: brak płci, wieku lub siatki' : ' · BMI-SDS: siatki nie były wczytane')
+              : ob.children ? 'brak pomiaru ze wzrostem w oknie' : 'brak leczonych dzieci' });
+          const thresholds = main.thresholds.map((item) => item.threshold);
+          obSection.tables.push({
+            key: 'ob-windows', title: 'Zmiana masy ciała',
+            columns: [col('Okno'), change('Średnia (%)'), change('Mediana (%)'), col('n', 'int'), change('Tempo (kg/mies.)')]
+              .concat(thresholds.map((threshold) => col('Redukcja o ≥ ' + threshold + '% (n)', 'int')), [col('Przyrost masy (n)', 'int')]),
+            rows: OBESITY_WINDOWS.map((period) => {
+              const part = ob.windows[period.key];
+              return [period.after, num(part.mean), num(part.median), part.n, num(part.kgPerMonth)]
+                .concat(part.thresholds.map((item) => part.n ? item.n : null), [part.n ? part.gained.length : null]);
+            })
+          });
+          if (ob.children) {
+            obSection.tables.push({
+              key: 'ob-bmi', title: 'Dzieci: zmiana BMI',
+              columns: [col('Okno'), change('Zmiana BMI (%)'), col('n', 'int'), change('Zmiana BMI-SDS', 2), col('n (BMI-SDS)', 'int')],
+              rows: OBESITY_WINDOWS.map((period) => {
+                const bmi = ob.windows[period.key].bmi;
+                return [period.after, num(bmi.mean), bmi.n, num(bmi.sds, 3), bmi.sdsN];
+              })
+            });
+          }
+          obSection.tables.push({
+            key: 'ob-drugs', title: 'Wg leku (zmiana masy)',
+            columns: [col('Lek'), col('Leczonych', 'int')].concat(
+              OBESITY_WINDOWS.reduce((list, period) => list.concat([change(period.after.charAt(0).toUpperCase() + period.after.slice(1) + ' (%)'), col('n', 'int')]), []), [col('Uwaga')]),
+            rows: ob.drugs.map((item) => [item.drug, item.treated].concat(
+              OBESITY_WINDOWS.reduce((list, period) => list.concat([num(item.windows[period.key].mean), item.windows[period.key].n]), []), [item.small ? 'mała grupa' : '']))
+          });
+          const missingRows = [];
+          OBESITY_WINDOWS.forEach((period) => OBESITY_REASONS.forEach((key) => {
+            const count = (ob.missing[period.key][key] || []).length;
+            if (count) missingRows.push([period.after, obesityReason(key, period), count]);
+          }));
+          if (missingRows.length) obSection.tables.push({ key: 'ob-missing', title: 'Bez wyniku', columns: [col('Okno'), col('Powód'), col('Pacjentów', 'int')], rows: missingRows });
+          if (main.n) obSection.chart = { kind: 'fall', title: 'Każdy pacjent ' + range.after, values: main.people.map((person) => num(person.pct)) };
+          obSection.notes.push(obesityNote(ob.journalFailed));
+        }
+      }
+      sections.push(obSection);
+    }
+
+    // 4. Kompletność danych.
+    const dataRows = [
+      ['Data urodzenia', model.total - model.missingDob.length, model.total],
+      ['Płeć', model.total - model.missingSex.length, model.total]
+    ];
+    if (cards) {
+      const read = cards.total - cards.failed;
+      CARD_ITEMS.forEach(([key, label]) => dataRows.push([label, read - (cards.missing[key] || []).length, read]));
+    }
+    sections.push({
+      key: 'data', title: 'Kompletność danych', hint: '', facts: [], chart: null,
+      tables: [{ key: 'data', title: 'Ile kart ma dane', columns: [col('Dane'), col('Mają', 'int'), col('Razem', 'int'), col('Odsetek (%)', 'int')],
+        rows: dataRows.map((row) => row.concat([percent(row[1], row[2])])) }],
+      notes: cards ? (cards.failed ? ['Nie udało się odczytać kart: ' + cards.failed + '.'] : []) : ['Leczenie i kompletność kart nie były liczone.']
+    });
+
+    // Arkusz „Pacjenci”: jeden wiersz na pacjenta, bez nazwiska, daty urodzenia i identyfikatora.
+    let people = null;
+    if (cards && Array.isArray(cards.details)) {
+      const ageOf = typeof source.ageMonths === 'function' ? source.ageMonths : () => null;
+      const byId = new Map(cards.details.map((item) => [item.id, item]));
+      const ghReasons = new Map(GH_REASONS.concat([['no-engine', 'moduł tempa niewczytany']]));
+      const columns = [col('Lp.', 'int'), col('Płeć'), col('Wiek (lata)', 'num', { digits: 1 }), col('Przedział wieku')]
+        .concat(CARD_ITEMS.map(([, label]) => col(label)), [
+          col('GH: program'), rate('GH: tempo przed leczeniem (cm/rok)'), rate('GH: tempo 1. rok (cm/rok)'), rate('GH: tempo 2. rok'), rate('GH: tempo 3. rok'), rate('GH: tempo 4. rok'),
+          change('GH: zmiana hSDS w 1. roku', 2), col('GH: uwaga'), col('Otyłość: lek'), col('Otyłość: grupa')],
+        OBESITY_WINDOWS.reduce((list, period) => list.concat([
+          col('Otyłość ' + period.after + ': tydzień pomiaru', 'int'), change('Otyłość ' + period.after + ': zmiana masy (%)'), change('Otyłość ' + period.after + ': tempo (kg/mies.)'),
+          change('Otyłość ' + period.after + ': zmiana BMI (%)'), change('Otyłość ' + period.after + ': zmiana BMI-SDS', 2), col('Otyłość ' + period.after + ': uwaga')]), []));
+      const rows = (Array.isArray(source.patients) ? source.patients : []).filter((record) => record && !record.__ext).map((record) => {
+        const header = record.header || {}, sex = sexKey(header.sex);
+        const computed = header.dobISO ? ageOf(header.dobISO) : null;
+        const months = typeof computed === 'number' && Number.isFinite(computed) && computed >= 0 ? computed : null;
+        const band = months === null ? null : AGE_BANDS.find((item) => Math.floor(months / 12) >= item.from && (item.to === null || Math.floor(months / 12) <= item.to));
+        const detail = byId.get(record.patientId) || null, card = detail && detail.card, gh = detail && detail.gh, ob = detail && detail.ob;
+        const cells = [sex === 'M' ? 'M' : sex === 'F' ? 'K' : '', months === null ? null : num(months / 12, 1), band ? band.label : '']
+          .concat(CARD_ITEMS.map(([key]) => card ? (card[key] ? 'tak' : 'nie') : ''), [
+            gh ? gh.program || 'bez programu' : '', gh ? num(gh.before) : null,
+            gh && gh.years.length > 0 ? num(gh.years[0]) : null, gh && gh.years.length > 1 ? num(gh.years[1]) : null,
+            gh && gh.years.length > 2 ? num(gh.years[2]) : null, gh && gh.years.length > 3 ? num(gh.years[3]) : null,
+            gh ? num(gh.deltaSds, 3) : null, gh && gh.reason ? ghReasons.get(gh.reason) || '' : '',
+            ob ? ob.drug || 'bez leku' : '', ob ? (ob.child === true ? 'dziecko' : ob.child === false ? 'dorosły' : '') : ''],
+          OBESITY_WINDOWS.reduce((list, period) => {
+            const part = ob && ob.windows[period.key], reason = ob && ob.reasons[period.key];
+            return list.concat([part ? part.weeks : null, part ? num(part.pct) : null, part ? num(part.kgPerMonth) : null, part ? num(part.bmiPct) : null, part ? num(part.bmiSds, 3) : null,
+              reason ? (reason === 'no-engine' ? 'moduł cykli niewczytany' : obesityReason(reason, period)) : '']);
+          }, []));
+        return { months, sex: sex || 'Z', cells };
+      }).sort((x, y) => (x.months === null ? Infinity : x.months) - (y.months === null ? Infinity : y.months) || x.sex.localeCompare(y.sex));
+      people = { columns, rows: rows.map((row, index) => [index + 1].concat(row.cells)) };
+    }
+    return { title: REPORT_TITLE, stamp, total: model.total, counted: Boolean(cards), sections, closing: footNote(model.total), people };
+  }
+  /* Arkusze: „Podsumowanie” (te same sekcje, co raport) i „Pacjenci”. Wiersz to { bold, cells };
+   * liczba zostaje liczbą (Excel policzy z niej dalej), brak wartości — pustą komórką. */
+  const PRIVACY_NOTE = 'Plik nie zawiera nazwisk, dat urodzenia ani identyfikatorów pacjentów.';
+  function statsWorkbook(report) {
+    const rows = [];
+    const push = (cells, bold) => rows.push({ bold: Boolean(bold), cells: cells || [] });
+    push([report.title], true);
+    push(['Stan na', stampText(report.stamp)]);
+    push(['Pacjentów w bazie', report.total]);
+    report.sections.forEach((section) => {
+      push([]);
+      push([section.title], true);
+      section.facts.filter((fact) => fact.only !== 'pdf').forEach((fact) => {
+        push([fact.label, fact.value === null || fact.value === undefined ? (fact.text && fact.text !== '—' ? fact.text : '') : fact.value, fact.unit || '', fact.note || '']);
+      });
+      section.tables.forEach((table) => {
+        const visible = table.columns.map((column, index) => column.kind === 'bar' ? -1 : index).filter((index) => index !== -1);
+        push([]);
+        push([table.title], true);
+        push(visible.map((index) => table.columns[index].title), true);
+        table.rows.forEach((row) => push(visible.map((index) => row[index] === undefined ? null : row[index])));
+      });
+      if (section.notes.length) push([]);
+      section.notes.forEach((note) => push([note]));
+    });
+    push([]);
+    push([report.closing]);
+    push([PRIVACY_NOTE]);
+    const sheets = [{ name: 'Podsumowanie', freeze: false, widths: [46, 16, 16, 18, 16, 18, 18, 18, 18], rows }];
+    if (report.people) {
+      sheets.push({
+        name: 'Pacjenci', freeze: true,
+        widths: report.people.columns.map((column) => column.kind === 'text' ? 24 : column.kind === 'int' && column.title === 'Lp.' ? 6 : 18),
+        rows: [{ bold: true, cells: report.people.columns.map((column) => column.title) }].concat(report.people.rows.map((cells) => ({ bold: false, cells })))
+      });
+    }
+    return sheets;
+  }
+  /* Plik .xlsx to archiwum ZIP z kilkoma dokumentami XML (Office Open XML). Tu powstają same
+   * dokumenty — { ścieżka: treść } — a archiwum składa widok lokalną biblioteką JSZip.
+   * Teksty idą jako inlineStr (bez tablicy wspólnych napisów), styl 1 to pogrubienie. */
+  function xmlText(value) {
+    // XML 1.0 dopuszcza tabulator, nową linię, CR i znaki od spacji; pozostałe znaki sterujące i samotne surogaty odpadają.
+    let clean = '';
+    for (const char of String(value)) {
+      const code = char.codePointAt(0);
+      if (code === 9 || code === 10 || code === 13 || (code >= 32 && code <= 0xD7FF) || (code >= 0xE000 && code <= 0xFFFD) || code >= 0x10000) clean += char;
+    }
+    return clean.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function columnName(index) {
+    let name = '';
+    for (let rest = index + 1; rest > 0; rest = Math.floor((rest - 1) / 26)) name = String.fromCharCode(65 + (rest - 1) % 26) + name;
+    return name;
+  }
+  function xlsxParts(sheets) {
+    const list = Array.isArray(sheets) ? sheets : [];
+    const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    const main = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const office = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const pack = 'http://schemas.openxmlformats.org/package/2006/relationships';
+    const types = 'application/vnd.openxmlformats-officedocument.spreadsheetml.';
+    const used = new Set();
+    const names = list.map((sheet, index) => {
+      // Nazwa arkusza: do 31 znaków, bez [ ] : * ? / \ i bez powtórzeń.
+      let name = String(sheet.name || '').replace(/[[\]:*?/\\]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 31).trim() || 'Arkusz ' + (index + 1);
+      while (used.has(name.toLowerCase())) name = name.slice(0, 28) + ' ' + (index + 1);
+      used.add(name.toLowerCase());
+      return name;
+    });
+    const parts = {}, sheetXml = [];
+    list.forEach((sheet, index) => {
+      const rows = (sheet.rows || []).map((row, r) => {
+        const cells = (row.cells || []).map((value, c) => {
+          if (value === null || value === undefined || value === '') return '';
+          const ref = ' r="' + columnName(c) + (r + 1) + '"' + (row.bold ? ' s="1"' : '');
+          if (typeof value === 'number') return Number.isFinite(value) ? '<c' + ref + '><v>' + String(value) + '</v></c>' : '';
+          return '<c' + ref + ' t="inlineStr"><is><t xml:space="preserve">' + xmlText(value) + '</t></is></c>';
+        }).join('');
+        return '<row r="' + (r + 1) + '">' + cells + '</row>';
+      }).join('');
+      const widths = Array.isArray(sheet.widths) ? sheet.widths : [];
+      sheetXml.push(head + '<worksheet xmlns="' + main + '">'
+        + '<sheetViews><sheetView workbookViewId="0"' + (index === 0 ? ' tabSelected="1"' : '') + '>'
+        + (sheet.freeze ? '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' : '') + '</sheetView></sheetViews>'
+        + (widths.length ? '<cols>' + widths.map((width, c) => '<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + width + '" customWidth="1"/>').join('') + '</cols>' : '')
+        + '<sheetData>' + rows + '</sheetData></worksheet>');
+    });
+    // Kolejność części jak w plikach zapisywanych przez arkusze kalkulacyjne: najpierw opis pakietu, na końcu arkusze.
+    parts['[Content_Types].xml'] = head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+      + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      + '<Default Extension="xml" ContentType="application/xml"/>'
+      + '<Override PartName="/xl/workbook.xml" ContentType="' + types + 'sheet.main+xml"/>'
+      + list.map((sheet, index) => '<Override PartName="/xl/worksheets/sheet' + (index + 1) + '.xml" ContentType="' + types + 'worksheet+xml"/>').join('')
+      + '<Override PartName="/xl/styles.xml" ContentType="' + types + 'styles+xml"/></Types>';
+    parts['_rels/.rels'] = head + '<Relationships xmlns="' + pack + '"><Relationship Id="rId1" Type="' + office + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+    parts['xl/workbook.xml'] = head + '<workbook xmlns="' + main + '" xmlns:r="' + office + '"><bookViews><workbookView/></bookViews><sheets>'
+      + names.map((name, index) => '<sheet name="' + xmlText(name) + '" sheetId="' + (index + 1) + '" r:id="rId' + (index + 1) + '"/>').join('') + '</sheets></workbook>';
+    parts['xl/_rels/workbook.xml.rels'] = head + '<Relationships xmlns="' + pack + '">'
+      + list.map((sheet, index) => '<Relationship Id="rId' + (index + 1) + '" Type="' + office + '/worksheet" Target="worksheets/sheet' + (index + 1) + '.xml"/>').join('')
+      + '<Relationship Id="rId' + (list.length + 1) + '" Type="' + office + '/styles" Target="styles.xml"/></Relationships>';
+    parts['xl/styles.xml'] = head + '<styleSheet xmlns="' + main + '">'
+      + '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+      + '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+      + '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+      + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+      + '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
+      + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+      + '</styleSheet>';
+    sheetXml.forEach((xml, index) => { parts['xl/worksheets/sheet' + (index + 1) + '.xml'] = xml; });
+    return parts;
+  }
+  /* Dokument pdfmake (A4, czcionka Roboto z polskimi znakami — te same pliki, co wydruk postępów
+   * dorosłego). Strzałek w tej czcionce nie ma, więc zastępuje je „»”, jak w tamtym wydruku.
+   * Wykresy to SVG z samych kształtów; liczby stoją w tekście i w tabelach. */
+  const PDF_COLORS = { teal: '#00838d', ink: '#0f2b33', muted: '#5a6b72', line: '#d7e9ec', soft: '#f3f9fa', boys: '#2a78d6', girls: '#eb6834', unknown: '#8aa0a6' };
+  const PDF_WIDTH = 515, PDF_BAR = 110;
+  function pdfText(value) { return String(value === null || value === undefined ? '' : value).replace(/[→➡›]/g, '»'); }
+  function reportCell(value, column) {
+    if (value === null || value === undefined || value === '') return column.kind === 'text' ? '' : '—';
+    if (column.kind === 'num' && typeof value === 'number') return column.signed ? formatDelta(value, column.digits) : value.toFixed(column.digits).replace('.', ',');
+    return String(value);
+  }
+  function barSvg(segments, max) {
+    let x = 0;
+    const rects = (Array.isArray(segments) ? segments : []).map((segment) => {
+      const width = max > 0 && segment.value > 0 ? Math.min(segment.value / max, 1) * PDF_BAR : 0;
+      if (!width) return '';
+      const rect = '<rect x="' + x.toFixed(1) + '" y="1" width="' + width.toFixed(1) + '" height="7" fill="' + (PDF_COLORS[segment.color] || PDF_COLORS.teal) + '"/>';
+      x += width;
+      return rect;
+    }).join('');
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + PDF_BAR + '" height="9" viewBox="0 0 ' + PDF_BAR + ' 9">' + rects + '</svg>';
+  }
+  function fallSvg(values) {
+    const height = 96, pad = 5, scale = fallScale(values);
+    const y = (value) => pad + (scale.high - value) / (scale.high - scale.low) * (height - 2 * pad);
+    const rule = (value, color, width) => '<line x1="0" x2="' + PDF_WIDTH + '" y1="' + y(value).toFixed(1) + '" y2="' + y(value).toFixed(1) + '" stroke="' + color + '" stroke-width="' + width + '"/>';
+    let shapes = '';
+    for (let tick = scale.high; tick >= scale.low; tick -= scale.step) if (tick !== 0) shapes += rule(tick, PDF_COLORS.line, 0.6);
+    const slot = PDF_WIDTH / Math.max(values.length, 16);
+    values.forEach((value, index) => {
+      shapes += '<rect x="' + (index * slot + slot * 0.14).toFixed(1) + '" y="' + Math.min(y(0), y(value)).toFixed(1) + '" width="' + (slot * 0.72).toFixed(1)
+        + '" height="' + Math.max(Math.abs(y(value) - y(0)), 0.6).toFixed(1) + '" fill="' + (value > 0 ? PDF_COLORS.girls : PDF_COLORS.teal) + '"/>';
+    });
+    shapes += rule(0, PDF_COLORS.muted, 0.8);
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + PDF_WIDTH + '" height="' + height + '" viewBox="0 0 ' + PDF_WIDTH + ' ' + height + '">' + shapes + '</svg>';
+  }
+  function statsDocument(report) {
+    const C = PDF_COLORS, content = [];
+    const small = (text, extra) => Object.assign({ text: pdfText(text), fontSize: 8.5, color: C.muted }, extra || {});
+    content.push({ columns: [
+      { width: '*', stack: [{ text: pdfText(report.title), fontSize: 16, bold: true, color: C.teal },
+        small('Zestawienie opisowe · ' + report.total + (report.total === 1 ? ' pacjent' : ' pacjentów') + ' z bazy', { fontSize: 9.5 })] },
+      { width: 'auto', stack: [{ text: pdfText(report.stamp ? 'Stan na ' + stampText(report.stamp) : ''), alignment: 'right' }, small('bez danych osobowych', { alignment: 'right' })] }
+    ] });
+    content.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: PDF_WIDTH, y2: 0, lineWidth: 1.2, lineColor: C.teal }], margin: [0, 6, 0, 2] });
+    const tiles = (facts) => ({
+      table: { widths: facts.map(() => '*'), body: [facts.map((fact) => ({
+        stack: [{ text: pdfText(fact.label).toUpperCase(), fontSize: 7, bold: true, color: C.muted, characterSpacing: 0.3 },
+          { text: pdfText(fact.text), fontSize: 15, bold: true, margin: [0, 2, 0, 1] }, small(fact.note, { fontSize: 8 })],
+        fillColor: C.soft
+      }))] },
+      layout: {
+        hLineWidth: () => 0, vLineWidth: (index, node) => index === 0 || index === node.table.widths.length ? 0 : 5, vLineColor: () => '#ffffff',
+        paddingLeft: () => 8, paddingRight: () => 8, paddingTop: () => 7, paddingBottom: () => 7
+      },
+      margin: [0, 2, 0, 0]
+    });
+    const table = (item) => {
+      const align = (column) => column.kind === 'text' || column.kind === 'bar' ? 'left' : 'right';
+      const body = [item.columns.map((column) => ({ text: pdfText(column.title), bold: true, fontSize: 8, color: C.muted, alignment: align(column) }))];
+      item.rows.forEach((row) => body.push(item.columns.map((column, index) => column.kind === 'bar'
+        ? { svg: barSvg(row[index], item.barMax), width: PDF_BAR, margin: [0, 2, 0, 0] }
+        : { text: pdfText(reportCell(row[index], column)), alignment: align(column) })));
+      const stack = [{ text: pdfText(item.title), bold: true, fontSize: 10, margin: [0, 9, 0, 2] },
+        { table: { headerRows: 1, widths: item.columns.map((column, index) => column.kind === 'bar' ? PDF_BAR : index === 0 ? '*' : 'auto'), body }, layout: 'lightHorizontalLines', fontSize: 9 }];
+      if (item.note) stack.push(small(item.note, { fontSize: 8, margin: [0, 3, 0, 0] }));
+      return { stack, unbreakable: item.rows.length <= 12 };
+    };
+    report.sections.forEach((section) => {
+      const head = [{ text: pdfText(section.title), fontSize: 12.5, bold: true, margin: [0, 13, 0, 1] }];
+      if (section.hint) head.push(small(section.hint, { fontSize: 9, margin: [0, 0, 0, 3] }));
+      const shown = section.facts.filter((fact) => fact.only !== 'sheet');
+      if (shown.length) head.push(tiles(shown));
+      // Nagłówek sekcji nie zostaje sam na dole strony: idzie razem z pierwszą (krótką) tabelą.
+      const blocks = section.tables.map(table);
+      if (blocks.length && blocks[0].unbreakable) head.push(blocks.shift());
+      content.push({ stack: head, unbreakable: true });
+      blocks.forEach((block) => content.push(block));
+      if (section.chart && section.chart.kind === 'fall') {
+        const scale = fallScale(section.chart.values);
+        content.push({ unbreakable: true, stack: [
+          { text: pdfText(section.chart.title), bold: true, fontSize: 10, margin: [0, 9, 0, 3] },
+          { svg: fallSvg(section.chart.values), width: PDF_WIDTH },
+          small('Jeden słupek to jeden pacjent, od najmniejszej do największej redukcji masy; pomarańczowy słupek to przyrost. Linie co ' + scale.step
+            + '%: od ' + formatDelta(scale.high, 0) + '% (góra) do ' + formatDelta(scale.low, 0) + '% (dół), ciemna linia to 0%.', { fontSize: 8, margin: [0, 2, 0, 0] })
+        ] });
+      }
+      section.notes.forEach((note) => content.push(small(note, { margin: [0, 5, 0, 0] })));
+    });
+    content.push(small(report.closing, { margin: [0, 14, 0, 0] }));
+    return {
+      pageSize: 'A4', pageOrientation: 'portrait', pageMargins: [40, 40, 40, 44],
+      defaultStyle: { font: 'Roboto', fontSize: 9.5, color: C.ink, lineHeight: 1.2 },
+      info: { title: report.title },
+      footer: (page, pages) => ({ text: 'Strona ' + page + ' z ' + pages, alignment: 'center', fontSize: 8, color: C.muted, margin: [0, 14, 0, 0] }),
+      content
+    };
+  }
   function create(options) {
     const opts = options || {};
     const doc = win.document;
@@ -38,7 +962,12 @@
       adding: Boolean(initial.adding),
       selected: Object.assign({}, initial.selected || {}),
       catalogScrollTop: Number(initial.catalogScrollTop) || 0,
-      listScrollTop: Number(initial.listScrollTop) || 0
+      listScrollTop: Number(initial.listScrollTop) || 0,
+      // P-BAZA-STATYSTYKI: widok „Statystyki”, grupa wybrana z wykresu i wynik sprawdzenia kart.
+      view: initial.view === 'stats' ? 'stats' : 'list',
+      group: initial.group && Array.isArray(initial.group.ids) ? { label: String(initial.group.label || ''), ids: initial.group.ids.slice() } : null,
+      cards: initial.cards && typeof initial.cards === 'object' ? initial.cards : null,
+      cardCache: initial.cardCache && typeof initial.cardCache === 'object' ? initial.cardCache : null
     };
     // Earlier versions used the same input for names of lists and patients.
     if (state.filter === 'lists' && !state.listId && !Object.prototype.hasOwnProperty.call(initial, 'listQuery')) {
@@ -56,6 +985,21 @@
     const memberPromises = new Map();
     let busy = Boolean(opts.loading);
     let rowWindow = null;
+    // P-BAZA-STATYSTYKI: sprawdzanie kart (odszyfrowanie najnowszego zapisu każdego pacjenta).
+    let cardsRun = 0;        // żeton bieżącego przebiegu; zmiana żetonu przerywa pętlę
+    let cardsBusy = null;    // { done, total } w trakcie przebiegu
+    let cardsHost = null;    // wiersze kompletności kart w bieżącym renderze
+    let cardsBar = null;     // pasek „z kart”: zachęta, postęp albo czas policzenia
+    let ghHost = null;       // sekcja „Leczenie hormonem wzrostu”
+    let ghHint = null;
+    let obHost = null;       // sekcja „Leczenie otyłości”
+    let obHint = null;
+    let exportBusy = null;   // 'pdf' albo 'xlsx' w trakcie przygotowania pliku
+    let exportNote = '';     // ostatni komunikat o pliku (pasek „z kart”)
+    let zipLoading = null;   // jedna obietnica wczytania lokalnej biblioteki JSZip
+    let statsCounted = false; // liczenie ruszyło samo przy tym wejściu w „Statystyki”
+    let cardsProgress = null;
+    const timeFormatter = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
     const rowHeights = new Map(Array.isArray(initial.rowHeights) ? initial.rowHeights : []);
     let measuredWidth = Number(initial.measuredWidth) || 0;
     const dateFormatter = new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -140,7 +1084,20 @@
     add.appendChild(el('span', 'pt-plus', '+'));
     add.appendChild(el('span', 'pt-add-full', 'Dodaj pacjenta'));
     add.appendChild(el('span', 'pt-add-short', 'Dodaj'));
-    titleRow.appendChild(titles); titleRow.appendChild(add); header.appendChild(titleRow);
+    const viewSwitch = el('div', 'pt-viewseg');
+    viewSwitch.setAttribute('role', 'group'); viewSwitch.setAttribute('aria-label', 'Widok Bazy pacjentów');
+    const viewNodes = {};
+    [['list', 'Lista'], ['stats', 'Statystyki']].forEach(([key, label]) => {
+      const node = button('', label, () => chooseView(key));
+      node.setAttribute('data-view', key); node.setAttribute('aria-pressed', 'false');
+      viewNodes[key] = node; viewSwitch.appendChild(node);
+    });
+    // Przełącznik widoku i „Dodaj pacjenta” stoją w jednej grupie: jedna linia i ta sama wysokość
+    // (grupa rozciąga oba elementy do wyższego z nich). Na telefonie grupa znika z układu
+    // (display: contents) i elementy układają się jak dotąd — przełącznik pod tytułem.
+    const actions = el('div', 'pt-head-actions');
+    actions.appendChild(viewSwitch); actions.appendChild(add);
+    titleRow.appendChild(titles); titleRow.appendChild(actions); header.appendChild(titleRow);
 
     const toolbar = el('div', 'pt-toolbar');
     const searchBox = el('div', 'pt-search');
@@ -201,6 +1158,11 @@
       render(); scroll.scrollTop = 0;
     });
     duplicates.appendChild(duplicateText); duplicates.appendChild(duplicateButton); root.appendChild(duplicates);
+    const groupBar = el('div', 'pt-groupbar');
+    const groupText = el('span', 'lt');
+    const groupBack = button('pt-secondary', '← Statystyki', () => { if (!busy) { state.group = null; chooseView('stats'); } });
+    const groupClear = button('pt-secondary', 'Pokaż wszystkich', () => { if (!busy) { state.group = null; render(); scroll.scrollTop = 0; } });
+    groupBar.appendChild(groupText); groupBar.appendChild(groupBack); groupBar.appendChild(groupClear); root.appendChild(groupBar);
     if (opts.legacyNotice) root.appendChild(opts.legacyNotice);
     const scroll = el('div', 'pt-scroll'); root.appendChild(scroll);
     const footer = el('div', 'pt-list-footer');
@@ -235,6 +1197,20 @@
     function syncControls() {
       root.setAttribute('data-layout', desktop ? 'desktop' : 'compact');
       root.setAttribute('aria-busy', String(busy));
+      const stats = state.view === 'stats';
+      root.setAttribute('data-view', stats ? 'stats' : 'list');
+      Object.keys(viewNodes).forEach((key) => {
+        const active = state.view === key;
+        viewNodes[key].classList.toggle('on', active);
+        viewNodes[key].setAttribute('aria-pressed', String(active));
+        viewNodes[key].disabled = busy;
+      });
+      viewSwitch.hidden = Boolean(opts.loading);
+      toolbar.hidden = stats;
+      const grouped = !stats && Boolean(state.group) && ['all', 'base', 'ext'].includes(state.filter);
+      groupBar.hidden = !grouped;
+      if (grouped) groupText.textContent = 'Grupa ze statystyk: ' + state.group.label + ' · ' + peopleLabel(state.group.ids.length);
+      groupBack.disabled = busy; groupClear.disabled = busy;
       Object.keys(tabNodes).forEach((key) => {
         const active = state.filter === key;
         tabNodes[key].classList.toggle('on', active);
@@ -261,12 +1237,12 @@
       home.disabled = busy && !opts.loading; add.disabled = busy;
       total.hidden = Boolean(opts.loading);
       refreshDuplicates();
-      footer.hidden = Boolean(opts.loading) || isCatalog() || state.filter === 'dup';
+      footer.hidden = Boolean(opts.loading) || stats || isCatalog() || state.filter === 'dup';
       syncBack();
     }
     function refreshDuplicates() {
       const number = Number(opts.duplicates && opts.duplicates.count) || 0;
-      duplicates.hidden = !number || state.filter === 'lists';
+      duplicates.hidden = !number || state.filter === 'lists' || state.view === 'stats';
       duplicateText.textContent = 'Podobne nazwiska · ' + number + (number === 1 ? ' grupa do sprawdzenia' : ' grup do sprawdzenia');
       duplicateButton.textContent = state.filter === 'dup' ? '← Wróć do bazy' : 'Przejrzyj';
       duplicateButton.disabled = busy;
@@ -275,7 +1251,24 @@
       if (busy) return;
       if (key === 'lists' && !desktop) { openPicker(); return; }
       state.filter = key; state.listId = null; state.adding = false; state.selected = {};
-      state.sourceFilter = 'all'; memberCache = null; closeSort(); closePicker(false);
+      state.sourceFilter = 'all'; state.group = null; memberCache = null; closeSort(); closePicker(false);
+      render(); scroll.scrollTop = 0;
+    }
+    function chooseView(key) {
+      if (busy || state.view === key) return;
+      closeSort(); closePicker(false);
+      state.view = key === 'stats' ? 'stats' : 'list';
+      if (state.view === 'stats') { state.adding = false; state.selected = {}; }
+      render(); scroll.scrollTop = 0;
+      const node = viewNodes[state.view];
+      if (node && !root.contains(doc.activeElement)) node.focus();
+    }
+    // Wybór słupka albo wiersza „brakuje” otwiera zwykłą listę zawężoną do tych pacjentów.
+    function showGroup(label, ids) {
+      if (busy || !ids || !ids.length) return;
+      state.group = { label, ids: ids.slice() };
+      state.view = 'list'; state.filter = 'base'; state.listId = null; state.query = '';
+      state.adding = false; state.selected = {}; memberCache = null;
       render(); scroll.scrollTop = 0;
     }
     function savePosition() {
@@ -302,6 +1295,8 @@
       if (destroyed || typeof opts.registerBack !== 'function') return;
       let handler = null;
       if (picker) handler = () => { closePicker(true); render(); };
+      else if (state.view === 'stats') handler = () => chooseView('list');
+      else if (state.group && ['all', 'base', 'ext'].includes(state.filter)) handler = () => { if (!busy) { state.group = null; chooseView('stats'); } };
       else if (state.adding) handler = () => { if (!busy) { state.adding = false; state.selected = {}; render(); } };
       else if (state.listId) handler = backToCatalog;
       else if (state.filter === 'lists' || state.filter === 'dup') handler = () => chooseTab('all');
@@ -552,16 +1547,776 @@
       };
     }
     function renderPatients() {
-      const rows = sorted(patients.filter((patient) => sourceMatches(patient, state.filter) && matchesName(patient, state.query)));
+      const group = state.group ? new Set(state.group.ids) : null;
+      const rows = sorted(patients.filter((patient) => (!group || group.has(patient.patientId)) && sourceMatches(patient, state.filter) && matchesName(patient, state.query)));
       count.textContent = 'Wyświetlono: ' + rows.length;
       if (!rows.length) {
         empty(scroll, patients.length ? 'Brak pasujących osób' : 'Baza jest jeszcze pusta', patients.length ? 'Zmień wyszukiwanie lub wybierz inny zakres.' : 'Dodaj pacjenta, aby rozpocząć pracę z bazą.', patients.length ? 'Wyczyść wyszukiwanie i filtry' : '+ Dodaj pacjenta', () => {
-          if (patients.length) { state.query = ''; chooseTab('all'); }
+          if (patients.length) { state.query = ''; state.group = null; chooseTab('all'); }
           else if (opts.onAddPatient) opts.onAddPatient();
         });
       } else patientRows(scroll, rows);
       footerCount.textContent = peopleLabel(rows.length);
     }
+    // ── P-BAZA-STATYSTYKI, etap 1 ───────────────────────────────────────────────
+    function basePatients() { return patients.filter((patient) => !patient.__ext); }
+    function ageFromVault(dobISO) {
+      if (vault && typeof vault.calcAgeFromDOB === 'function') {
+        const age = vault.calcAgeFromDOB(dobISO);
+        return age && Number.isFinite(age.totalMonths) ? age.totalMonths : null;
+      }
+      return monthsFromDob(dobISO, new Date());
+    }
+    function cardsSignature(rows) { return rows.map((patient) => patient.patientId + '@' + (patient.lastSavedAtISO || '')).sort().join('|'); }
+    /* Słupki rysuje SVG z atrybutami geometrii (szerokości w jednostkach viewBox 0–1000),
+     * więc widok nie ustawia żadnego stylu wprost na elemencie (P-STYLE krok 5b). */
+    function statBar(className, segments) {
+      const svg = doc.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('class', 'pt-stat-bar' + (className ? ' ' + className : ''));
+      svg.setAttribute('viewBox', '0 0 1000 20'); svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+      const drawn = segments.filter((segment) => segment.width > 0);
+      let x = 0;
+      drawn.forEach((segment, index) => {
+        const rect = doc.createElementNS(SVG_NS, 'rect');
+        // 5 jednostek przerwy między stykającymi się segmentami (ok. 2 px).
+        const width = index < drawn.length - 1 ? Math.max(segment.width - 5, 1) : segment.width;
+        rect.setAttribute('class', segment.className);
+        rect.setAttribute('x', String(Math.round(x))); rect.setAttribute('y', '0');
+        rect.setAttribute('width', String(Math.round(width))); rect.setAttribute('height', '20');
+        svg.appendChild(rect); x += segment.width;
+      });
+      return svg;
+    }
+    function statTile(label, value, unit, sub, action) {
+      const tile = action ? button('pt-stat-tile pt-stat-tile--link', null, action) : el('div', 'pt-stat-tile');
+      tile.appendChild(el('span', 'pt-stat-label', label));
+      const figure = el('span', 'pt-stat-value', value);
+      if (unit) figure.appendChild(el('span', 'pt-stat-unit', ' ' + unit));
+      tile.appendChild(figure);
+      if (sub) tile.appendChild(el('span', 'pt-stat-sub', sub));
+      return tile;
+    }
+    function ageParts(months) {
+      const text = formatAge(months);
+      const split = text.lastIndexOf(' ');
+      return split === -1 ? [text, ''] : [text.slice(0, split), text.slice(split + 1)];
+    }
+    function meterRow(label, have, total, missingIds, missingLabel) {
+      const row = el('div', 'pt-stat-meter');
+      row.appendChild(el('span', 'pt-stat-meter-name', label));
+      row.appendChild(statBar('pt-stat-bar--meter', [
+        { className: 'pt-stat-fill', width: total ? have / total * 1000 : 0 }
+      ]));
+      row.appendChild(el('span', 'pt-stat-meter-figure', have + ' / ' + total));
+      const missing = missingIds ? missingIds.length : 0;
+      if (missing) {
+        const show = button('pt-stat-missing', 'Brakuje: ' + missing + ' ›', () => showGroup(missingLabel, missingIds));
+        show.setAttribute('aria-label', label + ': brakuje u ' + peopleLabel(missing) + '. Pokaż listę');
+        row.appendChild(show);
+      } else row.appendChild(el('span', 'pt-stat-missing pt-stat-missing--none', 'komplet'));
+      return row;
+    }
+    /* Karty czyta jeden przebieg: z tego samego najnowszego zapisu liczy się kompletność danych
+     * i leczenie GH. Pasek „z kart” (cardsBar) prowadzi przebieg; sekcje tylko pokazują wynik. */
+    function savedCards() {
+      return state.cards && state.cards.signature === cardsSignature(basePatients()) ? state.cards : null;
+    }
+    function ghDeps() {
+      const tempo = win.VildaTempoWzrastania, trajectory = win.VildaTrajectoryAnalysis, engine = win.VildaSdsWzrostu;
+      const sds = engine && typeof engine.policz === 'function' ? (input) => {
+        const outcome = engine.policz(input);
+        return outcome && typeof outcome.sds === 'number' && Number.isFinite(outcome.sds) ? outcome.sds : null;
+      } : null;
+      return {
+        tempo, kursy: trajectory && typeof trajectory.ghKursy === 'function' ? trajectory.ghKursy : null, sds,
+        defaultSource: typeof win.bmiSource === 'string' && win.bmiSource ? win.bmiSource.toUpperCase() : null,
+        // Tablice siatek wzrostu ładuje tylko część stron; bez nich hSDS milczy u każdego pacjenta.
+        sdsReady: Boolean(sds) && sds({ wzrost: 110, plec: 'M', wiekMies: 60, zrodlo: 'OLAF', populacja: 'OGOLNA' }) !== null
+      };
+    }
+    function obesityDeps() {
+      const cycles = win.VildaCykleLeczenia, criteria = win.ObesityResponseCriteria, engine = win.VildaBmi;
+      const bmiSds = engine && typeof engine.policz === 'function' ? (input) => {
+        const outcome = engine.policz(input);
+        return outcome && typeof outcome.sds === 'number' && Number.isFinite(outcome.sds) ? outcome.sds : null;
+      } : null;
+      return {
+        cykle: cycles && typeof cycles.podziel === 'function' ? cycles.podziel : null,
+        lek: cycles && typeof cycles.nazwaLeku === 'function' ? cycles.nazwaLeku : null,
+        tygodnie: criteria && typeof criteria.tygodnieOceny === 'function' ? (start, point) => {
+          const outcome = criteria.tygodnieOceny(start, point);
+          return outcome && typeof outcome.tygodnie === 'number' ? outcome.tygodnie : null;
+        } : null,
+        bmi: engine && typeof engine.bmi === 'function' ? engine.bmi : null,
+        dorosly: engine && typeof engine.dorosly === 'function' ? engine.dorosly : null,
+        bmiSds,
+        defaultSource: typeof win.bmiSource === 'string' && win.bmiSource ? win.bmiSource.toUpperCase() : null,
+        thresholds: obesityThresholds(win.VildaPostepyDoroslegoDane),
+        // Siatki BMI ładuje tylko część stron; bez nich BMI-SDS milczy u każdego pacjenta.
+        sdsReady: Boolean(bmiSds) && bmiSds({ bmi: 20, plec: 'M', wiekMies: 120, zrodlo: 'OLAF', populacja: 'OGOLNA' }) !== null
+      };
+    }
+    /* Punkty leczenia otyłości pacjenta: wizyty z zapisu karty razem z wpisami między wizytami
+     * (dziennik leczenia w notatkach pacjenta). Składa je moduł dziennika — ta sama projekcja,
+     * którą pokazuje Karta pacjenta. Bez modułu albo przy błędzie odczytu zostają punkty z zapisu. */
+    async function obesityPoints(patientId, payload) {
+      const saved = Array.isArray(payload.obesityTherapyPoints) ? payload.obesityTherapyPoints : [];
+      const journal = win.VildaDziennikOtylosci;
+      if (!journal || typeof journal.wczytaj !== 'function') return { points: saved, failed: false };
+      const own = vault && typeof vault.listPatientNotesForPatient === 'function' && typeof vault.savePatientNoteOnce === 'function';
+      try {
+        const loaded = await journal.wczytaj(patientId, saved, own ? { vault } : undefined);
+        return { points: loaded && Array.isArray(loaded.punkty) ? loaded.punkty : saved, failed: false };
+      } catch {
+        return { points: saved, failed: true };
+      }
+    }
+    /* ── P-BAZA-STATYSTYKI, etap 4: raport PDF i plik dla Excela ───────────────────
+     * Oba pliki powstają na tym urządzeniu z modelu statsReport. PDF składa pdfmake — te same
+     * lokalne pliki i ta sama funkcja wczytania, co wydruk postępów dorosłego; plik .xlsx pakuje
+     * lokalna biblioteka JSZip. Zapis: zwykłe pobranie, a na iPhonie w trybie aplikacji arkusz
+     * udostępniania (tam pobranie nie działa) — ta sama reguła, co w wydruku postępów. */
+    function ensureZip() {
+      if (win.JSZip) return Promise.resolve(win.JSZip);
+      if (zipLoading) return zipLoading;
+      zipLoading = new Promise((resolve, reject) => {
+        const script = doc.createElement('script');
+        script.src = 'jszip.min.js?v=1'; script.async = true;
+        script.setAttribute('data-vilda-jszip', 'statystyki');
+        script.onload = () => { if (win.JSZip) resolve(win.JSZip); else reject(new Error('biblioteka plików nie wstała')); };
+        script.onerror = () => reject(new Error('nie udało się wczytać biblioteki plików'));
+        (doc.head || doc.body || doc.documentElement).appendChild(script);
+      }).catch((error) => { zipLoading = null; throw error; });   // następne kliknięcie ma prawo spróbować jeszcze raz
+      return zipLoading;
+    }
+    function saveFile(blob, name, type) {
+      const print = win.VildaPostepyDoroslegoWydruk;
+      const abilities = print && typeof print.mozliwosci === 'function' ? print.mozliwosci() : null;
+      if (abilities && abilities.iosStandalone) {
+        const nav = win.navigator, file = typeof win.File === 'function' ? new win.File([blob], name, { type }) : null;
+        if (!file || !nav || typeof nav.share !== 'function' || typeof nav.canShare !== 'function' || !nav.canShare({ files: [file] })) {
+          return Promise.reject(new Error('ta przeglądarka nie pozwala zapisać pliku z aplikacji'));
+        }
+        // Zamknięcie arkusza udostępniania to nie awaria.
+        return nav.share({ files: [file], title: name }).then(() => 'shared', (error) => {
+          if (error && (error.name === 'AbortError' || error.name === 'NotAllowedError')) return 'cancelled';
+          throw error;
+        });
+      }
+      const url = win.URL.createObjectURL(blob), link = doc.createElement('a');
+      link.href = url; link.download = name;
+      doc.body.appendChild(link);
+      link.click();
+      // Adres zwalniany po chwili — natychmiastowe zwolnienie potrafi przerwać pobieranie.
+      win.setTimeout(() => { try { doc.body.removeChild(link); win.URL.revokeObjectURL(url); } catch { /* posprzątane */ } }, 4000);
+      return Promise.resolve('saved');
+    }
+    async function pdfBlob(report) {
+      const print = win.VildaPostepyDoroslegoWydruk;
+      if (!print || typeof print.zapewnijPdfmake !== 'function') throw new Error('moduł PDF nie jest wczytany na tej stronie');
+      const pdfMake = await print.zapewnijPdfmake();
+      return new Promise((resolve, reject) => {
+        try {
+          pdfMake.createPdf(statsDocument(report)).getBlob((blob) => { if (blob) resolve(blob); else reject(new Error('nie udało się złożyć PDF')); });
+        } catch (error) { reject(error); }
+      });
+    }
+    async function sheetBlob(report) {
+      const JSZip = await ensureZip();
+      const archive = new JSZip(), parts = xlsxParts(statsWorkbook(report));
+      Object.keys(parts).forEach((path) => archive.file(path, parts[path], { createFolders: false }));
+      return archive.generateAsync({ type: 'blob', mimeType: XLSX_TYPE, compression: 'DEFLATE' });
+    }
+    async function exportFile(kind) {
+      const saved = savedCards();
+      if (exportBusy || cardsBusy || !saved || !alive()) return;
+      exportBusy = kind;
+      exportNote = kind === 'pdf' ? 'Przygotowuję raport PDF…' : 'Przygotowuję plik dla Excela…';
+      fillBar();
+      let message;
+      try {
+        const stamp = new Date(saved.at);
+        const report = statsReport({ model: demographics(patients, { ageMonths: ageFromVault }), cards: saved, patients: basePatients(), ageMonths: ageFromVault, stamp });
+        const name = reportFileName(stamp, kind);
+        const blob = kind === 'pdf' ? await pdfBlob(report) : await sheetBlob(report);
+        const outcome = await saveFile(blob, name, kind === 'pdf' ? 'application/pdf' : XLSX_TYPE);
+        message = outcome === 'cancelled' ? 'Udostępnianie przerwane.' : (outcome === 'shared' ? 'Udostępniono plik ' : 'Zapisano plik ') + name + '.';
+      } catch (error) {
+        message = 'Nie udało się przygotować pliku' + (error && error.message ? ': ' + error.message : '') + '.';
+      }
+      exportBusy = null; exportNote = message;
+      if (!alive() || !cardsBar) return;
+      fillBar();
+      const again = cardsBar.querySelector('[data-export="' + kind + '"]');
+      if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
+    }
+    function fillBar() {
+      if (!cardsBar) return;
+      clear(cardsBar); cardsProgress = null;
+      const base = basePatients(), saved = savedCards();
+      if (cardsBusy && !saved) {
+        const progress = el('span', 'pt-stat-progress');
+        progress.setAttribute('role', 'status'); progress.setAttribute('aria-live', 'polite');
+        cardsBar.appendChild(progress);
+        cardsProgress = { text: progress };
+        updateCardsProgress();
+      } else if (saved) {
+        // W trakcie sprawdzania zmian poprzedni wynik zostaje na ekranie; przyciski czekają na koniec.
+        const when = new Date(saved.at), locked = Boolean(cardsBusy);
+        cardsBar.appendChild(el('span', null, 'Karty policzone' + (Number.isFinite(when.getTime()) ? ' o ' + timeFormatter.format(when) : '')
+          + (saved.failed ? ' · nie udało się odczytać: ' + saved.failed : '') + '.'));
+        const again = button('pt-secondary pt-stat-check', 'Policz ponownie', () => countCards(true));
+        again.disabled = locked;
+        cardsBar.appendChild(again);
+        [['pdf', 'Raport PDF'], ['xlsx', 'Eksport do Excela']].forEach(([kind, label]) => {
+          const save = button('pt-secondary pt-stat-export', label, () => exportFile(kind));
+          save.setAttribute('data-export', kind);
+          save.disabled = locked || Boolean(exportBusy);
+          cardsBar.appendChild(save);
+        });
+        const status = el('p', 'pt-stat-export-status', exportNote || 'Raport i plik dla Excela zawierają liczby z tego ekranu, bez nazwisk i dat urodzenia.');
+        status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+        cardsBar.appendChild(status);
+        if (locked) { cardsProgress = { text: status }; updateCardsProgress(); }
+      } else {
+        cardsBar.appendChild(el('span', null, 'Leczenie hormonem wzrostu, leczenie otyłości i kompletność kart liczą się z zapisów kart i wpisów między wizytami. Liczenie rusza samo po wejściu w Statystyki; po policzeniu można zapisać raport PDF i plik dla Excela.'));
+        cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz z kart (' + base.length + ')', () => countCards(true)));
+      }
+    }
+    function fillCards() {
+      if (!cardsBar) return;
+      fillBar();
+      const saved = savedCards();
+      if (cardsHost) {
+        clear(cardsHost);
+        if (saved) CARD_ITEMS.forEach(([key, label]) => {
+          const missing = saved.missing[key] || [];
+          cardsHost.appendChild(meterRow(label, saved.total - saved.failed - missing.length, saved.total - saved.failed, missing, label + ' — brak'));
+        });
+      }
+      if (ghHost) { clear(ghHost); renderGh(ghHost, saved ? saved.gh : null); }
+      if (ghHint) {
+        const cohort = saved ? saved.gh : null;
+        ghHint.textContent = cohort && cohort.treated
+          ? 'leczonych: ' + cohort.treated + ' · ' + cohort.programs.map((item) => item.program + ' ' + item.treated).join(' · ') : '';
+      }
+      if (obHost) { clear(obHost); renderObesity(obHost, saved ? saved.obesity : null); }
+      if (obHint) {
+        const cohort = saved ? saved.obesity : null;
+        obHint.textContent = cohort && cohort.treated
+          ? 'leczonych: ' + cohort.treated + ' · ' + cohort.drugs.map((item) => item.drug + ' ' + item.treated).join(' · ') : '';
+      }
+    }
+    function updateCardsProgress() {
+      if (!cardsProgress || !cardsBusy) return;
+      cardsProgress.text.textContent = cardsBusy.total ? 'Liczenie z kart… ' + cardsBusy.done + ' z ' + cardsBusy.total : 'Sprawdzam zmiany w kartach…';
+    }
+    /* ── P-BAZA-SZYBKIE: liczenie z kart ──────────────────────────────────────────
+     * Rusza samo przy wejściu w „Statystyki” (decyzja właściciela 2026-11-24). Trzy rzeczy czynią je tanim:
+     *   1. wpisy między wizytami czyta JEDEN odczyt notatek kategorii dziennika (dotąd przy każdym pacjencie
+     *      wczytywały się notatki całego konta),
+     *   2. z karty odszyfrowuje się tylko najnowsza wersja (dotąd wszystkie),
+     *   3. czytane są tylko karty nowe i zmienione — wynik pozostałych czeka w pamięci widoku (cardsPlan).
+     * „Policz ponownie” czyta wszystko od nowa. Starszy sejf bez tych odczytów liczy po staremu. */
+    function readCard(patientId, session) {
+      return typeof vault.getNewestSnapshot === 'function' ? vault.getNewestSnapshot(patientId, session) : vault.getLatestSnapshot(patientId);
+    }
+    async function readJournal(session) {
+      const journal = win.VildaDziennikOtylosci;
+      if (!journal || typeof journal.zloz !== 'function' || typeof journal.jestWpisem !== 'function' || !journal.KATEGORIA
+        || typeof vault.listPatientNotesByCategory !== 'function') return null;
+      return journalIndex(await vault.listPatientNotesByCategory(journal.KATEGORIA, session), journal.jestWpisem);
+    }
+    async function countCards(force) {
+      if (cardsBusy || !alive() || state.view !== 'stats') return;
+      const base = basePatients();
+      const run = ++cardsRun, signature = cardsSignature(base);
+      const session = { strict: true, isCurrent: () => alive() && run === cardsRun };
+      const deps = ghDeps(), obDeps = obesityDeps();
+      // Wynik karty zależy też od tego, co wczytała strona (silnik tempa, siatki, pasma) — inny zestaw to inna pamięć.
+      const depsKey = [Boolean(annualWindow(deps.tempo)), Boolean(deps.kursy), deps.sdsReady, deps.defaultSource,
+        Boolean(obDeps.cykle && obDeps.tygodnie), obDeps.sdsReady, obDeps.defaultSource, obDeps.thresholds.join('/')].join('|');
+      const cached = force !== true && state.cardCache && state.cardCache.deps === depsKey ? state.cardCache.items : null;
+      const before = force !== true ? savedCards() : null;
+      exportNote = '';
+      cardsBusy = { done: 0, total: 0 };
+      if (before) fillBar(); else fillCards();
+      let journal = null, journalBroken = false;
+      try { journal = await readJournal(session); } catch { journalBroken = true; }
+      if (run !== cardsRun) return;
+      if (!alive()) { cardsBusy = null; return; }
+      const markOf = (patientId) => journalBroken ? '!' : journal ? journal.mark(patientId) : '';
+      const plan = cardsPlan(base, cached, markOf), items = plan.kept;
+      cardsBusy = { done: 0, total: plan.stale.length };
+      updateCardsProgress();
+      // Kilka kart naraz: odczyt z magazynu i odszyfrowanie czekają poza głównym wątkiem, więc równoległe kolejki
+      // skracają liczenie; wynik nie zależy od kolejności (każda karta ma własny wpis).
+      const queue = plan.stale.slice();
+      const reader = async () => {
+        while (queue.length) {
+          if (run !== cardsRun || !alive()) return;
+          const record = queue.shift();
+          const entry = { stamp: record.lastSavedAtISO || '', journal: markOf(record.patientId), read: false, card: null, gh: null, ob: null, partial: false };
+          try {
+            const snapshot = await readCard(record.patientId, session);
+            if (run !== cardsRun) return;
+            if (snapshot && snapshot.payload) {
+              const payload = snapshot.payload;
+              let points = Array.isArray(payload.obesityTherapyPoints) ? payload.obesityTherapyPoints : [];
+              if (journal) {
+                const merged = win.VildaDziennikOtylosci.zloz(journal.of(record.patientId), points);
+                if (merged && Array.isArray(merged.punkty)) points = merged.punkty;
+              } else if (journalBroken) entry.partial = true;
+              else {
+                // Sejf albo dziennik bez szybkiego odczytu: wpisy pacjenta po staremu, osobnym odczytem.
+                const therapy = await obesityPoints(record.patientId, payload);
+                if (run !== cardsRun) return;
+                points = therapy.points;
+                if (therapy.failed) { entry.partial = true; entry.journal = '!'; }
+              }
+              entry.card = cardCompleteness(payload);
+              entry.gh = ghPatient(payload, deps);
+              entry.ob = obesityPatient(payload, points, obDeps);
+              entry.read = true;
+            }
+          } catch {
+            if (run !== cardsRun) return;
+          }
+          items[record.patientId] = entry;
+          cardsBusy.done += 1; updateCardsProgress();
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CARD_READERS, queue.length) }, reader));
+      if (run !== cardsRun) return;
+      if (!alive()) { cardsBusy = null; return; }
+      cardsBusy = null;
+      if (!alive()) return;
+      state.cardCache = { deps: depsKey, items };
+      if (before && !plan.stale.length) {
+        // Nic się nie zmieniło: zostaje ten sam wynik, nowa jest tylko chwila sprawdzenia.
+        state.cards = Object.assign({}, before, { at: new Date().toISOString() });
+        fillBar();
+        return;
+      }
+      const result = cardsResult(base, items);
+      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed: result.failed, missing: result.missing, details: result.details,
+        gh: Object.assign(ghCohort(result.treated), { sdsReady: deps.sdsReady, engineReady: Boolean(annualWindow(deps.tempo)) }),
+        obesity: Object.assign(obesityCohort(result.obese, { thresholds: obDeps.thresholds }),
+          { sdsReady: obDeps.sdsReady, engineReady: Boolean(obDeps.cykle && obDeps.tygodnie), journalFailed: result.partial }) };
+      fillCards();
+      const again = cardsBar && cardsBar.querySelector('.pt-stat-check');
+      if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
+    }
+    /* Hantla „przed → 1. rok” i pojedynczy punkt. SVG rozciąga się na szerokość wiersza
+     * (viewBox 0–1000, bez zachowania proporcji), a linie mają grubość niezależną od skali
+     * (vector-effect w arkuszu), więc kropka — krótka kreska z okrągłymi końcami — ma ten sam
+     * rozmiar na telefonie i na komputerze. Pozycje są atrybutami, nie stylem. */
+    function ghScale(cohort) {
+      const values = [cohort.first.mean, cohort.paired.before].concat(cohort.programs.map((item) => item.mean),
+        cohort.programs.map((item) => item.paired.before), cohort.programs.map((item) => item.paired.first), cohort.years.map((item) => item.mean))
+        .filter((value) => typeof value === 'number' && Number.isFinite(value));
+      return Math.max(6, Math.ceil(Math.max.apply(null, values.concat([0])) / 3) * 3);
+    }
+    function dumbbell(before, after, top) {
+      const svg = doc.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('class', 'pt-gh-plot'); svg.setAttribute('viewBox', '0 0 1000 24');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+      const x = (value) => Math.round((20 + Math.max(0, Math.min(value, top)) / top * 960) * 10) / 10;
+      const line = (className, from, to) => {
+        const node = doc.createElementNS(SVG_NS, 'line');
+        node.setAttribute('class', className);
+        node.setAttribute('x1', String(from)); node.setAttribute('x2', String(to));
+        node.setAttribute('y1', '12'); node.setAttribute('y2', '12');
+        svg.appendChild(node);
+      };
+      const dot = (className, value) => {
+        line('pt-gh-ring', x(value), x(value) + 0.01);
+        line('pt-gh-dot ' + className, x(value), x(value) + 0.01);
+      };
+      line('pt-gh-axis', 20, 980);
+      if (before !== null && after !== null) line('pt-gh-link', x(before), x(after));
+      if (before !== null) dot('pt-gh-dot--before', before);
+      if (after !== null) dot('pt-gh-dot--first', after);
+      return svg;
+    }
+    function renderGh(host, cohort) {
+      if (!cohort) {
+        host.appendChild(el('p', 'pt-stat-note', cardsBusy ? 'Trwa liczenie z kart…' : 'Pojawi się po policzeniu z kart.'));
+        return;
+      }
+      if (!cohort.treated) {
+        host.appendChild(el('p', 'pt-stat-note', 'W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.'));
+        return;
+      }
+      if (!cohort.engineReady) {
+        host.appendChild(el('p', 'pt-stat-note', 'Leczonych: ' + cohort.treated + '. Tempa nie policzono, bo na tej stronie nie wczytał się moduł tempa wzrastania. Odśwież aplikację i policz ponownie.'));
+        return;
+      }
+      const people = (count) => count + (count === 1 ? ' pacjent' : ' pacjentów');
+      const tiles = el('div', 'pt-stat-tiles pt-gh-tiles');
+      const firstTile = statTile('Tempo w 1. roku leczenia', formatVelocity(cohort.first.mean), cohort.first.n ? 'cm/rok' : '',
+        cohort.first.n ? 'mediana ' + formatVelocity(cohort.first.median) + ' · n = ' + cohort.first.n : 'żaden pacjent nie ma kontroli po 9–15 mies.',
+        cohort.first.n ? () => showGroup('GH · tempo w 1. roku', cohort.first.ids) : null);
+      if (cohort.first.n) firstTile.setAttribute('aria-label', 'Średnie tempo wzrastania w 1. roku leczenia: ' + formatVelocity(cohort.first.mean) + ' cm/rok, ' + people(cohort.first.n) + '. Pokaż listę');
+      tiles.appendChild(firstTile);
+      tiles.appendChild(statTile('Przed leczeniem → 1. rok', cohort.paired.n ? formatVelocity(cohort.paired.before) + ' → ' + formatVelocity(cohort.paired.first) : '—',
+        cohort.paired.n ? 'cm/rok' : '', cohort.paired.n ? 'n = ' + cohort.paired.n + ' z pomiarem 9–15 mies. przed Włączeniem' : 'brak pomiarów 9–15 mies. przed Włączeniem'));
+      tiles.appendChild(statTile('Zmiana hSDS w 1. roku', formatDelta(cohort.deltaSds.mean), '',
+        cohort.deltaSds.n ? 'mediana ' + formatDelta(cohort.deltaSds.median) + ' · n = ' + cohort.deltaSds.n
+          : cohort.sdsReady ? 'brak pary hSDS (płeć, wiek lub siatka)' : 'siatki wzrostu nie są wczytane na tej stronie — otwórz Bazę ze strony Start'));
+      host.appendChild(tiles);
+
+      const top = ghScale(cohort);
+      const programHead = el('div', 'pt-stat-card-head');
+      programHead.appendChild(el('h4', null, 'Wg programu (cm/rok)'));
+      const legend = el('div', 'pt-stat-legend');
+      [['before', 'przed leczeniem'], ['first', '1. rok']].forEach(([key, text]) => {
+        const item = el('span', 'pt-stat-legend-item');
+        item.appendChild(el('span', 'pt-stat-swatch pt-gh-swatch--' + key));
+        item.appendChild(el('span', null, text));
+        legend.appendChild(item);
+      });
+      programHead.appendChild(legend); host.appendChild(programHead);
+      const programs = el('div', 'pt-stat-bands');
+      cohort.programs.forEach((item) => {
+        const pairedHere = item.paired.n > 0;
+        const figure = !item.n ? 'brak tempa' : pairedHere ? formatVelocity(item.paired.before) + ' → ' + formatVelocity(item.paired.first) : formatVelocity(item.mean);
+        const describe = item.program + ': leczonych ' + item.treated + ', z tempem w 1. roku ' + item.n
+          + (item.n ? ', średnio ' + formatVelocity(item.mean) + ' cm/rok' : '') + (pairedHere ? ', pary przed i po: ' + item.paired.n : '');
+        const row = button('pt-stat-band pt-gh-row', null, () => showGroup('GH · ' + item.program, item.ids));
+        row.setAttribute('data-program', item.program);
+        row.setAttribute('aria-label', describe + '. Pokaż listę'); row.title = describe;
+        const name = el('span', 'pt-gh-name');
+        name.appendChild(el('b', null, item.program));
+        name.appendChild(el('span', 'pt-gh-n', 'n = ' + item.n + ' z ' + item.treated + (item.small ? ' · mała grupa' : '')));
+        row.appendChild(name);
+        row.appendChild(dumbbell(pairedHere ? item.paired.before : null, item.n ? (pairedHere ? item.paired.first : item.mean) : null, top));
+        row.appendChild(el('span', 'pt-stat-band-total pt-gh-figure', figure));
+        programs.appendChild(row);
+      });
+      host.appendChild(programs);
+      const axis = el('div', 'pt-gh-scale');
+      axis.setAttribute('aria-hidden', 'true');
+      [0, top / 3, top / 3 * 2, top].forEach((value) => axis.appendChild(el('span', null, String(Math.round(value)))));
+      host.appendChild(axis);
+
+      if (cohort.years.length > 1) {
+        const yearsHead = el('div', 'pt-stat-card-head');
+        yearsHead.appendChild(el('h4', null, 'Kolejne lata leczenia'));
+        host.appendChild(yearsHead);
+        const years = el('div', 'pt-stat-meters');
+        cohort.years.forEach((item) => {
+          const row = el('div', 'pt-stat-meter pt-gh-year');
+          row.setAttribute('data-year', String(item.year));
+          row.appendChild(el('span', 'pt-stat-meter-name', item.year + '. rok'));
+          row.appendChild(statBar('pt-gh-yearbar', [{ className: 'pt-stat-fill', width: Math.min(item.mean, top) / top * 1000 }]));
+          row.appendChild(el('span', 'pt-stat-meter-figure', formatVelocity(item.mean) + ' cm/rok'));
+          row.appendChild(el('span', 'pt-stat-missing pt-stat-missing--none', 'n = ' + item.n));
+          years.appendChild(row);
+        });
+        host.appendChild(years);
+      }
+
+      const without = GH_REASONS.filter(([key]) => (cohort.missing[key] || []).length);
+      if (without.length) {
+        const gaps = el('div', 'pt-gh-gaps');
+        gaps.appendChild(el('span', null, 'Bez tempa w 1. roku:'));
+        without.forEach(([key, label]) => {
+          const ids = cohort.missing[key];
+          const show = button('pt-stat-missing', label + ': ' + ids.length + ' ›', () => showGroup('GH · ' + label, ids));
+          show.setAttribute('data-reason', key);
+          gaps.appendChild(show);
+        });
+        host.appendChild(gaps);
+      }
+      host.appendChild(el('p', 'pt-stat-note', ghNote()));
+    }
+    /* ── P-BAZA-STATYSTYKI, etap 3: leczenie otyłości ───────────────────────────── */
+    // Skala wierszy „wg leku”: od zera (albo od przyrostu) w lewo do największej redukcji w prawo, w trzech równych krokach.
+    function obesityScale(cohort) {
+      const values = [];
+      OBESITY_WINDOWS.forEach((range) => {
+        values.push(cohort.windows[range.key].mean);
+        cohort.drugs.forEach((item) => values.push(item.windows[range.key].mean));
+      });
+      const known = values.filter((value) => typeof value === 'number' && Number.isFinite(value)).concat([0]);
+      const high = Math.ceil(Math.max.apply(null, known) / 5) * 5;
+      return { high, span: Math.max(15, Math.ceil((high - Math.min.apply(null, known)) / 15) * 15) };
+    }
+    /* Wykres „każdy pacjent”: jeden słupek to jeden pacjent, od najmniejszej do największej redukcji.
+     * Słupki rysuje SVG rozciągnięty na szerokość (viewBox 0–1000), a podziałkę — drugi SVG w skali
+     * 1:1 (jednostka = piksel), żeby liczby nie rozciągały się razem ze słupkami. */
+    function fall(people) {
+      const scale = fallScale(people.map((person) => person.pct)), high = scale.high, low = scale.low, step = scale.step;
+      const y = (value) => Math.round((FALL_PAD + (high - value) / (high - low) * (FALL_HEIGHT - 2 * FALL_PAD)) * 10) / 10;
+      const svg = (className, width, stretch) => {
+        const node = doc.createElementNS(SVG_NS, 'svg');
+        node.setAttribute('class', className); node.setAttribute('viewBox', '0 0 ' + width + ' ' + FALL_HEIGHT);
+        if (stretch) node.setAttribute('preserveAspectRatio', 'none');
+        node.setAttribute('aria-hidden', 'true'); node.setAttribute('focusable', 'false');
+        return node;
+      };
+      const axis = svg('pt-ob-fall-axis', 46, false), plot = svg('pt-ob-fall-plot', 1000, true);
+      const rule = (className, value) => {
+        const line = doc.createElementNS(SVG_NS, 'line');
+        line.setAttribute('class', className);
+        line.setAttribute('x1', '0'); line.setAttribute('x2', '1000');
+        line.setAttribute('y1', String(y(value))); line.setAttribute('y2', String(y(value)));
+        plot.appendChild(line);
+      };
+      for (let tick = high; tick >= low; tick -= step) {
+        const label = doc.createElementNS(SVG_NS, 'text');
+        label.setAttribute('class', 'pt-ob-tick'); label.setAttribute('x', '40'); label.setAttribute('y', String(y(tick) + 4.5));
+        label.textContent = formatDelta(tick, 0) + '%';
+        axis.appendChild(label);
+        if (tick !== 0) rule('pt-ob-grid', tick);
+      }
+      const slot = 1000 / Math.max(people.length, 16);
+      people.forEach((person, index) => {
+        const rect = doc.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('class', person.pct > 0 ? 'pt-ob-bar pt-ob-bar--gain' : 'pt-ob-bar');
+        rect.setAttribute('x', String(Math.round((index * slot + slot * 0.14) * 10) / 10));
+        rect.setAttribute('y', String(Math.min(y(0), y(person.pct))));
+        rect.setAttribute('width', String(Math.round(slot * 0.72 * 10) / 10));
+        rect.setAttribute('height', String(Math.max(Math.round(Math.abs(y(person.pct) - y(0)) * 10) / 10, 1)));
+        plot.appendChild(rect);
+      });
+      rule('pt-ob-zero', 0);
+      const wrap = el('div', 'pt-ob-fall');
+      wrap.appendChild(axis); wrap.appendChild(plot);
+      return wrap;
+    }
+    function renderObesity(host, cohort) {
+      if (!cohort) {
+        host.appendChild(el('p', 'pt-stat-note', cardsBusy ? 'Trwa liczenie z kart…' : 'Pojawi się po policzeniu z kart.'));
+        return;
+      }
+      if (!cohort.treated) {
+        host.appendChild(el('p', 'pt-stat-note', 'W bazie nie ma pacjentów z punktami leczenia otyłości.'));
+        return;
+      }
+      if (!cohort.engineReady) {
+        host.appendChild(el('p', 'pt-stat-note', 'Leczonych: ' + cohort.treated + '. Zmiany masy nie policzono, bo na tej stronie nie wczytał się moduł cykli leczenia. Odśwież aplikację i policz ponownie.'));
+        return;
+      }
+      const people = (count) => count + (count === 1 ? ' pacjent' : ' pacjentów');
+      const tiles = el('div', 'pt-stat-tiles pt-gh-tiles pt-ob-tiles');
+      OBESITY_WINDOWS.forEach((range) => {
+        const part = cohort.windows[range.key];
+        const tile = statTile('Zmiana masy ' + range.after, percentText(part.mean), '',
+          part.n ? 'mediana ' + percentText(part.median) + ' · n = ' + part.n + ' · ' + formatDelta(part.kgPerMonth, 1) + ' kg/mies.'
+            : 'żaden pacjent nie ma pomiaru w ' + range.min + '–' + range.max + ' tyg.',
+          part.n ? () => showGroup('Otyłość · masa ' + range.after, part.ids) : null);
+        tile.setAttribute('data-window', range.key);
+        if (part.n) tile.setAttribute('aria-label', 'Średnia zmiana masy ciała ' + range.after + ': ' + percentText(part.mean) + ', ' + people(part.n) + '. Pokaż listę');
+        tiles.appendChild(tile);
+      });
+      const range = obesityMainWindow(cohort);
+      const main = cohort.windows[range.key];
+      if (main.thresholds.length) {
+        const first = main.thresholds[0], rest = main.thresholds.slice(1);
+        const label = 'Redukcja o ≥ ' + first.threshold + '% ' + range.after;
+        const tile = statTile(label, main.n ? first.n + ' z ' + main.n : '—', '',
+          main.n ? percent(first.n, main.n) + '%' + rest.map((item) => ' · o ≥ ' + item.threshold + '%: ' + item.n + ' (' + percent(item.n, main.n) + '%)').join('') : 'brak pomiarów w oknie',
+          first.n ? () => showGroup('Otyłość · redukcja o ≥ ' + first.threshold + '% ' + range.after, first.ids) : null);
+        tile.setAttribute('data-tile', 'threshold');
+        if (first.n) tile.setAttribute('aria-label', label + ': ' + first.n + ' z ' + main.n + '. Pokaż listę');
+        tiles.appendChild(tile);
+      }
+      const kids = main.bmi;
+      const kidsTile = statTile('Dzieci: zmiana BMI ' + range.after, percentText(kids.mean), '',
+        kids.n ? 'n = ' + kids.n + (kids.sdsN ? ' · BMI-SDS ' + formatDelta(kids.sds, 2) + (kids.sdsN < kids.n ? ' (n = ' + kids.sdsN + ')' : '')
+          : cohort.sdsReady ? ' · BMI-SDS: brak płci, wieku lub siatki' : ' · BMI-SDS: otwórz Bazę ze strony Start')
+          : cohort.children ? 'brak pomiaru ze wzrostem w oknie' : 'brak leczonych dzieci');
+      kidsTile.setAttribute('data-tile', 'bmi');
+      tiles.appendChild(kidsTile);
+      host.appendChild(tiles);
+
+      const scale = obesityScale(cohort);
+      const position = (part) => part.n ? scale.high - part.mean : null;
+      const drugHead = el('div', 'pt-stat-card-head');
+      drugHead.appendChild(el('h4', null, 'Wg leku (zmiana masy, %)'));
+      const legend = el('div', 'pt-stat-legend');
+      [['before', OBESITY_WINDOWS[0].after], ['first', OBESITY_WINDOWS[1].after]].forEach(([key, text]) => {
+        const item = el('span', 'pt-stat-legend-item');
+        item.appendChild(el('span', 'pt-stat-swatch pt-gh-swatch--' + key));
+        item.appendChild(el('span', null, text));
+        legend.appendChild(item);
+      });
+      drugHead.appendChild(legend); host.appendChild(drugHead);
+      const drugs = el('div', 'pt-stat-bands');
+      cohort.drugs.forEach((item) => {
+        const short = item.windows[OBESITY_WINDOWS[0].key], long = item.windows[OBESITY_WINDOWS[1].key];
+        const figure = short.n && long.n ? formatDelta(short.mean, 1) + ' → ' + percentText(long.mean)
+          : short.n ? percentText(short.mean) : long.n ? percentText(long.mean) : 'brak wyniku';
+        const describe = item.drug + ': leczonych ' + item.treated + OBESITY_WINDOWS.map((period) => {
+          const part = item.windows[period.key];
+          return ', ' + period.after + ' ' + (part.n ? percentText(part.mean) + ' (n = ' + part.n + ')' : 'brak wyniku');
+        }).join('');
+        const row = button('pt-stat-band pt-gh-row pt-ob-row', null, () => showGroup('Otyłość · ' + item.drug, item.ids));
+        row.setAttribute('data-drug', item.drug);
+        row.setAttribute('aria-label', describe + '. Pokaż listę'); row.title = describe;
+        const name = el('span', 'pt-gh-name');
+        name.appendChild(el('b', null, item.drug));
+        name.appendChild(el('span', 'pt-gh-n', 'leczonych ' + item.treated
+          + OBESITY_WINDOWS.map((period) => ' · ' + period.after.replace('po ', '') + ': ' + item.windows[period.key].n).join('') + (item.small ? ' · mała grupa' : '')));
+        row.appendChild(name);
+        row.appendChild(dumbbell(position(short), position(long), scale.span));
+        row.appendChild(el('span', 'pt-stat-band-total pt-gh-figure', figure));
+        drugs.appendChild(row);
+      });
+      host.appendChild(drugs);
+      const axis = el('div', 'pt-gh-scale pt-ob-scale');
+      axis.setAttribute('aria-hidden', 'true');
+      [0, 1, 2, 3].forEach((index) => axis.appendChild(el('span', null, formatDelta(scale.high - scale.span / 3 * index, 0) + (index === 3 ? '%' : ''))));
+      host.appendChild(axis);
+
+      if (main.n) {
+        const fallHead = el('div', 'pt-stat-card-head');
+        fallHead.appendChild(el('h4', null, 'Każdy pacjent ' + range.after));
+        const fallLegend = el('div', 'pt-stat-legend');
+        [['loss', 'ubytek masy'], ['gain', 'przyrost masy']].forEach(([key, text]) => {
+          const item = el('span', 'pt-stat-legend-item');
+          item.appendChild(el('span', 'pt-stat-swatch pt-ob-swatch--' + key));
+          item.appendChild(el('span', null, text));
+          fallLegend.appendChild(item);
+        });
+        fallHead.appendChild(fallLegend);
+        host.appendChild(fallHead);
+        host.appendChild(fall(main.people));
+        const best = main.people[main.people.length - 1].pct;
+        host.appendChild(el('p', 'pt-stat-note', 'Jeden słupek to jeden pacjent, od najmniejszej do największej redukcji masy.'
+          + (best < 0 ? ' Największa redukcja: ' + percentText(best) + '.' : '')));
+      }
+
+      OBESITY_WINDOWS.forEach((period) => {
+        const without = OBESITY_REASONS.filter((key) => cohort.missing[period.key][key].length);
+        if (!without.length) return;
+        const gaps = el('div', 'pt-gh-gaps pt-ob-gaps');
+        gaps.setAttribute('data-window', period.key);
+        gaps.appendChild(el('span', null, 'Bez wyniku ' + period.after + ':'));
+        without.forEach((key) => {
+          const ids = cohort.missing[period.key][key], label = obesityReason(key, period);
+          const show = button('pt-stat-missing', label + ': ' + ids.length + ' ›', () => showGroup('Otyłość · ' + period.after + ' · ' + label, ids));
+          show.setAttribute('data-reason', key);
+          gaps.appendChild(show);
+        });
+        host.appendChild(gaps);
+      });
+      if (main.gained.length) {
+        const gained = el('div', 'pt-gh-gaps pt-ob-gaps');
+        gained.setAttribute('data-window', 'gained');
+        gained.appendChild(el('span', null, 'Przyrost masy ' + range.after + ':'));
+        const show = button('pt-stat-missing', 'pacjentów: ' + main.gained.length + ' ›', () => showGroup('Otyłość · przyrost masy ' + range.after, main.gained));
+        show.setAttribute('data-reason', 'gained');
+        gained.appendChild(show);
+        host.appendChild(gained);
+      }
+      host.appendChild(el('p', 'pt-stat-note', obesityNote(cohort.journalFailed)));
+    }
+    function renderStats() {
+      cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; cardsProgress = null;
+      const model = demographics(patients, { ageMonths: ageFromVault });
+      if (!model.total) {
+        empty(scroll, 'Brak pacjentów w bazie', 'Statystyki pojawią się po dodaniu pierwszego pacjenta.', '+ Dodaj pacjenta', () => { if (opts.onAddPatient) opts.onAddPatient(); });
+        return;
+      }
+      const wrap = el('div', 'pt-stats');
+
+      const tiles = el('div', 'pt-stat-tiles');
+      tiles.appendChild(statTile('Pacjenci w bazie', String(model.total), '', model.recent + ' z zapisem w ostatnich 12 mies.'));
+      if (model.withAge) {
+        const meanAge = ageParts(model.meanMonths);
+        tiles.appendChild(statTile('Średni wiek', meanAge[0], meanAge[1],
+          'mediana ' + formatAge(model.medianMonths) + ' · od ' + formatAge(model.minMonths) + ' do ' + formatAge(model.maxMonths)));
+      } else tiles.appendChild(statTile('Średni wiek', '—', '', 'brak dat urodzenia'));
+      [['M', 'Chłopcy'], ['F', 'Dziewczęta']].forEach(([key, label]) => {
+        const average = model.meanMonthsBySex[key];
+        const sub = percent(model.sex[key], model.total) + '%' + (average === null ? '' : ' · średni wiek ' + formatAge(average));
+        const tile = statTile(label, String(model.sex[key]), '', sub, model.sex[key] ? () => showGroup(label, model.sexIds[key]) : null);
+        if (model.sex[key]) tile.setAttribute('aria-label', label + ': ' + model.sex[key] + ', ' + sub + '. Pokaż listę');
+        tiles.appendChild(tile);
+      });
+      wrap.appendChild(tiles);
+
+      const ageCard = el('section', 'pt-stat-card');
+      const ageHead = el('div', 'pt-stat-card-head');
+      ageHead.appendChild(el('h3', null, 'Wiek i płeć'));
+      const legend = el('div', 'pt-stat-legend');
+      [['m', 'Chłopcy ' + model.sex.M], ['f', 'Dziewczęta ' + model.sex.F]].concat(model.sex.unknown ? [['u', 'Płeć nieznana ' + model.sex.unknown]] : [])
+        .forEach(([key, text]) => {
+          const item = el('span', 'pt-stat-legend-item');
+          item.appendChild(el('span', 'pt-stat-swatch pt-stat-swatch--' + key));
+          item.appendChild(el('span', null, text));
+          legend.appendChild(item);
+        });
+      ageHead.appendChild(legend); ageCard.appendChild(ageHead);
+      const most = Math.max.apply(null, model.bands.map((band) => band.total).concat([1]));
+      const bandList = el('div', 'pt-stat-bands');
+      model.bands.forEach((band) => {
+        const describe = band.label + ': ' + peopleLabel(band.total) + ' (chłopcy ' + band.M + ', dziewczęta ' + band.F + (band.unknown ? ', płeć nieznana ' + band.unknown : '') + ')';
+        const row = band.total ? button('pt-stat-band', null, () => showGroup(band.label, band.ids)) : el('div', 'pt-stat-band pt-stat-band--empty');
+        row.setAttribute('data-band', band.key);
+        if (band.total) { row.setAttribute('aria-label', describe + '. Pokaż listę'); row.title = describe; }
+        row.appendChild(el('span', 'pt-stat-band-name', band.label));
+        row.appendChild(statBar('', [
+          { className: 'pt-stat-seg--m', width: band.M / most * 1000 },
+          { className: 'pt-stat-seg--f', width: band.F / most * 1000 },
+          { className: 'pt-stat-seg--u', width: band.unknown / most * 1000 }
+        ]));
+        row.appendChild(el('span', 'pt-stat-band-total', String(band.total)));
+        bandList.appendChild(row);
+      });
+      ageCard.appendChild(bandList);
+      ageCard.appendChild(el('p', 'pt-stat-note', 'Wiek na dziś, liczony z daty urodzenia. Wybierz przedział, aby zobaczyć pacjentów.'
+        + (model.missingDob.length ? ' Bez daty urodzenia: ' + model.missingDob.length + ' (poza wiekiem).' : '')));
+      wrap.appendChild(ageCard);
+
+      cardsBar = el('div', 'pt-stat-cards-foot pt-stat-cardsbar');
+      wrap.appendChild(cardsBar);
+
+      const ghCard = el('section', 'pt-stat-card pt-gh');
+      const ghHead = el('div', 'pt-stat-card-head');
+      ghHead.appendChild(el('h3', null, 'Leczenie hormonem wzrostu'));
+      ghHint = el('span', 'pt-stat-card-hint');
+      ghHead.appendChild(ghHint);
+      ghCard.appendChild(ghHead);
+      ghHost = el('div', 'pt-gh-body');
+      ghCard.appendChild(ghHost);
+      wrap.appendChild(ghCard);
+
+      const obCard = el('section', 'pt-stat-card pt-ob');
+      const obHead = el('div', 'pt-stat-card-head');
+      obHead.appendChild(el('h3', null, 'Leczenie otyłości'));
+      obHint = el('span', 'pt-stat-card-hint');
+      obHead.appendChild(obHint);
+      obCard.appendChild(obHead);
+      obHost = el('div', 'pt-gh-body pt-ob-body');
+      obCard.appendChild(obHost);
+      wrap.appendChild(obCard);
+
+      const dataCard = el('section', 'pt-stat-card');
+      const dataHead = el('div', 'pt-stat-card-head');
+      dataHead.appendChild(el('h3', null, 'Kompletność danych'));
+      dataHead.appendChild(el('span', 'pt-stat-card-hint', 'im pełniejsze karty, tym więcej pacjentów wejdzie do kolejnych statystyk'));
+      dataCard.appendChild(dataHead);
+      const headerRows = el('div', 'pt-stat-meters');
+      headerRows.appendChild(meterRow('Data urodzenia', model.total - model.missingDob.length, model.total, model.missingDob, 'Data urodzenia — brak'));
+      headerRows.appendChild(meterRow('Płeć', model.total - model.missingSex.length, model.total, model.missingSex, 'Płeć — brak'));
+      dataCard.appendChild(headerRows);
+      cardsHost = el('div', 'pt-stat-meters pt-stat-cards');
+      dataCard.appendChild(cardsHost);
+      fillCards();
+      wrap.appendChild(dataCard);
+
+      wrap.appendChild(el('p', 'pt-stat-note pt-stat-note--foot', footNote(model.total)));
+      scroll.appendChild(wrap);
+      // Liczenie rusza samo, raz na wejście w „Statystyki” (decyzja właściciela 2026-11-24).
+      if (!statsCounted) { statsCounted = true; countCards(false); }
+    }
+
     function reader() {
       if (!listReader) listReader = typeof vault.createPatientListReader === 'function' ? vault.createPatientListReader({ isCurrent: alive }) : vault;
       return listReader;
@@ -778,6 +2533,8 @@
       if (rowWindow) { rowWindow.destroy(); rowWindow = null; }
       clear(scroll);
       if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
+      if (state.view === 'stats') { count.textContent = ''; renderStats(); restorePosition(); return; }
+      ++cardsRun; cardsBusy = null; statsCounted = false; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
         if (opts.duplicates && typeof opts.duplicates.render === 'function') opts.duplicates.render(scroll);
@@ -901,7 +2658,7 @@
     }
     function destroy() {
       if (destroyed) return;
-      finalSnapshot = read(); destroyed = true; ++readSequence; invalidateLists();
+      finalSnapshot = read(); destroyed = true; ++readSequence; ++cardsRun; cardsBusy = null; invalidateLists();
       closePicker(false); closeSort();
       if (rowWindow) { rowWindow.destroy(); rowWindow = null; }
       if (unregisterBack) { unregisterBack(); unregisterBack = null; }
@@ -946,5 +2703,7 @@
     return { root, read, destroy, mount, refreshDuplicates, deferRefresh };
   }
   function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
-  win.VildaPatientsList = Object.freeze({ create, createLoading });
+  win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
+    statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName,
+    journalIndex, cardsPlan, cardsResult });
 })(typeof window !== 'undefined' ? window : null);

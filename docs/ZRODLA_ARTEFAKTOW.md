@@ -2913,6 +2913,34 @@ minifikacji.
 // → /* P-WALIDACJA-KAFEL-KROTKO … */r("div",{class:"vilda-patient-stat-sub",text:"uzupełnij wiek kostny lub wzrost rodziców"})
 ```
 
+## Łatka P-BAZA-SZYBKIE — sejf: odczyt najnowszej wersji karty i notatek jednej kategorii (`vilda_vault.js` 285 → 286, 2026-11-24, decyzja właściciela „zrób A i B razem”)
+
+Artefakt `vilda_vault.js` jest zminifikowany; zmiana to dwie dopisane funkcje tylko do odczytu i dwa wpisy mapy eksportu.
+Nic istniejącego nie zostało zmienione. Opis i uzasadnienie: `docs/clinical/ALGORITHMS.md`, wpis P-BAZA-SZYBKIE.
+
+1. Kotwica (jednoznaczna, poza blokiem natywnym i poza blokiem trwałych wizyt):
+   `async function hr(t){const e=await ct(t);return!e||!e.snapshots.length?null:e.snapshots[0]}` — bezpośrednio po niej,
+   w nowych liniach, komentarz i funkcje `Bnw_najnowsza(t, opcje)` oraz `Bnw_notatki(kategoria, opcje)`.
+   - `Bnw_najnowsza`: koperty wersji pacjenta (`listSnapshotsForUser`) porządkuje tym samym `yr`, co `ct` (pola jawne
+     koperty: `savedAtISO`, `updatedAtISO`, `rev`, `seq`, `snapshotId`), odszyfrowuje tylko pierwszą i przepuszcza ją
+     przez `Bvisit_read`; wynik ma kształt elementu `getLatestSnapshot`. Nie czyta nagłówka i nie woła `Bzu_zapamietaj`.
+   - `Bnw_notatki`: koperty notatek konta filtruje po jawnej kategorii (`Un(koperta.category)`) i odszyfrowuje tylko
+     pasujące (`Ft`), w porządku `Fr` — jak `listAllPatientNotes`.
+   - Obie honorują odczyt ścisły (`VaultStrictReadSession` / `VaultStrictReadAssert`).
+2. Kotwica w mapie eksportu: `listPatientTreatmentPeriods:Ao,` → dopisane
+   `getNewestSnapshot:Bnw_najnowsza,listPatientNotesByCategory:Bnw_notatki,`. Wpisu nie wolno stawiać przy
+   `getLatestSnapshot:hr,` — ten fragment mapy jest tekstem haka `41-Bvisit_list` warstwy trwałych wizyt.
+3. Przeliczone skróty (7 wartości w 5 plikach, jak przy każdej zmianie sejfu poza blokiem natywnym):
+   `runtime/durable-visits-v1/manifest.json` (`baseVaultSHA256`, `integratedVaultSHA256`), `tools/visits-vault-delta.mjs`
+   (`BASE`), `tests/unit/visits-vault-boundary.test.mjs`, `runtime/clinical-workspace-v1/manifest.json`
+   (`baseVaultSHA256`, `integratedVaultSHA256`), `tools/check_clinical_workspace_boundary.mjs` (`BASE`). Wartości niżej,
+   w akapitach „Od P-BAZA-SZYBKIE”. Kontrola: `node tools/visits-vault-delta.mjs`,
+   `node tools/check_clinical_workspace_boundary.mjs`.
+4. Lint: nowy kod nie dokłada naruszeń do `eslint-suppressions.json` (zmienna ładunku bez zbędnego przypisania).
+
+Strażnik: `tests/unit/sejf-odczyt-najnowszej.test.mjs` (prawdziwy sejf: ten sam wynik, co `getLatestSnapshot`, jedno
+odszyfrowanie zamiast sześciu; zgodność po poprawce, przypięciu i przywróceniu wersji; odczyt ścisły; blokada).
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -2988,12 +3016,18 @@ trwałych wizyt: SHA-256 `3e7bcd5a4ef38b482c00d318db8cf9c126b50d024dcc182e65bb11
 vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-PR0e1 (`audyt` `a7b2920b`); bieżącą bazę daje to samo
 odwrócenie delty co wyżej.
 
+Od P-BAZA-SZYBKIE (dwa odczyty dla statystyk Bazy pacjentów: `getNewestSnapshot` i `listPatientNotesByCategory`;
+zmiana poza blokiem trwałych wizyt i poza blokiem natywnym) bazą delty jest obraz sejfu po tej zmianie bez bloku
+trwałych wizyt: SHA-256 `776c4c6907f52c48a16a321d40599a9d8a0505ecd82bfe4a0eab4f41118e9b14`, a wynikiem — bieżący
+`vilda_vault.js` (`63deb8c33eed2d17647803b985862c7efc7e1b7f9e7bdf930565fd6d9a04c97d`). Baza `3e7bcd5a…` odpowiada stanowi
+sprzed P-BAZA-SZYBKIE (`audyt` `8f4f3cf8`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
 Od E3-PR0e2a (P-SYNC-WLASCICIEL, chwila przypisania wersji do karty — pierwsze wydanie nowego pola; zmiana poza blokiem
 trwałych wizyt, w bloku P-DZIENNIK-ZDARZEN tylko kształt koperty i reguła pola odsyłania; wstawki w eksportach za końcem
 tekstów haków, teksty 41 haków bez zmian) bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
-`8dc93f9539addde546e81bad3e756e5789a47cc6591e335c8ae63caec6368eef`, a wynikiem — bieżący `vilda_vault.js`
-(`34270b175b725f17b9552cbc2127da70180f293608d3dad877910d6a6dc6cd0e`). Baza `3e7bcd5a…` (po vildaclinic/vilda-calc#1045)
-odpowiada stanowi sprzed E3-PR0e2a (`audyt` `d6f133eb`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+`50063edfbe97d1174c95e6be489c81ae5294749bff2fe0860ec426a7c20a31f8`, a wynikiem — bieżący `vilda_vault.js`
+(`3bebcc8ed48cd321ef5b2d2d5058fddebc40211d756f4978583a0f5d18cb9928`). Baza `776c4c69…` (po vildaclinic/vilda-calc#1058)
+odpowiada stanowi sprzed E3-PR0e2a (`audyt` `ac0869f2`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -3149,12 +3183,19 @@ Baza `1464cdf4…` (po vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-
 natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości
 są w `runtime/clinical-workspace-v1/manifest.json`.
 
+Od P-BAZA-SZYBKIE (zmiana sejfu tylko poza blokiem natywnym — funkcje `Bnw_najnowsza` i `Bnw_notatki` oraz dwa wpisy
+mapy eksportu) baza sejfu to `8f8d3490c8b7178f07441a83f18d9a870f0dfeaa3f1d96977086b4027b57a6cc`, a
+`integratedVaultSHA256` (obraz pośredni) — `5c395dd0d24f19a3b76116d93d416d956699bda31100d486f75ac0731e8d1d85`.
+Baza `75fa66c9…` odpowiada stanowi sprzed P-BAZA-SZYBKIE (`audyt` `8f4f3cf8`). Blok natywny, haki natywne, rodzina
+modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w
+`runtime/clinical-workspace-v1/manifest.json`.
+
 Od E3-PR0e2a (P-SYNC-WLASCICIEL; zmiana sejfu tylko poza blokiem natywnym — chwila przypisania wersji do karty: łączenie
 w drogach zapisu, eksporty, importy, porównanie właściciela wersji, kształt koperty i reguła pola odsyłania, komentarze)
-baza sejfu to `c3ccdcf2c8f5735fc1cb693a39d828c06b1727ca5608ab94b19de2697fe3a458`, a `integratedVaultSHA256` (obraz
-pośredni) — `a77b7973c3ba13ea9f09ebda4cce27e305a9bd3f8e2b91ada5dc82825b18ecc5`. Baza `75fa66c9…` (po
-vildaclinic/vilda-calc#1045) odpowiada stanowi sprzed E3-PR0e2a (`audyt` `d6f133eb`). Blok natywny, haki natywne, rodzina
-modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w
+baza sejfu to `989fec00e7cbcb8478c972b666cb2a97479e5eb0decf9364bb2cae58b03143c6`, a `integratedVaultSHA256` (obraz
+pośredni) — `916382e1b0b0a5f4985b105d396f5c60a1f702ccf9298d7c0861aeabefa0d6d6`. Baza `8f8d3490…` (po
+vildaclinic/vilda-calc#1058) odpowiada stanowi sprzed E3-PR0e2a (`audyt` `ac0869f2`). Blok natywny, haki natywne,
+rodzina modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w
 `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,

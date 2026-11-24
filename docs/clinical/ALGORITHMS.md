@@ -47281,6 +47281,363 @@ wzrost rodziców” (decyzja właściciela 2026-11-23), żeby kafel nie wydłuż
 `vilda_growth_prediction_validation.js` 15 → 16, `vilda_chrome.js` 323 → 324 i `vilda_session_bridge.js` 239 → 240
 (wstrzykują pliki z nowym `?v=`), SW 1.1.578 → 1.1.579 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
 
+## P-BAZA-STATYSTYKI, etap 1 — Baza pacjentów: widok „Statystyki” (wiek, płeć, kompletność danych) (SW 1.1.580, `vilda_patients_list.js` 6, `vilda_patients_list.css` 5, 2026-11-23)
+
+**Zmiana kliniczna: NIE.** Statystyki opisowe własnej bazy: liczebności, średnia i mediana wieku, podział na płeć
+i kompletność danych. Bez norm, progów i interpretacji; żaden wynik pacjenta, zapis karty ani sejf się nie zmienia.
+Widok tylko czyta.
+
+**Decyzja właściciela (2026-11-23).** Makieta (komputer, telefon, lista po kliknięciu słupka) i plan etapów: (1) wiek,
+płeć i kompletność danych, (2) leczenie GH — główna liczba: tempo wzrastania w 1. roku leczenia, (3) leczenie otyłości —
+zmiana masy po 12 tygodniach i 6 miesiącach, (4) eksport i raport PDF. Przedziały wieku: 0–2, 3–5, 6–9, 10–13, 14–17, 18+.
+Pole „rozpoznanie” w karcie — osobna zmiana (zapis karty).
+
+**Skąd dane.**
+- **Wiek i płeć — z nagłówków kart** (`listPatientDirectory`, te same rekordy, które rysuje lista): bez odszyfrowania
+  zapisów, liczone od razu po otwarciu widoku.
+- **Kompletność kart — z najnowszego zapisu każdego pacjenta** (`getLatestSnapshot`), dopiero po „Sprawdź karty (N)”:
+  po kolei, z licznikiem „Sprawdzanie kart… k z N”. Wyjście z widoku przerywa przebieg. Wynik zostaje w pamięci widoku
+  do końca odblokowanej sesji i jest odrzucany, gdy zmieni się zestaw kart albo czas ostatniego zapisu którejkolwiek.
+
+**Reguły (model: `demographics`, `cardCompleteness` w `vilda_patients_list.js`).**
+1. Liczą się wyłącznie pacjenci z bazy; osoby „spoza bazy” nie mają kart i nie wchodzą do żadnej liczby.
+2. **Wiek = wiek na dziś z pełnej daty urodzenia**, w pełnych miesiącach na dobę lokalną (`calcAgeFromDOB` sejfu,
+   DOB-AGE-1). Ta sama zasada, co w wierszu listy: wiek z zapisu pomiaru ani sam rok urodzenia nie udają wieku bieżącego.
+   Pacjent bez daty urodzenia (albo z datą błędną lub przyszłą) nie wchodzi do średniej, mediany ani przedziałów i jest
+   wykazany („Bez daty urodzenia: n (poza wiekiem)”, wiersz kompletności „Data urodzenia”).
+3. Średnia i mediana z miesięcy; zapis: poniżej roku „N mies.”, dalej lata z jednym miejscem po przecinku („10,5 roku”).
+   Przedziały w pełnych latach (2 lata i 11 mies. to „0–2”, 3 lata to „3–5”).
+4. Płeć: `M` — chłopcy, `F` i `K` — dziewczęta, pozostałe — „płeć nieznana” (osobna pozycja legendy i wiersz kompletności).
+   Odsetki od wszystkich pacjentów z bazy.
+5. „Z zapisem w ostatnich 12 mies.” — `lastSavedAtISO` karty nie starszy niż rok (ostatni zapis, nie data wizyty).
+6. Kompletność karty: **co najmniej 2 pomiary wzrostu** w różnym wieku (wiersze historii `advanced.data.measurements`
+   i `growthBasic.data.measurements`, punkty `ghTherapyPoints` i `obesityTherapyPoints`, bieżący pomiar z formularza;
+   ten sam wiek w miesiącach liczy się raz), **wzrost obojga rodziców** (`advanced.motherHeight` i `fatherHeight` > 0),
+   **masa urodzeniowa** (`birth.weight` albo `perinatal.birthWeightG` > 0). Karta, której nie udało się odczytać, jest
+   wykazana osobno i nie wchodzi do mianownika.
+7. Kliknięcie przedziału wieku, kafla płci albo „Brakuje: n” otwiera zwykłą listę zawężoną do tych pacjentów (pasek
+   „Grupa ze statystyk: …” z powrotem do statystyk i „Pokaż wszystkich”); wyszukiwanie działa wewnątrz grupy.
+
+**Rysowanie.** Słupki to SVG z atrybutami geometrii (szerokości w jednostkach `viewBox`), więc widok nie ustawia stylów
+wprost na elementach (P-STYLE krok 5b bez zmian fixture). Kolory serii: chłopcy `#2a78d6`, dziewczęta `#eb6834`
+(para sprawdzona pod kątem rozróżnialności przy zaburzeniach widzenia barw), z legendą i liczbami tekstem. Bez nowych
+plików ładowanych przez strony: model i widok są w `vilda_patients_list.js`, style w `vilda_patients_list.css`
+(instalacja offline ma limit 600 żądań).
+
+**Przypadek syntetyczny (zegar 17.06.2026; `tests/support/baza-pacjentow-statystyki.mjs`).** 8 pacjentów z bazy
+(daty urodzenia 2024-12-01, 2021-06-17, 2018-01-10, 2014-03-20, 2010-09-01, 2005-05-05, jeden bez daty, 2016-06-18 bez
+płci) i 1 osoba spoza bazy → „Pacjenci w bazie 8”, średni wiek 10,5 roku, mediana 9,9 roku, od 1,5 roku do 21,1 roku,
+chłopcy 4 (50%, średnio 9,7 roku), dziewczęta 3 (38%, średnio 11,6 roku), przedziały 1/1/2/1/1/1, data urodzenia 7/8,
+płeć 7/8; po sprawdzeniu kart: pomiary 2/8, rodzice 1/8, masa urodzeniowa 2/8.
+
+**Strażnicy.** `tests/unit/baza-statystyki.test.mjs` (12: osoby spoza bazy, płeć, dzień przed urodzinami, granice
+przedziałów, średnia/mediana, brak i błąd daty urodzenia, ostatni zapis, pusta baza, kompletność karty, zapis wieku —
+model z pliku produkcyjnego); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (4: liczby i szerokości słupków na
+prawdziwym sejfie; grupy z wykresu i z „Brakuje”; karty odszyfrowywane dopiero na prośbę — 0 odczytów przy otwarciu,
+8 po przycisku, 0 po powrocie; telefon 390 px — dwie kolumny, cel dotyku ≥ 44 px, bez przewijania w bok).
+
+**Wersje.** `vilda_patients_list.js` 5 → 6, `vilda_patients_list.css` 4 → 5, `vilda_chrome.js` 324 → 325
+i `vilda_session_bridge.js` 240 → 241 (wstrzykują pliki z nowym `?v=`), SW 1.1.579 → 1.1.580 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 2 — Baza pacjentów: statystyki leczenia hormonem wzrostu (SW 1.1.581, `vilda_patients_list.js` 7, `vilda_patients_list.css` 6, 2026-11-24)
+
+**Zmiana kliniczna: MOŻLIWA — nowa statystyka opisowa bazy (średnie tempo wzrastania i zmiana hSDS u leczonych GH).**
+Wynik pojedynczego pacjenta, zapis karty, wzory, normy i progi — bez zmian. Model nie ma własnego wzoru: tempo liczy
+`VildaTempoWzrastania.odcinek` (P-TEMPO), kursy dzieli `VildaTrajectoryAnalysis.ghKursy` (P-GH-WZNOWIENIE), hSDS liczy
+`VildaSdsWzrostu.policz` (P-SDS). Nowe są wyłącznie definicje doboru par pomiarów i uśrednienie po pacjentach — do
+akceptacji właściciela.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów; etap 2 — leczenie GH, główna liczba: tempo wzrastania w 1. roku
+leczenia. 2026-11-24: „jako etap 2 ruszaj z leczeniem GH”.
+
+**Źródła i jednostki.** Wzór tempa (cm/rok): (h2 − h1) / ((m2 − m1) / 12), jak w całej aplikacji (P-TEMPO-1). Okno roczne
+9–15 mies. z celem 12 mies. — stałe silnika tempa `P.ROCZNE_OKNO_MIN_M`, `P.ROCZNE_OKNO_MAX_M`, `P.ROCZNE_CEL_M`
+(model czyta je z silnika, nie ma własnych liczb). hSDS: siatka zapisana w karcie (`zscore.dataSource`; bez niej — bieżące
+źródło strony), populacja z karty (`clinical.downSyndrome` → siatki zespołu Downa), reguły siatek jak w P-SDS. Wiek punktu
+leczenia: lata × 12 + miesiące (jak w Karcie i monitorze terapii).
+
+**Definicje (model: `ghPatient`, `ghCohort` w `vilda_patients_list.js`).**
+1. **Leczony** — karta ma co najmniej jeden punkt leczenia GH (`ghTherapyPoints`: Włączenie, Kontynuacja, Zakończenie).
+   Program IGF-1 (mekasermina) jest wykazany jako osobny program.
+2. **Kurs** — liczy się pierwszy kurs z punktem Włączenia. Leczenie wznowione po Zakończeniu to osobny kurs i nie wchodzi
+   do „pierwszego roku”.
+3. **Odcinek roczny** — dwa pomiary odległe o 9–15 mies., najbliżej 12; przy równej odległości od 12 — bliższy w czasie.
+4. **Tempo w 1. roku leczenia** — od Włączenia (ze wzrostem) do kontroli z odcinka rocznego. **Kolejne lata** — łańcuchem:
+   2. rok od kontroli 1. roku do następnej kontroli z okna itd. (pokazywane do 4. roku).
+5. **Tempo przed leczeniem** — pomiar 9–15 mies. przed Włączeniem (najbliżej 12) → Włączenie. Pomiary sprzed leczenia:
+   wiersze historii (`advanced.data.measurements`, `growthBasic.data.measurements`) i punkty leczenia o wcześniejszym wieku.
+   Para „przed → 1. rok” liczy tylko pacjentów, którzy mają obie wartości (ci sami pacjenci po obu stronach).
+6. **Zmiana hSDS w 1. roku** — hSDS kontroli 1. roku − hSDS Włączenia. Bez płci albo bez siatki dla wieku pacjent nie
+   wchodzi do średniej. Tablice siatek wzrostu ładują strony Start, DocPro i Klirens; na pozostałych kafel mówi, że
+   siatki nie są wczytane (tempo liczy się wszędzie).
+7. **Kto nie wchodzi do średniej** (wykazany z powodem i listą pacjentów): „brak Włączenia ze wzrostem”, „brak kontroli po
+   9–15 mies.” (są późniejsze punkty, ale żaden w oknie), „leczenie krótsze niż 9 mies.”.
+8. **Uśrednianie** — średnia arytmetyczna i mediana po pacjentach (każdy pacjent raz). „Wg programu”: program punktu
+   Włączenia (bez niego — pierwszy program w kursie; brak — „bez programu”). Grupa z mniej niż 5 pacjentami z tempem jest
+   oznaczona „mała grupa”.
+
+**Jeden przebieg po kartach.** Kompletność danych (etap 1) i leczenie GH liczą się z tego samego odczytu najnowszego
+zapisu każdej karty — po „Policz z kart (N)” (dotąd „Sprawdź karty”); pasek pokazuje postęp, a potem godzinę policzenia.
+
+**Rysowanie.** Hantla „przed → 1. rok” i słupki lat to SVG z atrybutami geometrii; kropki mają stały rozmiar przez
+`vector-effect: non-scaling-stroke` w arkuszu (bez stylów na elementach). Kliknięcie programu, kafla tempa albo powodu
+braku otwiera listę tych pacjentów.
+
+**Przypadki syntetyczne (prawdziwe silniki).**
+- dziewczynka, SNP: 5 l. 0 mies. 105,0 cm (historia); Włączenie 6 l. 0 mies. 109,2 cm; kontrole 6 l. 6 mies. 114,5 ·
+  7 l. 0 mies. 118,8 · 8 l. 1 mies. 126,4 → przed 4,2; 1. rok 9,6 (kontrola po 6 mies. pominięta); 2. rok 7,6 / (13/12) = 7,0;
+- chłopiec, SGA: Włączenie 5 l. 0 mies. 100,0 cm; kontrole po 10 mies. 106,0 i po 15 mies. 108,4 → 1. rok 6,0 / (10/12) = 7,2
+  (10 mies. bliżej celu niż 15);
+- Włączenie i kontrola po 6 mies. → „leczenie krótsze niż 9 mies.”; Włączenie i kontrola po 20 mies. → „brak kontroli po
+  9–15 mies.”; same Kontynuacje → „brak Włączenia ze wzrostem”;
+- Włączenie 5 l. 100 cm, Zakończenie 6 l. 108,4 cm, ponowne Włączenie 8 l. → 1. rok 8,4 z pierwszego kursu, program
+  pierwszego kursu.
+
+**Strażnicy.** `tests/unit/baza-statystyki-gh.test.mjs` (11: model na prawdziwym silniku tempa i `ghKursy` — okno
+z silnika, 1. rok i łańcuch lat, remis, powody braku, wznowienie, zapis pusty, brak silnika, hSDS z siatką i populacją
+z karty, kohorta, programy, mała grupa); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (5; nowy test leczenia GH na
+prawdziwym sejfie: 4 leczonych, 1. rok 8,4 cm/rok, para 4,5 → 9,4, zmiana hSDS równa wynikowi silnika siatek strony, programy,
+lata, grupy pacjentów; telefon — bez przewijania w bok, kropki 12 px).
+
+**Wersje.** `vilda_patients_list.js` 6 → 7, `vilda_patients_list.css` 5 → 6, `vilda_chrome.js` 325 → 326
+i `vilda_session_bridge.js` 241 → 242 (wstrzykują pliki z nowym `?v=`), SW 1.1.580 → 1.1.581 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 3 — Baza pacjentów: statystyki leczenia otyłości (SW 1.1.582, `vilda_patients_list.js` 8, `vilda_patients_list.css` 7, 2026-11-24)
+
+**Zmiana kliniczna: MOŻLIWA — nowa statystyka opisowa bazy (zmiana masy ciała i BMI u leczonych z powodu otyłości).**
+Wynik pojedynczego pacjenta, zapis karty, dziennik leczenia, kryteria ChPL, normy i progi — bez zmian. Model nie zna reguł
+leczenia: cykle dzieli `VildaCykleLeczenia.podziel` (P-OTYLOSC-CYKLE), tygodnie leczenia liczy
+`ObesityResponseCriteria.tygodnieOceny` (jak Karta pacjenta), BMI i BMI-SDS liczy `VildaBmi` (P-BMI), granicę
+dziecko/dorosły daje `VildaBmi.dorosly`, a punkty leczenia składa `VildaDziennikOtylosci.wczytaj` (P-OTYLOSC-DZIENNIK).
+Nowe są definicje okien pomiaru, dwie proste wielkości (zmiana masy w % i tempo w kg/mies.) oraz uśrednienie po pacjentach
+— do akceptacji właściciela.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów; etap 3 — leczenie otyłości, okna „po 12 tygodniach i po 6 miesiącach”.
+2026-11-24: „rób etap 3 — leczenie otyłości”.
+
+**Źródła i jednostki.** Masa w kg, wzrost w cm. Tygodnie leczenia: z dat obu punktów (zaokrąglone do pełnych tygodni),
+a bez dat — z różnicy wieku (miesiące × 4,345) — funkcja silnika kryteriów, bez własnego liczenia. BMI punktu: z masy
+i wzrostu (`VildaBmi.bmi`), a bez nich z zapisanego BMI — jak w Karcie pacjenta. BMI-SDS: siatka zapisana w karcie
+(`zscore.dataSource`; bez niej — bieżące źródło strony), populacja z karty (`clinical.downSyndrome` → siatki zespołu Downa),
+reguły siatek jak w P-BMI. Progi „redukcja o co najmniej X%” nie są wpisane w model: to szczeble wspólne wszystkim drabinkom
+pasm aplikacji z pliku danych `vilda_postepy_doroslego_dane.js` (P-POSTEPY) — dziś 5 i 10%; są drabinką prezentacyjną, nie
+kryterium odstawienia leku (to ma jedno miejsce: `obesity_response_criteria.js`).
+
+**Definicje (model: `obesityPatient`, `obesityCohort`, `obesityThresholds` w `vilda_patients_list.js`).**
+1. **Leczony** — pacjent ma co najmniej jeden punkt leczenia otyłości (Włączenie, Kontynuacja, Zakończenie): wizyty z zapisu
+   karty (`obesityTherapyPoints`) razem z wpisami między wizytami z dziennika leczenia (notatki pacjenta kategorii
+   `leczenie-otylosci`) — ta sama projekcja, którą pokazuje Karta pacjenta.
+2. **Cykl** — liczy się pierwszy cykl z punktem Włączenia; masa Włączenia jest punktem odniesienia. Kolejny cykl (np. po
+   zmianie leku) nie wchodzi do wyniku, bo jego masa wyjściowa jest już skutkiem wcześniejszego leczenia.
+3. **Okna** — „po 12 tyg.”: pomiar masy z 9–15 tyg. od Włączenia, najbliższy 12. tygodnia; „po 6 mies.”: pomiar z 20–32 tyg.,
+   najbliższy 26. tygodnia. Przy równej odległości od celu — wcześniejszy. Szerokość okna ±25%, jak okno roczne tempa
+   wzrastania (9–15 mies. dla 12).
+4. **Zmiana masy %** = (masa − masa Włączenia) / masa Włączenia × 100; ujemna = ubytek (ta sama wielkość, co `zmianaMasyPct`
+   w P-POSTEPY). **Tempo** = zmiana w kg / (tygodnie / 4,348), w kg/mies. (miesiąc = 365,25 / 12 dni).
+5. **Dziecko** — wiek przy Włączeniu poniżej granicy dorosłości silnika BMI (18 lat; zespół Downa 20 lat). U dziecka masa rośnie
+   ze wzrostem, dlatego dodatkowo liczy się **zmiana BMI %** i **zmiana BMI-SDS**: z najbliższego celowi pomiaru w tym samym
+   oknie, który ma BMI (wpis z samą masą nie ma BMI — wtedy bierze się wizytę ze wzrostem z tego okna). BMI-SDS wymaga płci
+   i siatki; tablice siatek ładują strony Start, DocPro i Klirens — na pozostałych kafel mówi, skąd otworzyć Bazę.
+6. **Redukcja o co najmniej próg** — zmiana masy ≤ −próg (z zapasem na zaokrąglenie dzielenia); liczona w dłuższym oknie,
+   a gdy nikt go jeszcze nie ma — w krótszym. To samo okno pokazują kafel BMI dzieci i wykres pacjentów.
+7. **Kto nie wchodzi do średniej** (osobno dla każdego okna, z listą pacjentów): „brak Włączenia z masą”, „brak pomiaru
+   w 9–15 tyg.” / „w 20–32 tyg.” (są późniejsze pomiary, ale żaden w oknie), „leczenie krótsze niż 9 tyg.” / „niż 20 tyg.”.
+8. **Uśrednianie** — średnia arytmetyczna i mediana po pacjentach (każdy pacjent raz). „Wg leku”: krótka nazwa leku punktu
+   Włączenia (`VildaCykleLeczenia.nazwaLeku`; bez niej — pierwsza nazwa w cyklu; brak — „bez leku”). Grupa z mniej niż 5
+   pacjentami z wynikiem jest oznaczona „mała grupa”.
+
+**Jeden przebieg po kartach.** „Policz z kart (N)” czyta dla każdego pacjenta najnowszy zapis karty i — nowe w tym etapie —
+jego wpisy między wizytami (jeden odczyt notatek pacjenta). Gdy wpisów nie da się odczytać, pacjent liczy się z punktów
+zapisu wizyty, a notka pod sekcją podaje, u ilu pacjentów tak było.
+
+**Rysowanie.** „Wg leku”: hantla „po 12 tyg. → po 6 mies.” na skali od zera (albo od przyrostu) do największej redukcji,
+w trzech równych krokach. „Każdy pacjent”: jeden słupek to jeden pacjent, od najmniejszej do największej redukcji; przyrost
+masy nad linią zera w innym kolorze. Słupki to SVG rozciągnięty na szerokość, a podziałka — osobny SVG w skali 1:1, żeby
+liczby się nie rozciągały. Bez stylów na elementach (geometria w atrybutach SVG i klasach arkusza). Kliknięcie kafla, leku
+albo powodu braku otwiera listę tych pacjentów.
+
+**Przypadki syntetyczne (prawdziwe silniki).**
+- dorosła, Wegovy: Włączenie 01.10.2025 100,0 kg; 24.12.2025 (12 tyg.) 94,0 kg → −6,0%; 01.04.2026 (26 tyg.) 88,0 kg → −12,0%,
+  tempo −12 / (26 / 4,348) = −2,0 kg/mies.;
+- dziecko 11 l. 5 mies., Saxenda: Włączenie 60,0 kg / 145 cm; po 13 tyg. 58,2 / 146 → −3,0%; po 26 tyg. 57,0 / 147 → −5,0%,
+  BMI 28,54 → 26,38 = −7,57%;
+- dziecko, wpis z samą masą w 12. tyg. (77,6 kg) i wizyta ze wzrostem w 14. tyg. (77,0 kg / 161 cm) po Włączeniu 80,0 / 160
+  → masa −3,0% z 12. tyg., BMI z 14. tyg.;
+- pomiary w 9., 13. i 15. tyg. → wybrany 13.; w 10. i 14. → wybrany 10.; w 19., 22., 31. i 33. tyg. → okno 6 mies. bierze 22.;
+- tylko pomiar w 6. tyg. → „leczenie krótsze niż…” w obu oknach; tylko w 18. tyg. → „brak pomiaru w 9–15 tyg.” i „leczenie
+  krótsze niż 20 tyg.”; tylko w 40. tyg. → „brak pomiaru” w obu; sama Kontynuacja albo Włączenie bez masy → „brak Włączenia
+  z masą”;
+- Włączenie, pomiar w 12. tyg. (−4,0%), Zakończenie w 17. tyg., potem nowe Włączenie innym lekiem → wynik i lek z pierwszego
+  cyklu, okno 6 mies. bez wyniku;
+- 95,0 → 90,25 kg w 26. tyg. (dokładnie −5%) → próg 5% osiągnięty.
+
+**Strażnicy.** `tests/unit/baza-statystyki-otylosc.test.mjs` (12: model na prawdziwych silnikach cykli, tygodni i BMI —
+dorosła i dziecko, wybór pomiaru w oknie, BMI z innej wizyty niż masa, punkty bez dat, powody braku, pierwszy cykl, brak
+silników, progi z pliku pasm, kohorta, leki, mała grupa, próg dokładnie osiągnięty);
+`tests/e2e/baza-pacjentow-statystyki.spec.mjs` (6; nowy test na prawdziwym sejfie: 5 leczonych, pomiar po 6 mies. u jednej
+pacjentki tylko we wpisie dziennika, średnie −2,8% i −4,7%, progi 2 z 3, BMI dzieci −4,5% i BMI-SDS równy wynikowi silnika
+BMI strony, leki, wykres pacjentów, grupy; jeden odczyt wpisów na pacjenta dopiero po przycisku; telefon — jedna kolumna
+kafli, podziałka 1:1, bez przewijania w bok).
+
+**Wersje.** `vilda_patients_list.js` 7 → 8, `vilda_patients_list.css` 6 → 7, `vilda_chrome.js` 326 → 327
+i `vilda_session_bridge.js` 242 → 243 (wstrzykują pliki z nowym `?v=`), SW 1.1.581 → 1.1.582 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 4 — Baza pacjentów: raport PDF i plik dla Excela (SW 1.1.583, `vilda_patients_list.js` 9, `vilda_patients_list.css` 8, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — te same liczby, co na ekranie „Statystyki”, zapisane do pliku.** Żadnego nowego wzoru, progu ani
+definicji: model raportu (`statsReport`) czyta gotowe obiekty z etapów 1–3 (`demographics`, `ghCohort`, `obesityCohort`,
+kompletność kart) i niczego nie liczy od nowa. Wynik pojedynczego pacjenta, zapis karty i sejf — bez zmian.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów (etap 4 — eksport i raport PDF; na makiecie przyciski „Eksport do Excela”
+i „Raport PDF”). 2026-11-24: „zrób etap 4 — eksport i raport PDF”.
+
+**Co powstaje.** Po „Policz z kart” pasek nad sekcjami dostaje dwa przyciski:
+- **Raport PDF** — A4, sekcje jak na ekranie: Pacjenci (kafle, tabela „Wiek i płeć” ze słupkami), Leczenie hormonem wzrostu
+  (kafle, „Wg programu”, „Kolejne lata leczenia”, „Bez tempa w 1. roku”), Leczenie otyłości (kafle, „Zmiana masy ciała”,
+  „Dzieci: zmiana BMI”, „Wg leku”, „Bez wyniku”, wykres „Każdy pacjent”), Kompletność danych; pod sekcjami te same teksty
+  definicji, co na ekranie, na końcu zastrzeżenie o charakterze opisowym. Stopka: numer strony.
+- **Eksport do Excela** — prawdziwy plik `.xlsx` z dwoma arkuszami: „Podsumowanie” (te same sekcje i tabele; liczby jako
+  liczby, żeby Excel mógł z nich liczyć dalej) i „Pacjenci” (jeden wiersz na pacjenta z bazy: płeć, wiek, przedział wieku,
+  kompletność karty, program i tempa GH, zmiana hSDS, lek i wyniki leczenia otyłości w obu oknach, powód braku wyniku).
+
+**Jeden model dla obu plików.** `statsReport(wejście)` → `{ title, stamp, total, sections[], closing, people }`; sekcja niesie
+`facts` (etykieta, wartość liczbowa, jednostka, napis, dopisek), `tables` (kolumny z rodzajem `text`/`int`/`num`/`bar`
+i surowe wartości), `notes` i opcjonalny `chart`. Z niego `statsDocument` buduje dokument pdfmake, a `statsWorkbook` arkusze
+— liczby w plikach i na ekranie pochodzą z tych samych obiektów. Teksty definicji mają jedno źródło (`ghNote`, `obesityNote`,
+`footNote`), wspólne z ekranem. Znacznik czasu i data w nazwie pliku to chwila policzenia kart.
+
+**Prywatność (do akceptacji właściciela).**
+1. Pliki nie zawierają nazwisk, imion, dat urodzenia, PESEL ani identyfikatorów kart. Raport PDF to wyłącznie liczby zbiorcze.
+2. Arkusz „Pacjenci” ma wiersze bez danych osobowych: płeć, wiek w latach z jednym miejscem po przecinku i wyniki leczenia.
+   Kolejność wierszy wg wieku (potem płci), nie wg nazwiska, żeby numer wiersza nie zdradzał pozycji na liście alfabetycznej.
+3. Nazwa pliku: `statystyki-bazy-pacjentow-RRRR-MM-DD.pdf` / `.xlsx` — bez nazwy gabinetu i bez danych pacjentów.
+4. Pliki powstają na urządzeniu; nic nie jest wysyłane. Biblioteki są lokalne (niżej), więc eksport działa offline.
+
+**Biblioteki — bez nowych plików i bez sieci.** PDF składa pdfmake z lokalnych plików `pdfmake.min.js?v=1`
+i `pdfmake_vfs_fonts.js?v=1` (czcionka Roboto z polskimi znakami), wczytywanych tą samą funkcją, co wydruk postępów dorosłego
+(`VildaPostepyDoroslegoWydruk.zapewnijPdfmake`, moduł obecny na tych samych 8 stronach przed listą pacjentów). Strzałek w tej
+czcionce nie ma, więc w PDF zastępuje je „»” — ta sama podmiana, co w tamtym wydruku. Plik `.xlsx` to pakiet Office Open XML
+złożony przez `xlsxParts` (typy, relacje, skoroszyt, style, arkusze; teksty jako `inlineStr`, styl 1 = pogrubienie, przypięty
+wiersz nagłówka w „Pacjenci”) i spakowany lokalną biblioteką `jszip.min.js?v=1`. Wszystkie trzy pliki są od dawna w pamięci
+offline service workera; SheetJS z CDN nie jest używany.
+
+**Zapis pliku.** Zwykłe pobranie; na iPhonie w trybie aplikacji (gdzie pobranie nie działa) arkusz udostępniania — ta sama
+reguła i to samo rozpoznanie platformy, co w wydruku postępów (`mozliwosci().iosStandalone`). Zamknięcie arkusza udostępniania
+nie jest błędem. Komunikat pod przyciskami mówi, co zapisano, albo dlaczego się nie udało; kolejne kliknięcie może spróbować
+ponownie.
+
+**Rysowanie w PDF.** Wykresy to SVG z samych kształtów (bez tekstu, więc bez zależności od czcionek SVG): słupki w tabelach
+„Wiek i płeć” i „Kolejne lata leczenia” oraz wykres „Każdy pacjent” z tą samą skalą, co na ekranie (`fallScale`). Nagłówek
+sekcji idzie na stronę razem z pierwszą tabelą, żeby nie zostawał sam na dole strony.
+
+**Sprawdzenie plików.** Wygenerowany `.xlsx` otwierają bez ostrzeżeń dwa niezależne czytniki (openpyxl i LibreOffice);
+PDF obejrzany strona po stronie (polskie znaki, „≥”, „−”, „»”, tabele, wykresy).
+
+**Strażnicy.** `tests/unit/baza-statystyki-eksport.test.mjs` (15: model raportu na prawdziwych modelach etapów 1–3 — liczby
+jak na ekranie, raport bez policzonych kart, puste grupy; arkusze — liczby jako liczby, kolejność wg wieku, karta nieodczytana,
+BRAK nazwisk, dat urodzenia i identyfikatorów; pakiet `.xlsx` — komplet części, poprawny XML, znaki specjalne, nazwy arkuszy,
+archiwum z lokalnego JSZip otwierane z powrotem; dokument PDF — A4, sekcje, liczby, podmiana strzałek, SVG bez tekstu,
+nagłówek z tabelą, brak danych osobowych; nazwa pliku; biblioteki lokalne i w pamięci offline, moduł wydruku przed listą na
+8 stronach); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (7; nowy test: sieć zewnętrzna odcięta, prawdziwe pobranie PDF
+i `.xlsx`, w arkuszu te same liczby, co na ekranie, osiem wierszy pacjentów bez danych osobowych, biblioteki z plików aplikacji;
+telefon — przyciski w pasku z celem dotyku co najmniej 44 px).
+
+**Wersje.** `vilda_patients_list.js` 8 → 9, `vilda_patients_list.css` 7 → 8, `vilda_chrome.js` 327 → 328
+i `vilda_session_bridge.js` 243 → 244 (wstrzykują pliki z nowym `?v=`), SW 1.1.582 → 1.1.583 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
+
+## P-BAZA-NAGLOWEK-LINIA — Baza pacjentów: przełącznik Lista/Statystyki w jednej linii z „Dodaj pacjenta” (SW 1.1.584, `vilda_patients_list.js` 10, `vilda_patients_list.css` 9, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — układ nagłówka.** Zgłoszenie właściciela 2026-11-24: przełącznik Lista/Statystyki ma leżeć
+w jednym wierszu z „Dodaj pacjenta” i mieć tę samą wysokość.
+
+**Przyczyna.** Przełącznik miał własny górny margines 24 px (przycisk „Dodaj pacjenta” już nie) i wysokość 50 px wobec 46 px
+przycisku — stał 10 px niżej i był o 4 px wyższy.
+
+**Naprawa.** Przełącznik i przycisk są w jednej grupie `.pt-head-actions` (flex, `align-items: stretch`), więc stoją w jednej
+linii i mają wysokość wyższego z nich (46 px), niezależnie od reguł, które ustalają wysokość przycisku. Na telefonie grupa
+znika z układu (`display: contents`) i zostaje dotychczasowy układ: „Dodaj” obok tytułu, przełącznik na całą szerokość pod
+tytułem z celem dotyku 44 px.
+
+**Pomiar w aplikacji (1440 px):** przed — przycisk 76–122 px, przełącznik 86–136 px; po — oba 72,5–118,5 px.
+
+**Strażnik.** `tests/e2e/baza-pacjentow-statystyki.spec.mjs`, test „komputer…”: ta sama górna krawędź i wysokość przełącznika
+i przycisku (tolerancja 0,6 px); test telefonu bez zmian (przełącznik pod tytułem, cel dotyku ≥ 44 px).
+
+**Wersje.** `vilda_patients_list.js` 9 → 10, `vilda_patients_list.css` 8 → 9, `vilda_chrome.js` 328 → 329
+i `vilda_session_bridge.js` 244 → 245, SW 1.1.583 → 1.1.584 — `npm run podbij-wersje`.
+
+## P-BAZA-SZYBKIE — Baza pacjentów: statystyki liczą się same i czytają tylko to, co potrzebne (SW 1.1.585, `vilda_patients_list.js` 11, `vilda_vault.js` 286, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — te same liczby, liczone szybciej; jedna poprawka świeżości.** Żadnego nowego wzoru, progu ani
+definicji: modele etapów 1–4 bez zmian. Poprawka świeżości (niżej, punkt 4) usuwa sytuację, w której ekran pokazywał wynik
+sprzed dopisania wpisu między wizytami.
+
+**Decyzja właściciela.** 2026-11-24, po analizie: „zrób A i B razem, liczenie samo przy wejściu w Statystyki”. Krok C
+(szyfrowana pamięć wyników na urządzeniu i liczenie w tle) — odłożony do oceny czasu na prawdziwej bazie.
+
+**Co było wolne (pomiar na fikcyjnej bazie w prawdziwej aplikacji).** Przy 300 kartach po 8 wersji i 1650 notatkach
+dotychczasowe liczenie trwało 9,7 s, z czego 8,8 s to notatki. Dwie przyczyny:
+1. `getLatestSnapshot` odszyfrowuje nagłówek i każdą wersję karty (retencja trzyma ich do 40), a potrzebna jest najnowsza;
+2. wpisy między wizytami czytał `listPatientNotesForPatient` — przy każdym pacjencie wczytuje koperty notatek całego
+   konta, więc koszt rósł z kwadratem bazy.
+
+Listy pacjentów nie mają zapisanego indeksu leczonych: przy każdym otwarciu odszyfrowują najnowszą wersję każdej karty.
+Zawężenie liczenia do „20 leczonych” nie jest więc możliwe bez tego samego odczytu — ale ten odczyt jest tani.
+
+**Co się zmienia.**
+1. **Najnowsza wersja karty** — nowy odczyt sejfu `getNewestSnapshot(patientId, opcje)`. Porządek wersji (`yr`) zależy
+   tylko od jawnych pól koperty, więc najnowszą wskazuje się przed odszyfrowaniem i odszyfrowuje tylko ją. Wynik jest tym
+   samym obiektem, co z `getLatestSnapshot`.
+2. **Wpisy między wizytami jednym odczytem** — nowy odczyt sejfu `listPatientNotesByCategory(kategoria, opcje)`: koperta
+   notatki niesie kategorię jawnie, więc odszyfrowują się tylko wpisy dziennika leczenia otyłości (`leczenie-otylosci`),
+   raz dla całej bazy. Punkty pacjenta składa jak dotąd `VildaDziennikOtylosci.zloz` (ta sama projekcja, co w Karcie).
+3. **Liczenie przyrostowe** — wynik każdej karty zostaje w pamięci widoku (`state.cardCache`); kolejne liczenie czyta
+   tylko karty nowe i zmienione (`cardsPlan`). Karty czytane są po cztery naraz (pomiar: około 2× szybciej niż po kolei).
+4. **Świeżość po wpisie między wizytami** — dopisanie wpisu nie zmienia chwili zapisu karty, więc dotychczasowy znacznik
+   aktualności (`patientId@lastSavedAtISO`) go nie widział i ekran pokazywał „Karty policzone” ze starym wynikiem. Teraz
+   karta jest „ta sama” tylko wtedy, gdy nie zmieniła się chwila jej zapisu ANI znacznik jej wpisów (identyfikatory
+   i chwile zmiany wpisów, `journalIndex`). Widzi to także leczenie rozpoczęte wyłącznie wpisami, bez punktu w zapisie wizyty.
+5. **Liczenie rusza samo** przy wejściu w „Statystyki” (raz na wejście). Gdy wynik już jest, zostaje na ekranie, a pasek
+   pokazuje „Sprawdzam zmiany w kartach…”; przyciski czekają na koniec. „Policz ponownie” czyta wszystko od nowa.
+   Pliki (raport PDF, Excel) są dostępne po zakończeniu liczenia.
+
+**Pomiar po zmianie (ta sama fikcyjna baza, prawdziwy interfejs).** Pierwsze wejście w Statystyki 1,7 s (z rysowaniem),
+ponowne wejście 0,13 s, „Policz ponownie” 1,5 s. Na 200 kartach po 8 wersji z kartą około 8 kB: wszystkie wersje 1,74 s,
+najnowsza po kolei 0,36 s, cztery naraz 0,19 s. Pozostały czas to odczyt kopert wersji z magazynu (magazyn oddaje wszystkie
+koperty pacjenta, żeby wskazać najnowszą) — rośnie z liczbą wersji, ale bez ich odszyfrowania.
+
+**Cykl życia pamięci wyników (analiza wymagana przy danych pochodnych).** `state.cardCache` to wyniki pochodne kart
+(kompletność, wynik leczenia GH i otyłości) — tego samego rodzaju i w tym samym miejscu, co `state.cards` z etapów 1–4:
+wyłącznie pamięć RAM widoku Bazy, przekazywana przy powrocie do Bazy w tej samej sesji (`read()` → `initialState`),
+czyszczona z blokadą sejfu i zamknięciem karty przeglądarki. Nic nie trafia do `localStorage`, `sessionStorage`, IndexedDB,
+kopii ani synchronizacji. Pamięć jest związana z zestawem wczytanych silników (tempo, siatki, pasma) — inna strona
+z innym zestawem liczy od nowa. Wynik nieodczytanej karty ani wynik policzony bez wpisów (błąd odczytu) nie jest pamiętany
+jako ostateczny.
+
+**Zgodność wstecz.** Starszy sejf bez nowych odczytów (testy floty) liczy po staremu: `getLatestSnapshot` i wpisy przez
+`VildaDziennikOtylosci.wczytaj`. Listy pacjentów bez zmian — nadal liczą tylko punkty z wizyt, więc liczba leczonych
+na liście może się nieznacznie różnić od statystyk, które widzą także wpisy między wizytami.
+
+**Sejf.** Zmiana `vilda_vault.js` poza blokiem natywnym: dwie funkcje tylko do odczytu i dwa wpisy mapy eksportu; nic
+istniejącego nie zostało zmienione. Baza sejfu przeliczona w tym PR (7 skrótów w 5 plikach) — opis łatki i wartości:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-BAZA-SZYBKIE”. **Sejf się zmienił — przy następnej pracy w `vilda-source` weź nową
+bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.**
+
+**Strażnicy.** `tests/unit/sejf-odczyt-najnowszej.test.mjs` (5, prawdziwy sejf: `getNewestSnapshot` = `getLatestSnapshot`
+przy jednym odszyfrowaniu zamiast sześciu, także po poprawce, przypięciu i przywróceniu wersji; `listPatientNotesByCategory`
+odszyfrowuje tylko notatki kategorii; odczyt ścisły; blokada); `tests/unit/baza-statystyki-otylosc.test.mjs` (+3: znacznik
+wpisów, plan odczytu kart, wynik zbiorczy); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (8: liczenie rusza samo, jeden
+odczyt najnowszej wersji na pacjenta i zero odczytów wszystkich wersji; ponowne wejście nie czyta kart; leczenie rozpoczęte
+samymi wpisami i nowa wersja karty czytają po jednej karcie; jeden odczyt wpisów na przebieg i zero odczytów notatek przy
+pacjencie); `tests/unit/visits-vault-boundary.test.mjs` i narzędzia granic sejfu z nowymi skrótami.
+
+**Wersje.** `vilda_patients_list.js` 10 → 11, `vilda_vault.js` 285 → 286, `vilda_chrome.js` 329 → 330
+i `vilda_session_bridge.js` 245 → 246, SW 1.1.584 → 1.1.585 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
 ## Chwila przypisania wersji do karty — pierwsze wydanie nowego pola (P-SYNC-WLASCICIEL, E3-PR0e2a, SW 1.1.580, `vilda_vault.js` 286, 2026-11-23)
 
 **Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Dziś dla lekarza nic
