@@ -47129,7 +47129,7 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
   zapisuje nową informację; poprawki i gwiazdki wizyt przeniesionych scaleniem zostają w karcie scalonej (D-4 A i PD-1
   dla nich zmienione decyzją 2 z 2026-11-23); wejścia: E4b, „Usuń pacjenta” duplikatu (światy 881–884), „tylko lista
   usuniętych pacjentów”, „miejsce wizyty po „Scal pacjentów”” w W1, ziarno 38 profilu pełnego; sprawdzić, czy znika
-  klasa „nagrobek karty opróżnionej” w zdarzeniach. *(2026-11-23: warunek — każde urządzenie ma SW 1.1.577 (wydanie
+  klasa „nagrobek karty opróżnionej” w zdarzeniach. *(2026-11-23: warunek — każde urządzenie ma SW 1.1.580 (wydanie
   E3-PR0e2a) albo wyższy; dalsze wejścia — wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku, „Wejście do kolejnych PR”.)*
 - **E3-PR0f:** wizyta nieznana urządzeniu scalającemu (E1/E1b, także w zwróconej starej karcie i w przypadku
   z „Do akceptacji”, punkt 5), ziarno 39 profilu pełnego razem z kolejnością klas wyroczni, świat 885 poza wyjątkiem,
@@ -47281,7 +47281,7 @@ wzrost rodziców” (decyzja właściciela 2026-11-23), żeby kafel nie wydłuż
 `vilda_growth_prediction_validation.js` 15 → 16, `vilda_chrome.js` 323 → 324 i `vilda_session_bridge.js` 239 → 240
 (wstrzykują pliki z nowym `?v=`), SW 1.1.578 → 1.1.579 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
 
-## Chwila przypisania wersji do karty — pierwsze wydanie nowego pola (P-SYNC-WLASCICIEL, E3-PR0e2a, SW 1.1.577, `vilda_vault.js` 286, 2026-11-23)
+## Chwila przypisania wersji do karty — pierwsze wydanie nowego pola (P-SYNC-WLASCICIEL, E3-PR0e2a, SW 1.1.580, `vilda_vault.js` 286, 2026-11-23)
 
 **Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Dziś dla lekarza nic
 się nie zmienia: rekord wersji wizyty może nieść jedno nowe, jawne pole opcjonalne `assignedAtISO` — chwilę, w której
@@ -47689,12 +47689,12 @@ danych; dziś żadne z nich nie zmienia działania, bo pola nikt nie zapisuje). 
     kopię konta”); w tym PR nie, bo zmienia działanie importu dziś.
 12. **Ryzyko CI** — niestabilny, istniejący e2e („Ograniczenia”).
 13. **Warunek E3-PR0e2b:** potwierdzenie właściciela, że każde urządzenie (Ustawienia, linia „Wersja aplikacji”) ma
-    SW 1.1.577 albo wyższy.
+    SW 1.1.580 albo wyższy.
 
 **Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
 - **E3-PR0e3** — bez zmian zakresu: zmiana wizyty po Koszu na innym urządzeniu wraca do karty wpisu po „Scal
   pacjentów” (wpis pod żywą kartą) oraz wąski wyjątek wyroczni z decyzji 4 z 2026-11-23 (tylko w testach).
-- **E3-PR0e2b** — po E3-PR0e3 i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.577**
+- **E3-PR0e2b** — po E3-PR0e3 i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.580**
   (to wydanie) albo wyższy:
   - „Scal pacjentów” zapisuje pole w samej `Bsw_poScaleniu` (tekst haka trwałych wizyt bez zmian): chwila =
     późniejsza z „teraz” i poprzedniej chwili tej wersji + 1 ms; w gałęzi następcy w fazie przeniesień — tak, żeby
@@ -47735,7 +47735,8 @@ W bloku P-DZIENNIK-ZDARZEN: `Bev_POLA_WERSJI` (6861–6863), komentarze `Bev_spr
 `Bev_POLA_KOSZA`), `Bgw_wskrzes` (kod), `Bev_kartaPoprawna`, fragment trwałych wizyt, `vilda_sync.js`,
 `vilda_sync_integration.js`.
 
-**Wersje.** `vilda_vault.js` 285 → 286, `vilda_chrome.js` 322 → 323 i `vilda_session_bridge.js` 238 → 239 (wstrzykują
-sejf), SW 1.1.576 → 1.1.577 — `npm run podbij-wersje`; baza `origin/audyt` `d6f133eb` (po vildaclinic/vilda-calc#1045).
-SW 1.1.577 to numer, który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b. Bez nowego pliku w pamięci
-offline.
+**Wersje.** `vilda_vault.js` 285 → 286, `vilda_chrome.js` 324 → 325 i `vilda_session_bridge.js` 240 → 241 (wstrzykują
+sejf), SW 1.1.579 → 1.1.580 — `npm run podbij-wersje`; baza `origin/audyt` `28dd9b3f` (po vildaclinic/vilda-calc#1049;
+sejf, `vilda_sync.js`, `vilda_sync_integration.js`, `runtime/`, `tools/`, `tests/support/` i `tests/unit/sync-*` bez zmian
+od `d6f133eb`, więc czerwone na bazie, piny granicy i przebiegi liczone na `d6f133eb` są ważne). SW 1.1.580 to numer,
+który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b. Bez nowego pliku w pamięci offline.
