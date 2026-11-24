@@ -36,10 +36,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // move phase of the synchronization merge disappears together with the patient tombstone known to that merge, from
 // the payload or local, written only when no local tombstone or an earlier one exists; in effect at once) and
 // E3-PR0e2a (an optional field of a visit version record, the moment "Merge patients" assigned the version to its
-// card, is kept on every write of the record as the later of both copies, carried by exports, imports and the event
-// envelope, decides the owner card first when present and alone does not queue the version again; no device writes
-// it yet).
-const BASE = 'c1aaa0bde56650de638e7395b60d9437bc2ba6e81c0f160a42e7374f99c57ca9';
+// card, is kept as the later of both copies on every write that joins two copies of the record, while imports and
+// other single-copy writes take it from that copy; it is carried by exports, imports and the event envelope, decides
+// the owner card first when present, is checked again by the move phase and alone does not queue the version again;
+// no device writes it yet).
+const BASE = 'c3ccdcf2c8f5735fc1cb693a39d828c06b1727ca5608ab94b19de2697fe3a458';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

@@ -186,7 +186,10 @@
 //   treść z koperty nowsza, tutejsza chwila przypisania późniejsza; tutejsza treść wygrywa chwilą, koperta z wyższym rev
 //        i późniejszą chwilą przypisania (zapis samego rev) — 0 wierszy, jak bez pola (zielony z natury);
 //   wymiana kopert różniących się chwilą przypisania w obie strony (oba okna z odsyłaniem) — bez wierszy odsyłania na obu,
-//        treść zbieżna (zielony z natury).
+//        treść zbieżna (zielony z natury);
+//   „Scal pacjentów” przy otwartej bramce z chwilą przypisania przeniesionej wersji — w kolejce te same wiersze co bez niej
+//        (przeniesione wersje, nowa głowa, nagrobek karty źródłowej z kartą docelową), koperty wersji i nagrobka niosą tę
+//        chwilę (czerwony na bazie — builder koperty gubi pole).
 // Kopia sejfu tylko w tym pliku (busy, apply-error i błąd odczytu stanu): wstawka na początku Bkz_scalKoniec (faza Kosza,
 // po zapisie wersji w Le), na początku Le albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd
 // z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza wymaga limitu blokady; strażnik osiągalności: Le
@@ -3331,5 +3334,50 @@ describe('chwila przypisania wersji do karty (E3-PR0e2a) — sama nie wywołuje 
     expect({ A: wierszeOd(o, a0).map(opis), B: wierszeOd(B, b0).map(opis) }, 'wiersze odsyłania').toEqual({ A: [], B: [] });
     // zbieżność samej chwili przypisania (późniejsza z obu przy każdym zapisie) — tests/unit/sync-chwila-przypisania.test.mjs
     expect([sA.masa, sB.masa, sA.rev === sB.rev], 'treść zbieżna').toEqual([17.2, 17.2, true]);
+  }, 2 * CZAS);
+});
+
+// ── chwila przypisania wersji do karty (E3-PR0e2a) — kolejka po „Scal pacjentów” ─────────────────────────────────────
+// Koperty „Scal pacjentów” powstają w łańcuchu emisji; builder z polem spoza listy pól koperty rzuciłby
+// EVENT_ENVELOPE_INVALID, a emiter zgubiłby wiersz po cichu. Ten sam przebieg z chwilą przypisania przeniesionej wersji
+// i bez niej (ten sam zegar od początku).
+describe('chwila przypisania wersji do karty (E3-PR0e2a) — kolejka po „Scal pacjentów”', () => {
+  it('„Scal pacjentów” przy otwartej bramce, przeniesiona wersja z chwilą przypisania: w kolejce te same wiersze co bez niej (przeniesione wersje, nowa głowa i nagrobek karty źródłowej z kartą docelową), a koperty przeniesionej wersji i nagrobka niosą tę chwilę', async () => {
+    const przebieg = async (zPolem) => {
+      naStart();
+      const o = await okno({ bramka: true });
+      await o.zaloguj('A');
+      const X = await karta(o, 1, [20, 21]);
+      const Y = await karta(o, 2, [30]);
+      const v = X.w[0];
+      await o.gotowe();
+      if (zPolem) await wstawPrzypisanie(o, v, PRZYPISANIE_WCZESNIEJ);
+      const s0 = ostatni(o);
+      tik(MIN);
+      const r = await o.v.mergePatients(X.P, Y.P);
+      tik();
+      await o.gotowe();
+      const et = { [X.P]: 'X', [Y.P]: 'Y', [v]: 'v', [X.w[1]]: 'x2', [r.snapshotId]: 'głowa' };
+      const wiersze = wierszeOd(o, s0);
+      const pola = [];
+      for (const w of wiersze) {
+        const k = await odszyfruj(o, w.env);
+        for (const p of k.patients || []) for (const s of p.snapshots || []) if (s.snapshotId === v) pola.push([w.kind, s[PRZYPISANIE] || null]);
+      }
+      return {
+        wiersze: wiersze.map((w) => [w.kind, String(w.entityKey).split('/').map((x) => et[x] || '?').join('/'), w.state]).sort(),
+        pola: pola.sort(), pole: await przypisanie(o, v),
+      };
+    };
+    const bez = await przebieg(false);
+    const z = await przebieg(true);
+    expect(bez.wiersze, 'kontrola: wiersze „Scal pacjentów” bez chwili przypisania').toEqual([
+      ['ptomb', 'X', 'pending'], ['snap', 'Y/głowa', 'pending'], ['snap', 'Y/v', 'pending'], ['snap', 'Y/x2', 'pending'],
+    ]);
+    expect(z.wiersze, 'te same wiersze z chwilą przypisania').toEqual(bez.wiersze);
+    expect({ pole: z.pole, pola: z.pola }, 'chwila przypisania w rekordzie i w kopertach przeniesionej wersji i nagrobka').toEqual({
+      pole: PRZYPISANIE_WCZESNIEJ, pola: [['ptomb', PRZYPISANIE_WCZESNIEJ], ['snap', PRZYPISANIE_WCZESNIEJ]],
+    });
+    expect(bez.pola, 'kontrola: bez chwili przypisania koperty bez niej').toEqual([['ptomb', null], ['snap', null]]);
   }, 2 * CZAS);
 });

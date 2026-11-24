@@ -5,9 +5,10 @@
 // pacjentów”, po potwierdzeniu właściciela, że wszystkie urządzenia mają to wydanie). Dlatego pole wstrzykujemy jako
 // rekord z urządzenia, które je zapisuje: wprost do rekordu wersji w magazynie urządzenia (surowy adapter) albo do
 // elementu wersji w ładunku (kopia JSON eksportu). Reguły:
-//   - łączenie przy każdym zapisie rekordu wersji: późniejsza chwila przypisania z obu kopii (tutejszej i z ładunku),
-//     niezależnie od tego, która kopia wygrała treścią albo przypisaniem karty; postać kanoniczna chwili (toISOString),
-//     każda inna wartość liczy się jak brak i nie przechodzi dalej;
+//   - łączenie przy każdym zapisie rekordu wersji, który łączy dwie kopie: późniejsza chwila przypisania z obu (tutejszej
+//     i z ładunku), niezależnie od tego, która kopia wygrała treścią albo przypisaniem karty; postać kanoniczna chwili
+//     (toISOString), każda inna wartość liczy się jak brak i nie przechodzi dalej; faza przeniesień przenosi tylko
+//     rekord, którego chwila przypisania nie zmieniła się od decyzji;
 //   - przesyłanie: element wersji eksportu pełnego, delty karty, pliku karty, kopii konta i koperty zdarzenia niesie pole
 //     za payload, gdy jest; bez pola — kształt jak dotąd; importy zapisują pole z pliku;
 //   - porównanie właściciela wersji wspólnej dwóm kartom (Bsw_ladunekWygrywa): najpierw późniejsza chwila przypisania
@@ -21,15 +22,21 @@
 // odsyłania — tests/unit/licznik-odsylania.test.mjs; strażnik natywny w przeglądarce —
 // tests/e2e/care-template-native-storage.spec.mjs.
 //
-// PRZYPADKI (63; na bazie d6f133eb, przed kodem tej zmiany, czerwone 43 — powód w nawiasie; zielone z natury 20):
+// PRZYPADKI (71; na bazie d6f133eb, przed kodem tej zmiany, czerwone 51 — powód w nawiasie; zielone z natury 20):
 //   drogi zapisu: poprawka wizyty, gwiazdka, edycja i usunięcie wiersza pomiaru (czerwone — rekord budowany z listy pól
 //        gubi pole); „Scal pacjentów” (zielony — rekord rozpięty, pole zostaje bez zmian, nowa głowa bez pola);
 //   wersja tej samej karty: 5 wariantów (treść z ładunku, treść tutejsza, rekord złożony W3, ta sama wersja, zapis samego
 //        rev) × 4 układy chwili przypisania (tylko tutaj, tylko w ładunku, w obu z późniejszą tutaj albo w ładunku),
 //        wynik porównany z przebiegiem bez pola (czerwone 14 — zapis z listy pól ładunku albo brak zapisu przy późniejszym
-//        polu w ładunku; zielone 6 — tutejszy rekord z późniejszym polem zostaje albo jest rozpięty);
-//   wersja wspólna dwóm kartom: „przenieś” ×2, „zabierz” ×2, „zabierz” po zniknięciu wersji, „treść”, „nowa” ×2,
-//        następca (czerwone — rekord z listy pól ładunku albo z chwili decyzji bez pola);
+//        polu w ładunku; zielone 6 — tutejszy rekord z późniejszym polem zostaje albo jest rozpięty); dwa różne rekordy
+//        złożone z tą samą rev i chwilą zmiany × 3 układy (czerwone — rekord złożony budowany z listy pól);
+//   wersja wspólna dwóm kartom: „przenieś” ×2, „zabierz” ×2, „zabierz” po zniknięciu wersji, „treść”, „treść” z rekordem
+//        złożonym, „nowa” ×2, następca (czerwone — rekord z listy pól ładunku albo z chwili decyzji bez pola); „przenieś”,
+//        gdy między decyzją a fazą przeniesień tutejsza wersja dostaje samą późniejszą chwilę przypisania (czerwony —
+//        zapis samej chwili nie powstaje; faza, która nie sprawdza chwili z decyzji, przenosi wersję mimo późniejszej
+//        tutejszej chwili);
+//   zbieżność trzech urządzeń w sześciu kolejnościach wymian: wersja tej samej karty i wersja wspólna dwóm kartom
+//        (czerwone — pole ginie w zapisie);
 //   wersja przeżywająca przycięcie (zielony — rekord rozpięty); „Przywróć” z Kosza i magazyn IndexedDB (czerwone);
 //   eksporty niosą pole (czerwony); bez pola kształt elementu jak dotąd (zielony); import karty, „Scal kopię konta” ×2,
 //        odtworzenie konta (czerwone — plik bez pola);
@@ -40,8 +47,8 @@
 //        i scalanie w obu kierunkach (czerwone — porównanie nie patrzy na pole); ta sama chwila, tablica przypadków bez
 //        pola, zła postać jak brak (w porównaniu i w zapisie), strażnik natywny (zielone);
 //   nikt nie ustawia: strażnik drzewa składni i przebieg wszystkich dróg bez pola na wejściu (zielone);
-//   zgodność wstecz: 221 i 276 — pełny ładunek i koperta z polem (zielone), plik karty i kopia konta z polem (czerwone —
-//        bieżący eksport pola nie niesie).
+//   zgodność wstecz: 221 i 276 — pełny ładunek i koperta z polem (zielone), plik karty, kopia konta („Scal kopię konta”)
+//        i odtworzenie konta z kopii z polem (czerwone — bieżący eksport pola nie niesie).
 // Strażniki zielone z natury mają mutanta kodu, przy którym czerwienieją (poza kontrolami bez zapisu rekordu i zgodnością
 // wstecz, która charakteryzuje niezmienne sejfy z fikstur).
 //
@@ -291,6 +298,29 @@ describe('wersja tej samej karty — późniejsza chwila przypisania z obu kopii
     expect(z.pole, 'chwila przypisania po scaleniu').toBe(UKLADY[uklad].wynik);
     expect({ stan: z.stan, liczniki: z.liczniki }, 'treść, rev, chwile i liczniki jak bez chwili przypisania').toEqual({ stan: bez.stan, liczniki: bez.liczniki });
   }, CZAS);
+
+  // Dwa różne rekordy złożone W3 tej samej wersji z tą samą rev i chwilą zmiany: A i B poprawiły v (37 i 41 kg), D je
+  // przypięło, A i B scaliły kopię D. Przy wymianie wygrywa składnikowo późniejsza treść z gwiazdką, rev = wyższa + 1.
+  it.each([['tylko tutaj', T1, undefined, T1], ['tylko w ładunku', undefined, T1, T1], ['w obu, późniejsza w ładunku', T1, T2, T2]])('dwa różne rekordy złożone z tą samą rev i chwilą zmiany, chwila przypisania %s: wynik z późniejszą z obu', async (_n, tu, lad, wynik) => {
+    const A = await urzadzenie('A');
+    const { ids: [v] } = await karta(A, 1, [22]);
+    const B = await blizniak(A, 'B');
+    const D = await blizniak(A, 'D');
+    await popraw(A, v, 37);
+    await popraw(B, v, 41);
+    await gwiazdka(D, v, true);
+    krok();
+    await scal(D, A); await scal(D, B);
+    const ra = await rek(A, v), rb = await rek(B, v);
+    const sa = await stan(A, v), sb = await stan(B, v);
+    expect([ra.rev === rb.rev, ra.updatedAtISO === rb.updatedAtISO, sa.masa, sb.masa, sa.gwiazdka, sb.gwiazdka], 'kontrola: dwa różne rekordy złożone, ta sama rev i chwila zmiany').toEqual([true, true, 37, 41, true, true]);
+    await wstaw(A, v, tu);
+    krok();
+    await scal(B, A, lad ? (l) => zPolem(l, v, lad) : undefined);
+    const s = await stan(A, v);
+    expect([s.masa, s.gwiazdka, s.rev], 'kontrola: wygrywa późniejsza treść z gwiazdką, rev + 1').toEqual([41, true, ra.rev + 1]);
+    expect(await pole(A, v)).toBe(wynik);
+  }, CZAS);
 });
 
 // ── Wersja wspólna dwóm kartom: każda decyzja scalania zachowuje późniejszą chwilę przypisania ────────────────────
@@ -309,10 +339,10 @@ async function dwieKarty({ czwarta = false } = {}) {
   return { A, B, X, Y, W, v, x2, et: { [X]: 'X', [Y]: 'Y', ...(W ? { [W]: 'W' } : {}) } };
 }
 // A scala pełną kopię B z kartą Y na początku i kartą Q (nową na B) na końcu; akcja(c) — druga karta przeglądarki na A
-// w kroku karty Q (po decyzjach dla wersji karty Y, przed fazą przeniesień).
-async function zOknem(c, akcja) {
+// w kroku karty Q (po decyzjach dla wersji karty Y, przed fazą przeniesień); zmien — zmiana ładunku przed scaleniem.
+async function zOknem(c, akcja, zmien = (l) => l) {
   const { P: Q } = await karta(c.B, 4, [50]);
-  const lad = uloz(c.Y, Q)(await eksport(c.B));
+  const lad = zmien(uloz(c.Y, Q)(await eksport(c.B)));
   const p = pulapka(c.A, 'getPatientForUser', (u, pid) => pid === Q);
   const sync = c.A.vault.mergeSyncPayload(lad);
   const krokQ = await Promise.race([p.osiagnieta.then(() => 'krok Q'), sync.then(() => 'koniec')]);
@@ -369,6 +399,43 @@ describe('wersja wspólna dwóm kartom — każda decyzja scalania zachowuje pó
     expect(await pole(c.A, c.v)).toBe(T1);
   }, CZAS);
 
+  it('„treść” z rekordem złożonym (A scaliło X → Y i przypięło v, B poprawiło v w starej X bez wiedzy o scaleniu): treść z B, gwiazdka z A, a tutejsza chwila przypisania zostaje', async () => {
+    const c = await dwieKarty();
+    await popraw(c.B, c.v, 26);
+    krok(); await c.A.vault.mergePatients(c.X, c.Y);
+    await gwiazdka(c.A, c.v, true);
+    await wstaw(c.A, c.v, T1);
+    krok();
+    await scal(c.B, c.A);
+    const s = await stan(c.A, c.v, c.et);
+    expect([s.karta, s.masa, s.gwiazdka], 'kontrola: rekord złożony pod Y — treść z B, gwiazdka z A').toEqual(['Y', 26, true]);
+    expect(await pole(c.A, c.v)).toBe(T1);
+  }, CZAS);
+
+  // „Przenieś” zapada przy chwili przypisania z ładunku późniejszej niż tutejsza; w oknie przed fazą przeniesień druga
+  // karta przeglądarki scala kopię z jeszcze późniejszą chwilą tej wersji w tutejszej karcie (zapis samej chwili, rev
+  // i chwila zmiany bez zmian). Faza przenosi tylko rekord niezmieniony od decyzji — także co do chwili przypisania.
+  it('„przenieś”, a między decyzją a fazą przeniesień tutejsza wersja dostaje samą późniejszą chwilę przypisania (scalenie w drugiej karcie przeglądarki): faza jej nie przenosi — zostaje pod tutejszą kartą z późniejszą chwilą, a następna wymiana rozstrzyga zwykłą regułą', async () => {
+    const T3 = '2026-03-02T09:50:00.000Z';
+    const c = await dwieKarty();
+    krok(); await c.B.vault.mergePatients(c.X, c.Y);
+    krok(); await c.A.vault.savePatient(naglowek(1, { masa: 24 }), { dedup: false, patientId: c.X });
+    await wstaw(c.A, c.v, T1);
+    const ladC = zPolem(await eksport(await blizniak(c.A, 'C')), c.v, T3);
+    const przed = await rek(c.A, c.v);
+    krok();
+    let wOknie = null;
+    await zOknem(c, async (q) => {
+      await q.A.vault.mergeSyncPayload(ladC);
+      const r = await rek(q.A, q.v);
+      wOknie = { karta: q.et[r.patientId] || '?', pole: r[POLE] || null, rev: r.rev, zmiana: r.updatedAtISO || null };
+    }, (l) => zPolem(l, c.v, T2));
+    expect(wOknie, 'kontrola: w oknie v pod X z późniejszą chwilą przypisania, rev i chwila zmiany bez zmian').toEqual({ karta: 'X', pole: T3, rev: przed.rev, zmiana: przed.updatedAtISO || null });
+    expect([(await stan(c.A, c.v, c.et)).karta, await pole(c.A, c.v)], 'v zostaje pod X z późniejszą chwilą przypisania').toEqual(['X', T3]);
+    krok(); await scal(c.A, c.B);
+    expect([(await stan(c.B, c.v, c.et)).karta, await pole(c.B, c.v)], 'następna wymiana: B przenosi v pod X z późniejszą chwilą').toEqual(['X', T3]);
+  }, CZAS);
+
   it('„nowa” — wersji nie ma tu nigdzie, karta nowa: zapis z chwilą przypisania z ładunku', async () => {
     const A = await urzadzenie('A');
     const B = await blizniak(A, 'B');
@@ -400,6 +467,59 @@ describe('wersja wspólna dwóm kartom — każda decyzja scalania zachowuje pó
     expect((await stan(c.A, c.v, c.et)).karta, 'kontrola: v pod W').toBe('W');
     expect(await pole(c.A, c.v)).toBe(T1);
   }, CZAS);
+});
+
+// ── Zbieżność: trzy urządzenia, różna kolejność wymian pełnych kopii ───────────────────────────────────────────────
+// Sześć par (skąd → dokąd) między A, B i C; pierwsze sześć wymian w sześciu różnych kolejnościach, potem jeszcze dwa
+// razy wszystkie pary w kolejności stałej. Wynik na każdym urządzeniu i w każdej kolejności ten sam: późniejsza chwila
+// przypisania z obu kopii przy każdym zapisie jest przemienna i łączna.
+const PARY = [['A', 'B'], ['B', 'A'], ['A', 'C'], ['C', 'A'], ['B', 'C'], ['C', 'B']];
+const KOLEJNOSCI = [[0, 1, 2, 3, 4, 5], [5, 4, 3, 2, 1, 0], [2, 0, 4, 1, 5, 3], [3, 5, 1, 4, 0, 2], [4, 2, 0, 5, 3, 1], [1, 3, 5, 0, 2, 4]];
+async function trzyUrzadzenia(przygotuj) {
+  const wyniki = new Set();
+  for (const kolejnosc of KOLEJNOSCI) {
+    await sprzatnijUrzadzenia();
+    ustaw(START);
+    atrapa = utworzAtrapeWorkera({ tryb: 'v37a', eventsEnabled: false, zegar: zegarSterowany() });
+    const D = { A: await urzadzenie('A') };
+    const { v, et } = await przygotuj(D);
+    for (const i of kolejnosc) { krok(); await scal(D[PARY[i][0]], D[PARY[i][1]]); }
+    for (let r = 0; r < 2; r += 1) for (const [z, na] of PARY) { krok(); await scal(D[z], D[na]); }
+    const s = {};
+    for (const n of ['A', 'B', 'C']) s[n] = { ...(await stan(D[n], v, et)), pole: await pole(D[n], v) };
+    wyniki.add(JSON.stringify(s));
+  }
+  expect(wyniki.size, 'ten sam wynik w każdej kolejności').toBe(1);
+  const s = JSON.parse([...wyniki][0]);
+  expect(s.B, 'B jak A').toEqual(s.A);
+  expect(s.C, 'C jak A').toEqual(s.A);
+  return s.A;
+}
+
+describe('zbieżność — trzy urządzenia, każda kolejność wymian pełnych kopii daje ten sam wynik', () => {
+  it('wersja tej samej karty: A z wcześniejszą chwilą przypisania, B z późniejszą, C bez niej; B i C poprawiają wersję — wszędzie późniejsza chwila i ostatnia poprawka', async () => {
+    const s = await trzyUrzadzenia(async (D) => {
+      const { P, ids: [v] } = await karta(D.A, 1, [22]);
+      D.B = await blizniak(D.A, 'B'); D.C = await blizniak(D.A, 'C');
+      await popraw(D.B, v, 23); await popraw(D.C, v, 24);
+      await wstaw(D.A, v, T1); await wstaw(D.B, v, T2);
+      return { v, et: { [P]: 'P' } };
+    });
+    expect([s.karta, s.masa, s.pole]).toEqual(['P', 24, T2]);
+  }, 4 * CZAS);
+
+  it('wersja wspólna dwóm kartom: A scaliło X → Y (wersja z chwilą przypisania pod Y), B poprawiło ją w starej X bez wiedzy o scaleniu, C bez zmian — wszędzie pod Y z poprawką i chwilą przypisania', async () => {
+    const s = await trzyUrzadzenia(async (D) => {
+      const { P: X, ids: [v] } = await karta(D.A, 1, [22, 23]);
+      const { P: Y } = await karta(D.A, 2, [30]);
+      D.B = await blizniak(D.A, 'B'); D.C = await blizniak(D.A, 'C');
+      krok(); await D.A.vault.mergePatients(X, Y);
+      await wstaw(D.A, v, T1);
+      await popraw(D.B, v, 26);
+      return { v, et: { [X]: 'X', [Y]: 'Y' } };
+    });
+    expect([s.karta, s.masa, s.pole]).toEqual(['Y', 26, T1]);
+  }, 4 * CZAS);
 });
 
 // ── Wersja, która przeżywa przycięcie, i pozostałe drogi bez zmiany kodu ────────────────────────────────────────────
@@ -1051,5 +1171,20 @@ describe('zgodność wstecz — starsza aplikacja przyjmuje dane z chwilą przyp
       wynik[O.nazwa] = [await bladLubOk(() => O.vault.mergeVaultBackup(kopia, HASLO)), await pole(O, f.v)];
     }
     expect(wynik).toEqual({ N: ['ok', T1], S221: ['ok', null], S276: ['ok', null] });
+  }, CZAS);
+
+  it('kopia konta z chwilą przypisania: odtworzenie konta (restoreVaultBackup) w sejfie 221 i 276 bez błędu, wersja bez niej', async () => {
+    const f = await flota();
+    await wstaw(f.A, f.v, T1);
+    const kopia = await f.A.vault.exportVaultBackup();
+    const tresc = await f.A.vault.decryptPayloadForCurrentUser(kopia.payload.iv, kopia.payload.data);
+    expect(wszystkieElementy(tresc, f.v).map((e) => e[POLE]), 'kopia niesie chwilę przypisania').toEqual([T1]);
+    const wynik = {};
+    for (const app of ['S221', 'S276']) {
+      const R = await urzadzenie(`R ${app}`, { haslo: 'Vilda#Odtworzenie!2026abc', zrodla: zrodlaStarszej(app) });
+      krok();
+      wynik[app] = [await bladLubOk(() => R.vault.restoreVaultBackup(kopia, HASLO, { label: 'Fikcyjne odtworzenie konta' })), await pole(R, f.v)];
+    }
+    expect(wynik).toEqual({ S221: ['ok', null], S276: ['ok', null] });
   }, CZAS);
 });
