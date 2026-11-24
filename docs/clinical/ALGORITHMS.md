@@ -47558,3 +47558,71 @@ i przycisku (tolerancja 0,6 px); test telefonu bez zmian (przełącznik pod tytu
 
 **Wersje.** `vilda_patients_list.js` 9 → 10, `vilda_patients_list.css` 8 → 9, `vilda_chrome.js` 328 → 329
 i `vilda_session_bridge.js` 244 → 245, SW 1.1.583 → 1.1.584 — `npm run podbij-wersje`.
+
+## P-BAZA-SZYBKIE — Baza pacjentów: statystyki liczą się same i czytają tylko to, co potrzebne (SW 1.1.585, `vilda_patients_list.js` 11, `vilda_vault.js` 286, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — te same liczby, liczone szybciej; jedna poprawka świeżości.** Żadnego nowego wzoru, progu ani
+definicji: modele etapów 1–4 bez zmian. Poprawka świeżości (niżej, punkt 4) usuwa sytuację, w której ekran pokazywał wynik
+sprzed dopisania wpisu między wizytami.
+
+**Decyzja właściciela.** 2026-11-24, po analizie: „zrób A i B razem, liczenie samo przy wejściu w Statystyki”. Krok C
+(szyfrowana pamięć wyników na urządzeniu i liczenie w tle) — odłożony do oceny czasu na prawdziwej bazie.
+
+**Co było wolne (pomiar na fikcyjnej bazie w prawdziwej aplikacji).** Przy 300 kartach po 8 wersji i 1650 notatkach
+dotychczasowe liczenie trwało 9,7 s, z czego 8,8 s to notatki. Dwie przyczyny:
+1. `getLatestSnapshot` odszyfrowuje nagłówek i każdą wersję karty (retencja trzyma ich do 40), a potrzebna jest najnowsza;
+2. wpisy między wizytami czytał `listPatientNotesForPatient` — przy każdym pacjencie wczytuje koperty notatek całego
+   konta, więc koszt rósł z kwadratem bazy.
+
+Listy pacjentów nie mają zapisanego indeksu leczonych: przy każdym otwarciu odszyfrowują najnowszą wersję każdej karty.
+Zawężenie liczenia do „20 leczonych” nie jest więc możliwe bez tego samego odczytu — ale ten odczyt jest tani.
+
+**Co się zmienia.**
+1. **Najnowsza wersja karty** — nowy odczyt sejfu `getNewestSnapshot(patientId, opcje)`. Porządek wersji (`yr`) zależy
+   tylko od jawnych pól koperty, więc najnowszą wskazuje się przed odszyfrowaniem i odszyfrowuje tylko ją. Wynik jest tym
+   samym obiektem, co z `getLatestSnapshot`.
+2. **Wpisy między wizytami jednym odczytem** — nowy odczyt sejfu `listPatientNotesByCategory(kategoria, opcje)`: koperta
+   notatki niesie kategorię jawnie, więc odszyfrowują się tylko wpisy dziennika leczenia otyłości (`leczenie-otylosci`),
+   raz dla całej bazy. Punkty pacjenta składa jak dotąd `VildaDziennikOtylosci.zloz` (ta sama projekcja, co w Karcie).
+3. **Liczenie przyrostowe** — wynik każdej karty zostaje w pamięci widoku (`state.cardCache`); kolejne liczenie czyta
+   tylko karty nowe i zmienione (`cardsPlan`). Karty czytane są po cztery naraz (pomiar: około 2× szybciej niż po kolei).
+4. **Świeżość po wpisie między wizytami** — dopisanie wpisu nie zmienia chwili zapisu karty, więc dotychczasowy znacznik
+   aktualności (`patientId@lastSavedAtISO`) go nie widział i ekran pokazywał „Karty policzone” ze starym wynikiem. Teraz
+   karta jest „ta sama” tylko wtedy, gdy nie zmieniła się chwila jej zapisu ANI znacznik jej wpisów (identyfikatory
+   i chwile zmiany wpisów, `journalIndex`). Widzi to także leczenie rozpoczęte wyłącznie wpisami, bez punktu w zapisie wizyty.
+5. **Liczenie rusza samo** przy wejściu w „Statystyki” (raz na wejście). Gdy wynik już jest, zostaje na ekranie, a pasek
+   pokazuje „Sprawdzam zmiany w kartach…”; przyciski czekają na koniec. „Policz ponownie” czyta wszystko od nowa.
+   Pliki (raport PDF, Excel) są dostępne po zakończeniu liczenia.
+
+**Pomiar po zmianie (ta sama fikcyjna baza, prawdziwy interfejs).** Pierwsze wejście w Statystyki 1,7 s (z rysowaniem),
+ponowne wejście 0,13 s, „Policz ponownie” 1,5 s. Na 200 kartach po 8 wersji z kartą około 8 kB: wszystkie wersje 1,74 s,
+najnowsza po kolei 0,36 s, cztery naraz 0,19 s. Pozostały czas to odczyt kopert wersji z magazynu (magazyn oddaje wszystkie
+koperty pacjenta, żeby wskazać najnowszą) — rośnie z liczbą wersji, ale bez ich odszyfrowania.
+
+**Cykl życia pamięci wyników (analiza wymagana przy danych pochodnych).** `state.cardCache` to wyniki pochodne kart
+(kompletność, wynik leczenia GH i otyłości) — tego samego rodzaju i w tym samym miejscu, co `state.cards` z etapów 1–4:
+wyłącznie pamięć RAM widoku Bazy, przekazywana przy powrocie do Bazy w tej samej sesji (`read()` → `initialState`),
+czyszczona z blokadą sejfu i zamknięciem karty przeglądarki. Nic nie trafia do `localStorage`, `sessionStorage`, IndexedDB,
+kopii ani synchronizacji. Pamięć jest związana z zestawem wczytanych silników (tempo, siatki, pasma) — inna strona
+z innym zestawem liczy od nowa. Wynik nieodczytanej karty ani wynik policzony bez wpisów (błąd odczytu) nie jest pamiętany
+jako ostateczny.
+
+**Zgodność wstecz.** Starszy sejf bez nowych odczytów (testy floty) liczy po staremu: `getLatestSnapshot` i wpisy przez
+`VildaDziennikOtylosci.wczytaj`. Listy pacjentów bez zmian — nadal liczą tylko punkty z wizyt, więc liczba leczonych
+na liście może się nieznacznie różnić od statystyk, które widzą także wpisy między wizytami.
+
+**Sejf.** Zmiana `vilda_vault.js` poza blokiem natywnym: dwie funkcje tylko do odczytu i dwa wpisy mapy eksportu; nic
+istniejącego nie zostało zmienione. Baza sejfu przeliczona w tym PR (7 skrótów w 5 plikach) — opis łatki i wartości:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-BAZA-SZYBKIE”. **Sejf się zmienił — przy następnej pracy w `vilda-source` weź nową
+bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.**
+
+**Strażnicy.** `tests/unit/sejf-odczyt-najnowszej.test.mjs` (5, prawdziwy sejf: `getNewestSnapshot` = `getLatestSnapshot`
+przy jednym odszyfrowaniu zamiast sześciu, także po poprawce, przypięciu i przywróceniu wersji; `listPatientNotesByCategory`
+odszyfrowuje tylko notatki kategorii; odczyt ścisły; blokada); `tests/unit/baza-statystyki-otylosc.test.mjs` (+3: znacznik
+wpisów, plan odczytu kart, wynik zbiorczy); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (8: liczenie rusza samo, jeden
+odczyt najnowszej wersji na pacjenta i zero odczytów wszystkich wersji; ponowne wejście nie czyta kart; leczenie rozpoczęte
+samymi wpisami i nowa wersja karty czytają po jednej karcie; jeden odczyt wpisów na przebieg i zero odczytów notatek przy
+pacjencie); `tests/unit/visits-vault-boundary.test.mjs` i narzędzia granic sejfu z nowymi skrótami.
+
+**Wersje.** `vilda_patients_list.js` 10 → 11, `vilda_vault.js` 285 → 286, `vilda_chrome.js` 329 → 330
+i `vilda_session_bridge.js` 245 → 246, SW 1.1.584 → 1.1.585 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.

@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { expect, test } from '../support/test-czas.mjs';
 import { bezPrzewijaniaPoziomego } from '../support/baza-pacjentow-lista.mjs';
 import { OCZEKIWANE, otworzStatystyki, przygotujStatystyki } from '../support/baza-pacjentow-statystyki.mjs';
+import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 // P-BAZA-STATYSTYKI, etap 1 (decyzja właściciela 2026-11-23): widok „Statystyki” w Bazie pacjentów.
 // Prawdziwy renderer, prawdziwy szyfrowany sejf powłoki i wyłącznie fikcyjne osoby; zegar testu
@@ -42,7 +43,7 @@ test('komputer: wiek, płeć i przedziały z nagłówków kart; osoba spoza bazy
   for (const [klucz, liczba] of Object.entries(OCZEKIWANE.przedzialy)) {
     await expect(database.locator(`.pt-stat-band[data-band="${klucz}"] .pt-stat-band-total`), `przedział ${klucz}`).toHaveText(String(liczba));
   }
-  await expect(database.locator('.pt-stat-legend')).toHaveText(/Chłopcy 4\s*Dziewczęta 3\s*Płeć nieznana 1/);
+  await expect(database.locator('.pt-stat-card').first().locator('.pt-stat-legend')).toHaveText(/Chłopcy 4\s*Dziewczęta 3\s*Płeć nieznana 1/);
   await expect(database.locator('.pt-stat-card .pt-stat-note').first()).toContainText('Bez daty urodzenia: 1 (poza wiekiem).');
   // Słupki mają szerokość z danych: przedział 6–9 (2 osoby) jest dwa razy szerszy niż 0–2 (1 osoba).
   const szerokosc = async (klucz) => database.locator(`.pt-stat-band[data-band="${klucz}"] rect`)
@@ -88,42 +89,123 @@ test('kliknięcie przedziału i wiersza „Brakuje” otwiera listę tych pacjen
     .toEqual([ids.a, ids.d, ids.f].sort());
 });
 
-test('kompletność danych: nagłówki od razu, karty dopiero po „Policz z kart”', async ({ page }) => {
+// P-BAZA-SZYBKIE (decyzja właściciela 2026-11-24): liczenie rusza samo przy wejściu w „Statystyki”
+// i czyta z każdej karty tylko najnowszą wersję.
+test('kompletność danych: liczenie rusza samo, jeden odczyt najnowszej wersji na pacjenta', async ({ page }) => {
   const { frame, database, ids } = await przygotujStatystyki(page);
+  await frame.evaluate(() => {
+    const vault = window.VildaVault, newest = vault.getNewestSnapshot, latest = vault.getLatestSnapshot;
+    window.__statOdczyty = 0; window.__statWszystkieWersje = 0;
+    vault.getNewestSnapshot = function (...args) { window.__statOdczyty += 1; return newest.apply(this, args); };
+    vault.getLatestSnapshot = function (...args) { window.__statWszystkieWersje += 1; return latest.apply(this, args); };
+  });
+  expect(await frame.evaluate(() => window.__statOdczyty), 'sama lista nie czyta kart').toBe(0);
   await otworzStatystyki(database);
 
   const wiersz = (nazwa) => database.locator('.pt-stat-meter', { hasText: nazwa });
   await expect(wiersz('Data urodzenia').locator('.pt-stat-meter-figure')).toHaveText('7 / 8');
   await expect(wiersz('Płeć').locator('.pt-stat-meter-figure')).toHaveText('7 / 8');
-  await expect(database.locator('.pt-stat-cards .pt-stat-meter'), 'karty nie są odszyfrowywane bez prośby').toHaveCount(0);
-
-  // Otwarcie statystyk nie czyta żadnego zapisu karty; robi to dopiero przycisk.
-  await frame.evaluate(() => {
-    const vault = window.VildaVault, original = vault.getLatestSnapshot;
-    window.__statOdczyty = 0;
-    vault.getLatestSnapshot = function (...args) { window.__statOdczyty += 1; return original.apply(this, args); };
-  });
-  await database.locator('.pt-viewseg [data-view="list"]').click();
-  await otworzStatystyki(database);
-  expect(await frame.evaluate(() => window.__statOdczyty)).toBe(0);
-
-  await database.locator('.pt-stat-check').click();
+  // Bez żadnego kliknięcia: wynik z kart pojawia się po wejściu w statystyki.
   await expect(database.locator('.pt-stat-cards .pt-stat-meter')).toHaveCount(3);
-  expect(await frame.evaluate(() => window.__statOdczyty), 'jeden odczyt na pacjenta z bazy').toBe(8);
+  await expect(database.locator('.pt-stat-cardsbar')).toContainText('Karty policzone o');
+  expect(await frame.evaluate(() => window.__statOdczyty), 'jeden odczyt najnowszej wersji na pacjenta z bazy').toBe(8);
+  expect(await frame.evaluate(() => window.__statWszystkieWersje), 'odczyt wszystkich wersji karty nie jest używany').toBe(0);
   await expect(wiersz('Co najmniej 2 pomiary wzrostu').locator('.pt-stat-meter-figure')).toHaveText(OCZEKIWANE.karty.pomiary);
   await expect(wiersz('Wzrost obojga rodziców').locator('.pt-stat-meter-figure')).toHaveText(OCZEKIWANE.karty.rodzice);
   await expect(wiersz('Masa urodzeniowa').locator('.pt-stat-meter-figure')).toHaveText(OCZEKIWANE.karty.masaUrodzeniowa);
-  await expect(database.locator('.pt-stat-cardsbar')).toContainText('Karty policzone o');
 
   await wiersz('Masa urodzeniowa').locator('button.pt-stat-missing').click();
   await expect(database.locator('.pt-groupbar .lt')).toHaveText('Grupa ze statystyk: Masa urodzeniowa — brak · 6 osób');
   expect(await database.locator('.pt-row').evaluateAll((rows) => rows.map((row) => row.dataset.patientId).sort()))
     .toEqual([ids.b, ids.c, ids.e, ids.f, ids.g, ids.h].sort());
 
-  // Wynik sprawdzenia kart zostaje po powrocie do statystyk — bez ponownego odszyfrowania.
+  // Powrót do statystyk sprawdza zmiany, ale nie czyta ponownie kart, które się nie zmieniły.
   await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
   await expect(database.locator('.pt-stat-cards .pt-stat-meter')).toHaveCount(3);
+  await expect(database.locator('.pt-stat-check')).toBeEnabled();
   expect(await frame.evaluate(() => window.__statOdczyty)).toBe(8);
+
+  // „Policz ponownie” czyta wszystkie karty od nowa.
+  await database.locator('.pt-stat-check').click();
+  await expect.poll(() => frame.evaluate(() => window.__statOdczyty)).toBe(16);
+  await expect(database.locator('.pt-stat-check')).toBeEnabled();
+  await expect(wiersz('Masa urodzeniowa').locator('.pt-stat-meter-figure')).toHaveText(OCZEKIWANE.karty.masaUrodzeniowa);
+});
+
+/* P-BAZA-SZYBKIE: liczenie przyrostowe. Pamięć wyników kart żyje w widoku; karta jest czytana ponownie tylko wtedy,
+   gdy zmieniła się chwila jej zapisu albo wpisy między wizytami (wpis nie zmienia chwili zapisu karty). */
+test('liczenie przyrostowe: nowy wpis między wizytami i nowa wersja karty czytają tylko tę jedną kartę', async ({ page }) => {
+  const { frame, database, ids } = await przygotujStatystyki(page);
+  await frame.evaluate(() => {
+    const vault = window.VildaVault, newest = vault.getNewestSnapshot, category = vault.listPatientNotesByCategory, perPatient = vault.listPatientNotesForPatient;
+    window.__statKarty = []; window.__statWpisy = 0; window.__statNotatkiPacjenta = 0;
+    vault.getNewestSnapshot = function (...args) { window.__statKarty.push(args[0]); return newest.apply(this, args); };
+    vault.listPatientNotesByCategory = function (...args) { window.__statWpisy += 1; return category.apply(this, args); };
+    vault.listPatientNotesForPatient = function (...args) { window.__statNotatkiPacjenta += 1; return perPatient.apply(this, args); };
+  });
+  const E = OCZEKIWANE.otylosc, ob = database.locator('.pt-ob');
+  const stan = () => frame.evaluate(() => ({ karty: window.__statKarty.slice(), wpisy: window.__statWpisy, notatkiPacjenta: window.__statNotatkiPacjenta }));
+  const gotowe = async () => { await expect(database.locator('.pt-stat-cardsbar')).toContainText('Karty policzone o'); await expect(database.locator('.pt-stat-check')).toBeEnabled(); };
+
+  await otworzStatystyki(database);
+  await expect(ob.locator('.pt-stat-card-hint')).toHaveText(E.leki);
+  await gotowe();
+  let s1 = await stan();
+  expect(s1.karty.slice().sort(), 'pierwsze wejście: każda karta raz').toEqual(Object.values(ids).filter((id) => id !== ids.spoza).sort());
+  expect(s1.wpisy, 'wpisy między wizytami: jeden odczyt dla całej bazy').toBe(1);
+  expect(s1.notatkiPacjenta, 'bez odczytu notatek przy każdym pacjencie').toBe(0);
+
+  // Ponowne wejście: jeden odczyt wpisów, żadnej karty.
+  await database.locator('.pt-viewseg [data-view="list"]').click();
+  await otworzStatystyki(database);
+  await gotowe();
+  let s2 = await stan();
+  expect(s2.karty).toHaveLength(8);
+  expect(s2.wpisy).toBe(2);
+
+  // Leczenie rozpoczęte wyłącznie wpisami między wizytami (karta c nie ma punktów otyłości w zapisie wizyty):
+  // karta się nie zmienia, a statystyki i tak muszą to zobaczyć — i przeczytać ponownie tylko tę kartę.
+  await frame.evaluate(async (id) => {
+    const dziennik = window.VildaDziennikOtylosci;
+    const SAXENDA = { drug: 'Saxenda (liraglutyd) – s.c. 1×/dobę', substance: 'Liraglutyd (agonista receptora GLP‑1)' };
+    const wpisy = [
+      { type: 'start', dateISO: '2025-12-03', ageYears: 7, ageMonths: 10, weight: 30.0, weightSource: 'gabinet', height: 128.0, heightSource: 'gabinet', ...SAXENDA, dose: '0,6 mg', comment: '' },
+      { type: 'continue', dateISO: '2026-02-25', ageYears: 8, ageMonths: 1, weight: 28.5, weightSource: 'pacjent', height: null, heightSource: null, ...SAXENDA, dose: '1,8 mg', comment: '' },
+    ];
+    for (const wpis of wpisy) {
+      const plan = dziennik.planNowego(await dziennik.wczytaj(id, []), id, wpis);
+      if (!plan || !plan.ok) throw new Error('plan wpisu dziennika: ' + JSON.stringify(plan && plan.bledy));
+      await dziennik.zapisz(id, plan.wersje);
+    }
+  }, ids.c);
+  await database.locator('.pt-viewseg [data-view="list"]').click();
+  await otworzStatystyki(database);
+  // d −3,0 · e −4,2 · f −6,0 · h +2,0 · c −5,0 → średnia −3,24.
+  await expect(ob.locator('.pt-stat-card-hint')).toHaveText('leczonych: 6 · Saxenda 4 · Wegovy 2');
+  await expect(ob.locator('.pt-stat-tile[data-window="w12"] .pt-stat-value')).toHaveText('−3,2%');
+  await expect(ob.locator('.pt-stat-tile[data-window="w12"] .pt-stat-sub')).toContainText('n = 5');
+  await gotowe();
+  let s3 = await stan();
+  expect(s3.karty.slice(8), 'po dopisaniu wpisów czytana jest tylko karta c').toEqual([ids.c]);
+  expect(s3.wpisy).toBe(3);
+  expect(s3.notatkiPacjenta, 'dwa odczyty samego testu przy dopisywaniu wpisów').toBe(2);
+
+  // Nowa wersja karty d (dopisany wzrost rodziców): po powrocie do Bazy czytana jest tylko ta karta.
+  await frame.evaluate(async (id) => {
+    const vault = window.VildaVault, payload = (await vault.getLatestSnapshot(id)).payload;
+    await vault.savePatient({ ...payload, advanced: { ...(payload.advanced || {}), motherHeight: 164, fatherHeight: 180 } }, { patientId: id, dedup: false });
+  }, ids.d);
+  await database.locator('.pt-home').click();
+  const menu = await visibleChromeMenu(page);
+  await menu.getByRole('button', { name: 'Baza pacjentów', exact: true }).click();
+  await expect(database).toHaveAttribute('data-view', 'stats');
+  await expect(database.locator('.pt-stat-meter', { hasText: 'Wzrost obojga rodziców' }).locator('.pt-stat-meter-figure')).toHaveText('2 / 8');
+  await gotowe();
+  let s4 = await stan();
+  expect(s4.karty.slice(9), 'po zapisie nowej wersji czytana jest tylko karta d').toEqual([ids.d]);
+  expect(s4.notatkiPacjenta, 'statystyki nie czytają notatek przy każdym pacjencie; te dwa odczyty zrobił sam test, dopisując wpisy').toBe(2);
+  // Leczenie otyłości bez zmian po zapisie karty d.
+  await expect(ob.locator('.pt-stat-card-hint')).toHaveText('leczonych: 6 · Saxenda 4 · Wegovy 2');
 });
 
 // P-BAZA-STATYSTYKI, etap 2: leczenie hormonem wzrostu — tempo silnikiem aplikacji, hSDS jej siatkami.
@@ -131,10 +213,7 @@ test('leczenie GH: tempo w 1. roku, para „przed → 1. rok”, zmiana hSDS, pr
   const { frame, database, ids } = await przygotujStatystyki(page);
   await otworzStatystyki(database);
   const gh = database.locator('.pt-gh');
-  await expect(gh, 'przed policzeniem z kart sekcja nie pokazuje liczb').toContainText('Pojawi się po policzeniu z kart.');
-  await expect(gh.locator('.pt-stat-tile')).toHaveCount(0);
-
-  await database.locator('.pt-stat-check').click();
+  // Liczenie rusza samo po wejściu w statystyki.
   await expect(gh.locator('.pt-stat-card-hint')).toHaveText(OCZEKIWANE.gh.programy);
 
   const tempo = gh.locator('.pt-stat-tile', { hasText: /Tempo w 1\. roku leczenia/i });
@@ -205,18 +284,7 @@ test('leczenie otyłości: zmiana masy po 12 tyg. i po 6 mies., progi redukcji, 
   await otworzStatystyki(database);
   const E = OCZEKIWANE.otylosc;
   const ob = database.locator('.pt-ob');
-  await expect(ob, 'przed policzeniem z kart sekcja nie pokazuje liczb').toContainText('Pojawi się po policzeniu z kart.');
-  await expect(ob.locator('.pt-stat-tile')).toHaveCount(0);
-
-  // Wpisy między wizytami czyta dopiero przycisk — raz na pacjenta z bazy.
-  await frame.evaluate(() => {
-    const vault = window.VildaVault, original = vault.listPatientNotesForPatient;
-    window.__statNotatki = 0;
-    vault.listPatientNotesForPatient = function (...args) { window.__statNotatki += 1; return original.apply(this, args); };
-  });
-  await database.locator('.pt-stat-check').click();
   await expect(ob.locator('.pt-stat-card-hint')).toHaveText(E.leki);
-  expect(await frame.evaluate(() => window.__statNotatki), 'jeden odczyt wpisów na pacjenta z bazy').toBe(OCZEKIWANE.razem);
 
   const okno = (klucz) => ob.locator(`.pt-stat-tile[data-window="${klucz}"]`);
   await expect(okno('w12').locator('.pt-stat-label')).toHaveText('Zmiana masy po 12 tyg.');
@@ -311,11 +379,8 @@ test('raport PDF i plik dla Excela: pobranie z lokalnych bibliotek, liczby z ekr
   const { frame, database, ids } = await przygotujStatystyki(page);
   await otworzStatystyki(database);
   const pasek = database.locator('.pt-stat-cardsbar');
-  await expect(pasek, 'przed policzeniem pasek zapowiada pliki, ale ich nie oferuje').toContainText('Po policzeniu można zapisać raport PDF i plik dla Excela.');
-  await expect(pasek.locator('[data-export]')).toHaveCount(0);
-
-  await database.locator('.pt-stat-check').click();
   await expect(pasek.locator('[data-export]')).toHaveText(['Raport PDF', 'Eksport do Excela']);
+  await expect(pasek.locator('[data-export="pdf"]'), 'pliki są dostępne po zakończeniu liczenia').toBeEnabled();
   await expect(pasek.locator('.pt-stat-export-status')).toHaveText('Raport i plik dla Excela zawierają liczby z tego ekranu, bez nazwisk i dat urodzenia.');
 
   /* Czekamy na pobranie TEGO pliku, nie na „jakiekolwiek pobranie”: aplikacja sama zapisuje w tle kopię konta
@@ -393,7 +458,7 @@ test.describe('telefon', () => {
   test('przełącznik pod tytułem, kafle w dwóch kolumnach, bez przewijania w bok', async ({ page }) => {
     const { frame, database } = await przygotujStatystyki(page);
     await otworzStatystyki(database);
-    const kafle = await database.locator('.pt-stat-tile').evaluateAll((nodes) => nodes.map((node) => {
+    const kafle = await database.locator('.pt-stats > .pt-stat-tiles .pt-stat-tile').evaluateAll((nodes) => nodes.map((node) => {
       const box = node.getBoundingClientRect();
       return { left: Math.round(box.left), top: Math.round(box.top), width: Math.round(box.width) };
     }));
@@ -414,8 +479,8 @@ test.describe('telefon', () => {
 
     // Etap 2: sekcja leczenia GH mieści się na telefonie; kropki hantli mają stały rozmiar.
     await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
-    await database.locator('.pt-stat-check').click();
     await expect(database.locator('.pt-gh .pt-stat-tile')).toHaveCount(3);
+    await expect(database.locator('.pt-stat-check')).toBeEnabled();
     await bezPrzewijaniaPoziomego(page, frame);
     const kropka = await database.locator('.pt-gh-row[data-program="SNP"] line.pt-gh-dot--first').boundingBox();
     expect(Math.round(kropka.width), 'kropka 12 px niezależnie od szerokości').toBe(12);

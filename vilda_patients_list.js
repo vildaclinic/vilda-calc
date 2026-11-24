@@ -448,7 +448,49 @@
   function percent(part, whole) { return whole ? Math.round(part / whole * 100) : 0; }
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const FALL_HEIGHT = 132, FALL_PAD = 8;
+  const CARD_READERS = 4;   // liczba kart czytanych naraz przy liczeniu statystyk (pomiar: 4 naraz ≈ 2× szybciej niż po kolei, więcej nie pomaga)
 
+  /* ── P-BAZA-SZYBKIE (decyzja właściciela 2026-11-24): liczenie z kart przyrostowo ─────────────
+   * Wynik każdej karty zostaje w pamięci widoku do końca sesji; kolejne liczenie czyta tylko karty
+   * nowe i zmienione. Karta jest „ta sama”, gdy nie zmieniła się chwila jej zapisu (lastSavedAtISO)
+   * ANI znacznik wpisów między wizytami — dopisanie takiego wpisu nie zmienia chwili zapisu karty,
+   * więc sama chwila zapisu nie wystarcza. Wynik nieodczytanej karty nie jest pamiętany. */
+  function journalIndex(notes, isEntry) {
+    const byPatient = new Map();
+    (Array.isArray(notes) ? notes : []).forEach((note) => {
+      if (!note || typeof note.patientId !== 'string' || (typeof isEntry === 'function' && !isEntry(note))) return;
+      if (!byPatient.has(note.patientId)) byPatient.set(note.patientId, []);
+      byPatient.get(note.patientId).push(note);
+    });
+    return {
+      of: (patientId) => byPatient.get(patientId) || [],
+      // Znacznik: identyfikatory i chwile zmiany wpisów pacjenta — zmienia się po dopisaniu, poprawce i usunięciu wpisu.
+      mark: (patientId) => (byPatient.get(patientId) || []).map((note) => String(note.id) + '@' + (note.updatedAtISO || note.createdAtISO || '')).sort().join('|')
+    };
+  }
+  function cardsPlan(base, cached, markOf) {
+    const kept = {}, stale = [];
+    (Array.isArray(base) ? base : []).forEach((record) => {
+      const hit = cached && cached[record.patientId];
+      if (hit && hit.read === true && hit.stamp === (record.lastSavedAtISO || '') && hit.journal === markOf(record.patientId)) kept[record.patientId] = hit;
+      else stale.push(record);
+    });
+    return { kept, stale };
+  }
+  function cardsResult(base, items) {
+    const missing = {}; CARD_ITEMS.forEach(([key]) => { missing[key] = []; });
+    const treated = [], obese = [], details = [];
+    let failed = 0, partial = 0;
+    (Array.isArray(base) ? base : []).forEach((record) => {
+      const id = record.patientId, item = items && items[id];
+      if (!item || item.read !== true) { failed += 1; details.push({ id, card: null, gh: null, ob: null }); return; }
+      CARD_ITEMS.forEach(([key]) => { if (!item.card[key]) missing[key].push(id); });
+      if (item.gh) treated.push({ id, gh: item.gh });
+      if (item.ob) { obese.push({ id, ob: item.ob }); if (item.partial) partial += 1; }
+      details.push({ id, card: item.card, gh: item.gh, ob: item.ob });
+    });
+    return { total: details.length, failed, missing, details, treated, obese, partial };
+  }
   /* ── P-BAZA-STATYSTYKI, etap 4 (decyzja właściciela 2026-11-24): raport PDF i plik dla Excela ──
    * Jeden model raportu (statsReport) z tych samych obiektów, które rysuje ekran: demographics,
    * ghCohort, obesityCohort i kompletność kart. Z niego powstają OBA pliki — dokument pdfmake
@@ -924,7 +966,8 @@
       // P-BAZA-STATYSTYKI: widok „Statystyki”, grupa wybrana z wykresu i wynik sprawdzenia kart.
       view: initial.view === 'stats' ? 'stats' : 'list',
       group: initial.group && Array.isArray(initial.group.ids) ? { label: String(initial.group.label || ''), ids: initial.group.ids.slice() } : null,
-      cards: initial.cards && typeof initial.cards === 'object' ? initial.cards : null
+      cards: initial.cards && typeof initial.cards === 'object' ? initial.cards : null,
+      cardCache: initial.cardCache && typeof initial.cardCache === 'object' ? initial.cardCache : null
     };
     // Earlier versions used the same input for names of lists and patients.
     if (state.filter === 'lists' && !state.listId && !Object.prototype.hasOwnProperty.call(initial, 'listQuery')) {
@@ -954,6 +997,7 @@
     let exportBusy = null;   // 'pdf' albo 'xlsx' w trakcie przygotowania pliku
     let exportNote = '';     // ostatni komunikat o pliku (pasek „z kart”)
     let zipLoading = null;   // jedna obietnica wczytania lokalnej biblioteki JSZip
+    let statsCounted = false; // liczenie ruszyło samo przy tym wejściu w „Statystyki”
     let cardsProgress = null;
     const timeFormatter = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
     const rowHeights = new Map(Array.isArray(initial.rowHeights) ? initial.rowHeights : []);
@@ -1711,29 +1755,33 @@
       if (!cardsBar) return;
       clear(cardsBar); cardsProgress = null;
       const base = basePatients(), saved = savedCards();
-      if (cardsBusy) {
+      if (cardsBusy && !saved) {
         const progress = el('span', 'pt-stat-progress');
         progress.setAttribute('role', 'status'); progress.setAttribute('aria-live', 'polite');
         cardsBar.appendChild(progress);
         cardsProgress = { text: progress };
         updateCardsProgress();
       } else if (saved) {
-        const when = new Date(saved.at);
+        // W trakcie sprawdzania zmian poprzedni wynik zostaje na ekranie; przyciski czekają na koniec.
+        const when = new Date(saved.at), locked = Boolean(cardsBusy);
         cardsBar.appendChild(el('span', null, 'Karty policzone' + (Number.isFinite(when.getTime()) ? ' o ' + timeFormatter.format(when) : '')
           + (saved.failed ? ' · nie udało się odczytać: ' + saved.failed : '') + '.'));
-        cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz ponownie', checkCards));
+        const again = button('pt-secondary pt-stat-check', 'Policz ponownie', () => countCards(true));
+        again.disabled = locked;
+        cardsBar.appendChild(again);
         [['pdf', 'Raport PDF'], ['xlsx', 'Eksport do Excela']].forEach(([kind, label]) => {
           const save = button('pt-secondary pt-stat-export', label, () => exportFile(kind));
           save.setAttribute('data-export', kind);
-          save.disabled = Boolean(exportBusy);
+          save.disabled = locked || Boolean(exportBusy);
           cardsBar.appendChild(save);
         });
         const status = el('p', 'pt-stat-export-status', exportNote || 'Raport i plik dla Excela zawierają liczby z tego ekranu, bez nazwisk i dat urodzenia.');
         status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
         cardsBar.appendChild(status);
+        if (locked) { cardsProgress = { text: status }; updateCardsProgress(); }
       } else {
-        cardsBar.appendChild(el('span', null, 'Leczenie hormonem wzrostu, leczenie otyłości i kompletność kart liczą się z zapisów kart i wpisów między wizytami. Policzenie odszyfrowuje je po kolei na tym urządzeniu i przy dużej bazie może chwilę potrwać. Po policzeniu można zapisać raport PDF i plik dla Excela.'));
-        cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz z kart (' + base.length + ')', checkCards));
+        cardsBar.appendChild(el('span', null, 'Leczenie hormonem wzrostu, leczenie otyłości i kompletność kart liczą się z zapisów kart i wpisów między wizytami. Liczenie rusza samo po wejściu w Statystyki; po policzeniu można zapisać raport PDF i plik dla Excela.'));
+        cardsBar.appendChild(button('pt-secondary pt-stat-check', 'Policz z kart (' + base.length + ')', () => countCards(true)));
       }
     }
     function fillCards() {
@@ -1742,71 +1790,120 @@
       const saved = savedCards();
       if (cardsHost) {
         clear(cardsHost);
-        if (saved && !cardsBusy) CARD_ITEMS.forEach(([key, label]) => {
+        if (saved) CARD_ITEMS.forEach(([key, label]) => {
           const missing = saved.missing[key] || [];
           cardsHost.appendChild(meterRow(label, saved.total - saved.failed - missing.length, saved.total - saved.failed, missing, label + ' — brak'));
         });
       }
-      if (ghHost) { clear(ghHost); renderGh(ghHost, saved && !cardsBusy ? saved.gh : null); }
+      if (ghHost) { clear(ghHost); renderGh(ghHost, saved ? saved.gh : null); }
       if (ghHint) {
-        const cohort = saved && !cardsBusy ? saved.gh : null;
+        const cohort = saved ? saved.gh : null;
         ghHint.textContent = cohort && cohort.treated
           ? 'leczonych: ' + cohort.treated + ' · ' + cohort.programs.map((item) => item.program + ' ' + item.treated).join(' · ') : '';
       }
-      if (obHost) { clear(obHost); renderObesity(obHost, saved && !cardsBusy ? saved.obesity : null); }
+      if (obHost) { clear(obHost); renderObesity(obHost, saved ? saved.obesity : null); }
       if (obHint) {
-        const cohort = saved && !cardsBusy ? saved.obesity : null;
+        const cohort = saved ? saved.obesity : null;
         obHint.textContent = cohort && cohort.treated
           ? 'leczonych: ' + cohort.treated + ' · ' + cohort.drugs.map((item) => item.drug + ' ' + item.treated).join(' · ') : '';
       }
     }
     function updateCardsProgress() {
-      if (cardsProgress && cardsBusy) cardsProgress.text.textContent = 'Liczenie z kart… ' + cardsBusy.done + ' z ' + cardsBusy.total;
+      if (!cardsProgress || !cardsBusy) return;
+      cardsProgress.text.textContent = cardsBusy.total ? 'Liczenie z kart… ' + cardsBusy.done + ' z ' + cardsBusy.total : 'Sprawdzam zmiany w kartach…';
     }
-    async function checkCards() {
+    /* ── P-BAZA-SZYBKIE: liczenie z kart ──────────────────────────────────────────
+     * Rusza samo przy wejściu w „Statystyki” (decyzja właściciela 2026-11-24). Trzy rzeczy czynią je tanim:
+     *   1. wpisy między wizytami czyta JEDEN odczyt notatek kategorii dziennika (dotąd przy każdym pacjencie
+     *      wczytywały się notatki całego konta),
+     *   2. z karty odszyfrowuje się tylko najnowsza wersja (dotąd wszystkie),
+     *   3. czytane są tylko karty nowe i zmienione — wynik pozostałych czeka w pamięci widoku (cardsPlan).
+     * „Policz ponownie” czyta wszystko od nowa. Starszy sejf bez tych odczytów liczy po staremu. */
+    function readCard(patientId, session) {
+      return typeof vault.getNewestSnapshot === 'function' ? vault.getNewestSnapshot(patientId, session) : vault.getLatestSnapshot(patientId);
+    }
+    async function readJournal(session) {
+      const journal = win.VildaDziennikOtylosci;
+      if (!journal || typeof journal.zloz !== 'function' || typeof journal.jestWpisem !== 'function' || !journal.KATEGORIA
+        || typeof vault.listPatientNotesByCategory !== 'function') return null;
+      return journalIndex(await vault.listPatientNotesByCategory(journal.KATEGORIA, session), journal.jestWpisem);
+    }
+    async function countCards(force) {
       if (cardsBusy || !alive() || state.view !== 'stats') return;
       const base = basePatients();
       const run = ++cardsRun, signature = cardsSignature(base);
-      const missing = {}; CARD_ITEMS.forEach(([key]) => { missing[key] = []; });
-      const deps = ghDeps(), treated = [];
-      const obDeps = obesityDeps(), obese = [];
-      const details = [];      // wynik każdej karty — do arkusza „Pacjenci” (etap 4)
-      let failed = 0, journalFailed = 0;
+      const session = { strict: true, isCurrent: () => alive() && run === cardsRun };
+      const deps = ghDeps(), obDeps = obesityDeps();
+      // Wynik karty zależy też od tego, co wczytała strona (silnik tempa, siatki, pasma) — inny zestaw to inna pamięć.
+      const depsKey = [Boolean(annualWindow(deps.tempo)), Boolean(deps.kursy), deps.sdsReady, deps.defaultSource,
+        Boolean(obDeps.cykle && obDeps.tygodnie), obDeps.sdsReady, obDeps.defaultSource, obDeps.thresholds.join('/')].join('|');
+      const cached = force !== true && state.cardCache && state.cardCache.deps === depsKey ? state.cardCache.items : null;
+      const before = force !== true ? savedCards() : null;
       exportNote = '';
-      cardsBusy = { done: 0, total: base.length };
-      fillCards();
-      for (const record of base) {
-        if (run !== cardsRun) return;
-        if (!alive()) { cardsBusy = null; return; }
-        try {
-          const snapshot = await vault.getLatestSnapshot(record.patientId);
-          if (run !== cardsRun) return;
-          if (!snapshot || !snapshot.payload) { failed += 1; details.push({ id: record.patientId, card: null, gh: null, ob: null }); }
-          else {
-            const result = cardCompleteness(snapshot.payload);
-            CARD_ITEMS.forEach(([key]) => { if (!result[key]) missing[key].push(record.patientId); });
-            const gh = ghPatient(snapshot.payload, deps);
-            if (gh) treated.push({ id: record.patientId, gh });
-            const therapy = await obesityPoints(record.patientId, snapshot.payload);
+      cardsBusy = { done: 0, total: 0 };
+      if (before) fillBar(); else fillCards();
+      let journal = null, journalBroken = false;
+      try { journal = await readJournal(session); } catch { journalBroken = true; }
+      if (run !== cardsRun) return;
+      if (!alive()) { cardsBusy = null; return; }
+      const markOf = (patientId) => journalBroken ? '!' : journal ? journal.mark(patientId) : '';
+      const plan = cardsPlan(base, cached, markOf), items = plan.kept;
+      cardsBusy = { done: 0, total: plan.stale.length };
+      updateCardsProgress();
+      // Kilka kart naraz: odczyt z magazynu i odszyfrowanie czekają poza głównym wątkiem, więc równoległe kolejki
+      // skracają liczenie; wynik nie zależy od kolejności (każda karta ma własny wpis).
+      const queue = plan.stale.slice();
+      const reader = async () => {
+        while (queue.length) {
+          if (run !== cardsRun || !alive()) return;
+          const record = queue.shift();
+          const entry = { stamp: record.lastSavedAtISO || '', journal: markOf(record.patientId), read: false, card: null, gh: null, ob: null, partial: false };
+          try {
+            const snapshot = await readCard(record.patientId, session);
             if (run !== cardsRun) return;
-            if (therapy.failed) journalFailed += 1;
-            const ob = obesityPatient(snapshot.payload, therapy.points, obDeps);
-            if (ob) obese.push({ id: record.patientId, ob });
-            details.push({ id: record.patientId, card: result, gh, ob });
+            if (snapshot && snapshot.payload) {
+              const payload = snapshot.payload;
+              let points = Array.isArray(payload.obesityTherapyPoints) ? payload.obesityTherapyPoints : [];
+              if (journal) {
+                const merged = win.VildaDziennikOtylosci.zloz(journal.of(record.patientId), points);
+                if (merged && Array.isArray(merged.punkty)) points = merged.punkty;
+              } else if (journalBroken) entry.partial = true;
+              else {
+                // Sejf albo dziennik bez szybkiego odczytu: wpisy pacjenta po staremu, osobnym odczytem.
+                const therapy = await obesityPoints(record.patientId, payload);
+                if (run !== cardsRun) return;
+                points = therapy.points;
+                if (therapy.failed) { entry.partial = true; entry.journal = '!'; }
+              }
+              entry.card = cardCompleteness(payload);
+              entry.gh = ghPatient(payload, deps);
+              entry.ob = obesityPatient(payload, points, obDeps);
+              entry.read = true;
+            }
+          } catch {
+            if (run !== cardsRun) return;
           }
-        } catch {
-          if (run !== cardsRun) return;
-          failed += 1;
-          if (!details.some((item) => item.id === record.patientId)) details.push({ id: record.patientId, card: null, gh: null, ob: null });
+          items[record.patientId] = entry;
+          cardsBusy.done += 1; updateCardsProgress();
         }
-        cardsBusy.done += 1; updateCardsProgress();
-      }
+      };
+      await Promise.all(Array.from({ length: Math.min(CARD_READERS, queue.length) }, reader));
+      if (run !== cardsRun) return;
+      if (!alive()) { cardsBusy = null; return; }
       cardsBusy = null;
       if (!alive()) return;
-      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed, missing, details,
-        gh: Object.assign(ghCohort(treated), { sdsReady: deps.sdsReady, engineReady: Boolean(annualWindow(deps.tempo)) }),
-        obesity: Object.assign(obesityCohort(obese, { thresholds: obDeps.thresholds }),
-          { sdsReady: obDeps.sdsReady, engineReady: Boolean(obDeps.cykle && obDeps.tygodnie), journalFailed }) };
+      state.cardCache = { deps: depsKey, items };
+      if (before && !plan.stale.length) {
+        // Nic się nie zmieniło: zostaje ten sam wynik, nowa jest tylko chwila sprawdzenia.
+        state.cards = Object.assign({}, before, { at: new Date().toISOString() });
+        fillBar();
+        return;
+      }
+      const result = cardsResult(base, items);
+      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed: result.failed, missing: result.missing, details: result.details,
+        gh: Object.assign(ghCohort(result.treated), { sdsReady: deps.sdsReady, engineReady: Boolean(annualWindow(deps.tempo)) }),
+        obesity: Object.assign(obesityCohort(result.obese, { thresholds: obDeps.thresholds }),
+          { sdsReady: obDeps.sdsReady, engineReady: Boolean(obDeps.cykle && obDeps.tygodnie), journalFailed: result.partial }) };
       fillCards();
       const again = cardsBar && cardsBar.querySelector('.pt-stat-check');
       if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
@@ -2216,6 +2313,8 @@
 
       wrap.appendChild(el('p', 'pt-stat-note pt-stat-note--foot', footNote(model.total)));
       scroll.appendChild(wrap);
+      // Liczenie rusza samo, raz na wejście w „Statystyki” (decyzja właściciela 2026-11-24).
+      if (!statsCounted) { statsCounted = true; countCards(false); }
     }
 
     function reader() {
@@ -2435,7 +2534,7 @@
       clear(scroll);
       if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
       if (state.view === 'stats') { count.textContent = ''; renderStats(); restorePosition(); return; }
-      ++cardsRun; cardsBusy = null; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
+      ++cardsRun; cardsBusy = null; statsCounted = false; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
         if (opts.duplicates && typeof opts.duplicates.render === 'function') opts.duplicates.render(scroll);
@@ -2605,5 +2704,6 @@
   }
   function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
   win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
-    statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName });
+    statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName,
+    journalIndex, cardsPlan, cardsResult });
 })(typeof window !== 'undefined' ? window : null);

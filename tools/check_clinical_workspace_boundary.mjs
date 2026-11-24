@@ -34,8 +34,10 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // trash entry of a deleted card is queued again when the change carried a later version of that visit under a card
 // that lost to the patient tombstone here; dormant behind the same hidden switch) and E3-PR0e1 (a card emptied by the
 // move phase of the synchronization merge disappears together with the patient tombstone known to that merge, from
-// the payload or local, written only when no local tombstone or an earlier one exists; in effect at once).
-const BASE = '75fa66c9e580e9ac051c7300b621de8cb03ede637cad026afc0f15c7b1a0ec68';
+// the payload or local, written only when no local tombstone or an earlier one exists; in effect at once) and
+// P-BAZA-SZYBKIE (two read-only helpers: getNewestSnapshot decrypts only the newest version of a patient card and
+// listPatientNotesByCategory decrypts only the notes of one category; docs/clinical/ALGORITHMS.md).
+const BASE = '8f8d3490c8b7178f07441a83f18d9a870f0dfeaa3f1d96977086b4027b57a6cc';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
