@@ -767,6 +767,10 @@ Rozpoznanie jest osobną notatką pacjenta kategorii `treatment` z zaszyfrowanym
 odwracalna warstwa z czytelnych źródeł `runtime/patient-treatment-v1/`. Ten sam zapis czyta i pisze nowa Karta
 pacjenta na gałęzi strony głównej.
 
+Usunięcie rozpoznania (rata 3) to `removeDiagnosis` tego samego magazynu: istniejący aktor notatki sprawdza wersję
+i usuwa zapis razem z nagrobkiem w jednym niepodzielnym kroku. Robi to druga, zewnętrzna warstwa sejfu z czytelnego
+źródła `runtime/diagnosis-mutation-v1/` — wydanie bez dokumentów wizyt tej samej warstwy, którą ma gałąź strony głównej.
+
 W dotychczasowej Karcie sekcję „Rozpoznania pacjenta” i jej formularz buduje blok `Kr_` w `vilda_auth_ui.js`;
 zapis idzie wyłącznie przez magazyn (rewizja, właściciel, sesja sejfu). Wyszukiwanie kodu ma odrębne warstwy:
 `vilda_icd10_pl_data.js` (przypięte źródło CeZ i metadane), `vilda_icd10_search.js` (czysty indeks przyjmujący

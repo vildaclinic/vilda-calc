@@ -62,6 +62,7 @@ przechwytuje bieżącą sesję sejfu i zwraca:
 
 - `read()` → `{ patientId, diagnoses, episodes, unsupported }`;
 - `createDiagnosis(values)` / `updateDiagnosis(dto, values)`;
+- `removeDiagnosis(dto, binding)` → `{ id, removed: true }`;
 - `createEpisode(values)` / `updateEpisode(dto, values)`;
 - `addFollowup(dto, values)` / `updateFollowup(dto, id, values)`;
 - `dispose()`.
@@ -74,6 +75,17 @@ kolejnym krokiem. Opcjonalny zaufany drugi argument `{ isCurrent }` tych dwóch
 istniejących aktorów jest sprawdzany również w ich dotychczasowej kontroli
 `beforeCommit`, po szyfrowaniu i przed przekazaniem wiersza adapterowi. Callback
 nie jest częścią notatki i nie trafia do eksportu.
+
+`removeDiagnosis` sprawdza przechwyconą rewizję przez natywnego aktora
+`removeExistingPatientNote` z opcjonalnym zaufanym `{ isCurrent }`. Zapis usuwa
+wyłącznie ten rekord oraz tworzy zwykły nagrobek notatki do synchronizacji.
+Scoped usunięcie i nagrobek mają jeden atomowy commit: transakcję IndexedDB,
+podmianę obu map pamięci albo istniejący etap chronionego workspace.
+Konflikt rewizji daje `TREATMENT_CONFLICT`; utrata właściciela przed rozpoczęciem
+zatwierdzania zatrzymuje operację. Usunięcie nie zamyka terapii, nie kasuje jej
+`diagnosisIds` i nie zmienia pomiarów ani wersji karty. W `audyt` każde
+rozpoznanie jest ogólne (pacjenta, nie wizyty) — opis niżej, w części
+„Usuwanie rozpoznania”.
 
 Odczyty i otwieranie zakładki niczego nie zapisują. Nieobsługiwany kontekst jest
 tylko do odczytu również w dawnych ścieżkach edycji notatek. Natywne przeniesienie
@@ -116,7 +128,9 @@ jego kodu. Pliki są w paczce precache interfejsu wizyt
 Wszędzie, gdzie aplikacja otwiera edytor istniejącej notatki (np. `Edytuj`
 w „Notatkach”), wpis rozpoznania otwiera formularz rozpoznania, a nie zwykły
 edytor tekstu (`ga` → `Kr_zNotatki`). Inny zapis leczenia jest tu tylko do
-odczytu. `Usuń` w „Notatkach” usuwa rozpoznanie jak każdą notatkę. Sekcja odświeża się po każdej
+odczytu. `Usuń` w „Notatkach” przy rozpoznaniu usuwa je tym samym mechanizmem co
+formularz (niżej), a przy innym zapisie leczenia pokazuje, że jest on tu tylko
+do odczytu. Sekcja odświeża się po każdej
 zmianie notatki pacjenta zgłoszonej przez sejf (`onPatientNoteChanged`).
 Formularz znika przy zablokowaniu sejfu i przy zmianie pacjenta lub sesji;
 niezapisane zmiany chroni pytanie przy zamknięciu i `beforeunload`.
@@ -131,6 +145,72 @@ Bieżący formularz z niezapisanymi zmianami, trwającym zapisem lub niepewnym
 wynikiem zapisu korzysta z natywnej ochrony `beforeunload`. Odmowa odświeżenia
 zachowuje ten sam formularz. Zamknięcie, blokada i usunięcie widoku zwalniają
 handler; ochrona nie zapisuje szkicu automatycznie.
+
+### Usuwanie rozpoznania (`audyt`, P-ROZPOZNANIA rata 3)
+
+Prośba właściciela z 24.11.2026: w dotychczasowej Karcie rozpoznanie ma się dać
+usunąć, a mechanizm ma być zgodny z nową Kartą pacjenta, żeby późniejsze
+scalenie nowej strony głównej było proste.
+
+**Co widzi lekarz.** Formularz „Edytuj rozpoznanie” (otwarty z sekcji albo
+z „Notatek”) ma na końcu, pod „Anuluj”, przycisk „Usuń rozpoznanie”. Pytanie
+przed usunięciem: „Usunąć to rozpoznanie z kartoteki pacjenta?”, z dopiskiem
+o powiązanych zapisach leczenia (zostają bez zmian) i o odrzuceniu
+niezapisanych zmian formularza. Po usunięciu sekcja pokazuje „Usunięto
+rozpoznanie.”. Gdy rozpoznanie zmieniło się w innym miejscu, usunięcie odmawia
+(komunikat o zmianie zapisu), a formularz można już tylko zamknąć — jak po
+nieudanym zapisie. Formularz nowego rozpoznania nie ma przycisku. „Usuń” przy
+wpisie rozpoznania w „Notatkach” pyta tak samo i usuwa tą samą drogą
+(`CareDeleteCheckedNote` → `Kr_usunZNotatek`); zwykłe usuwanie notatki nie
+dotyka zapisów leczenia.
+
+**Mechanizm — ten sam, co w nowej Karcie.** Interfejs woła
+`removeDiagnosis(dto)` magazynu leczenia. Magazyn przekazuje przechwyconą
+rewizję i widoczną wersję aktorowi `removeExistingPatientNote` ze świadkiem
+`{ isCurrent, diagnosisMutation: { visitContext: null } }`. Aktor sprawdza
+sesję, nagrobek, pacjenta i rewizję jak przy każdej zmianie istniejącej
+notatki, potwierdza, że zapis jest obsługiwanym rozpoznaniem
+(`TREATMENT_UNSUPPORTED` w innym razie), i usuwa zapis razem z nagrobkiem
+`{ id, deletedAtISO, rev }` w jednym niepodzielnym kroku
+(`commitDiagnosisDeleteForUser`: jedna transakcja IndexedDB na sklepach notatek
+i nagrobków, podmiana obu map w pamięci albo etap chronionego workspace).
+Nieudane zatwierdzenie nie zostawia ani usuniętego zapisu, ani nagrobka, ani
+zdarzenia zmiany. Świadek jest utrwalany w chwili wywołania aktora
+(`DiagnosisMutationInstall`), zanim wywołanie trafi do kolejki — późniejsza
+zmiana obiektu opcji niczego nie zmienia. Zwykłe `removeExistingPatientNote`
+bez świadka działa jak dotąd.
+
+**Warstwa sejfu.** `VILDA DIAGNOSIS MUTATION V1` — te same ścieżki, nazwa
+i znaczniki co na gałęzi nowej strony głównej:
+`runtime/diagnosis-mutation-v1/vault-fragment.js`, `manifest.json`,
+`tools/diagnosis-mutation-vault-delta.mjs`. W `audyt` jest to **wydanie bez
+dokumentów wizyt** (dziesięć punktów włączenia), nałożone bezpośrednio na obraz
+warstwy leczenia:
+
+| Część | `audyt` | Pełna warstwa (gałąź nowej strony głównej) |
+| --- | --- | --- |
+| `removeDiagnosis` w magazynie, eksport w zakresie | jest (bez bindingu wizyty) | jest, z bindingiem wizyty |
+| przekazanie opcji do aktora, kontrola rodzaju zapisu, niepodzielne usunięcie, most adaptera hybrydowego | ten sam tekst | ten sam tekst |
+| `commitDiagnosisDeleteForUser` w adapterach IndexedDB i pamięci | ta sama metoda, inne miejsce wstawienia | obok kosza wizyt |
+| funkcje fragmentu | te same poza `DiagnosisMutationOrigin` | — |
+| pochodzenie z wizyty (`visitContext`) | brak czytnika: zapis albo świadek, który nazywa wizytę, jest odrzucany (`TREATMENT_VISIT_READONLY`) | sprawdzane, edycja i usunięcie tylko z otwartej tej samej wizyty |
+| edycja rozpoznania przez świadka, blokada pacjenta wspólna z koszem wizyt | brak (edycja idzie jak w racie 1) | jest |
+
+**Scalenie z nową stroną główną.** Wydanie z `audyt` jest podzbiorem pełnej
+warstwy: wszystko, co tu przechodzi (ogólne rozpoznanie), przechodzi tam tak
+samo. Przy scalaniu pliki `runtime/diagnosis-mutation-v1/*`,
+`tools/diagnosis-mutation-vault-delta.mjs` i obraz sejfu bierze się z gałęzi
+nowej strony głównej, a jej łańcuch warstw nakłada się na obraz warstwy
+leczenia — wydanie z `audyt` zdejmuje wcześniej polecenie kontroli
+(`restoreDiagnosisMutationBaseline`). Interfejs dotychczasowej Karty woła tylko
+`removeDiagnosis(dto)` i rozumie odpowiedź `TREATMENT_VISIT_READONLY`, więc po
+scaleniu działa bez zmian.
+
+**Ograniczenie do czasu scalenia.** `audyt` nie zapisuje ani nie odczytuje
+pochodzenia zapisu z wizyty. Rozpoznanie wpisane w ramach wizyty w podglądzie
+nowej strony głównej, jeśli trafi przez synchronizację do bieżącej aplikacji,
+jest tu zwykłym rozpoznaniem pacjenta i da się je usunąć (a edycja w `audyt`,
+jak od raty 1, zapisuje je bez tego pochodzenia).
 
 ## Wyszukiwanie kodu ICD-10
 
@@ -202,3 +282,18 @@ Po każdej zmianie sejfu pod tą warstwą (także po nowym bloku natywnym
 z repozytorium źródeł modułu) warstwę nakłada się ponownie poleceniem
 `--rebuild` i przypina nowe `baseVaultSHA256` oraz `integratedVaultSHA256`
 w `runtime/patient-treatment-v1/manifest.json` i stałą `BASE` w narzędziu.
+
+Od raty 3 nad warstwą leczenia leży jeszcze warstwa usuwania rozpoznania
+(`VILDA DIAGNOSIS MUTATION V1`). Jest najbardziej zewnętrzna: straże zdejmują
+ją pierwszą (`restorePatientTreatmentBaseline` woła najpierw
+`restoreDiagnosisMutationBaseline`), więc skróty warstwy leczenia i warstw pod
+nią nie zmieniły się. Jej bazą jest obraz warstwy leczenia
+(`integratedVaultSHA256` z `runtime/patient-treatment-v1/manifest.json`).
+Kolejność odtwarzania po zmianie sejfu pod spodem:
+
+```bash
+node tools/patient-treatment-vault-delta.mjs --rebuild BAZA.js LECZENIE.js
+# nowy skrót LECZENIE.js → stała BASE w tools/diagnosis-mutation-vault-delta.mjs
+node tools/diagnosis-mutation-vault-delta.mjs --build LECZENIE.js vilda_vault.js   # zapisuje też manifest
+node tools/diagnosis-mutation-vault-delta.mjs                                      # kontrola bieżącego sejfu
+```

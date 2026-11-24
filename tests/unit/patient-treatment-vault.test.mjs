@@ -156,6 +156,23 @@ describe('patient treatment through the real encrypted vault', () => {
     expect((await d.vault.getPatientNote(treatment.id)).treatmentContext.diagnosisIds).toEqual([problem.id]);
   });
 
+  it('removes a diagnosis with a native tombstone and keeps its therapy reference across sync without resurrecting the old diagnosis', async () => {
+    const source = await device(), target = await device({ seed: false }), { current, problem, treatment } = await fixtures(source);
+    const previous = await source.vault.exportSyncPayload();
+    await target.vault.mergeSyncPayload(previous);
+    const before = await source.vault.getPatientNote(treatment.id);
+    await expect(current.removeDiagnosis(problem)).resolves.toEqual({ id: problem.id, removed: true });
+    const deleted = await source.vault.exportSyncPayload();
+    expect(deleted.patientNotes.map(note => note.id)).not.toContain(problem.id);
+    expect(deleted.patientNoteTombstones).toContainEqual(expect.objectContaining({ id: problem.id, rev: problem.rev }));
+    await target.vault.mergeSyncPayload(deleted);
+    expect(await target.vault.getPatientNote(problem.id)).toBeNull();
+    expect((await projected(target, source.patientId)).episodes[0].context.diagnosisIds).toEqual([problem.id]);
+    await source.vault.mergeSyncPayload(previous);
+    expect(await source.vault.getPatientNote(problem.id)).toBeNull();
+    expect((await source.vault.getPatientNote(treatment.id)).treatmentContext).toEqual(before.treatmentContext);
+  });
+
   it('round-trips diagnosis, therapy and followup IDs through sync, patient envelope, backup restore and backup merge', async () => {
     const source = await device(), { current, problem, treatment } = await fixtures(source);
     const recorded = await current.addFollowup(treatment, { dateISO: DAY, kind: 'Ustalenia', body: 'Fikcyjna dokumentacja do przeniesienia.' });

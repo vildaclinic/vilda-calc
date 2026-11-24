@@ -48254,3 +48254,64 @@ zamknięciu rozpoznania bez czytania kart; statystyki grupy liczone bez odczytu 
 `tests/e2e/baza-pacjentow-statystyki.spec.mjs` — licznik odczytów osobno dla wpisów między wizytami i rozpoznań.
 
 **Wersje.** `vilda_patients_list.js` 11 → 12, `vilda_patients_list.css` 9 → 10, wstrzykujące `vilda_chrome.js` 332 → 333 i `vilda_session_bridge.js` 248 → 249; SW 1.1.587 → 1.1.588 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline (katalog ICD-10 jest w niej od raty 1).
+
+## P-ROZPOZNANIA, rata 3 — usuwanie rozpoznania w Karcie pacjenta, tym samym mechanizmem co w nowej Karcie (SW 1.1.589, `vilda_vault.js` 289, `vilda_auth_ui.js` 585, `vilda_auth_ui.css` 93, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Aplikacja nadal niczego nie wyprowadza i nie ocenia. Zmienia się to, że rozpoznanie
+wpisane przez lekarza da się usunąć z kartoteki pacjenta.
+
+**Decyzja właściciela.** 2026-11-24: „na tej nowej stronie głównej weszła poprawka, dzięki której można usunąć rozpoznanie,
+tutaj też taka opcja usunięcia rozpoznania musi być, ale mechanizm powinien być zgodny, żeby można było potem łatwo scalić
+tą nową stronę z aplikacją”. Wzorzec: vildaclinic/vilda-calc#1061 na gałęzi `agent/nowa-strona-glowna`.
+
+**Co robi usunięcie.** Usuwa jeden zapis — notatkę rozpoznania — i zostawia zwykły nagrobek notatki, dzięki któremu
+usunięcie przechodzi przez synchronizację na pozostałe urządzenia i nie wraca ze starszej kopii. Nie da się go cofnąć
+z poziomu aplikacji (rozpoznanie można wpisać ponownie). **Nie rusza niczego innego:** kart leczenia GH i otyłości,
+pomiarów, wersji karty ani zapisów leczenia, które na to rozpoznanie wskazują (zostają ze swoim wskazaniem; nowa Karta
+pokaże przy nich „Rozpoznanie niedostępne”). Statystyki Bazy (rata 2) przestają liczyć usunięte rozpoznanie przy
+następnym wejściu — czytają notatki kategorii `treatment`, a usuniętej już wśród nich nie ma.
+
+**Zabezpieczenia (te same, co w nowej Karcie).**
+1. Usuwa magazyn leczenia (`removeDiagnosis`), nie zwykłe usuwanie notatki: sprawdza właściciela otwartej Karty, sesję
+   sejfu i to, że formularz dotyczy rozpoznania w wersji, którą lekarz widzi.
+2. Aktor sejfu porównuje wersję zapisu. Rozpoznanie zmienione albo usunięte w innym miejscu (druga karta przeglądarki,
+   inne urządzenie) → odmowa `TREATMENT_CONFLICT`, zapis zostaje, formularz można już tylko zamknąć i otworzyć aktualny.
+3. Zapis i nagrobek znikają i powstają w jednym niepodzielnym kroku (jedna transakcja IndexedDB; w trybie bez zapisu
+   na dysk — jedna podmiana w pamięci). Błąd zapisu nie zostawia stanu pośredniego ani zdarzenia zmiany.
+4. Tą drogą da się usunąć tylko obsługiwane rozpoznanie. Inny zapis leczenia (epizod z nowej Karty) jest w tej Karcie
+   tylko do odczytu — także dla przycisku „Usuń” w „Notatkach”.
+5. Przed usunięciem pytanie „Usunąć to rozpoznanie z kartoteki pacjenta?”, z dopiskiem o powiązanych zapisach leczenia
+   i o odrzuceniu niezapisanych zmian formularza.
+
+**Przypadki syntetyczne (dane fikcyjne).**
+- Pacjent z rozpoznaniami „E66.0 — Fikcyjna otyłość prosta” i „Q96 — Fikcyjny zespół Turnera”; „Usuń rozpoznanie” przy
+  E66.0 i zgoda → w sekcji zostaje Q96, komunikat „Usunięto rozpoznanie.”, w sejfie nie ma notatki E66.0, jest nagrobek
+  z jej wersją; odczyt statystyk zwraca tylko Q96. Odmowa w pytaniu → nic się nie zmienia.
+- To samo rozpoznanie zamknięte w drugim zakresie przed kliknięciem „Usuń rozpoznanie” → komunikat o zmianie zapisu,
+  rozpoznanie zostaje (zamknięte), bez nagrobka; po ponownym otwarciu usunięcie działa.
+- Rozpoznanie wskazane przez epizod leczenia → po usunięciu epizod zostaje, jego `diagnosisIds` bez zmian; „Usuń” przy
+  epizodzie w „Notatkach” → „Ten zapis leczenia jest tutaj tylko do odczytu.”, sejf bez zmian.
+- Dwa urządzenia: usunięcie na pierwszym, synchronizacja → na drugim rozpoznania nie ma; scalenie starszej kopii
+  z powrotem nie przywraca go.
+
+**Zgodność z gałęzią nowej strony głównej.** Ta sama funkcja magazynu, ten sam aktor, ten sam świadek opcji, ten sam
+niepodzielny zapis i te same kody odmów. `audyt` ma wydanie warstwy bez dokumentów wizyt: nie zna pochodzenia zapisu
+z wizyty, więc każde rozpoznanie jest tu rozpoznaniem pacjenta. Różnice i sposób scalenia:
+[PATIENT_TREATMENT.md](../PATIENT_TREATMENT.md), „Usuwanie rozpoznania”. **Sejf ma nową zewnętrzną warstwę** (skróty
+warstw pod nią i obraz bazy dla repozytorium źródeł modułu bez zmian); po następnym bloku natywnym nakłada się ją
+ponownie po warstwie leczenia (`node tools/diagnosis-mutation-vault-delta.mjs --build`). Opis łatek:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-ROZPOZNANIA, rata 3”.
+
+**Prywatność.** Bez nowych danych i bez nowych miejsc zapisu. Nagrobek zawiera identyfikator notatki, chwilę usunięcia
+i numer wersji — jak przy każdej usuniętej notatce. Dziennik działań dostaje wpis `note.delete` (identyfikator notatki
+i pacjenta), tak jak przy zwykłym usunięciu notatki.
+
+**Strażnicy.** `tests/unit/diagnosis-mutation-vault.test.mjs` (19; prawdziwy sejf na magazynie w pamięci i na IndexedDB:
+usunięcie z nagrobkiem i jednym zdarzeniem, powtórne i nieaktualne usunięcie, właściciel, zapis niebędący rozpoznaniem,
+świadek nazywający wizytę i świadek błędny, utrwalenie świadka przed kolejką, zwykłe usuwanie bez zmian, wiersz dziennika zmian synchronizacji, wycofanie całej
+transakcji po błędzie zapisu i po zmianie właściciela); `tests/unit/diagnosis-mutation-vault-boundary.test.mjs` (3;
+dokładne zdjęcie i nałożenie warstwy, blok natywny bez zmian); `tests/unit/patient-treatment-vault.test.mjs` — przypadek
+synchronizacji przeniesiony z tamtej gałęzi bez zmian; `tests/e2e/karta-rozpoznania-usuwanie.spec.mjs` (5: formularz,
+konflikt, „Notatki” z powiązanym epizodem, formularz z „Notatek”, telefon).
+
+**Wersje.** `vilda_vault.js` 288 → 289, `vilda_auth_ui.js` 584 → 585, `vilda_auth_ui.css` 92 → 93, wstrzykujące `vilda_chrome.js` 333 → 334 i `vilda_session_bridge.js` 249 → 250; SW 1.1.588 → 1.1.589 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.

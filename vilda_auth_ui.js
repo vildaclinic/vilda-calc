@@ -952,6 +952,8 @@ async function CareReadNoteAccess(note, patientId, isCurrent) {
   return { note: fresh, destination: CareNoteDestination(fresh, patientId, values[1]), owner: owner };
 }
 async function CareDeleteCheckedNote(note, patientId, onChanged, isCurrent) {
+  // P-ROZPOZNANIA, rata 3: zapis leczenia (treatmentContext) usuwa magazyn leczenia; zwykłe usuwanie notatki go nie dotyka.
+  if (note && note.id && Object.prototype.hasOwnProperty.call(note, "treatmentContext")) return Kr_usunZNotatek(note, patientId, onChanged, isCurrent);
   var owner = remReadOwner();
   try {
     var access = await CareReadNoteAccess(note, patientId, isCurrent);
@@ -3428,10 +3430,27 @@ function Kr_etykieta(k) {
 }
 function Kr_komunikat(blad) {
   var kod = String((blad && blad.code) || "");
+  if (kod === "TREATMENT_VISIT_READONLY") return "To rozpoznanie pochodzi z wizyty. Można je zmienić lub usunąć tylko w wizycie, w której zostało zapisane.";
   if (/CONFLICT|REVISION|CHANGED/.test(kod)) return "Zapis zmienił się w innym miejscu. Zachowaj wpisaną treść, anuluj formularz i otwórz aktualny zapis.";
   if (/STALE|SESSION|LOCK|OWNER/.test(kod)) return "Sesja lub pacjent uległy zmianie. Otwórz ponownie Kartę pacjenta.";
   if (/INVALID|VALIDATION/.test(kod)) return "Sprawdź nazwę, kod i datę. Nie udało się zapisać rozpoznania.";
   return "Nie udało się potwierdzić zapisu. Zachowaj wpisaną treść, anuluj formularz i sprawdź listę rozpoznań przed kolejną próbą.";
+}
+/** Pytanie przed usunięciem rozpoznania. Usunięcie nie rusza zapisów leczenia, które na to rozpoznanie wskazują. */
+function Kr_pytanieUsun(dane, id, zmienione) {
+  var powiazane = !!(dane && Array.isArray(dane.episodes)) && dane.episodes.some(function (x) {
+    return !!(x && x.context && Array.isArray(x.context.diagnosisIds)) && x.context.diagnosisIds.indexOf(id) >= 0;
+  });
+  return "Usunąć to rozpoznanie z kartoteki pacjenta?"
+    + (powiazane ? " Powiązane z nim zapisy leczenia zostaną w karcie bez zmian." : "")
+    + (zmienione ? " Zmiany w formularzu zostaną odrzucone." : "");
+}
+/** Usunięcie rozpoznania przez magazyn leczenia (ten sam aktor sejfu co w nowej Karcie) i wpis w dzienniku działań. */
+function Kr_usun(zakres, dto, patientId) {
+  return Promise.resolve().then(function () { return zakres.removeDiagnosis(dto); }).then(function (wynik) {
+    try { if (i.VildaAuditLog) i.VildaAuditLog.log("note.delete", { noteId: dto.id, patientId: patientId }); } catch (x) { Ot("karta rozpoznania dziennik", x); }
+    return wynik;
+  });
 }
 /** Trzy pliki katalogu ICD-10 po kolei, raz na okno. false — pliku nie ma (np. offline przed pierwszym pobraniem). */
 function Kr_katalog() {
@@ -3473,7 +3492,7 @@ function Kr_obserwuj(vault) {
 function Kr_formularz(w) {
   if (i.document.querySelector(".vilda-kr-nakladka")) return false;
   var vault = jt(), k = (w.dto && w.dto.context) || {}, zamkniete = false, zapis = false, niepewne = false, zmienione = false;
-  var wybor = null, stopBlokady = null, obserwator = null, nakladka = null;
+  var wybor = null, stopBlokady = null, obserwator = null, nakladka = null, kodGotowy = false;
   function pole(etykieta, kontrolka) { return e("label", { class: "vilda-kr-pole" }, [e("span", { text: etykieta }), kontrolka]); }
   var blad = e("p", { class: "vilda-kr-blad", role: "alert", tabindex: "-1" });
   var nazwa = e("input", { type: "text", name: "name", required: "", maxlength: "200", autocomplete: "off" });
@@ -3482,13 +3501,16 @@ function Kr_formularz(w) {
   var data = e("input", { type: "date", name: "dateISO", required: "" });
   var zapisz = e("button", { type: "submit", class: "vilda-auth-btn vilda-auth-btn-primary", text: "Zapisz", "data-kr": "zapisz" });
   var anuluj = e("button", { type: "button", class: "vilda-auth-btn", text: "Anuluj", "data-kr": "anuluj" });
+  var usun = w.dto && typeof w.usun == "function" ? e("button", { type: "button", class: "vilda-auth-btn vilda-kr-usun", text: "Usuń rozpoznanie", "data-kr": "usun" }) : null;
   var naglowek = [e("h3", { class: "vilda-auth-sheet-title", id: "vilda-kr-arkusz-tytul", text: w.dto ? "Edytuj rozpoznanie" : "Dodaj rozpoznanie" })];
   if (w.nazwa) naglowek.unshift(e("p", { class: "vilda-kr-pacjent", text: w.nazwa }));
   var formularz = e("form", { class: "vilda-kr-formularz" },
     naglowek.concat([blad, pole("Nazwa rozpoznania", nazwa), kod,
       e("div", { class: "vilda-kr-dwa" }, [pole("Status rozpoznania", stan), pole("Data rozpoznania", data)]),
-      e("p", { class: "vilda-kr-opis", text: "Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10." }),
-      e("div", { class: "vilda-auth-sheet-actions" }, [zapisz, anuluj])]));
+      e("p", { class: "vilda-kr-opis", text: "Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10." })],
+      [e("div", { class: "vilda-auth-sheet-actions" }, [zapisz, anuluj])],
+      // Usuwanie na samym końcu formularza, pod „Anuluj”: rzadka, nieodwracalna czynność nie stoi obok zapisu.
+      usun ? [e("div", { class: "vilda-kr-usuwanie" }, [usun])] : []));
   var arkusz = e("div", { class: "vilda-auth-sheet vilda-auth-sheet-info vilda-kr-arkusz", role: "dialog", "aria-modal": "true", "aria-labelledby": "vilda-kr-arkusz-tytul" }, [formularz]);
   blad.hidden = true;
   nazwa.value = k.name || "";
@@ -3525,7 +3547,10 @@ function Kr_formularz(w) {
     if (wybor) wybor.setWorking(tak || niepewne);
     Array.prototype.forEach.call(arkusz.querySelectorAll("input,select,button"), function (x) { x.disabled = tak; });
     arkusz.setAttribute("aria-busy", String(tak));
-    if (!tak) zapisz.disabled = niepewne;
+    if (!tak) {
+      zapisz.disabled = niepewne || !kodGotowy;
+      if (usun) usun.disabled = niepewne;
+    }
   }
   function pokazBlad(tekst) {
     blad.textContent = tekst;
@@ -3572,6 +3597,27 @@ function Kr_formularz(w) {
     });
   });
   anuluj.addEventListener("click", function () { zamknij(false, true); });
+  if (usun) usun.addEventListener("click", function () {
+    if (zamkniete || zapis || niepewne) return;
+    if (!aktualny()) { zamknij(true, false); return; }
+    if (!i.confirm(w.pytanieUsun(zmienione)) || zamkniete) return;
+    if (!aktualny()) { zamknij(true, false); return; }
+    blad.hidden = true;
+    blad.textContent = "";
+    pracuje(true);
+    Promise.resolve().then(function () { return w.usun(); }).then(function (wynik) {
+      if (zamkniete) return;
+      w.poUsunieciu(wynik);
+      zamknij(true, false);
+    }, function (x) {
+      if (zamkniete) return;
+      if (w.biezace() !== true) { zamknij(true, false); return; }
+      // Wynik nieudanego usunięcia bywa nieznany (zapis mógł zniknąć): formularz zostaje tylko do zamknięcia.
+      niepewne = !/INVALID|VALIDATION|VISIT_READONLY/.test(String((x && x.code) || ""));
+      pracuje(false);
+      pokazBlad(Kr_komunikat(x));
+    });
+  });
   arkusz.addEventListener("keydown", function (event) {
     if (event.key === "Escape") { event.preventDefault(); zamknij(false, true); return; }
     if (event.key !== "Tab") return;
@@ -3607,6 +3653,7 @@ function Kr_formularz(w) {
         kodReczny();
       }
     } else kodReczny();
+    kodGotowy = true;
     if (!zapis) zapisz.disabled = niepewne;
   });
   return true;
@@ -3635,12 +3682,26 @@ function Kr_sekcja(o) {
     if (!zakres) zakres = magazyn.createScope({ vault: vault, patientId: o.patientId, isCurrent: biezace });
     return zakres;
   }
+  // Przycisk „Usuń rozpoznanie” tylko wtedy, gdy magazyn leczenia w sejfie ma usuwanie (starszy sejf: formularz bez niego).
+  function mozeUsunac() {
+    try { return typeof magazynPacjenta().removeDiagnosis == "function"; } catch (x) { Ot("karta rozpoznania magazyn", x); return false; }
+  }
   function otworz(dto, otwieracz) {
     if (!biezace() || !dane) return;
     powiedz("");
     Kr_formularz({
       nazwa: o.nazwa || "", dto: dto, otwieracz: otwieracz, biezace: biezace,
       zapisz: function (wartosci) { var z = magazynPacjenta(); return dto ? z.updateDiagnosis(dto, wartosci) : z.createDiagnosis(wartosci); },
+      usun: dto && mozeUsunac() ? function () { return Kr_usun(magazynPacjenta(), dto, o.patientId); } : null,
+      pytanieUsun: function (zmienione) { return Kr_pytanieUsun(dane, dto.id, zmienione); },
+      poUsunieciu: function () {
+        zalegle = false;
+        wczytaj().then(function () {
+          if (!biezace()) return;
+          powiedz("Usunięto rozpoznanie.");
+          dodaj.focus();
+        });
+      },
       poZapisie: function (zapisane) {
         zalegle = false;
         wczytaj().then(function () {
@@ -3759,12 +3820,52 @@ function Kr_zNotatki(options) {
     return Kr_formularz({
       nazwa: "", dto: dto, otwieracz: otwieracz, biezace: biezace,
       zapisz: function (wartosci) { return zakres.updateDiagnosis(dto, wartosci); },
+      usun: typeof zakres.removeDiagnosis == "function" ? function () { return Kr_usun(zakres, dto, patientId); } : null,
+      pytanieUsun: function (zmienione) { return Kr_pytanieUsun(dane, dto.id, zmienione); },
+      poUsunieciu: function () { if (biezace() && typeof options.onSaved == "function") options.onSaved(); },
       poZapisie: function () { if (biezace() && typeof options.onSaved == "function") options.onSaved(); }
     });
   }, function (x) {
     if (!biezace()) return false;
     Ot("karta rozpoznania otwarcie z notatek", x);
     return odmow("Nie udało się otworzyć rozpoznania", "Spróbuj ponownie.");
+  });
+}
+/** „Usuń” przy wpisie leczenia w historii notatek. Rozpoznanie usuwa magazyn leczenia (sprawdzenie wersji, jedno
+    niepodzielne usunięcie z nagrobkiem); zwykłe usuwanie notatki go nie dotyka. Pozostałe zapisy leczenia są tu do odczytu. */
+function Kr_usunZNotatek(notatka, patientId, poZmianie, czyBiezace) {
+  var vault = jt(), model = i.VildaPatientTreatmentModel, magazyn = i.VildaPatientTreatmentStore, wlasciciel = remReadOwner();
+  var rodzaj = null, zakres = null;
+  function biezace() { return remReadCurrent(wlasciciel) && (!czyBiezace || czyBiezace() === true); }
+  try { rodzaj = model && magazyn && vault ? model.decode(notatka).kind : null; } catch (x) { Ot("karta rozpoznania rodzaj zapisu", x); }
+  if (rodzaj !== "diagnosis" || !patientId || notatka.patientId !== patientId) {
+    Gd5(notatka.title || "Zapis leczenia", "Ten zapis leczenia jest tutaj tylko do odczytu.");
+    return Promise.resolve(false);
+  }
+  try {
+    zakres = magazyn.createScope({ vault: vault, patientId: patientId, isCurrent: biezace });
+    if (typeof zakres.removeDiagnosis != "function") throw new Error("removeDiagnosis");
+  } catch (x) {
+    Ot("karta rozpoznania usuniecie z notatek", x);
+    Gd5("Nie usunięto rozpoznania", "Otwórz ponownie Kartę pacjenta i spróbuj jeszcze raz.");
+    return Promise.resolve(false);
+  }
+  return zakres.read().then(function (dane) {
+    if (!biezace()) return false;
+    var dto = null;
+    dane.diagnoses.forEach(function (x) { if (x.id === notatka.id) dto = x; });
+    if (!dto) { Gd5("Rozpoznanie", "Tego rozpoznania nie ma już w karcie pacjenta."); return false; }
+    if (!i.confirm(Kr_pytanieUsun(dane, dto.id, false)) || !biezace()) return false;
+    return Kr_usun(zakres, dto, patientId).then(function () {
+      if (!biezace()) return false;
+      if (typeof poZmianie == "function") poZmianie();
+      return true;
+    });
+  }).then(null, function (x) {
+    if (!biezace()) return false;
+    Ot("karta rozpoznania usuniecie z notatek", x);
+    Gd5("Nie usunięto rozpoznania", Kr_komunikat(x));
+    return false;
   });
 }
 function Kl_leczenie(o) {

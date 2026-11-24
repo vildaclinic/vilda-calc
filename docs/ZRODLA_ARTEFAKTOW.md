@@ -3004,6 +3004,63 @@ był wyczerpany (600 z 600), dlatego trzy pliki weszły do paczki interfejsu wiz
 
 Arkusz `vilda_icd10_picker.css` z tamtej gałęzi nie wszedł do `audyt`: jego reguły są zawężone do nowej strony głównej.
 
+## Łatka P-ROZPOZNANIA, rata 3 — usuwanie rozpoznania: warstwa sejfu i przycisk w Karcie (`vilda_vault.js`, `vilda_auth_ui.js`, `vilda_auth_ui.css`, 2026-11-24, prośba właściciela „tutaj też taka opcja usunięcia rozpoznania musi być, ale mechanizm powinien być zgodny”)
+
+Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-ROZPOZNANIA rata 3; kontrakt i porównanie z pełną warstwą:
+`docs/PATIENT_TREATMENT.md`, „Usuwanie rozpoznania”. Mechanizm pochodzi z gałęzi `agent/nowa-strona-glowna`
+(vildaclinic/vilda-calc#1061, commit `d5f77cbb`).
+
+**1. Sejf (`vilda_vault.js`) — warstwa `VILDA DIAGNOSIS MUTATION V1`, wydanie bez dokumentów wizyt.** Te same ścieżki
+i znaczniki co na tamtej gałęzi: czytelne źródło `runtime/diagnosis-mutation-v1/vault-fragment.js`, manifest
+`runtime/diagnosis-mutation-v1/manifest.json`, narzędzie `tools/diagnosis-mutation-vault-delta.mjs`.
+
+- Fragment: tekst z tamtej gałęzi z trzema różnicami — nagłówek, funkcja `DiagnosisMutationOrigin` (tam czyta
+  `visitContext` czytnikiem dokumentów wizyt, którego tu nie ma; tu zapis nazywający wizytę jest odrzucany) i brak
+  `DiagnosisMutationLock` (blokada pacjenta wspólna z koszem wizyt). Pozostałe funkcje bajt w bajt.
+- Dziesięć nazwanych podmian (`before` → `after`, skróty w manifeście). Ten sam tekst co na tamtej gałęzi:
+  `diagnosis-native-check`, `diagnosis-atomic-removal`, `diagnosis-remove-owner-options`, `diagnosis-hybrid-commit`.
+  Ta sama wstawka w innym miejscu (tam obok metod kosza wizyt, tu przed `commitCarePlanForUser` danego adaptera):
+  `diagnosis-idb-commit`, `diagnosis-memory-commit`. Własne kotwice tego obrazu: `diagnosis-remove-scope`
+  (`removeDiagnosis` w magazynie leczenia, przed `followup`), `diagnosis-public-scope` (eksport w zakresie),
+  `diagnosis-capture-before-queue` (`DiagnosisMutationInstall($s)` po `PatientWorkspaceInstall($s)` — owijka
+  zewnętrzna, żeby świadek był utrwalony przed kolejką workspace), `diagnosis-readable-source` (fragment po
+  `/* END VILDA PATIENT TREATMENT V1 */`). Bez podmian tamtej gałęzi dla edycji (`diagnosis-bind-origin`,
+  `diagnosis-update-options`) i blokady (`diagnosis-native-lock`).
+- Warstwa jest najbardziej zewnętrzna. Baza: obraz warstwy leczenia `4f625ec4…` (bez zmian od raty 1); wynik:
+  `46535d45…`. `restorePatientTreatmentBaseline` zdejmuje ją jako pierwszą (`restoreDiagnosisMutationBaseline`), więc
+  skróty warstwy leczenia, trwałych wizyt i bloku natywnego **nie zmieniają się**, a obraz bazy dla repozytorium źródeł
+  modułu zostaje ten sam. Blok natywny bez zmian (sprawdza `tests/unit/diagnosis-mutation-vault-boundary.test.mjs`).
+- Odtworzenie: `node tools/diagnosis-mutation-vault-delta.mjs --build LECZENIE.js vilda_vault.js` (zapisuje też
+  manifest); kontrola bieżącego pliku: `node tools/diagnosis-mutation-vault-delta.mjs`. Po zmianie sejfu pod spodem
+  najpierw `node tools/patient-treatment-vault-delta.mjs --rebuild`, potem nowy skrót do stałej `BASE` narzędzia tej
+  warstwy i `--build`.
+- Zmienione straże: `tools/patient-treatment-vault-delta.mjs` (zdejmuje warstwę zewnętrzną przed swoją),
+  `tests/unit/patient-treatment-vault-boundary.test.mjs` i `tests/unit/klirens-existing-note-update-vault.test.mjs`
+  (czytają i odtwarzają sejf przez obie warstwy).
+- Scalenie z gałęzią nowej strony głównej: tamtejsze pliki tych samych ścieżek zastępują tutejsze w całości (tutejsze
+  wydanie jest podzbiorem), a jej łańcuch warstw nakłada się na obraz warstwy leczenia.
+- Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
+
+**2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i jedna podmiana poza nim.** Zmiany po unikalnych kotwicach
+(skrypt łatki: każda kotwica dokładnie raz), bez ponownej minifikacji:
+
+- `Kr_komunikat`: komunikat dla `TREATMENT_VISIT_READONLY` (odpowiedź pełnej warstwy po scaleniu).
+- Nowe `Kr_pytanieUsun(dane, id, zmienione)` i `Kr_usun(zakres, dto, patientId)` (wywołanie `removeDiagnosis`
+  i wpis `note.delete` w dzienniku działań) przed `Kr_katalog`.
+- `Kr_formularz`: przycisk `[data-kr="usun"]` „Usuń rozpoznanie” w `.vilda-kr-usuwanie` na końcu formularza (tylko
+  edycja i tylko gdy magazyn ma `removeDiagnosis`), obsługa kliknięcia (pytanie, praca, wynik niepewny po błędzie),
+  zmienna `kodGotowy` — „Zapisz” po nieudanym usunięciu nie odblokuje się przed wczytaniem pola kodu.
+- `Kr_sekcja` (`mozeUsunac`, pola `usun`, `pytanieUsun`, `poUsunieciu` formularza) i `Kr_zNotatki` (te same pola).
+- Nowe `Kr_usunZNotatek` przed `Kl_leczenie`; kotwica poza blokiem: początek `CareDeleteCheckedNote` — wpis
+  z własnym `treatmentContext` idzie do `Kr_usunZNotatek` (rozpoznanie: pytanie i `removeDiagnosis`; inny zapis
+  leczenia: informacja „tylko do odczytu”), zamiast zwykłego `removePatientNote`.
+
+**3. Style (`vilda_auth_ui.css`)** — sekcja „P-ROZPOZNANIA, rata 3”: `.vilda-kr-usuwanie`, `.vilda-kr-arkusz .vilda-kr-usun`.
+
+Strażnicy: `tests/unit/diagnosis-mutation-vault.test.mjs`, `tests/unit/diagnosis-mutation-vault-boundary.test.mjs`,
+`tests/unit/patient-treatment-vault.test.mjs` (przypadek synchronizacji z tamtej gałęzi, bez zmian),
+`tests/e2e/karta-rozpoznania-usuwanie.spec.mjs`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
