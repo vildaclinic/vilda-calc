@@ -597,34 +597,59 @@
    * spójnikiem „i”: pacjent jest w zakresie, gdy spełnia wszystkie wybrane. Model jest czysty i niczego nie liczy
    * inaczej niż demographics: ta sama reguła „zapisu w ostatnich 12 mies.”, ten sam wiek na dziś z pełnej daty
    * urodzenia i te same przedziały; pacjent bez daty urodzenia nie wchodzi do żadnego przedziału wieku, a pacjent
-   * bez płci — do żadnej płci. Liczą się wyłącznie pacjenci z bazy. */
+   * bez płci — do żadnej płci. Liczą się wyłącznie pacjenci z bazy.
+   *
+   * P-BAZA-ZAKRES (decyzja właściciela 2026-11-24: „popracuj nad selektorem Zakres bo tam jest mały wybór”).
+   * Pole „Zakres” ma jedną pozycję naraz, z dwóch rodzin:
+   *   - ostatni zapis karty: zapis w ostatnich 3, 6 albo 12 miesiącach oraz ich dopełnienie — bez zapisu od ponad
+   *     12 albo 24 miesięcy. Granicą jest ta sama data N miesięcy wstecz (arytmetyka kalendarzowa — dla 12 mies.
+   *     dokładnie reguła kafelka „z zapisem w ostatnich 12 mies.” z demographics). „Bez zapisu od ponad N mies.”
+   *     to każdy, kto nie ma zapisu w ostatnich N miesiącach — także pacjent bez daty zapisu;
+   *   - leczenie: „leczeni hormonem wzrostu” i „leczeni z powodu otyłości” — ci sami pacjenci, których liczą
+   *     sekcje leczenia („leczonych”): karta ma co najmniej jeden punkt leczenia (ghPatient / obesityPatient
+   *     dały wynik). Te pozycje potrzebują wyniku liczenia kart (options.cards); bez niego zakresu nie da się
+   *     jeszcze policzyć (null), tak jak przy niewczytanej liście. */
   const SCOPE_SEX = { M: 'chłopcy', F: 'dziewczęta' };
-  const SCOPE_RECENT = 'z zapisem w ostatnich 12 mies.';
+  const SCOPE_SAVED = 'Ostatni zapis karty', SCOPE_TREATED = 'Leczenie';
+  const SCOPE_RANGES = [
+    { key: 'm3', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 3 mies.', months: 3, within: true },
+    { key: 'm6', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 6 mies.', months: 6, within: true },
+    { key: 'm12', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 12 mies.', months: 12, within: true },
+    { key: 'o12', group: SCOPE_SAVED, label: 'bez zapisu od ponad 12 mies.', months: 12, within: false },
+    { key: 'o24', group: SCOPE_SAVED, label: 'bez zapisu od ponad 24 mies.', months: 24, within: false },
+    { key: 'gh', group: SCOPE_TREATED, label: 'leczeni hormonem wzrostu', cards: 'gh' },
+    { key: 'ob', group: SCOPE_TREATED, label: 'leczeni z powodu otyłości', cards: 'ob' }
+  ];
+  function scopeRange(key) { return SCOPE_RANGES.find((range) => range.key === key) || null; }
+  // Pozycje pola „Zakres” dla widoku i testów: klucz, rodzina, opis i to, czy pozycja potrzebuje wyniku kart.
+  function scopeRanges() { return SCOPE_RANGES.map((range) => ({ key: range.key, group: range.group, label: range.label, needsCards: Boolean(range.cards) })); }
+  function scopeNeedsCards(filters) { const range = scopeRange(filters && filters.range); return Boolean(range && range.cards); }
   function scopeFilters(value) {
     const source = value && typeof value === 'object' ? value : {};
     return {
-      recent: source.recent === true,
+      range: scopeRange(source.range) ? source.range : null,
       listId: typeof source.listId === 'string' && source.listId ? source.listId : null,
       listName: typeof source.listName === 'string' ? source.listName : '',
       sex: source.sex === 'M' || source.sex === 'F' ? source.sex : null,
       band: AGE_BANDS.some((band) => band.key === source.band) ? source.band : null
     };
   }
-  function scopeActive(filters) { return Boolean(filters && (filters.recent || filters.listId || filters.sex || filters.band)); }
+  function scopeActive(filters) { return Boolean(filters && (filters.range || filters.listId || filters.sex || filters.band)); }
   // Klucz pamięci wyniku dla zakresu; dx — grupa rozpoznania ({ key }) albo null.
   function scopeKey(filters, dx) {
     const f = scopeFilters(filters);
-    return [f.recent ? 'r' : '', f.listId ? 'l:' + f.listId : '', f.sex ? 's:' + f.sex : '', f.band ? 'b:' + f.band : '', dx && dx.key ? 'd:' + dx.key : ''].filter(Boolean).join('|');
+    return [f.range ? 'z:' + f.range : '', f.listId ? 'l:' + f.listId : '', f.sex ? 's:' + f.sex : '', f.band ? 'b:' + f.band : '', dx && dx.key ? 'd:' + dx.key : ''].filter(Boolean).join('|');
   }
   // Opis zakresu dla banera, nagłówka raportu i nazwy grupy — w kolejności filtrów na ekranie, rozpoznanie na końcu.
   function scopeLabel(filters, dx) {
-    const f = scopeFilters(filters), band = AGE_BANDS.find((item) => item.key === f.band);
-    return [f.recent ? SCOPE_RECENT : '', f.listId ? 'lista „' + (f.listName || 'bez nazwy') + '”' : '', f.sex ? SCOPE_SEX[f.sex] : '',
+    const f = scopeFilters(filters), band = AGE_BANDS.find((item) => item.key === f.band), range = scopeRange(f.range);
+    return [range ? range.label : '', f.listId ? 'lista „' + (f.listName || 'bez nazwy') + '”' : '', f.sex ? SCOPE_SEX[f.sex] : '',
       band ? band.label : '', dx && dx.label ? String(dx.label) : ''].filter(Boolean).join(' · ');
   }
   /* Identyfikatory pacjentów z bazy, którzy spełniają wszystkie filtry. options: now, ageMonths (jak w demographics),
-   * listIds — członkowie wybranej listy (tablica albo Set), ids — pacjenci grupy rozpoznania. Wybrana lista bez
-   * wczytanych członków daje null: zakresu nie da się jeszcze policzyć (to nie jest „zero pacjentów”). */
+   * listIds — członkowie wybranej listy (tablica albo Set), ids — pacjenci grupy rozpoznania, cards — wynik liczenia
+   * kart (details z cardsResult: { id, gh, ob }). Wybrana lista bez wczytanych członków albo zakres leczenia bez
+   * wyniku kart daje null: zakresu nie da się jeszcze policzyć (to nie jest „zero pacjentów”). */
   function scopeMembers(patientRecords, filters, options) {
     const settings = options || {}, f = scopeFilters(filters);
     const now = settings.now instanceof Date ? settings.now : new Date();
@@ -632,7 +657,14 @@
     const asSet = (value) => value instanceof Set ? value : Array.isArray(value) ? new Set(value) : null;
     const listIds = asSet(settings.listIds), groupIds = asSet(settings.ids);
     if (f.listId && !listIds) return null;
-    const yearAgo = new Date(now.getTime()); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    const range = scopeRange(f.range);
+    let treated = null, edge = null;
+    if (range && range.cards) {
+      if (!Array.isArray(settings.cards)) return null;
+      treated = new Set(settings.cards.filter((item) => item && item[range.cards]).map((item) => item.id));
+    } else if (range) {
+      edge = new Date(now.getTime()); edge.setMonth(edge.getMonth() - range.months);
+    }
     const band = AGE_BANDS.find((item) => item.key === f.band) || null;
     return (Array.isArray(patientRecords) ? patientRecords : []).filter((record) => {
       if (!record || record.__ext) return false;
@@ -640,9 +672,10 @@
       if (f.listId && !listIds.has(record.patientId)) return false;
       const header = record.header || {};
       if (f.sex && sexKey(header.sex) !== f.sex) return false;
-      if (f.recent) {
+      if (treated && !treated.has(record.patientId)) return false;
+      if (edge) {
         const saved = record.lastSavedAtISO ? new Date(record.lastSavedAtISO).getTime() : NaN;
-        if (!Number.isFinite(saved) || saved < yearAgo.getTime()) return false;
+        if ((Number.isFinite(saved) && saved >= edge.getTime()) !== range.within) return false;
       }
       if (band) {
         const computed = header.dobISO ? ageOf(header.dobISO) : null;
@@ -1214,6 +1247,7 @@
     let filterFailed = null;  // identyfikator listy, której członków nie udało się wczytać
     let filterNote = '';      // komunikat pod filtrami (np. wybrana lista już nie istnieje) — do zmiany filtrów
     let filterStamp = 0;      // numer kolejnego odczytu członków listy (część klucza pamięci zakresu)
+    let filterRefresh = null; // odświeża liczniki pozycji pola „Zakres”, gdy skończy się liczenie kart
     let catalogueLoading = null; // jedna obietnica wczytania katalogu ICD-10 (nazwy kategorii)
     let catalogueLookup = null;
     let cardsProgress = null;
@@ -1548,7 +1582,7 @@
     function setFilter(key, value) {
       if (busy) return;
       const next = Object.assign({}, state.filters);
-      if (key === 'recent') next.recent = value === 'recent';
+      if (key === 'range') next.range = value || null;
       else if (key === 'list') {
         const entry = value && listCache ? listCache.find(({ list }) => list.id === value) : null;
         next.listId = value || null; next.listName = entry ? entry.list.name || '' : '';
@@ -1863,17 +1897,22 @@
     function basePatients() { return patients.filter((patient) => !patient.__ext); }
     // P-ROZPOZNANIA, rata 2: zakres statystyk. Bez zakresu — cała baza; z zakresem — pacjenci wybranej grupy,
     // którzy nadal są w bazie. Liczenie z kart i jego pamięć zawsze obejmują całą bazę; zakres tylko wybiera z wyniku.
-    // P-BAZA-GRUPY: do rozpoznania doszły filtry (lista pacjentów, płeć, wiek, zapis w ostatnich 12 mies.); łączą się „i”.
+    // P-BAZA-GRUPY: do rozpoznania doszły filtry (zakres, lista pacjentów, płeć, wiek); łączą się „i”.
     function scopeOn() { return Boolean(state.scope) || scopeActive(state.filters); }
     function scopeLabelNow() { return scopeLabel(state.filters, state.scope); }
     function scopeKeyNow() { return scopeKey(state.filters, state.scope) + (filterMembers && filterMembers.id === state.filters.listId ? '#' + filterMembers.stamp : ''); }
-    // true — wybrana lista nie ma jeszcze wczytanych członków, więc zakresu nie da się policzyć.
-    function scopePending() { return Boolean(state.filters.listId) && !(filterMembers && filterMembers.id === state.filters.listId); }
+    // Na co czeka zakres: 'list' — wybrana lista nie ma jeszcze wczytanych członków; 'cards' — zakres leczenia nie ma
+    // jeszcze wyniku liczenia kart; '' — zakres da się policzyć.
+    function scopeWaiting() {
+      if (state.filters.listId && !(filterMembers && filterMembers.id === state.filters.listId)) return 'list';
+      return scopeNeedsCards(state.filters) && !savedCards() ? 'cards' : '';
+    }
     function scopeIds() {
       if (!scopeOn()) return null;
       if (scopeMemo) return scopeMemo;
+      const saved = scopeNeedsCards(state.filters) ? savedCards() : null;
       const matched = scopeMembers(basePatients(), state.filters, {
-        ageMonths: ageFromVault, ids: state.scope ? state.scope.ids : null,
+        ageMonths: ageFromVault, ids: state.scope ? state.scope.ids : null, cards: saved ? saved.details : null,
         listIds: filterMembers && filterMembers.id === state.filters.listId ? filterMembers.ids : null
       });
       scopeMemo = new Set(matched || []);
@@ -2400,7 +2439,18 @@
         gh: Object.assign(ghCohort(result.treated), { sdsReady: deps.sdsReady, engineReady: Boolean(annualWindow(deps.tempo)) }),
         obesity: Object.assign(obesityCohort(result.obese, { thresholds: obDeps.thresholds }),
           { sdsReady: obDeps.sdsReady, engineReady: Boolean(obDeps.cykle && obDeps.tygodnie), journalFailed: result.partial }) };
-      fillCards();
+      if (scopeNeedsCards(state.filters)) {
+        // P-BAZA-ZAKRES: zakres leczenia wybiera pacjentów z tego wyniku, więc rysuje się cały widok — z fokusem
+        // w polu filtra, jeśli tam był.
+        const active = doc.activeElement;
+        const key = active && root.contains(active) && typeof active.getAttribute === 'function' ? active.getAttribute('data-filter-key') : null;
+        render();
+        const field = key ? root.querySelector('.pt-filter-select[data-filter-key="' + key + '"]') : null;
+        if (field && !field.disabled) field.focus();
+      } else {
+        fillCards();
+        if (filterRefresh) filterRefresh();
+      }
       const again = cardsBar && cardsBar.querySelector('.pt-stat-check');
       if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
     }
@@ -2713,37 +2763,58 @@
       host.appendChild(el('p', 'pt-stat-note', obesityNote(cohort.journalFailed)));
     }
     /* P-BAZA-GRUPY: pasek filtrów zakresu nad statystykami. Zwykłe pola wyboru (klawiatura, czytnik ekranu i telefon
-     * obsługują je same). Lista pacjentów jest tylko przy dostępie do list; jej pozycje dochodzą po odczycie katalogu. */
+     * obsługują je same). Lista pacjentów jest tylko przy dostępie do list; jej pozycje dochodzą po odczycie katalogu.
+     * P-BAZA-ZAKRES: pole „Zakres” ma pozycje w dwóch rodzinach (ostatni zapis karty, leczenie); każda pokazuje, ilu
+     * pacjentów całej bazy obejmuje. Liczniki zakresów leczenia dochodzą, gdy skończy się liczenie kart. */
     function filterBar(sequence) {
       const bar = el('div', 'pt-filters'), base = basePatients();
       bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zakres statystyk');
-      function field(key, labelText, options, value) {
-        const holder = el('label', 'pt-filter');
+      // rows: [wartość, napis, rodzina]; kolejne pozycje tej samej rodziny trafiają do jednej grupy opcji.
+      function field(key, labelText, options, value, wide) {
+        const holder = el('label', 'pt-filter' + (wide ? ' pt-filter--wide' : ''));
         holder.appendChild(el('span', 'pt-filter-label', labelText));
         const node = doc.createElement('select');
         node.className = 'pt-filter-select' + (value ? ' on' : '');
         node.setAttribute('data-filter-key', key);
         const fill = (rows) => {
           clear(node);
-          rows.forEach(([id, text]) => { const option = doc.createElement('option'); option.value = id; option.textContent = text; node.appendChild(option); });
+          let family = null, host = node;
+          rows.forEach(([id, text, group]) => {
+            if (!group) host = node;
+            else if (group !== family) { host = doc.createElement('optgroup'); host.label = group; node.appendChild(host); }
+            family = group || null;
+            const option = doc.createElement('option'); option.value = id; option.textContent = text; host.appendChild(option);
+          });
           node.value = value;
         };
         fill(options);
         node.disabled = busy;
         node.addEventListener('change', () => setFilter(key, node.value));
         holder.appendChild(node); bar.appendChild(holder);
-        return fill;
+        return { node, fill };
       }
-      const recent = scopeMembers(base, { recent: true }, { ageMonths: ageFromVault }).length;
-      field('recent', 'Zakres', [['', 'cała baza (' + base.length + ')'], ['recent', SCOPE_RECENT + ' (' + recent + ')']], state.filters.recent ? 'recent' : '');
+      const rangeRows = () => {
+        const saved = savedCards();
+        return [['', 'cała baza (' + base.length + ')']].concat(SCOPE_RANGES.map((range) => {
+          const members = scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault, cards: saved ? saved.details : null });
+          return [range.key, range.label + (members ? ' (' + members.length + ')' : ''), range.group];
+        }));
+      };
+      const rangeField = field('range', 'Zakres', rangeRows(), state.filters.range || '', true);
+      // Po liczeniu kart zmieniają się tylko napisy pozycji — pole zostaje to samo (także otwarte albo z fokusem).
+      filterRefresh = () => {
+        if (!bar.isConnected) return;
+        const texts = new Map(rangeRows().map(([id, text]) => [id, text]));
+        Array.from(rangeField.node.options).forEach((option) => { if (texts.has(option.value)) option.textContent = texts.get(option.value); });
+      };
       if (mayUseLists()) {
         const chosen = state.filters.listId || '';
         const rows = (entries) => [['', 'wszystkie']].concat(entries.map(({ list }) => [list.id, list.name || '(bez nazwy)']));
         const known = chosen ? [{ list: { id: chosen, name: state.filters.listName || 'wybrana lista' } }] : [];
-        const fill = field('list', 'Lista pacjentów', rows(listCache || known), chosen);
+        const listField = field('list', 'Lista pacjentów', rows(listCache || known), chosen, true);
         if (!listCache) getCatalog().then((entries) => {
           if (!guardedRead(sequence) || !mayUseLists() || !bar.isConnected) return;
-          fill(rows(!chosen || entries.some(({ list }) => list.id === chosen) ? entries : entries.concat(known)));
+          listField.fill(rows(!chosen || entries.some(({ list }) => list.id === chosen) ? entries : entries.concat(known)));
         }).catch(() => { /* pole zostaje z samym „wszystkie”; błąd odczytu list pokazuje zakładka „Listy” */ });
       }
       field('sex', 'Płeć', [['', 'wszyscy'], ['M', SCOPE_SEX.M], ['F', SCOPE_SEX.F]], state.filters.sex || '');
@@ -2768,6 +2839,7 @@
     }
     function renderStats(sequence) {
       cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; cardsProgress = null; dxHost = null; dxHint = null;
+      filterRefresh = null;
       const base = basePatients();
       if (!base.length) {
         empty(scroll, 'Brak pacjentów w bazie', 'Statystyki pojawią się po dodaniu pierwszego pacjenta.', '+ Dodaj pacjenta', () => { if (opts.onAddPatient) opts.onAddPatient(); });
@@ -2789,11 +2861,29 @@
         const note = el('p', 'pt-stat-note pt-filters-note', filterNote);
         note.setAttribute('role', 'status'); wrap.appendChild(note);
       }
-      if (scopePending()) {
+      const waiting = scopeWaiting();
+      if (waiting === 'list') {
         if (filterFailed === state.filters.listId) empty(wrap, 'Nie udało się wczytać listy „' + (state.filters.listName || 'wybrana lista') + '”.', 'Spróbuj ponownie albo wybierz inny zakres.', 'Ponów', () => { filterFailed = null; render(); });
         else { wrap.appendChild(el('div', 'pt-loading', 'Wczytywanie listy…')); loadFilterMembers(sequence); }
         scroll.appendChild(wrap);
         return;
+      }
+      if (waiting === 'cards') {
+        // Zakres leczenia wybiera pacjentów z wyniku liczenia kart; po liczeniu widok rysuje się od nowa (countCards).
+        const pending = el('div', 'pt-loading', 'Liczenie kart…');
+        pending.setAttribute('role', 'status');
+        wrap.appendChild(pending);
+        scroll.appendChild(wrap);
+        if (!cardsBusy) { statsCounted = true; countCards(false); }
+        return;
+      }
+      if (scopeNeedsCards(state.filters)) {
+        // Karta, której nie udało się odczytać, nie mówi nic o leczeniu — ekran mówi wprost, że jej pacjenta tu nie ma.
+        const unread = savedCards().failed;
+        if (unread) {
+          const note = el('p', 'pt-stat-note pt-filters-note', 'Nie udało się odczytać kart: ' + unread + '. Ci pacjenci nie są liczeni w zakresie „' + scopeRange(state.filters.range).label + '”.');
+          note.setAttribute('role', 'status'); wrap.appendChild(note);
+        }
       }
       const model = demographics(shownPatients(), { ageMonths: ageFromVault });
       if (!model.total) {
@@ -3351,5 +3441,5 @@
   win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
     statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName,
     journalIndex, cardsPlan, cardsResult, diagnosisIndex, diagnosisCohort,
-    scopeFilters, scopeActive, scopeKey, scopeLabel, scopeMembers });
+    scopeFilters, scopeActive, scopeKey, scopeLabel, scopeMembers, scopeRanges, scopeNeedsCards });
 })(typeof window !== 'undefined' ? window : null);
