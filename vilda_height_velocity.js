@@ -52,6 +52,18 @@
       + 'jest zwykle ukończone i tempo przestaje cokolwiek różnicować.'
   };
 
+  /* P-STATUS-KAFLE-ROWNE (decyzja wlasciciela 2026-11-23): na kafelku w zakladce „Status"
+   * stoi krotka wersja powodu, zeby kafel mial te sama wysokosc co sasiednie. Pelny opis
+   * (OPIS_POWODU) zostaje bez zmian w panelu pod siatka, w zakladce trajektorii i w opisach. */
+  var OPIS_POWODU_KROTKI = {
+    'brak-danych': 'brak danych',
+    'brak-plci': 'brak płci pacjenta',
+    'nieznane-zrodlo': 'nieznane źródło norm',
+    'okno-poza-zakresem': 'odstęp poza zakresem norm',
+    'wiek-ponizej-zakresu': 'wiek poniżej zakresu norm',
+    'wiek-powyzej-zakresu': 'wiek powyżej zakresu norm'
+  };
+
   // Zastrzezenie towarzyszace KAZDEMU wynikowi — wprost z decyzji wlasciciela i z danych
   // DONALD. Nie jest opcjonalne i nie da sie go wylaczyc parametrem.
   var ZASTRZEZENIE_STALE = 'Pojedyncza wartość SDS tempa nie jest kryterium rozpoznania: '
@@ -219,7 +231,8 @@
       version: VERSION, sds: null, centyl: null, mediana: null,
       zrodlo: meta || null, podgrupa: null, kowd: null,
       zastrzezenia: [],
-      powod: powod, opisPowodu: OPIS_POWODU[powod] || null
+      powod: powod, opisPowodu: OPIS_POWODU[powod] || null,
+      opisPowoduKrotki: OPIS_POWODU_KROTKI[powod] || null
     };
   }
 
@@ -312,7 +325,8 @@
       kowd: i.kowd === true ? ocenKowd(plec, wiek, hv) : null,
       zastrzezenia: zastrzezenia,
       powod: null,
-      opisPowodu: null
+      opisPowodu: null,
+      opisPowoduKrotki: null
     };
   }
 
@@ -320,6 +334,7 @@
     VERSION: VERSION,
     POWOD: POWOD,
     OPIS_POWODU: OPIS_POWODU,
+    OPIS_POWODU_KROTKI: OPIS_POWODU_KROTKI,
     ZASTRZEZENIE_STALE: ZASTRZEZENIE_STALE,
     zrodla: zrodla,
     interpolujLms: interpolujLms,

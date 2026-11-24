@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { opcjePrzedApi, rodzaje, zrodlo } from '../support/gh-monitor-atrapa.mjs';
 import {
   KATEGORIE, KATEGORIE_ODMOW, LISTY, NOWE_ID, PLIK_WZORCA, PLIKI, idReprezentatywnych, kanon, korzen, pierwszaRoznica,
-  podsumowanieKategorii, siatka, wplywProgramuBiezacego, wplywRegulyKursow, wykonajNaSwiezej, wykonajPrzypadki,
-  zProgramemNowego,
+  podsumowanieKategorii, siatka, wplywProgramuBiezacego, wplywProgramuEdycji, wplywRegulyKursow, wykonajNaSwiezej,
+  wykonajPrzypadki, zProgramemEdytowanego, zProgramemNowego,
 } from '../scripts/gh-punkty-wzorzec.mjs';
 
 // P-GH-PUNKTY-TESTY: złota siatka punktów terapii GH. Ok. 10 tys. kombinacji ścieżek Z1 (nowy punkt z karty), Z2 (edycja
@@ -35,6 +35,11 @@ import {
 // programem ostatniego punktu (wplywProgramuBiezacego) ma dziś program bieżący: przypadek reprezentatywny = wynik wzorca
 // z programem bieżącym nowego punktu (zProgramemNowego), każdy przypadek — zapis z tym programem, a skrót kategorii liczony
 // z wyniku z programem cofniętym do programu Włączenia = skrót BAZA (reszta wyniku bez zmian). Wzorzec bez zmian.
+// P-GH-PROGRAM-EDYCJA (zmiana kliniczna, decyzja właściciela 2026-11-23, pytanie 17): #therProg przy edycji = program
+// edytowanego punktu, nie program Włączenia. Edycja z zapisem punktu o innym programie niż Włączenie (wplywProgramuEdycji:
+// W+bez-id → ZT, W+obce-pole → IGF-1) zapisuje dziś program punktu: przypadek reprezentatywny = wynik wzorca z programem
+// edytowanego punktu od zapisu dalej (zProgramemEdytowanego), każdy przypadek — zapis z tym programem, a skrót kategorii
+// liczony z wyniku z programem cofniętym do programu Włączenia = skrót BAZA. Wzorzec bez zmian.
 
 const wzorzec = JSON.parse(fs.readFileSync(path.join(korzen, PLIK_WZORCA), 'utf8'));
 const przypadki = siatka();
@@ -49,7 +54,8 @@ const OPISY = {
   'Z1-bez-modulu': 'Z1 nowy punkt z karty bez VildaGhDawka: od D6 odmowa z prośbą o odświeżenie strony, bez zapisu '
     + '(dawniej gałąź zapasowa: Increlex bez ×2, Ngenla z dawką tygodniową jako dobową; pytania 27, 28)',
   'Z2-modul': 'Z2 edycja punktu z listy z VildaGhDawka: dose = dawka podawana (Increlex × 2)/masa, type z przycisku, program z #therProg '
-    + '(punktu Włączenia), id, pozycja i obce pole zostają — stan obecny — do decyzji (pytania 17, 30)',
+    + '(od P-GH-PROGRAM-EDYCJA — program edytowanego punktu; pytanie 17), id, pozycja i obce pole zostają — stan obecny — do '
+    + 'decyzji (pytanie 30)',
   'Z2-bez-modulu': 'Z2 edycja punktu z listy bez VildaGhDawka: od D6 odmowa z prośbą o odświeżenie strony, bez zapisu, '
     + 'formularz edycji otwarty (dawniej Increlex bez ×2; pytanie 27)',
   'Z4-modul': 'Z4 punkt wsteczny z VildaGhDawka: dose = dawka podawana (Increlex × 2)/masa, Ngenla doseAbs = dawka/7 i 4 dni przy IGF bez '
@@ -131,7 +137,14 @@ const zmienionaRegula = (p) => !!WPLYW.get(p.id);
 const doWykonania = (lista) => lista.map((p) => (zmienionaRegula(p) && p.sciezka === 'Z2' && !p.swieza ? { ...p, swieza: true } : p));
 // P-GH-PROGRAM-BIEZACY: przypadki ze zmienionym programem nowego punktu i oczekiwany wynik przypadku reprezentatywnego.
 const PROGRAM_BIEZACY = new Map(przypadki.map((p) => [p.id, wplywProgramuBiezacego(p)]));
-const oczekiwany = (r) => (PROGRAM_BIEZACY.get(r.wejscie.id) ? zProgramemNowego(r.wynik, PROGRAM_BIEZACY.get(r.wejscie.id).teraz) : r.wynik);
+// P-GH-PROGRAM-EDYCJA: przypadki edycji ze zmienionym programem edytowanego punktu.
+const PROGRAM_EDYCJI = new Map(przypadki.map((p) => [p.id, wplywProgramuEdycji(p)]));
+const oczekiwany = (r) => {
+  const nowy = PROGRAM_BIEZACY.get(r.wejscie.id);
+  if (nowy) return zProgramemNowego(r.wynik, nowy.teraz);
+  const edycja = PROGRAM_EDYCJI.get(r.wejscie.id);
+  return edycja ? zProgramemEdytowanego(r.wynik, edycja.indeks, edycja.teraz) : r.wynik;
+};
 const programyNowych = (w) => w.lista.filter((x) => x && x.id === NOWE_ID).map((x) => x.program);
 function naruszenieProgramu(p, w) {
   const n = naruszenie(p, w);
@@ -139,9 +152,21 @@ function naruszenieProgramu(p, w) {
   const progr = programyNowych(w);
   return progr.length === 1 && progr[0] === PROGRAM_BIEZACY.get(p.id).teraz ? null : `program nowego punktu ${JSON.stringify(progr)}`;
 }
-// Wyniki do skrótu BAZA: program nowego punktu cofnięty do programu Włączenia.
-const doBazy = (lista, wyniki) => new Map(lista.map((p) => [p.id, PROGRAM_BIEZACY.get(p.id)
-  ? zProgramemNowego(wyniki.get(p.id), PROGRAM_BIEZACY.get(p.id).dotad) : wyniki.get(p.id)]));
+function naruszenieProgramuEdycji(p, w) {
+  const n = naruszenie(p, w);
+  if (n) return n;
+  const { indeks, teraz } = PROGRAM_EDYCJI.get(p.id);
+  const zapisany = [w.lista, w.modul].map((l) => (Array.isArray(l) && l[indeks] ? l[indeks].program : null));
+  return zapisany.every((x) => x === teraz) ? null : `program edytowanego punktu ${JSON.stringify(zapisany)}`;
+}
+// Wyniki do skrótu BAZA: program nowego punktu (P-GH-PROGRAM-BIEZACY) i edytowanego punktu (P-GH-PROGRAM-EDYCJA) cofnięty
+// do programu Włączenia.
+const doBazy = (lista, wyniki) => new Map(lista.map((p) => {
+  const nowy = PROGRAM_BIEZACY.get(p.id);
+  const edycja = PROGRAM_EDYCJI.get(p.id);
+  const w = wyniki.get(p.id);
+  return [p.id, nowy ? zProgramemNowego(w, nowy.dotad) : edycja ? zProgramemEdytowanego(w, edycja.indeks, edycja.dotad) : w];
+}));
 const zModulemDawki = (lista) => lista.filter((p) => p.modulDawki);
 const bezModuluDawki = (lista) => lista.filter((p) => !p.modulDawki).map((p) => ({ ...p, swieza: true }));
 
@@ -198,6 +223,24 @@ describe('Złota siatka punktów GH — budowa siatki i wzorca', () => {
     expect(reprezentatywne.some((r) => PROGRAM_BIEZACY.get(r.wejscie.id))).toBe(true);
   });
 
+  it('P-GH-PROGRAM-EDYCJA: program przy edycji zmienia tylko zapis edycji punktu o innym programie niż Włączenie (W+bez-id, punkt bez id → ZT; W+obce-pole, fikc-k2 → IGF-1; dotąd SNP Włączenia)', () => {
+    const zmienione = przypadki.filter((p) => PROGRAM_EDYCJI.get(p.id));
+    expect(new Set(zmienione.map((p) => p.kategoria))).toEqual(new Set(['Z2-modul']));
+    expect(Object.fromEntries(zmienione.map((p) => [`${p.lista} ${p.cel}`, PROGRAM_EDYCJI.get(p.id)]))).toEqual({
+      'W+bez-id undefined': { indeks: 1, dotad: 'SNP', teraz: 'ZT' }, 'W+obce-pole fikc-k2': { indeks: 1, dotad: 'SNP', teraz: 'IGF-1' },
+    });
+    // Każdy zapis Z2 edytowanego punktu o innym programie (bez odmowy reguły kursów) — i tylko one; reprezentatywne też.
+    const tePunkty = przypadki.filter((p) => p.kategoria === 'Z2-modul' && !zmienionaRegula(p)
+      && ((p.lista === 'W+bez-id' && p.cel === 'undefined') || (p.lista === 'W+obce-pole' && p.cel === 'fikc-k2')));
+    expect(zmienione.map((p) => p.id)).toEqual(tePunkty.map((p) => p.id));
+    expect(zmienione.length).toBe(253);
+    // Edycja punktu z programem Włączenia (fikc-w1, W+Z, dawny format) — bez zmian.
+    expect(przypadki.some((p) => p.kategoria === 'Z2-modul' && p.cel === 'fikc-w1' && PROGRAM_EDYCJI.get(p.id))).toBe(false);
+    expect(reprezentatywne.some((r) => PROGRAM_EDYCJI.get(r.wejscie.id))).toBe(true);
+    // Nie nakłada się na program bieżący nowego punktu z karty.
+    expect(zmienione.some((p) => PROGRAM_BIEZACY.get(p.id))).toBe(false);
+  });
+
   it('wzorzec ma te same listy punktów, pliki i przypadki reprezentatywne co siatka (ok. 200, wejście bez zmian)', () => {
     expect(kanon(wzorzec.listy)).toBe(kanon(LISTY));
     expect(wzorzec.pliki).toEqual(PLIKI);
@@ -224,7 +267,8 @@ describe('Złota siatka punktów GH — prawdziwy monitor daje wynik wzorca', ()
           expect(naruszenieRegulyKursow(r.wejscie, w, WPLYW.get(r.wejscie.id)), r.wejscie.id).toBeNull();
           continue;
         }
-        // P-GH-PROGRAM-BIEZACY: wynik wzorca z programem bieżącym nowego punktu (oczekiwany).
+        // P-GH-PROGRAM-BIEZACY i P-GH-PROGRAM-EDYCJA: wynik wzorca z programem bieżącym nowego punktu albo z programem
+        // edytowanego punktu (oczekiwany).
         expect(w, r.wejscie.id).toEqual(oczekiwany(r));
         expect(pierwszaRoznica(oczekiwany(r), w), r.wejscie.id).toBeNull();
       }
@@ -232,11 +276,13 @@ describe('Złota siatka punktów GH — prawdziwy monitor daje wynik wzorca', ()
       // przypadki zmienione regułą kursów — odmowa z tekstem reguły kursów).
       const naruszenia = zModulem.map((p) => [p.id, zmienionaRegula(p)
         ? naruszenieRegulyKursow(p, wyniki.get(p.id), WPLYW.get(p.id))
-        : PROGRAM_BIEZACY.get(p.id) ? naruszenieProgramu(p, wyniki.get(p.id)) : naruszenie(p, wyniki.get(p.id))]).filter(([, n]) => n);
+        : PROGRAM_BIEZACY.get(p.id) ? naruszenieProgramu(p, wyniki.get(p.id))
+          : PROGRAM_EDYCJI.get(p.id) ? naruszenieProgramuEdycji(p, wyniki.get(p.id)) : naruszenie(p, wyniki.get(p.id))]).filter(([, n]) => n);
       expect(naruszenia).toEqual([]);
       // Całość części z modułem dawki bez przypadków zmienionych regułą kursów: skrót SHA-256 po id, wejściu i wyniku
-      // kanonicznym każdego przypadku; skróty z BAZA (kategorieRegulaKursow). P-GH-PROGRAM-BIEZACY: przypadki ze
-      // zmienionym programem nowego punktu wchodzą z programem cofniętym do programu Włączenia (reszta wyniku jak BAZA).
+      // kanonicznym każdego przypadku; skróty z BAZA (kategorieRegulaKursow). P-GH-PROGRAM-BIEZACY i P-GH-PROGRAM-EDYCJA:
+      // przypadki ze zmienionym programem nowego albo edytowanego punktu wchodzą z programem cofniętym do programu Włączenia
+      // (reszta wyniku jak BAZA).
       const bezZmiany = zModulem.filter((p) => !zmienionaRegula(p));
       expect(podsumowanieKategorii(bezZmiany, doBazy(bezZmiany, wyniki))[kategoria], PODPOWIEDZ)
         .toEqual(wzorzec.kategorieRegulaKursow[kategoria]);
@@ -329,9 +375,16 @@ const KONTROLE = [
   // P-GH-PUNKTY-USZKODZONE: bramka uszkodzonych wpisów stoi na drodze każdego zapisu i usunięcia (siatka ma listy bez
   // takich wpisów, więc dziś zawsze przepuszcza; ta kopia odmawia zawsze).
   // P-GH-PROGRAM-BIEZACY: #therProg znów z programu Włączenia — wzorzec z programem bieżącym wykrywa to tylko w przypadkach
-  // nowego punktu z karty, których program się zmienił.
+  // nowego punktu z karty, których program się zmienił (od P-GH-PROGRAM-EDYCJA także edycji, bo pole przy edycji też
+  // idzie przez ghProgramPola).
   { nazwa: 'monitor: #therProg z programu Włączenia (bez programu bieżącego)', plik: 'gh_therapy_monitor.js',
-    kotwica: '/* P-GH-PROGRAM-BIEZACY */l=ghProgramPola(Gwk,l),', zamiana: '', dotyczy: (p) => !!PROGRAM_BIEZACY.get(p.id) },
+    kotwica: '/* P-GH-PROGRAM-BIEZACY */l=ghProgramPola(Gwk,l),', zamiana: '',
+    dotyczy: (p) => !!PROGRAM_BIEZACY.get(p.id) || !!PROGRAM_EDYCJI.get(p.id) },
+  // P-GH-PROGRAM-EDYCJA: #therProg przy edycji znów z programu Włączenia (ghProgramPola sprzed tej zmiany) — wykrywają to
+  // tylko przypadki edycji punktu o innym programie niż Włączenie.
+  { nazwa: 'monitor: #therProg przy edycji z programu Włączenia (bez programu edytowanego punktu)', plik: 'gh_therapy_monitor.js',
+    kotwica: 'x != null ? ghProgramEdycji(Gwk, dotad) :', zamiana: 'x != null ? dotad :',
+    dotyczy: (p) => !!PROGRAM_EDYCJI.get(p.id) },
   { nazwa: 'monitor: bramka uszkodzonych wpisów zawsze odmawia', plik: 'gh_therapy_monitor.js',
     kotwica: 'function Gpg(A){const n=A.uszkodzone(window.ghTherapyPoints).length;',
     zamiana: 'function Gpg(A){const n=1;', dotyczy: (p) => !p.anuluj, swieza: true },

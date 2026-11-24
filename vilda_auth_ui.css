@@ -801,10 +801,20 @@ select.vilda-auth-input {
   box-shadow: 0 8px 24px var(--focus-ring)
 }
 
+/* P-STATUS-KAFLE-ROWNE (decyzja wlasciciela 2026-11-23): kafelki w zakladce „Status" maja
+   jeden rozmiar w kazdej sekcji. Cztery kolumny (karta 675 i 880 px), mniej dopiero, gdy
+   kafelek bylby wezszy niz 160 px. auto-fill (nie auto-fit) zostawia puste kolumny, wiec sekcja
+   z czterema kafelkami nie rozciaga ich szerzej niz sekcja z szescioma; rzedy maja wspolna
+   wysokosc, a minimalna wysokosc kafelka wyrownuje sekcje miedzy soba. */
 .vilda-patient-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+  grid-template-columns: repeat(auto-fill,minmax(max(160px,calc((100% - 3 * var(--space-10px)) / 4)),1fr));
+  grid-auto-rows: 1fr;
   gap: var(--space-10px)
+}
+
+.vilda-patient-stats-grid>.vilda-patient-stat {
+  min-height: 124px
 }
 
 .vilda-patient-stat {

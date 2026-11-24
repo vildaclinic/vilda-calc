@@ -2820,6 +2820,99 @@ na listach z innym programem ostatniego punktu mają dziś program bieżący (`w
 w `tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
 precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
 
+## Łatka P-GH-PROGRAM-EDYCJA — DocPro: edycja punktu GH zachowuje program punktu (`gh_therapy_monitor.js` 66 → 67, 2026-11-23, decyzja właściciela, pytanie 17)
+
+Czytelne źródło reguły: `gh_therapy_monitor.js`, czytelna część na górze pliku — nowy blok P-GH-PROGRAM-EDYCJA (komentarz
+i funkcja `ghProgramEdycji(Gwk, dotad)`) zaraz po `ghProgramPola` (blok P-GH-PROGRAM-BIEZACY). `ghProgramPola` przy edycji
+punktu (`x != null`) woła `ghProgramEdycji` zamiast zwracać dawne wyrażenie: program edytowanego punktu (pierwszy
+o równym `String(id)` na liście, jak `O()`), bez programu — `ghProgramBiezacy` na punktach kursu punktu wg wieku do
+niego włącznie (kilka kursów — kurs z `Gwk.wgPunktu`; jeden kurs albo brak modułu kursów — `ghPunktyBiezacegoKursu(null,
+lista)`; punkt spoza kursów — sam punkt; edytowany punkt z lekiem z formularza edycji, `Gpv("ghEditDrug")`), bez tego
+— `dotad` (dawne wyrażenie); punktu nie ma na liście (usunięty w trakcie edycji) — `ghProgramWiersza`, jak poza edycją.
+Po przeglądzie w tym samym bloku: `ghZmianaPreparatuEdycji` (słuchacz `change` na dokumencie, instalowany raz przy
+starcie skryptu z flagą `window.__ghProgramEdycjiBound`, jak inne słuchacze monitora: zmiana `#ghEditDrug` w trakcie
+edycji punktu bez programu → `F()`), `ghPoKoncuEdycji` (`F()` po zakończeniu edycji tam, gdzie dotąd po `Gek()` nie
+było `F()`) i `ghWstecznyZKarty` z `ghProgramPozaEdycji` (formularz wsteczny w trakcie edycji — program, który pole pokazuje poza
+edycją, i lek bieżący kursu). Dopiski
+w komentarzach P-GH-WZNOWIENIE (część 2), `ghProgramKursu`, `ghKursProgramu` i P-GH-PROGRAM-BIEZACY („Edycja punktu —
+bez zmian”). Opis: `docs/clinical/ALGORITHMS.md`, wpis P-GH-PROGRAM-EDYCJA. Zminifikowane ciało: `F()` od
+P-GH-PROGRAM-BIEZACY woła już `ghProgramPola` (bez nowej kotwicy); po przeglądzie cztery kotwice występujące dokładnie
+raz (niżej). Skrypt łatki (Python, `zamien` z licznikiem kotwicy: `patch_monitor.py` + `ge_monitor_blok.js`, poza
+repozytorium) odtwarza wynik z `origin/audyt` 77cb60dc; bez ponownej minifikacji.
+
+```
+// gh_therapy_monitor.js — czytelna część:
+// 1. ghProgramPola: return x != null ? dotad : ghProgramWiersza(Gwk, dotad);
+//    → return x != null ? ghProgramEdycji(Gwk, dotad) : ghProgramWiersza(Gwk, dotad);
+//    a zaraz po funkcji blok P-GH-PROGRAM-EDYCJA (komentarz + ghProgramEdycji)
+// 1a. zdarzenie storage vildaCurrentPatientId: try{Gea()||Gek()}… → try{Gea()||(Gek(),/* P-GH-PROGRAM-EDYCJA */ghPoKoncuEdycji())}…
+//     i() (formularz wsteczny): …if(a){try{D()}catch{} → …if(a){const Gxe=x!=null;try{D()}catch{}Gxe&&x==null&&ghPoKoncuEdycji();
+//     ghAddRetroPoint: function(){D(); → function(){const Gxe=x!=null;D();Gxe&&x==null&&ghPoKoncuEdycji();
+// 1b. ghOpenRetroForm: o.value=d.value||"" → o.value=ghWstecznyZKarty("program",d.value||"");
+//     n(o?o.value:"",l?l.value:null) → n(o?o.value:"",ghWstecznyZKarty("lek",l?l.value:null))
+// 2.–5. dopiski [od P-GH-PROGRAM-EDYCJA (2026-11-23): …] w komentarzach P-GH-WZNOWIENIE (część 2), ghProgramKursu,
+//    ghKursProgramu i P-GH-PROGRAM-BIEZACY
+// Kontrola: tests/unit/gh-program-edycja.test.mjs cofa wszystkie wpięcia (ZAMIANY_PRZED, zachowanie 77cb60dc), kontrola
+//   negatywna złotej siatki — 'x != null ? ghProgramEdycji(Gwk, dotad) :' → 'x != null ? dotad :'.
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony i bez stylów (`tests/fixtures/style-elementow.json` bez zmian).
+`vilda_gh_punkty.js` (zapis i walidacja), `vilda_auth_ui.js` (Karta), `gh_igf_therapy.js`, `vilda_gh_punkt_z_wiersza.js`
+(panel wiersza), lista preparatów formularza edycji (`O()`), `ghPreparatyKarty`, blokada pola, kursy i sejf — bez zmian.
+Złota siatka punktów (`tests/fixtures/gh-punkty-wzorzec.json`) bez zmian pliku: zapisy edycji punktu o innym programie
+niż Włączenie mają dziś program edytowanego punktu (`wplywProgramuEdycji`, `zProgramemEdytowanego` w
+`tests/scripts/gh-punkty-wzorzec.mjs`), a skrót z programem cofniętym do programu Włączenia = skrót BAZA. Wersje `?v=`,
+precache i `SW_VERSION` ustawił `npm run podbij-wersje`.
+
+## Łatka P-STATUS-KAFLE-ROWNE — Karta pacjenta: kafelki „Statusu” jednego rozmiaru (`vilda_auth_ui.js` 582 → 583, `vilda_growth_prediction_validation.js` 14 → 15, 2026-11-23, makieta zaakceptowana przez właściciela)
+
+Opis reguły: `docs/clinical/ALGORITHMS.md`, wpis P-STATUS-KAFLE-ROWNE. Czytelne części tej samej zmiany są w plikach
+czytelnych: `vilda_height_velocity.js` (`OPIS_POWODU_KROTKI`, pole `opisPowoduKrotki`), `vilda_trajectory_analysis.js`
+(`hvSdsKafelek`: krótki powód, `linie` i `szczegoly` odmowy) i `vilda_auth_ui.css` (siatka). Zminifikowane miejsca
+zmienione kotwicami występującymi dokładnie raz (skrypt Python z licznikiem kotwicy, poza repozytorium; odtwarza wynik
+z `origin/audyt` 9662e33b); bez ponownej minifikacji.
+
+```
+// vilda_auth_ui.js — showPatientCard, kafelek „Tempo wzrastania”
+// 1. Ie=Ee?"improve":null,Tw=Tf?Tf.wartosc+(Tf.odstep?" ("+Tf.odstep+(Tf.pozaOknem?", poza oknem oceny normy":"")+")":""):St(ut)+" cm/rok";
+//    ce.push(xt("Tempo wzrastania",Tw,Ee,Ie))}
+//    → Ie=Ee?"improve":null,/* P-STATUS-KAFLE-ROWNE … */Tw=Tf?Tf.wartosc:St(ut)+" cm/rok",
+//      TwS=Tf&&Tf.odstep?Tf.odstep+(Tf.pozaOknem?" \xB7 poza oknem oceny normy":""):null,TwK=xt("Tempo wzrastania",Tw,TwS||Ee,Ie);
+//      TwS&&Ee&&TwK.appendChild(e("div",{class:"vilda-patient-stat-extra",text:Ee}));ce.push(TwK)}
+// vilda_auth_ui.js — showPatientCard, kafelek „SDS tempa” (blok GROWTH-HV-STATUS)
+// 2. if(Bh0.wartosc==null)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
+//    else{Bh3.push(e("div",{class:"vilda-patient-stat-sub",style:"margin-top:3px;",text:"kliknij, aby rozwin\u0105\u0107"}));
+//    var Bh4=…;var Bh5=e("div",{class:"vilda-patient-stat vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0"},Bh4);
+//    → // P-STATUS-KAFLE-ROWNE …
+//      var BhOdm=Bh0.wartosc==null,BhMa=(Bh0.linie&&Bh0.linie.length)||(Bh0.szczegoly&&Bh0.szczegoly.length);
+//      if(!BhMa)ce.push(e("div",{class:"vilda-patient-stat",style:"opacity:.78"},Bh3));
+//      else{var Bh4=…;var Bh5=e("div",{class:BhOdm?"vilda-patient-stat vhv-tile vhv-odm":"vilda-patient-stat
+//      vilda-patient-stat--ok vhv-tile",role:"button",tabindex:"0","aria-expanded":"false"},Bh4);
+//    oraz w arkuszu wstrzykiwanym przez blok (vhv-style), po regule .vhv-tile.vhv-open .vhv-cev:
+//      ".vhv-tile.vhv-odm{opacity:.78}",   (przygaszenie odmowy klasą, nie stylem na elemencie — P-STYLE krok 5b)
+// 3. try{Bh5.classList.toggle("vhv-open",!Bh9)}catch(Bha){}};
+//    → try{Bh5.classList.toggle("vhv-open",!Bh9);Bh5.setAttribute("aria-expanded",Bh9?"false":"true")}catch(Bha){}};
+// vilda_growth_prediction_validation.js — Pe() (buildStatusSection), podpis kafelka „Walidacja prognoz”
+// 4. r("div",{class:"vilda-patient-stat-sub",text:a.points.length+" punkt\xF3w \xB7 kliknij, aby rozwin\u0105\u0107"})
+//    → /* P-STATUS-KAFLE-ROWNE … */r("div",{class:"vilda-patient-stat-sub",text:(function(_k){var _d=_k%10,_s=_k%100;
+//      return _k+(_k===1?" punkt":_d>=2&&_d<=4&&!(_s>=12&&_s<=14)?" punkty":" punkt\xF3w")})(a.points.length)})
+```
+
+**Granice.** Bez nowego pliku ładowanego przez strony. Zapis pacjenta, sejf, model tempa, silnik SDS tempa (liczby),
+panel trajektorii, opis pacjenta, podsumowanie i schowek — bez zmian. Wersje `?v=`, precache i `SW_VERSION` ustawił
+`npm run podbij-wersje`.
+
+## Łatka P-WALIDACJA-KAFEL-KROTKO — krótki podpis kafla „Walidacja prognoz” bez prognoz (`vilda_growth_prediction_validation.js` 15 → 16, 2026-11-23, decyzja właściciela)
+
+Opis: `docs/clinical/ALGORITHMS.md`, wpis P-WALIDACJA-KAFEL-KROTKO. Jedna kotwica występująca dokładnie raz, bez ponownej
+minifikacji.
+
+```
+// vilda_growth_prediction_validation.js — Pe() (buildStatusSection), kafel bez prognoz (i===0)
+// r("div",{class:"vilda-patient-stat-sub",text:"za mało danych do prognoz — uzupełnij wiek kostny i/lub wzrost rodziców"})
+// → /* P-WALIDACJA-KAFEL-KROTKO … */r("div",{class:"vilda-patient-stat-sub",text:"uzupełnij wiek kostny lub wzrost rodziców"})
+```
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita

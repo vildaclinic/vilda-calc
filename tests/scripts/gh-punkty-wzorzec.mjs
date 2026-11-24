@@ -29,6 +29,12 @@
 // z karty na liście z innym programem ostatniego punktu); zProgramemNowego(wynik, program) zamienia program nowego punktu
 // w wyniku. Test porównuje te przypadki z wynikiem wzorca z programem bieżącym, a skróty kategorii liczy z ich wyniku
 // z programem cofniętym do programu Włączenia — muszą dać skróty BAZA. Wzorzec (plik) bez zmian.
+// P-GH-PROGRAM-EDYCJA (zmiana kliniczna, decyzja właściciela 2026-11-23, pytanie 17): #therProg przy edycji = program
+// edytowanego punktu (bez programu — program bieżący kursu z chwili punktu), nie program Włączenia. wplywProgramuEdycji(p)
+// mówi, które przypadki to zmienia (edycja z zapisem punktu o innym programie niż Włączenie); zProgramemEdytowanego(wynik,
+// indeks, program) zamienia program edytowanego punktu w wyniku od zapisu (wpis M) dalej. Test porównuje te przypadki
+// z wynikiem wzorca z programem edytowanego punktu, a skróty kategorii liczy z wyniku z programem cofniętym do programu
+// Włączenia — muszą dać skróty BAZA. Wzorzec (plik) bez zmian.
 // Siatkę, wykonanie przypadku i postać kanoniczną wyniku eksportuje ten plik. Test używa tych samych funkcji, ale na
 // plikach z drzewa roboczego. Dane wyłącznie FIKCYJNE.
 import { createHash } from 'node:crypto';
@@ -444,7 +450,8 @@ function programPola(lista) {
  * Czy program bieżący (P-GH-PROGRAM-BIEZACY, decyzja właściciela 2026-11-23) zmienia wynik przypadku względem BAZA:
  * null — bez zmian; { dotad, teraz } — nowy punkt z karty (Z1, z modułem dawki) na liście, której program bieżący
  * (program ostatniego punktu wg wieku) różni się od programu Włączenia: zapis jak w BAZA, tylko nowy punkt ma program
- * `teraz` zamiast `dotad`. Edycja (Z2 — #therProg przy edycji bez zmian), punkt wsteczny (Z4 — program z formularza),
+ * `teraz` zamiast `dotad`. Edycja (Z2 — od P-GH-PROGRAM-EDYCJA program edytowanego punktu, wplywProgramuEdycji niżej),
+ * punkt wsteczny (Z4 — program z formularza),
  * usuwanie (Z5), odmowy i przypadki zmienione regułą kursów (odmowa) — bez zmian. Program `teraz` czyta prawdziwy
  * monitor z drzewa roboczego (#therProg po wczytaniu listy), nie kopia reguły.
  */
@@ -466,6 +473,51 @@ export function zProgramemNowego(wynikJson, program) {
     return o;
   };
   return zamien(wynikJson);
+}
+
+/* ---------- Program przy edycji (P-GH-PROGRAM-EDYCJA) ---------- */
+
+const programyEdycji = new Map();
+// #therProg monitora z drzewa roboczego podczas edycji punktu `cel` listy (świeża atrapa, prawdziwe O() i F(), bez zapisu).
+function programEdycji(lista, cel) {
+  const klucz = `${lista}\n${cel}`;
+  if (!programyEdycji.has(klucz)) {
+    const atrapa = utworzAtrapeMonitoraGh({ punkty: kopia(LISTY[lista]) });
+    atrapa.edytuj(cel);
+    programyEdycji.set(klucz, atrapa.pole('therProg').value);
+  }
+  return programyEdycji.get(klucz);
+}
+/**
+ * Czy program przy edycji (P-GH-PROGRAM-EDYCJA, decyzja właściciela 2026-11-23, pytanie 17) zmienia wynik przypadku
+ * względem BAZA: null — bez zmian; { indeks, dotad, teraz } — edycja z zapisem (Z2, z modułem dawki, bez odmowy i bez
+ * zmiany regułą kursów) punktu, którego program różni się od programu Włączenia (siatka: jeden kurs, programDotad):
+ * zapis jak w BAZA, tylko edytowany punkt (pozycja `indeks` listy, pierwszy o równym String(id), jak O()) ma program
+ * `teraz` zamiast `dotad`. Program `teraz` czyta prawdziwy monitor z drzewa roboczego (#therProg podczas edycji), nie
+ * kopia reguły. Nowy punkt z karty (Z1 — wplywProgramuBiezacego), punkt wsteczny (Z4), usuwanie (Z5) i odmowy — bez zmian.
+ */
+export function wplywProgramuEdycji(p) {
+  if (p.sciezka !== 'Z2' || !p.modulDawki || p.powod || wplywRegulyKursow(p)) return null;
+  const indeks = LISTY[p.lista].findIndex((x) => idTekst(x) === String(p.cel));
+  const dotad = programDotad(LISTY[p.lista]);
+  const teraz = programEdycji(p.lista, p.cel);
+  return teraz !== dotad ? { indeks, dotad, teraz } : null;
+}
+/** Wynik JSON z programem punktu na pozycji `indeks` zamienionym na `program` w liście i module oraz we wpisach
+    dziennika od zapisu (pierwszy wpis M) dalej — wcześniejsze zdarzenie (odczyt listy przed zapisem) ma punkt sprzed
+    edycji. Kolejność kluczy bez zmian. */
+export function zProgramemEdytowanego(wynikJson, indeks, program) {
+  const zamien = (l) => (Array.isArray(l) && l[indeks] && typeof l[indeks] === 'object' && 'program' in l[indeks]
+    ? l.map((x, j) => (j === indeks ? { ...x, program } : x)) : l);
+  const odZapisu = wynikJson.dziennik.findIndex((w) => w.rodzaj === 'M');
+  const dziennik = wynikJson.dziennik.map((w, j) => {
+    if (odZapisu < 0 || j < odZapisu) return w;
+    const o = { ...w };
+    if ('okno' in o) o.okno = zamien(o.okno);
+    if ('wartosc' in o) o.wartosc = zamien(o.wartosc);
+    return o;
+  });
+  return { ...wynikJson, lista: zamien(wynikJson.lista), modul: zamien(wynikJson.modul), dziennik };
 }
 
 /* ---------- Wynik kanoniczny ---------- */
