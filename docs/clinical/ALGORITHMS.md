@@ -47269,3 +47269,62 @@ wzrost rodziców” (decyzja właściciela 2026-11-23), żeby kafel nie wydłuż
 **Wersje (P-SGA-KAFEL-NORMY i P-WALIDACJA-KAFEL-KROTKO, jeden PR).** `vilda_patient_sga_model.js` 1 → 2,
 `vilda_growth_prediction_validation.js` 15 → 16, `vilda_chrome.js` 323 → 324 i `vilda_session_bridge.js` 239 → 240
 (wstrzykują pliki z nowym `?v=`), SW 1.1.578 → 1.1.579 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 1 — Baza pacjentów: widok „Statystyki” (wiek, płeć, kompletność danych) (SW 1.1.580, `vilda_patients_list.js` 6, `vilda_patients_list.css` 5, 2026-11-23)
+
+**Zmiana kliniczna: NIE.** Statystyki opisowe własnej bazy: liczebności, średnia i mediana wieku, podział na płeć
+i kompletność danych. Bez norm, progów i interpretacji; żaden wynik pacjenta, zapis karty ani sejf się nie zmienia.
+Widok tylko czyta.
+
+**Decyzja właściciela (2026-11-23).** Makieta (komputer, telefon, lista po kliknięciu słupka) i plan etapów: (1) wiek,
+płeć i kompletność danych, (2) leczenie GH — główna liczba: tempo wzrastania w 1. roku leczenia, (3) leczenie otyłości —
+zmiana masy po 12 tygodniach i 6 miesiącach, (4) eksport i raport PDF. Przedziały wieku: 0–2, 3–5, 6–9, 10–13, 14–17, 18+.
+Pole „rozpoznanie” w karcie — osobna zmiana (zapis karty).
+
+**Skąd dane.**
+- **Wiek i płeć — z nagłówków kart** (`listPatientDirectory`, te same rekordy, które rysuje lista): bez odszyfrowania
+  zapisów, liczone od razu po otwarciu widoku.
+- **Kompletność kart — z najnowszego zapisu każdego pacjenta** (`getLatestSnapshot`), dopiero po „Sprawdź karty (N)”:
+  po kolei, z licznikiem „Sprawdzanie kart… k z N”. Wyjście z widoku przerywa przebieg. Wynik zostaje w pamięci widoku
+  do końca odblokowanej sesji i jest odrzucany, gdy zmieni się zestaw kart albo czas ostatniego zapisu którejkolwiek.
+
+**Reguły (model: `demographics`, `cardCompleteness` w `vilda_patients_list.js`).**
+1. Liczą się wyłącznie pacjenci z bazy; osoby „spoza bazy” nie mają kart i nie wchodzą do żadnej liczby.
+2. **Wiek = wiek na dziś z pełnej daty urodzenia**, w pełnych miesiącach na dobę lokalną (`calcAgeFromDOB` sejfu,
+   DOB-AGE-1). Ta sama zasada, co w wierszu listy: wiek z zapisu pomiaru ani sam rok urodzenia nie udają wieku bieżącego.
+   Pacjent bez daty urodzenia (albo z datą błędną lub przyszłą) nie wchodzi do średniej, mediany ani przedziałów i jest
+   wykazany („Bez daty urodzenia: n (poza wiekiem)”, wiersz kompletności „Data urodzenia”).
+3. Średnia i mediana z miesięcy; zapis: poniżej roku „N mies.”, dalej lata z jednym miejscem po przecinku („10,5 roku”).
+   Przedziały w pełnych latach (2 lata i 11 mies. to „0–2”, 3 lata to „3–5”).
+4. Płeć: `M` — chłopcy, `F` i `K` — dziewczęta, pozostałe — „płeć nieznana” (osobna pozycja legendy i wiersz kompletności).
+   Odsetki od wszystkich pacjentów z bazy.
+5. „Z zapisem w ostatnich 12 mies.” — `lastSavedAtISO` karty nie starszy niż rok (ostatni zapis, nie data wizyty).
+6. Kompletność karty: **co najmniej 2 pomiary wzrostu** w różnym wieku (wiersze historii `advanced.data.measurements`
+   i `growthBasic.data.measurements`, punkty `ghTherapyPoints` i `obesityTherapyPoints`, bieżący pomiar z formularza;
+   ten sam wiek w miesiącach liczy się raz), **wzrost obojga rodziców** (`advanced.motherHeight` i `fatherHeight` > 0),
+   **masa urodzeniowa** (`birth.weight` albo `perinatal.birthWeightG` > 0). Karta, której nie udało się odczytać, jest
+   wykazana osobno i nie wchodzi do mianownika.
+7. Kliknięcie przedziału wieku, kafla płci albo „Brakuje: n” otwiera zwykłą listę zawężoną do tych pacjentów (pasek
+   „Grupa ze statystyk: …” z powrotem do statystyk i „Pokaż wszystkich”); wyszukiwanie działa wewnątrz grupy.
+
+**Rysowanie.** Słupki to SVG z atrybutami geometrii (szerokości w jednostkach `viewBox`), więc widok nie ustawia stylów
+wprost na elementach (P-STYLE krok 5b bez zmian fixture). Kolory serii: chłopcy `#2a78d6`, dziewczęta `#eb6834`
+(para sprawdzona pod kątem rozróżnialności przy zaburzeniach widzenia barw), z legendą i liczbami tekstem. Bez nowych
+plików ładowanych przez strony: model i widok są w `vilda_patients_list.js`, style w `vilda_patients_list.css`
+(instalacja offline ma limit 600 żądań).
+
+**Przypadek syntetyczny (zegar 17.06.2026; `tests/support/baza-pacjentow-statystyki.mjs`).** 8 pacjentów z bazy
+(daty urodzenia 2024-12-01, 2021-06-17, 2018-01-10, 2014-03-20, 2010-09-01, 2005-05-05, jeden bez daty, 2016-06-18 bez
+płci) i 1 osoba spoza bazy → „Pacjenci w bazie 8”, średni wiek 10,5 roku, mediana 9,9 roku, od 1,5 roku do 21,1 roku,
+chłopcy 4 (50%, średnio 9,7 roku), dziewczęta 3 (38%, średnio 11,6 roku), przedziały 1/1/2/1/1/1, data urodzenia 7/8,
+płeć 7/8; po sprawdzeniu kart: pomiary 2/8, rodzice 1/8, masa urodzeniowa 2/8.
+
+**Strażnicy.** `tests/unit/baza-statystyki.test.mjs` (12: osoby spoza bazy, płeć, dzień przed urodzinami, granice
+przedziałów, średnia/mediana, brak i błąd daty urodzenia, ostatni zapis, pusta baza, kompletność karty, zapis wieku —
+model z pliku produkcyjnego); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (4: liczby i szerokości słupków na
+prawdziwym sejfie; grupy z wykresu i z „Brakuje”; karty odszyfrowywane dopiero na prośbę — 0 odczytów przy otwarciu,
+8 po przycisku, 0 po powrocie; telefon 390 px — dwie kolumny, cel dotyku ≥ 44 px, bez przewijania w bok).
+
+**Wersje.** `vilda_patients_list.js` 5 → 6, `vilda_patients_list.css` 4 → 5, `vilda_chrome.js` 324 → 325
+i `vilda_session_bridge.js` 240 → 241 (wstrzykują pliki z nowym `?v=`), SW 1.1.579 → 1.1.580 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.

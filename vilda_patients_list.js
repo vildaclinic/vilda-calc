@@ -1,5 +1,7 @@
 /* Baza pacjentów: presentation and temporary navigation state only.
  * Patient records, list rules and mutations remain in VildaVault/AuthUI.
+ * The „Statystyki” view (P-BAZA-STATYSTYKI) only reads: patient headers for age and sex,
+ * and — on request — the newest saved state of each card for data completeness.
  * This file is the readable browser source; it has no build step. */
 (function (win) {
   'use strict';
@@ -20,6 +22,125 @@
     arrow: '<path d="m9 5 7 7-7 7"/>'
   };
 
+  /* P-BAZA-STATYSTYKI, etap 1 (decyzja właściciela 2026-11-23): statystyki opisowe bazy —
+   * wiek, płeć i kompletność danych. Model jest czysty (bez DOM i bez sejfu), żeby dało się
+   * go testować wprost. Zasady:
+   *   - liczą się wyłącznie pacjenci z bazy; osoby „spoza bazy” nie mają kart;
+   *   - wiek to wiek NA DZIŚ z pełnej daty urodzenia (ta sama zasada, co w wierszu listy:
+   *     wiek z zapisu pomiaru ani sam rok urodzenia nie udają wieku bieżącego) — pacjent bez
+   *     daty urodzenia nie wchodzi do średniej, mediany ani przedziałów i jest wykazany osobno;
+   *   - przedziały wieku w pełnych latach: 0–2, 3–5, 6–9, 10–13, 14–17, 18+. */
+  const AGE_BANDS = [
+    { key: '0-2', from: 0, to: 2, label: '0–2 lata' },
+    { key: '3-5', from: 3, to: 5, label: '3–5 lat' },
+    { key: '6-9', from: 6, to: 9, label: '6–9 lat' },
+    { key: '10-13', from: 10, to: 13, label: '10–13 lat' },
+    { key: '14-17', from: 14, to: 17, label: '14–17 lat' },
+    { key: '18+', from: 18, to: null, label: '18+ lat' }
+  ];
+  function sexKey(value) { return value === 'M' ? 'M' : value === 'F' || value === 'K' ? 'F' : null; }
+  // Wiek w pełnych miesiącach na dobę lokalną — jak calcAgeFromDOB w sejfie (DOB-AGE-1).
+  function monthsFromDob(dobISO, now) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dobISO || ''));
+    if (!match) return null;
+    const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    let months = (now.getFullYear() - year) * 12 + (now.getMonth() + 1 - month);
+    if (now.getDate() < day) months -= 1;
+    return months >= 0 ? months : null;
+  }
+  function mean(values) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null; }
+  function median(values) {
+    if (!values.length) return null;
+    const ordered = values.slice().sort((a, b) => a - b), middle = Math.floor(ordered.length / 2);
+    return ordered.length % 2 ? ordered[middle] : (ordered[middle - 1] + ordered[middle]) / 2;
+  }
+  function demographics(patientRecords, options) {
+    const settings = options || {};
+    const now = settings.now instanceof Date ? settings.now : new Date();
+    const ageOf = typeof settings.ageMonths === 'function' ? settings.ageMonths : (dobISO) => monthsFromDob(dobISO, now);
+    const base = (Array.isArray(patientRecords) ? patientRecords : []).filter((record) => record && !record.__ext);
+    const yearAgo = new Date(now.getTime()); yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+    const bands = AGE_BANDS.map((band) => ({ key: band.key, label: band.label, M: 0, F: 0, unknown: 0, total: 0, ids: [] }));
+    const ages = [], agesBySex = { M: [], F: [] };
+    const sex = { M: 0, F: 0, unknown: 0 }, sexIds = { M: [], F: [] };
+    const missingDob = [], missingSex = [];
+    let recent = 0;
+    base.forEach((record) => {
+      const header = record.header || {};
+      const key = sexKey(header.sex);
+      if (key) { sex[key] += 1; sexIds[key].push(record.patientId); } else { sex.unknown += 1; missingSex.push(record.patientId); }
+      const saved = record.lastSavedAtISO ? new Date(record.lastSavedAtISO).getTime() : NaN;
+      if (Number.isFinite(saved) && saved >= yearAgo.getTime()) recent += 1;
+      const computed = header.dobISO ? ageOf(header.dobISO) : null;
+      const months = typeof computed === 'number' && Number.isFinite(computed) && computed >= 0 ? computed : null;
+      if (months === null) { missingDob.push(record.patientId); return; }
+      ages.push(months);
+      if (key) agesBySex[key].push(months);
+      const years = Math.floor(months / 12);
+      const band = bands[AGE_BANDS.findIndex((item) => years >= item.from && (item.to === null || years <= item.to))];
+      band[key || 'unknown'] += 1; band.total += 1; band.ids.push(record.patientId);
+    });
+    return {
+      total: base.length, recent, withAge: ages.length,
+      meanMonths: mean(ages), medianMonths: median(ages),
+      minMonths: ages.length ? Math.min.apply(null, ages) : null,
+      maxMonths: ages.length ? Math.max.apply(null, ages) : null,
+      sex, sexIds, meanMonthsBySex: { M: mean(agesBySex.M), F: mean(agesBySex.F) },
+      bands, missingDob, missingSex
+    };
+  }
+  /* Kompletność jednej karty — z najnowszego zapisu (payload). Trzy pytania, od których zależy,
+   * czy pacjent wejdzie do kolejnych statystyk: czy da się policzyć tempo wzrastania (co najmniej
+   * dwa pomiary wzrostu w różnym wieku), czy jest wzrost obojga rodziców i czy jest masa urodzeniowa. */
+  function positive(value) {
+    if (value == null || String(value).trim() === '') return false;
+    const parsed = Number(String(value).trim().replace(/\s+/g, '').replace(',', '.'));
+    return Number.isFinite(parsed) && parsed > 0;
+  }
+  function finite(value) { return typeof value === 'number' && Number.isFinite(value) ? value : null; }
+  function cardCompleteness(payload) {
+    const data = payload && typeof payload === 'object' ? payload : {};
+    const heights = new Set();
+    // Wiersze historii niosą wiek łączny w miesiącach; punkty leczenia i formularz — lata + miesiące.
+    const historyRow = (row) => {
+      if (!row || !positive(row.height)) return;
+      const months = finite(row.ageMonths) !== null ? row.ageMonths : finite(row.ageYears) !== null ? row.ageYears * 12 : null;
+      if (months !== null) heights.add(Math.round(months));
+    };
+    const pointRow = (row) => {
+      if (!row || !positive(row.height)) return;
+      if (finite(row.ageYears) === null && finite(row.ageMonths) === null) return;
+      heights.add(Math.round((finite(row.ageYears) || 0) * 12 + (finite(row.ageMonths) || 0)));
+    };
+    const list = (value) => Array.isArray(value) ? value : [];
+    list(data.advanced && data.advanced.data && data.advanced.data.measurements).forEach(historyRow);
+    list(data.growthBasic && data.growthBasic.data && data.growthBasic.data.measurements).forEach(historyRow);
+    list(data.ghTherapyPoints).forEach(pointRow);
+    list(data.obesityTherapyPoints).forEach(pointRow);
+    const user = data.user || {};
+    const formAge = (value) => value == null || String(value).trim() === '' ? null : finite(Number(value));
+    pointRow({ height: user.height, ageYears: formAge(user.age), ageMonths: formAge(user.ageMonths) });
+    const advanced = data.advanced || {}, birth = data.birth || {}, perinatal = data.perinatal || {};
+    return {
+      measurements: heights.size >= 2,
+      parents: positive(advanced.motherHeight) && positive(advanced.fatherHeight),
+      birthWeight: positive(birth.weight) || positive(perinatal.birthWeightG)
+    };
+  }
+  const CARD_ITEMS = [
+    ['measurements', 'Co najmniej 2 pomiary wzrostu'],
+    ['parents', 'Wzrost obojga rodziców'],
+    ['birthWeight', 'Masa urodzeniowa']
+  ];
+  function formatAge(months) {
+    if (months === null || months === undefined || !Number.isFinite(months)) return '—';
+    if (months < 12) return Math.round(months) + ' mies.';
+    return (months / 12).toFixed(1).replace('.', ',') + ' roku';
+  }
+  function percent(part, whole) { return whole ? Math.round(part / whole * 100) : 0; }
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
   function create(options) {
     const opts = options || {};
     const doc = win.document;
@@ -38,7 +159,11 @@
       adding: Boolean(initial.adding),
       selected: Object.assign({}, initial.selected || {}),
       catalogScrollTop: Number(initial.catalogScrollTop) || 0,
-      listScrollTop: Number(initial.listScrollTop) || 0
+      listScrollTop: Number(initial.listScrollTop) || 0,
+      // P-BAZA-STATYSTYKI: widok „Statystyki”, grupa wybrana z wykresu i wynik sprawdzenia kart.
+      view: initial.view === 'stats' ? 'stats' : 'list',
+      group: initial.group && Array.isArray(initial.group.ids) ? { label: String(initial.group.label || ''), ids: initial.group.ids.slice() } : null,
+      cards: initial.cards && typeof initial.cards === 'object' ? initial.cards : null
     };
     // Earlier versions used the same input for names of lists and patients.
     if (state.filter === 'lists' && !state.listId && !Object.prototype.hasOwnProperty.call(initial, 'listQuery')) {
@@ -56,6 +181,12 @@
     const memberPromises = new Map();
     let busy = Boolean(opts.loading);
     let rowWindow = null;
+    // P-BAZA-STATYSTYKI: sprawdzanie kart (odszyfrowanie najnowszego zapisu każdego pacjenta).
+    let cardsRun = 0;        // żeton bieżącego przebiegu; zmiana żetonu przerywa pętlę
+    let cardsBusy = null;    // { done, total } w trakcie przebiegu
+    let cardsHost = null;    // sekcja „Kompletność danych” w bieżącym renderze
+    let cardsProgress = null;
+    const timeFormatter = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
     const rowHeights = new Map(Array.isArray(initial.rowHeights) ? initial.rowHeights : []);
     let measuredWidth = Number(initial.measuredWidth) || 0;
     const dateFormatter = new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -140,7 +271,15 @@
     add.appendChild(el('span', 'pt-plus', '+'));
     add.appendChild(el('span', 'pt-add-full', 'Dodaj pacjenta'));
     add.appendChild(el('span', 'pt-add-short', 'Dodaj'));
-    titleRow.appendChild(titles); titleRow.appendChild(add); header.appendChild(titleRow);
+    const viewSwitch = el('div', 'pt-viewseg');
+    viewSwitch.setAttribute('role', 'group'); viewSwitch.setAttribute('aria-label', 'Widok Bazy pacjentów');
+    const viewNodes = {};
+    [['list', 'Lista'], ['stats', 'Statystyki']].forEach(([key, label]) => {
+      const node = button('', label, () => chooseView(key));
+      node.setAttribute('data-view', key); node.setAttribute('aria-pressed', 'false');
+      viewNodes[key] = node; viewSwitch.appendChild(node);
+    });
+    titleRow.appendChild(titles); titleRow.appendChild(viewSwitch); titleRow.appendChild(add); header.appendChild(titleRow);
 
     const toolbar = el('div', 'pt-toolbar');
     const searchBox = el('div', 'pt-search');
@@ -201,6 +340,11 @@
       render(); scroll.scrollTop = 0;
     });
     duplicates.appendChild(duplicateText); duplicates.appendChild(duplicateButton); root.appendChild(duplicates);
+    const groupBar = el('div', 'pt-groupbar');
+    const groupText = el('span', 'lt');
+    const groupBack = button('pt-secondary', '← Statystyki', () => { if (!busy) { state.group = null; chooseView('stats'); } });
+    const groupClear = button('pt-secondary', 'Pokaż wszystkich', () => { if (!busy) { state.group = null; render(); scroll.scrollTop = 0; } });
+    groupBar.appendChild(groupText); groupBar.appendChild(groupBack); groupBar.appendChild(groupClear); root.appendChild(groupBar);
     if (opts.legacyNotice) root.appendChild(opts.legacyNotice);
     const scroll = el('div', 'pt-scroll'); root.appendChild(scroll);
     const footer = el('div', 'pt-list-footer');
@@ -235,6 +379,20 @@
     function syncControls() {
       root.setAttribute('data-layout', desktop ? 'desktop' : 'compact');
       root.setAttribute('aria-busy', String(busy));
+      const stats = state.view === 'stats';
+      root.setAttribute('data-view', stats ? 'stats' : 'list');
+      Object.keys(viewNodes).forEach((key) => {
+        const active = state.view === key;
+        viewNodes[key].classList.toggle('on', active);
+        viewNodes[key].setAttribute('aria-pressed', String(active));
+        viewNodes[key].disabled = busy;
+      });
+      viewSwitch.hidden = Boolean(opts.loading);
+      toolbar.hidden = stats;
+      const grouped = !stats && Boolean(state.group) && ['all', 'base', 'ext'].includes(state.filter);
+      groupBar.hidden = !grouped;
+      if (grouped) groupText.textContent = 'Grupa ze statystyk: ' + state.group.label + ' · ' + peopleLabel(state.group.ids.length);
+      groupBack.disabled = busy; groupClear.disabled = busy;
       Object.keys(tabNodes).forEach((key) => {
         const active = state.filter === key;
         tabNodes[key].classList.toggle('on', active);
@@ -261,12 +419,12 @@
       home.disabled = busy && !opts.loading; add.disabled = busy;
       total.hidden = Boolean(opts.loading);
       refreshDuplicates();
-      footer.hidden = Boolean(opts.loading) || isCatalog() || state.filter === 'dup';
+      footer.hidden = Boolean(opts.loading) || stats || isCatalog() || state.filter === 'dup';
       syncBack();
     }
     function refreshDuplicates() {
       const number = Number(opts.duplicates && opts.duplicates.count) || 0;
-      duplicates.hidden = !number || state.filter === 'lists';
+      duplicates.hidden = !number || state.filter === 'lists' || state.view === 'stats';
       duplicateText.textContent = 'Podobne nazwiska · ' + number + (number === 1 ? ' grupa do sprawdzenia' : ' grup do sprawdzenia');
       duplicateButton.textContent = state.filter === 'dup' ? '← Wróć do bazy' : 'Przejrzyj';
       duplicateButton.disabled = busy;
@@ -275,7 +433,24 @@
       if (busy) return;
       if (key === 'lists' && !desktop) { openPicker(); return; }
       state.filter = key; state.listId = null; state.adding = false; state.selected = {};
-      state.sourceFilter = 'all'; memberCache = null; closeSort(); closePicker(false);
+      state.sourceFilter = 'all'; state.group = null; memberCache = null; closeSort(); closePicker(false);
+      render(); scroll.scrollTop = 0;
+    }
+    function chooseView(key) {
+      if (busy || state.view === key) return;
+      closeSort(); closePicker(false);
+      state.view = key === 'stats' ? 'stats' : 'list';
+      if (state.view === 'stats') { state.adding = false; state.selected = {}; }
+      render(); scroll.scrollTop = 0;
+      const node = viewNodes[state.view];
+      if (node && !root.contains(doc.activeElement)) node.focus();
+    }
+    // Wybór słupka albo wiersza „brakuje” otwiera zwykłą listę zawężoną do tych pacjentów.
+    function showGroup(label, ids) {
+      if (busy || !ids || !ids.length) return;
+      state.group = { label, ids: ids.slice() };
+      state.view = 'list'; state.filter = 'base'; state.listId = null; state.query = '';
+      state.adding = false; state.selected = {}; memberCache = null;
       render(); scroll.scrollTop = 0;
     }
     function savePosition() {
@@ -302,6 +477,8 @@
       if (destroyed || typeof opts.registerBack !== 'function') return;
       let handler = null;
       if (picker) handler = () => { closePicker(true); render(); };
+      else if (state.view === 'stats') handler = () => chooseView('list');
+      else if (state.group && ['all', 'base', 'ext'].includes(state.filter)) handler = () => { if (!busy) { state.group = null; chooseView('stats'); } };
       else if (state.adding) handler = () => { if (!busy) { state.adding = false; state.selected = {}; render(); } };
       else if (state.listId) handler = backToCatalog;
       else if (state.filter === 'lists' || state.filter === 'dup') handler = () => chooseTab('all');
@@ -552,16 +729,221 @@
       };
     }
     function renderPatients() {
-      const rows = sorted(patients.filter((patient) => sourceMatches(patient, state.filter) && matchesName(patient, state.query)));
+      const group = state.group ? new Set(state.group.ids) : null;
+      const rows = sorted(patients.filter((patient) => (!group || group.has(patient.patientId)) && sourceMatches(patient, state.filter) && matchesName(patient, state.query)));
       count.textContent = 'Wyświetlono: ' + rows.length;
       if (!rows.length) {
         empty(scroll, patients.length ? 'Brak pasujących osób' : 'Baza jest jeszcze pusta', patients.length ? 'Zmień wyszukiwanie lub wybierz inny zakres.' : 'Dodaj pacjenta, aby rozpocząć pracę z bazą.', patients.length ? 'Wyczyść wyszukiwanie i filtry' : '+ Dodaj pacjenta', () => {
-          if (patients.length) { state.query = ''; chooseTab('all'); }
+          if (patients.length) { state.query = ''; state.group = null; chooseTab('all'); }
           else if (opts.onAddPatient) opts.onAddPatient();
         });
       } else patientRows(scroll, rows);
       footerCount.textContent = peopleLabel(rows.length);
     }
+    // ── P-BAZA-STATYSTYKI, etap 1 ───────────────────────────────────────────────
+    function basePatients() { return patients.filter((patient) => !patient.__ext); }
+    function ageFromVault(dobISO) {
+      if (vault && typeof vault.calcAgeFromDOB === 'function') {
+        const age = vault.calcAgeFromDOB(dobISO);
+        return age && Number.isFinite(age.totalMonths) ? age.totalMonths : null;
+      }
+      return monthsFromDob(dobISO, new Date());
+    }
+    function cardsSignature(rows) { return rows.map((patient) => patient.patientId + '@' + (patient.lastSavedAtISO || '')).sort().join('|'); }
+    /* Słupki rysuje SVG z atrybutami geometrii (szerokości w jednostkach viewBox 0–1000),
+     * więc widok nie ustawia żadnego stylu wprost na elemencie (P-STYLE krok 5b). */
+    function statBar(className, segments) {
+      const svg = doc.createElementNS(SVG_NS, 'svg');
+      svg.setAttribute('class', 'pt-stat-bar' + (className ? ' ' + className : ''));
+      svg.setAttribute('viewBox', '0 0 1000 20'); svg.setAttribute('preserveAspectRatio', 'none');
+      svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+      const drawn = segments.filter((segment) => segment.width > 0);
+      let x = 0;
+      drawn.forEach((segment, index) => {
+        const rect = doc.createElementNS(SVG_NS, 'rect');
+        // 5 jednostek przerwy między stykającymi się segmentami (ok. 2 px).
+        const width = index < drawn.length - 1 ? Math.max(segment.width - 5, 1) : segment.width;
+        rect.setAttribute('class', segment.className);
+        rect.setAttribute('x', String(Math.round(x))); rect.setAttribute('y', '0');
+        rect.setAttribute('width', String(Math.round(width))); rect.setAttribute('height', '20');
+        svg.appendChild(rect); x += segment.width;
+      });
+      return svg;
+    }
+    function statTile(label, value, unit, sub, action) {
+      const tile = action ? button('pt-stat-tile pt-stat-tile--link', null, action) : el('div', 'pt-stat-tile');
+      tile.appendChild(el('span', 'pt-stat-label', label));
+      const figure = el('span', 'pt-stat-value', value);
+      if (unit) figure.appendChild(el('span', 'pt-stat-unit', ' ' + unit));
+      tile.appendChild(figure);
+      if (sub) tile.appendChild(el('span', 'pt-stat-sub', sub));
+      return tile;
+    }
+    function ageParts(months) {
+      const text = formatAge(months);
+      const split = text.lastIndexOf(' ');
+      return split === -1 ? [text, ''] : [text.slice(0, split), text.slice(split + 1)];
+    }
+    function meterRow(label, have, total, missingIds, missingLabel) {
+      const row = el('div', 'pt-stat-meter');
+      row.appendChild(el('span', 'pt-stat-meter-name', label));
+      row.appendChild(statBar('pt-stat-bar--meter', [
+        { className: 'pt-stat-fill', width: total ? have / total * 1000 : 0 }
+      ]));
+      row.appendChild(el('span', 'pt-stat-meter-figure', have + ' / ' + total));
+      const missing = missingIds ? missingIds.length : 0;
+      if (missing) {
+        const show = button('pt-stat-missing', 'Brakuje: ' + missing + ' ›', () => showGroup(missingLabel, missingIds));
+        show.setAttribute('aria-label', label + ': brakuje u ' + peopleLabel(missing) + '. Pokaż listę');
+        row.appendChild(show);
+      } else row.appendChild(el('span', 'pt-stat-missing pt-stat-missing--none', 'komplet'));
+      return row;
+    }
+    function fillCards() {
+      if (!cardsHost) return;
+      clear(cardsHost); cardsProgress = null;
+      const base = basePatients();
+      const saved = state.cards && state.cards.signature === cardsSignature(base) ? state.cards : null;
+      if (cardsBusy) {
+        const progress = el('div', 'pt-stat-progress');
+        progress.setAttribute('role', 'status'); progress.setAttribute('aria-live', 'polite');
+        const text = el('span', 'pt-stat-progress-text');
+        progress.appendChild(text);
+        cardsHost.appendChild(progress);
+        cardsProgress = { text };
+        updateCardsProgress();
+        return;
+      }
+      if (saved) {
+        CARD_ITEMS.forEach(([key, label]) => {
+          const missing = saved.missing[key] || [];
+          cardsHost.appendChild(meterRow(label, saved.total - saved.failed - missing.length, saved.total - saved.failed, missing, label + ' — brak'));
+        });
+        const foot = el('div', 'pt-stat-cards-foot');
+        const when = new Date(saved.at);
+        foot.appendChild(el('span', null, 'Karty sprawdzone' + (Number.isFinite(when.getTime()) ? ' o ' + timeFormatter.format(when) : '')
+          + (saved.failed ? ' · nie udało się odczytać: ' + saved.failed : '') + '.'));
+        foot.appendChild(button('pt-secondary pt-stat-check', 'Sprawdź ponownie', checkCards));
+        cardsHost.appendChild(foot);
+        return;
+      }
+      const intro = el('div', 'pt-stat-cards-foot');
+      intro.appendChild(el('span', null, 'Pomiary, wzrost rodziców i masa urodzeniowa są w kartach. Sprawdzenie odszyfrowuje po kolei każdą kartę na tym urządzeniu i przy dużej bazie może chwilę potrwać.'));
+      intro.appendChild(button('pt-secondary pt-stat-check', 'Sprawdź karty (' + base.length + ')', checkCards));
+      cardsHost.appendChild(intro);
+    }
+    function updateCardsProgress() {
+      if (cardsProgress && cardsBusy) cardsProgress.text.textContent = 'Sprawdzanie kart… ' + cardsBusy.done + ' z ' + cardsBusy.total;
+    }
+    async function checkCards() {
+      if (cardsBusy || !alive() || state.view !== 'stats') return;
+      const base = basePatients();
+      const run = ++cardsRun, signature = cardsSignature(base);
+      const missing = {}; CARD_ITEMS.forEach(([key]) => { missing[key] = []; });
+      let failed = 0;
+      cardsBusy = { done: 0, total: base.length };
+      fillCards();
+      for (const record of base) {
+        if (run !== cardsRun) return;
+        if (!alive()) { cardsBusy = null; return; }
+        try {
+          const snapshot = await vault.getLatestSnapshot(record.patientId);
+          if (run !== cardsRun) return;
+          if (!snapshot || !snapshot.payload) failed += 1;
+          else {
+            const result = cardCompleteness(snapshot.payload);
+            CARD_ITEMS.forEach(([key]) => { if (!result[key]) missing[key].push(record.patientId); });
+          }
+        } catch {
+          if (run !== cardsRun) return;
+          failed += 1;
+        }
+        cardsBusy.done += 1; updateCardsProgress();
+      }
+      cardsBusy = null;
+      if (!alive()) return;
+      state.cards = { signature, at: new Date().toISOString(), total: base.length, failed, missing };
+      fillCards();
+      const again = cardsHost && cardsHost.querySelector('.pt-stat-check');
+      if (again && (doc.activeElement === doc.body || !doc.activeElement)) again.focus();
+    }
+    function renderStats() {
+      cardsHost = null; cardsProgress = null;
+      const model = demographics(patients, { ageMonths: ageFromVault });
+      if (!model.total) {
+        empty(scroll, 'Brak pacjentów w bazie', 'Statystyki pojawią się po dodaniu pierwszego pacjenta.', '+ Dodaj pacjenta', () => { if (opts.onAddPatient) opts.onAddPatient(); });
+        return;
+      }
+      const wrap = el('div', 'pt-stats');
+
+      const tiles = el('div', 'pt-stat-tiles');
+      tiles.appendChild(statTile('Pacjenci w bazie', String(model.total), '', model.recent + ' z zapisem w ostatnich 12 mies.'));
+      if (model.withAge) {
+        const meanAge = ageParts(model.meanMonths);
+        tiles.appendChild(statTile('Średni wiek', meanAge[0], meanAge[1],
+          'mediana ' + formatAge(model.medianMonths) + ' · od ' + formatAge(model.minMonths) + ' do ' + formatAge(model.maxMonths)));
+      } else tiles.appendChild(statTile('Średni wiek', '—', '', 'brak dat urodzenia'));
+      [['M', 'Chłopcy'], ['F', 'Dziewczęta']].forEach(([key, label]) => {
+        const average = model.meanMonthsBySex[key];
+        const sub = percent(model.sex[key], model.total) + '%' + (average === null ? '' : ' · średni wiek ' + formatAge(average));
+        const tile = statTile(label, String(model.sex[key]), '', sub, model.sex[key] ? () => showGroup(label, model.sexIds[key]) : null);
+        if (model.sex[key]) tile.setAttribute('aria-label', label + ': ' + model.sex[key] + ', ' + sub + '. Pokaż listę');
+        tiles.appendChild(tile);
+      });
+      wrap.appendChild(tiles);
+
+      const ageCard = el('section', 'pt-stat-card');
+      const ageHead = el('div', 'pt-stat-card-head');
+      ageHead.appendChild(el('h3', null, 'Wiek i płeć'));
+      const legend = el('div', 'pt-stat-legend');
+      [['m', 'Chłopcy ' + model.sex.M], ['f', 'Dziewczęta ' + model.sex.F]].concat(model.sex.unknown ? [['u', 'Płeć nieznana ' + model.sex.unknown]] : [])
+        .forEach(([key, text]) => {
+          const item = el('span', 'pt-stat-legend-item');
+          item.appendChild(el('span', 'pt-stat-swatch pt-stat-swatch--' + key));
+          item.appendChild(el('span', null, text));
+          legend.appendChild(item);
+        });
+      ageHead.appendChild(legend); ageCard.appendChild(ageHead);
+      const most = Math.max.apply(null, model.bands.map((band) => band.total).concat([1]));
+      const bandList = el('div', 'pt-stat-bands');
+      model.bands.forEach((band) => {
+        const describe = band.label + ': ' + peopleLabel(band.total) + ' (chłopcy ' + band.M + ', dziewczęta ' + band.F + (band.unknown ? ', płeć nieznana ' + band.unknown : '') + ')';
+        const row = band.total ? button('pt-stat-band', null, () => showGroup(band.label, band.ids)) : el('div', 'pt-stat-band pt-stat-band--empty');
+        row.setAttribute('data-band', band.key);
+        if (band.total) { row.setAttribute('aria-label', describe + '. Pokaż listę'); row.title = describe; }
+        row.appendChild(el('span', 'pt-stat-band-name', band.label));
+        row.appendChild(statBar('', [
+          { className: 'pt-stat-seg--m', width: band.M / most * 1000 },
+          { className: 'pt-stat-seg--f', width: band.F / most * 1000 },
+          { className: 'pt-stat-seg--u', width: band.unknown / most * 1000 }
+        ]));
+        row.appendChild(el('span', 'pt-stat-band-total', String(band.total)));
+        bandList.appendChild(row);
+      });
+      ageCard.appendChild(bandList);
+      ageCard.appendChild(el('p', 'pt-stat-note', 'Wiek na dziś, liczony z daty urodzenia. Wybierz przedział, aby zobaczyć pacjentów.'
+        + (model.missingDob.length ? ' Bez daty urodzenia: ' + model.missingDob.length + ' (poza wiekiem).' : '')));
+      wrap.appendChild(ageCard);
+
+      const dataCard = el('section', 'pt-stat-card');
+      const dataHead = el('div', 'pt-stat-card-head');
+      dataHead.appendChild(el('h3', null, 'Kompletność danych'));
+      dataHead.appendChild(el('span', 'pt-stat-card-hint', 'im pełniejsze karty, tym więcej pacjentów wejdzie do kolejnych statystyk'));
+      dataCard.appendChild(dataHead);
+      const headerRows = el('div', 'pt-stat-meters');
+      headerRows.appendChild(meterRow('Data urodzenia', model.total - model.missingDob.length, model.total, model.missingDob, 'Data urodzenia — brak'));
+      headerRows.appendChild(meterRow('Płeć', model.total - model.missingSex.length, model.total, model.missingSex, 'Płeć — brak'));
+      dataCard.appendChild(headerRows);
+      cardsHost = el('div', 'pt-stat-meters pt-stat-cards');
+      dataCard.appendChild(cardsHost);
+      fillCards();
+      wrap.appendChild(dataCard);
+
+      wrap.appendChild(el('p', 'pt-stat-note pt-stat-note--foot', 'Statystyki opisowe ' + model.total + (model.total === 1 ? ' pacjenta' : ' pacjentów')
+        + ' z bazy, bez osób spoza bazy. Policzone na tym urządzeniu; nic nie jest wysyłane. Nie są badaniem naukowym ani podstawą decyzji klinicznych.'));
+      scroll.appendChild(wrap);
+    }
+
     function reader() {
       if (!listReader) listReader = typeof vault.createPatientListReader === 'function' ? vault.createPatientListReader({ isCurrent: alive }) : vault;
       return listReader;
@@ -778,6 +1160,8 @@
       if (rowWindow) { rowWindow.destroy(); rowWindow = null; }
       clear(scroll);
       if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
+      if (state.view === 'stats') { count.textContent = ''; renderStats(); restorePosition(); return; }
+      ++cardsRun; cardsBusy = null; cardsHost = null; // sprawdzanie kart trwa tylko, dopóki widać statystyki
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
         if (opts.duplicates && typeof opts.duplicates.render === 'function') opts.duplicates.render(scroll);
@@ -901,7 +1285,7 @@
     }
     function destroy() {
       if (destroyed) return;
-      finalSnapshot = read(); destroyed = true; ++readSequence; invalidateLists();
+      finalSnapshot = read(); destroyed = true; ++readSequence; ++cardsRun; cardsBusy = null; invalidateLists();
       closePicker(false); closeSort();
       if (rowWindow) { rowWindow.destroy(); rowWindow = null; }
       if (unregisterBack) { unregisterBack(); unregisterBack = null; }
@@ -946,5 +1330,5 @@
     return { root, read, destroy, mount, refreshDuplicates, deferRefresh };
   }
   function createLoading(options) { return create(Object.assign({}, options, { loading: true, patients: [], initialState: { focused: false } })); }
-  win.VildaPatientsList = Object.freeze({ create, createLoading });
+  win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge });
 })(typeof window !== 'undefined' ? window : null);
