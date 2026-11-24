@@ -81,7 +81,7 @@ test('kliknięcie przedziału i wiersza „Brakuje” otwiera listę tych pacjen
     .toEqual([ids.a, ids.d, ids.f].sort());
 });
 
-test('kompletność danych: nagłówki od razu, karty dopiero po „Sprawdź karty”', async ({ page }) => {
+test('kompletność danych: nagłówki od razu, karty dopiero po „Policz z kart”', async ({ page }) => {
   const { frame, database, ids } = await przygotujStatystyki(page);
   await otworzStatystyki(database);
 
@@ -103,10 +103,10 @@ test('kompletność danych: nagłówki od razu, karty dopiero po „Sprawdź kar
   await database.locator('.pt-stat-check').click();
   await expect(database.locator('.pt-stat-cards .pt-stat-meter')).toHaveCount(3);
   expect(await frame.evaluate(() => window.__statOdczyty), 'jeden odczyt na pacjenta z bazy').toBe(8);
-  await expect(wiersz('Co najmniej 2 pomiary wzrostu').locator('.pt-stat-meter-figure')).toHaveText('2 / 8');
-  await expect(wiersz('Wzrost obojga rodziców').locator('.pt-stat-meter-figure')).toHaveText('1 / 8');
-  await expect(wiersz('Masa urodzeniowa').locator('.pt-stat-meter-figure')).toHaveText('2 / 8');
-  await expect(database.locator('.pt-stat-cards-foot')).toContainText('Karty sprawdzone o');
+  await expect(wiersz('Co najmniej 2 pomiary wzrostu').locator('.pt-stat-meter-figure')).toHaveText(OCZEKIWANE.karty.pomiary);
+  await expect(wiersz('Wzrost obojga rodziców').locator('.pt-stat-meter-figure')).toHaveText(OCZEKIWANE.karty.rodzice);
+  await expect(wiersz('Masa urodzeniowa').locator('.pt-stat-meter-figure')).toHaveText(OCZEKIWANE.karty.masaUrodzeniowa);
+  await expect(database.locator('.pt-stat-cardsbar')).toContainText('Karty policzone o');
 
   await wiersz('Masa urodzeniowa').locator('button.pt-stat-missing').click();
   await expect(database.locator('.pt-groupbar .lt')).toHaveText('Grupa ze statystyk: Masa urodzeniowa — brak · 6 osób');
@@ -117,6 +117,78 @@ test('kompletność danych: nagłówki od razu, karty dopiero po „Sprawdź kar
   await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
   await expect(database.locator('.pt-stat-cards .pt-stat-meter')).toHaveCount(3);
   expect(await frame.evaluate(() => window.__statOdczyty)).toBe(8);
+});
+
+// P-BAZA-STATYSTYKI, etap 2: leczenie hormonem wzrostu — tempo silnikiem aplikacji, hSDS jej siatkami.
+test('leczenie GH: tempo w 1. roku, para „przed → 1. rok”, zmiana hSDS, programy i lata leczenia', async ({ page }) => {
+  const { frame, database, ids } = await przygotujStatystyki(page);
+  await otworzStatystyki(database);
+  const gh = database.locator('.pt-gh');
+  await expect(gh, 'przed policzeniem z kart sekcja nie pokazuje liczb').toContainText('Pojawi się po policzeniu z kart.');
+  await expect(gh.locator('.pt-stat-tile')).toHaveCount(0);
+
+  await database.locator('.pt-stat-check').click();
+  await expect(gh.locator('.pt-stat-card-hint')).toHaveText(OCZEKIWANE.gh.programy);
+
+  const tempo = gh.locator('.pt-stat-tile', { hasText: /Tempo w 1\. roku leczenia/i });
+  await expect(tempo.locator('.pt-stat-value')).toHaveText(`${OCZEKIWANE.gh.pierwszyRok} cm/rok`);
+  await expect(tempo.locator('.pt-stat-sub')).toHaveText(`mediana ${OCZEKIWANE.gh.mediana} · n = ${OCZEKIWANE.gh.n}`);
+  const para = gh.locator('.pt-stat-tile', { hasText: /Przed leczeniem/i });
+  await expect(para.locator('.pt-stat-value')).toHaveText(`${OCZEKIWANE.gh.para} cm/rok`);
+  await expect(para.locator('.pt-stat-sub')).toHaveText('n = 1 z pomiarem 9–15 mies. przed Włączeniem');
+
+  // Zmiana hSDS: te same dwa punkty co tempo (Włączenie i kontrola 1. roku), liczone silnikiem siatek strony.
+  const oczekiwanaDelta = await frame.evaluate(() => {
+    const zrodlo = typeof window.bmiSource === 'string' && window.bmiSource ? window.bmiSource.toUpperCase() : null;
+    const sds = (wzrost, plec, wiekMies) => window.VildaSdsWzrostu.policz({ wzrost, plec, wiekMies, zrodlo, populacja: 'OGOLNA' }).sds;
+    const c = sds(121.4, 'M', 84) - sds(112.0, 'M', 72), d = sds(128.4, 'F', 120) - sds(121.0, 'F', 108);
+    const srednia = (c + d) / 2, tekst = Math.abs(srednia).toFixed(2).replace('.', ',');
+    return { c, d, tekst: (srednia > 0 ? '+' : srednia < 0 ? '−' : '') + tekst };
+  });
+  expect(Number.isFinite(oczekiwanaDelta.c) && Number.isFinite(oczekiwanaDelta.d), 'strona Start ma siatki wzrostu').toBe(true);
+  const delta = gh.locator('.pt-stat-tile', { hasText: /Zmiana hSDS w 1\. roku/i });
+  await expect(delta.locator('.pt-stat-value')).toHaveText(oczekiwanaDelta.tekst);
+  await expect(delta.locator('.pt-stat-sub')).toContainText('n = 2');
+
+  const program = (nazwa) => gh.locator(`.pt-gh-row[data-program="${nazwa}"]`);
+  await expect(program('SNP').locator('.pt-gh-n')).toHaveText('n = 1 z 2 · mała grupa');
+  await expect(program('SNP').locator('.pt-gh-figure')).toHaveText('4,5 → 9,4');
+  await expect(program('ZT').locator('.pt-gh-figure')).toHaveText('7,4');
+  await expect(program('bez programu').locator('.pt-gh-figure')).toHaveText('brak tempa');
+  // Kropki stoją na skali: 9,4 leży na prawo od 4,5, a 7,4 (ZT) między nimi.
+  const srodek = async (wiersz, klasa) => wiersz.locator(`line.${klasa}`).evaluate((node) => {
+    const box = node.getBoundingClientRect(); return box.left + box.width / 2;
+  });
+  const przed = await srodek(program('SNP'), 'pt-gh-dot--before'), po = await srodek(program('SNP'), 'pt-gh-dot--first');
+  const zt = await srodek(program('ZT'), 'pt-gh-dot--first');
+  expect(po).toBeGreaterThan(przed);
+  expect(zt).toBeGreaterThan(przed);
+  expect(zt).toBeLessThan(po);
+
+  for (const [rok, wartosc, n] of OCZEKIWANE.gh.lata) {
+    const wiersz = gh.locator('.pt-gh-year', { hasText: rok });
+    await expect(wiersz.locator('.pt-stat-meter-figure')).toHaveText(wartosc);
+    await expect(wiersz.locator('.pt-stat-missing')).toHaveText(n);
+  }
+  await bezPrzewijaniaPoziomego(page, frame);
+
+  // Grupy: program, pacjenci z tempem i pacjenci bez tempa z powodem.
+  await program('SNP').click();
+  await expect(database.locator('.pt-groupbar .lt')).toHaveText('Grupa ze statystyk: GH · SNP · 2 osoby');
+  expect(await database.locator('.pt-row').evaluateAll((rows) => rows.map((row) => row.dataset.patientId).sort())).toEqual([ids.c, ids.e].sort());
+  await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
+  await expect(gh.locator('.pt-stat-tile'), 'wynik z kart zostaje po powrocie').toHaveCount(3);
+
+  await gh.locator('.pt-gh-gaps [data-reason="no-start"]').click();
+  await expect(database.locator('.pt-groupbar .lt')).toHaveText('Grupa ze statystyk: GH · brak Włączenia ze wzrostem · 1 osoba');
+  await expect(database.locator(`.pt-row[data-patient-id="${ids.b}"]`)).toBeVisible();
+  await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
+  await gh.locator('.pt-gh-gaps [data-reason="too-early"]').click();
+  await expect(database.locator(`.pt-row[data-patient-id="${ids.e}"]`)).toBeVisible();
+  await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
+  await tempo.click();
+  await expect(database.locator('.pt-groupbar .lt')).toHaveText('Grupa ze statystyk: GH · tempo w 1. roku · 2 osoby');
+  expect(await database.locator('.pt-row').evaluateAll((rows) => rows.map((row) => row.dataset.patientId).sort())).toEqual([ids.c, ids.d].sort());
 });
 
 test.describe('telefon', () => {
@@ -143,5 +215,14 @@ test.describe('telefon', () => {
     await database.locator('.pt-stat-band[data-band="6-9"]').click();
     await expect(database.locator('.pt-row')).toHaveCount(2);
     await bezPrzewijaniaPoziomego(page, frame);
+
+    // Etap 2: sekcja leczenia GH mieści się na telefonie; kropki hantli mają stały rozmiar.
+    await database.locator('.pt-groupbar button', { hasText: 'Statystyki' }).click();
+    await database.locator('.pt-stat-check').click();
+    await expect(database.locator('.pt-gh .pt-stat-tile')).toHaveCount(3);
+    await bezPrzewijaniaPoziomego(page, frame);
+    const kropka = await database.locator('.pt-gh-row[data-program="SNP"] line.pt-gh-dot--first').boundingBox();
+    expect(Math.round(kropka.width), 'kropka 12 px niezależnie od szerokości').toBe(12);
+    expect(Math.round(kropka.height)).toBe(12);
   });
 });

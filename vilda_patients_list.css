@@ -340,6 +340,37 @@ body .vilda-pl-overlay .vilda-pl-modal .foot button.go:is(:hover,:focus-visible)
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-check { flex: 0 0 auto; }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-progress { font-size: 15px; font-weight: 600; color: var(--pt-ink, #111); }
 
+/* P-BAZA-STATYSTYKI, etap 2: pasek „z kart” i sekcja „Leczenie hormonem wzrostu”. */
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-cardsbar { padding: var(--space-12px) var(--space-16px); background: var(--pt-subtle, #f7fbfc); border: var(--border-hairline) solid var(--pt-line, #dce6e9); border-radius: var(--radius-8); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-body { display: flex; flex-direction: column; gap: var(--space-14px); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-card h4 { margin: 0; font-size: 16px; font-weight: 600; color: var(--pt-ink, #111); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-tiles .pt-stat-tile { min-height: 112px; background: var(--pt-subtle, #f7fbfc) !important; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-tiles .pt-stat-value { font-size: 30px; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-row { grid-template-columns: 150px minmax(0, 1fr) 110px; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-name b { font-weight: 600; overflow-wrap: anywhere; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-n { font-size: 14px; color: var(--pt-muted, #475a63); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-plot { display: block; width: 100%; height: 24px; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-plot line { vector-effect: non-scaling-stroke; stroke-linecap: round; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-axis { stroke: var(--pt-line, #dce6e9); stroke-width: 1; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-link { stroke: var(--pt-gh-before, #9fd0d4); stroke-width: 4; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-ring { stroke: var(--pt-paper, #fff); stroke-width: 16; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-dot { stroke-width: 12; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-dot--before { stroke: var(--pt-gh-before, #9fd0d4); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-dot--first { stroke: var(--pt-teal, #087f89); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-swatch--before { border-radius: var(--radius-circle, 50%); background: var(--pt-gh-before, #9fd0d4); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-swatch--first { border-radius: var(--radius-circle, 50%); background: var(--pt-teal, #087f89); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-figure { white-space: nowrap; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-scale { position: relative; height: 20px; margin: 0 130px 0 170px; font-size: 14px; color: var(--pt-muted, #475a63); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-scale span { position: absolute; top: 0; transform: translateX(-50%); }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-scale span:nth-child(1) { left: 2%; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-scale span:nth-child(2) { left: 34%; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-scale span:nth-child(3) { left: 66%; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-scale span:nth-child(4) { left: 98%; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-yearbar { height: 12px; border-radius: 0 var(--radius-4, 4px) var(--radius-4, 4px) 0; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-gaps { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-8px) var(--space-10px); font-size: 15px; color: var(--pt-muted, #475a63); }
+
 @media (min-width: 1400px) {
   .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) .vilda-auth-card { max-width: 1260px; }
 }
@@ -413,6 +444,13 @@ body .vilda-pl-overlay .vilda-pl-modal .foot button.go:is(:hover,:focus-visible)
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-meter-figure { grid-area: figure; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-bar--meter { grid-area: bar; }
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-missing { grid-area: missing; justify-self: start; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-tiles { grid-template-columns: minmax(0, 1fr); }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-tiles .pt-stat-tile { min-height: 0; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name figure" "plot plot"; gap: var(--space-4px) var(--space-10px); }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-name { grid-area: name; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-figure { grid-area: figure; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-plot { grid-area: plot; }
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-gh-scale { margin: 0; }
   .vilda-patients-list-picker { padding: var(--space-12px) !important; }
   .vilda-patients-list-picker .pt-picker-sheet { max-height: calc(100dvh - 24px); }
   .vilda-patients-list-picker .pt-picker-head { padding: 17px var(--space-16px) var(--space-12px); }

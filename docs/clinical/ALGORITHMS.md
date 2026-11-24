@@ -47328,3 +47328,67 @@ prawdziwym sejfie; grupy z wykresu i z „Brakuje”; karty odszyfrowywane dopie
 **Wersje.** `vilda_patients_list.js` 5 → 6, `vilda_patients_list.css` 4 → 5, `vilda_chrome.js` 324 → 325
 i `vilda_session_bridge.js` 240 → 241 (wstrzykują pliki z nowym `?v=`), SW 1.1.579 → 1.1.580 — `npm run podbij-wersje`.
 Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 2 — Baza pacjentów: statystyki leczenia hormonem wzrostu (SW 1.1.581, `vilda_patients_list.js` 7, `vilda_patients_list.css` 6, 2026-11-24)
+
+**Zmiana kliniczna: MOŻLIWA — nowa statystyka opisowa bazy (średnie tempo wzrastania i zmiana hSDS u leczonych GH).**
+Wynik pojedynczego pacjenta, zapis karty, wzory, normy i progi — bez zmian. Model nie ma własnego wzoru: tempo liczy
+`VildaTempoWzrastania.odcinek` (P-TEMPO), kursy dzieli `VildaTrajectoryAnalysis.ghKursy` (P-GH-WZNOWIENIE), hSDS liczy
+`VildaSdsWzrostu.policz` (P-SDS). Nowe są wyłącznie definicje doboru par pomiarów i uśrednienie po pacjentach — do
+akceptacji właściciela.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów; etap 2 — leczenie GH, główna liczba: tempo wzrastania w 1. roku
+leczenia. 2026-11-24: „jako etap 2 ruszaj z leczeniem GH”.
+
+**Źródła i jednostki.** Wzór tempa (cm/rok): (h2 − h1) / ((m2 − m1) / 12), jak w całej aplikacji (P-TEMPO-1). Okno roczne
+9–15 mies. z celem 12 mies. — stałe silnika tempa `P.ROCZNE_OKNO_MIN_M`, `P.ROCZNE_OKNO_MAX_M`, `P.ROCZNE_CEL_M`
+(model czyta je z silnika, nie ma własnych liczb). hSDS: siatka zapisana w karcie (`zscore.dataSource`; bez niej — bieżące
+źródło strony), populacja z karty (`clinical.downSyndrome` → siatki zespołu Downa), reguły siatek jak w P-SDS. Wiek punktu
+leczenia: lata × 12 + miesiące (jak w Karcie i monitorze terapii).
+
+**Definicje (model: `ghPatient`, `ghCohort` w `vilda_patients_list.js`).**
+1. **Leczony** — karta ma co najmniej jeden punkt leczenia GH (`ghTherapyPoints`: Włączenie, Kontynuacja, Zakończenie).
+   Program IGF-1 (mekasermina) jest wykazany jako osobny program.
+2. **Kurs** — liczy się pierwszy kurs z punktem Włączenia. Leczenie wznowione po Zakończeniu to osobny kurs i nie wchodzi
+   do „pierwszego roku”.
+3. **Odcinek roczny** — dwa pomiary odległe o 9–15 mies., najbliżej 12; przy równej odległości od 12 — bliższy w czasie.
+4. **Tempo w 1. roku leczenia** — od Włączenia (ze wzrostem) do kontroli z odcinka rocznego. **Kolejne lata** — łańcuchem:
+   2. rok od kontroli 1. roku do następnej kontroli z okna itd. (pokazywane do 4. roku).
+5. **Tempo przed leczeniem** — pomiar 9–15 mies. przed Włączeniem (najbliżej 12) → Włączenie. Pomiary sprzed leczenia:
+   wiersze historii (`advanced.data.measurements`, `growthBasic.data.measurements`) i punkty leczenia o wcześniejszym wieku.
+   Para „przed → 1. rok” liczy tylko pacjentów, którzy mają obie wartości (ci sami pacjenci po obu stronach).
+6. **Zmiana hSDS w 1. roku** — hSDS kontroli 1. roku − hSDS Włączenia. Bez płci albo bez siatki dla wieku pacjent nie
+   wchodzi do średniej. Tablice siatek wzrostu ładują strony Start, DocPro i Klirens; na pozostałych kafel mówi, że
+   siatki nie są wczytane (tempo liczy się wszędzie).
+7. **Kto nie wchodzi do średniej** (wykazany z powodem i listą pacjentów): „brak Włączenia ze wzrostem”, „brak kontroli po
+   9–15 mies.” (są późniejsze punkty, ale żaden w oknie), „leczenie krótsze niż 9 mies.”.
+8. **Uśrednianie** — średnia arytmetyczna i mediana po pacjentach (każdy pacjent raz). „Wg programu”: program punktu
+   Włączenia (bez niego — pierwszy program w kursie; brak — „bez programu”). Grupa z mniej niż 5 pacjentami z tempem jest
+   oznaczona „mała grupa”.
+
+**Jeden przebieg po kartach.** Kompletność danych (etap 1) i leczenie GH liczą się z tego samego odczytu najnowszego
+zapisu każdej karty — po „Policz z kart (N)” (dotąd „Sprawdź karty”); pasek pokazuje postęp, a potem godzinę policzenia.
+
+**Rysowanie.** Hantla „przed → 1. rok” i słupki lat to SVG z atrybutami geometrii; kropki mają stały rozmiar przez
+`vector-effect: non-scaling-stroke` w arkuszu (bez stylów na elementach). Kliknięcie programu, kafla tempa albo powodu
+braku otwiera listę tych pacjentów.
+
+**Przypadki syntetyczne (prawdziwe silniki).**
+- dziewczynka, SNP: 5 l. 0 mies. 105,0 cm (historia); Włączenie 6 l. 0 mies. 109,2 cm; kontrole 6 l. 6 mies. 114,5 ·
+  7 l. 0 mies. 118,8 · 8 l. 1 mies. 126,4 → przed 4,2; 1. rok 9,6 (kontrola po 6 mies. pominięta); 2. rok 7,6 / (13/12) = 7,0;
+- chłopiec, SGA: Włączenie 5 l. 0 mies. 100,0 cm; kontrole po 10 mies. 106,0 i po 15 mies. 108,4 → 1. rok 6,0 / (10/12) = 7,2
+  (10 mies. bliżej celu niż 15);
+- Włączenie i kontrola po 6 mies. → „leczenie krótsze niż 9 mies.”; Włączenie i kontrola po 20 mies. → „brak kontroli po
+  9–15 mies.”; same Kontynuacje → „brak Włączenia ze wzrostem”;
+- Włączenie 5 l. 100 cm, Zakończenie 6 l. 108,4 cm, ponowne Włączenie 8 l. → 1. rok 8,4 z pierwszego kursu, program
+  pierwszego kursu.
+
+**Strażnicy.** `tests/unit/baza-statystyki-gh.test.mjs` (11: model na prawdziwym silniku tempa i `ghKursy` — okno
+z silnika, 1. rok i łańcuch lat, remis, powody braku, wznowienie, zapis pusty, brak silnika, hSDS z siatką i populacją
+z karty, kohorta, programy, mała grupa); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (5; nowy test leczenia GH na
+prawdziwym sejfie: 4 leczonych, 1. rok 8,4 cm/rok, para 4,5 → 9,4, zmiana hSDS równa wynikowi silnika siatek strony, programy,
+lata, grupy pacjentów; telefon — bez przewijania w bok, kropki 12 px).
+
+**Wersje.** `vilda_patients_list.js` 6 → 7, `vilda_patients_list.css` 5 → 6, `vilda_chrome.js` 325 → 326
+i `vilda_session_bridge.js` 241 → 242 (wstrzykują pliki z nowym `?v=`), SW 1.1.580 → 1.1.581 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
