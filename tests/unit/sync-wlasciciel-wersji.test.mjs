@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
@@ -2522,6 +2523,32 @@ describe('P-SYNC-WLASCICIEL — poprawka albo gwiazdka wizyty starej karty na ur
     expect(fn.indexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('Bsw_wersjaLokalna('));
     expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('Bsw_odloz('));
     expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeGreaterThan(fn.indexOf('await V(S.payload)'));
+  });
+
+  it('KS10 strażnik źródła (E3-PR0e3): wpis Kosza pomija wersję z karty z N tylko wtedy, gdy z nią wygrywa (Bkz_wygrywa, bez zmiany reguły); wersja, której tu nie ma pod żadną kartą — decyzja do karty wpisu (Bsw_doWpisu) po wyszukaniu w sesji scalania', () => {
+    const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
+    const a = src.indexOf('async function Bsw_zKartyZNagrobkiem(');
+    expect(a).toBeGreaterThan(0);
+    const fn = src.slice(a, src.indexOf('\n}\n', a));
+    expect(fn, 'dawny warunek „każdy wpis pomija wersję” zniknął').not.toContain('if (ctx.mapa && ctx.mapa.get(S.snapshotId)) continue;');
+    expect(fn, 'wpis pomija wersję, z którą wygrywa').toContain('if (e && Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload))) continue;');
+    const iDecyzji = fn.indexOf('Bsw_doWpisu(ctx, F, S, e, opcje)');
+    expect(iDecyzji, 'decyzja do karty wpisu').toBeGreaterThan(0);
+    expect(fn.indexOf('Bsw_wersjaLokalna(ctx, S.snapshotId)'), 'najpierw wyszukanie wersji tutaj (wersja pod żywą kartą — decyzja „treść”)').toBeLessThan(iDecyzji);
+    expect(fn.indexOf('Bses_pilnuj(opcje)'), 'sprawdzenie sesji przed wyszukaniem').toBeLessThan(fn.indexOf('Bsw_wersjaLokalna('));
+  });
+
+  it('KS11 strażnik źródła (E3-PR0e3, zielony z natury): reguła wygranej Kosza, chwila zmiany wersji i stan W3 bez zmian — Bkz_wygrywa, Bkz_zmiana i Bgw_stan bajt w bajt (skrót SHA-256 tekstu funkcji; ta sama reguła w Bsl_koszZLadunku, Bkz_scalKoniec i w wyroczni testów)', () => {
+    const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
+    const tekst = (f, jednaLinia) => { const i = src.indexOf(f); return i < 0 ? null : src.slice(i, jednaLinia ? src.indexOf('\n', i) : src.indexOf('\n}\n', i) + 2); };
+    const skrot = (x) => (x == null ? null : createHash('sha256').update(x).digest('hex'));
+    expect({
+      Bkz_wygrywa: skrot(tekst('function Bkz_wygrywa(')), Bkz_zmiana: skrot(tekst('function Bkz_zmiana(', true)), Bgw_stan: skrot(tekst('function Bgw_stan(')),
+    }).toEqual({
+      Bkz_wygrywa: '02cab63cf1092f0e0884e262bb623b0a986599cf155f4dd6b8a97932c30026bd',
+      Bkz_zmiana: '4f49535d70585224777da722daf61d2a3ff6bd1f66c04e50f6a0fd05ffc715e0',
+      Bgw_stan: 'f1d5bdba2e1b2e341c856f78263f0acd7d0a5bb588ea2ff7eb637b96c33826aa',
+    });
   });
 });
 

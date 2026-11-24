@@ -4,7 +4,9 @@
 // treści z chwilą przywrócenia (rozpoznany po operacji, nie po różnicy eksportu), że głowa „Scal pacjentów” nie jest
 // zapisem lekarza, że retencja nie usuwa ostatniego stanu wizyty (P-TRWALE-WIZYTY), że zniknięcie bez operacji (także
 // przy „Scal pacjentów”) jest naruszeniem bez klasy, i że każda klasa tabeli wyjątków wymaga swojego mechanizmu z historii:
-// dla każdej klasy pozytyw i negatyw (ten sam objaw bez mechanizmu — bez klasy). Dane wyłącznie fikcyjne („Testowy Jan…”).
+// dla każdej klasy pozytyw i negatyw (ten sam objaw bez mechanizmu — bez klasy). E3-PR0e3: klasa „„Usuń pacjenta”
+// zwróconej starej karty (wizyta nigdy w karcie scalonej)” (decyzja właściciela 4a z 2026-11-23) — pozytyw (świat 885
+// w miniaturze) i negatywy, każdy zdejmuje jeden warunek. Dane wyłącznie fikcyjne („Testowy Jan…”).
 import { describe, expect, it } from 'vitest';
 import * as WYR from '../support/ostatnia-zmiana.mjs';
 import * as LO from '../support/licznik-odsylania.mjs';
@@ -438,8 +440,9 @@ describe('wyrocznia: klasy tabeli wyjątków wymagają mechanizmu (pozytyw; nega
 
   it('tabela wyjątków: każda klasa z opisem, mechanizmem, źródłem i światami; E1/E1b — do naprawy w E3-PR0 (9a), E4b — tylko W1 (4a); klasa null zawsze czerwieni', () => {
     // klasy samych bieżących urządzeń (bez pola cechy; E3-PR0b dopisało „D-4 A (Kosz w zwróconej starej karcie)” i „D-4 A
-    // (wersja nieznana scalającemu w zwróconej starej karcie)”); klasy floty ze starszą aplikacją — osobny przypadek niżej
-    expect(Object.values(WYR.WYJATKI).filter((w) => !w.cechy).length, 'liczba klas').toBe(17);
+    // (wersja nieznana scalającemu w zwróconej starej karcie)”, E3-PR0e3 — „„Usuń pacjenta” zwróconej starej karty (wizyta
+    // nigdy w karcie scalonej)”); klasy floty ze starszą aplikacją — osobny przypadek niżej
+    expect(Object.values(WYR.WYJATKI).filter((w) => !w.cechy).length, 'liczba klas').toBe(18);
     for (const [k, w] of Object.entries(WYR.WYJATKI)) {
       expect(typeof w.opis === 'string' && w.opis.length > 20 && typeof w.zrodlo === 'string' && w.zrodlo.length > 10, `opis i źródło: ${k}`).toBe(true);
       expect(typeof w.mechanizm === 'string' && w.mechanizm.length > 20, `mechanizm: ${k}`).toBe(true);
@@ -1269,5 +1272,96 @@ describe('wyrocznia: D-4 A (wersja nieznana scalającemu w zwróconej starej kar
     expect(skrot(bez), 'P bez powrotu').toEqual(['A u inna karta [E4b (stara karta po „Scal pacjentów”)]']);
     expect(swiaty.map((s) => WYR.bezWyjatku(bez, s).length)).toEqual([0, 1, 1, 0, 1, 0, 1]);
     expect(tylko(WYR.ocen(historia(true), { A: widok(scalonePQ()) }), 'u'), 'wersji nie ma').toEqual(['A u utrata [E1/E1b (utrata wersji nieznanej scalającemu)]']);
+  });
+});
+
+// E3-PR0e3 (decyzja właściciela 4a z 2026-11-23): „Usuń pacjenta” zwróconej starej karty P po „Scal pacjentów” P → Q to
+// świadome usunięcie wizyt, które nigdy nie były w karcie scalonej Q, a które urządzenie usuwające miało w P (świat 885
+// A ≡ B w miniaturze). B (bez wiedzy o scaleniu) zapisuje w P nową wizytę b; A scala P → Q, nie znając b; B, nadal bez
+// wiedzy, zapisuje w P wizytę n; A dostaje P z b i n (P wraca, D-4 A); B daje b gwiazdkę, A poprawia n (38,8 kg) — zapis
+// w starej karcie idzie w modelu za scaleniem do Q; A usuwa zwróconą P („Usuń pacjenta”) razem z b i n. Widok A, B i C:
+// bez P, b i n. Klasa wymaga wszystkich warunków naraz (wyrocznia, klasaWizyty); każdy negatyw zdejmuje jeden.
+describe('wyrocznia: „Usuń pacjenta” zwróconej starej karty (wizyta nigdy w karcie scalonej) — wyjątek z decyzji właściciela 4a (E3-PR0e3)', () => {
+  const KL = '„Usuń pacjenta” zwróconej starej karty (wizyta nigdy w karcie scalonej)';
+  const wB = (kg, o = {}) => wersja('b', kg, { vid: 'wiz-b', ...o });
+  const wN = (kg, o = {}) => wersja('n', kg, { vid: 'wiz-n', ...o });
+  const pv = () => [wersja('v', 20, { vid: 'wiz-v' }), wersja('w', 21, { vid: 'wiz-w' })];
+  const qPo = () => karta('Q', [wersja('v', 20, { pid: 'Q', vid: 'wiz-v' }), wersja('w', 21, { pid: 'Q', vid: 'wiz-w' }), wersja('q', 30, { pid: 'Q', imie: 'Jan2' }), wersja('h', 30, { pid: 'Q', imie: 'Jan2' })]);
+  const qPrzed = () => karta('Q', [wersja('q', 30, { pid: 'Q', imie: 'Jan2' })]);
+  // o: bezScalenia — bez „Scal pacjentów” (karta bez aliasu); usuwa — urządzenie usuwające ('A' z b i n, 'C' tylko z b);
+  // zapisPo — B (bez wiedzy o usunięciu) zdejmuje b gwiazdkę i stawia ją ponownie (ta sama treść i gwiazdka co na A
+  // w chwili usunięcia, ale zapis późniejszy niż usunięcie); widziana — 'mutacja' (eksport D z b pod Q w jego mutacji) albo 'dostawa'
+  // (stan C po dostawie z b pod Q, obserwuj); nWidoczna — C ma jeszcze P z n (bez nagrobka)
+  function historia885(o = {}) {
+    const M = WYR.nowyModel();
+    const S0 = stan({ karty: [karta('P', pv()), qPrzed()] });
+    const zap = (dev, opis, przed, po, min, operacje = []) => WYR.zapisz(M, { dev, opis, przed, po, t: T(min), operacje });
+    zap('B', 'nowa b', S0, stan({ karty: [karta('P', [...pv(), wB(21.4)]), qPrzed()] }), 1);
+    const poScaleniu = o.bezScalenia ? stan({ karty: [karta('P', pv()), qPrzed()] }) : stan({ karty: [qPo()], nagrobki: ['P'] });
+    if (!o.bezScalenia) zap('A', 'Scal pacjentów P → Q', S0, poScaleniu, 2, [op('mergePatients', 'P', 'Q')]);
+    zap('B', 'nowa n', stan({ karty: [karta('P', [...pv(), wB(21.4)]), qPrzed()] }), stan({ karty: [karta('P', [...pv(), wB(21.4), wN(40.9)]), qPrzed()] }), 3);
+    if (o.widziana === 'mutacja') {
+      const zB = stan({ karty: [karta('Q', [wersja('q', 30, { pid: 'Q', imie: 'Jan2' }), wB(21.4, { pid: 'Q' })])] });
+      zap('D', 'poprawka q (D ma b pod Q)', zB, stan({ karty: [karta('Q', [wersja('q', 31, { pid: 'Q', imie: 'Jan2', rev: 2 }), wB(21.4, { pid: 'Q' })])] }), 3.5, [op('updateSnapshotPayload', 'Q', 'q')]);
+    }
+    if (o.widziana === 'dostawa') WYR.obserwuj(M, stan({ karty: [karta('Q', [wersja('q', 30, { pid: 'Q', imie: 'Jan2' }), wB(21.4, { pid: 'Q' })])] }));
+    const pB = stan({ karty: [karta('P', [wB(21.4), wN(40.9)]), ...(o.bezScalenia ? [qPrzed()] : [qPo()])] });
+    const pBg = stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 }), wN(40.9)]), ...(o.bezScalenia ? [qPrzed()] : [qPo()])] });
+    zap('B', 'gwiazdka b', pB, pBg, 4, [op('setSnapshotPinned', 'P', 'b')]);
+    const pA = stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 }), wN(38.8, { rev: 2 })]), ...(o.bezScalenia ? [qPrzed()] : [qPo()])] });
+    zap('A', 'poprawka n', pBg, pA, 5, [op('updateSnapshotPayload', 'P', 'n')]);
+    const koniec = o.bezScalenia ? stan({ karty: [qPrzed()], nagrobki: ['P'] }) : stan({ karty: [qPo()], nagrobki: ['P'] });
+    if (o.usuwa === 'C') zap('C', 'usuń pacjenta P (C ma tylko b)', stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 })]), qPo()] }), koniec, 6, [op('removePatient', 'P')]);
+    else zap('A', 'usuń pacjenta P', pA, koniec, 6, [op('removePatient', 'P')]);
+    if (o.zapisPo) {
+      const bez = stan({ karty: [karta('P', [wB(21.4, { rev: 3 }), wN(40.9)]), qPo()] });
+      zap('B', 'zdjęcie gwiazdki b (bez wiedzy o usunięciu)', pBg, bez, 7, [op('setSnapshotPinned', 'P', 'b')]);
+      zap('B', 'gwiazdka b ponownie', bez, stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 4 }), wN(40.9)]), qPo()] }), 8, [op('setSnapshotPinned', 'P', 'b')]);
+    }
+    const widoki = { A: widok(koniec), B: widok(koniec), C: widok(o.nWidoczna ? stan({ karty: [karta('P', [wN(38.8, { rev: 2 })]), qPo()] }) : koniec) };
+    return { M, oc: WYR.ocen(M, widoki) };
+  }
+  const utraty = (oc, id) => skrot(oc.filter((x) => x.id === id && x.rodzaj === 'utrata'));
+  const kl = (k) => ['A', 'B', 'C'].map((u) => `${u} ${k}`);
+
+  it('pozytyw: b i n — „utrata” na A, B i C z klasą, dozwoloną w W1, W4, blobach i w światach floty; bez innych naruszeń', () => {
+    const { oc } = historia885();
+    expect(skrot(oc), 'naruszenia').toEqual([...kl(`b utrata [${KL}]`), ...kl(`n utrata [${KL}]`)].sort());
+    for (const s of ['W1', 'W4', 'bloby', 'W1 floty', 'W4 floty', 'p6f W1', 'p6f W4']) expect(WYR.bezWyjatku(oc, s), `dozwolona w ${s}`).toEqual([]);
+    expect(WYR.WYJATKI[KL].naprawa, 'bez naprawy: świadome usunięcie').toMatch(/^bez naprawy: świadome usunięcie \(decyzja właściciela 4a z 2026-11-23\)/);
+  });
+
+  it('negatyw (wizyta była w karcie scalonej — eksport mutacji innego urządzenia z b pod Q): b bez klasy, n z klasą', () => {
+    const { oc } = historia885({ widziana: 'mutacja' });
+    expect(utraty(oc, 'b'), 'b').toEqual(kl('b utrata [null]'));
+    expect(utraty(oc, 'n'), 'n').toEqual(kl(`n utrata [${KL}]`));
+  });
+
+  it('negatyw (wizyta widziana pod Q tylko w stanie urządzenia po dostawie — obserwacja stanów): b bez klasy', () => {
+    const { oc } = historia885({ widziana: 'dostawa' });
+    expect(utraty(oc, 'b'), 'b').toEqual(kl('b utrata [null]'));
+    expect(utraty(oc, 'n'), 'n').toEqual(kl(`n utrata [${KL}]`));
+  });
+
+  it('negatyw (urządzenie usuwające nie miało wizyty w starej karcie — C usuwa P tylko z b): n bez klasy, b z klasą', () => {
+    const { oc } = historia885({ usuwa: 'C' });
+    expect(utraty(oc, 'n'), 'n').toEqual(kl('n utrata [null]'));
+    expect(utraty(oc, 'b'), 'b').toEqual(kl(`b utrata [${KL}]`));
+  });
+
+  it('negatyw (zapis wizyty po usunięciu — B zdejmuje gwiazdkę b i stawia ją ponownie bez wiedzy o usunięciu; treść i gwiazdka jak na A w chwili usunięcia): b bez klasy', () => {
+    const { oc } = historia885({ zapisPo: true });
+    expect(utraty(oc, 'b').every((x) => x.endsWith('[null]')) && utraty(oc, 'b').length === 3, `b bez klasy: ${utraty(oc, 'b')}`).toBe(true);
+  });
+
+  it('negatyw (wizyta widoczna na innym urządzeniu — C ma jeszcze P z n): „utrata” n na A i B bez klasy', () => {
+    const { oc } = historia885({ nWidoczna: true });
+    expect(utraty(oc, 'n'), 'n').toEqual(['A n utrata [null]', 'B n utrata [null]']);
+    expect(utraty(oc, 'b'), 'b').toEqual(kl(`b utrata [${KL}]`));
+  });
+
+  it('kontrola („Usuń pacjenta” karty bez aliasu „Scal pacjentów”): model usuwa wizyty sam — bez naruszeń b i n', () => {
+    const { oc } = historia885({ bezScalenia: true });
+    expect(skrot(oc.filter((x) => x.id === 'b' || x.id === 'n')), 'b i n').toEqual([]);
   });
 });

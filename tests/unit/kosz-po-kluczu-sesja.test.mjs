@@ -115,6 +115,10 @@
 //        pozostaje w Z, więc retencja przycina tylko dawną wersję x, zachowując całą wizytę.
 //   F-S2c E4b, przełączenie na B zaraz po liście kart w wyszukaniu po pętli (Bkz_gdzieIndziejRazem, F-C1) — żadnego
 //        dalszego odczytu w koncie B; po zalogowaniu A zbieżnie.
+//   Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (E3-PR0e3; blok na końcu pliku): karta wpisu
+//        usunięta, „Przywróć” albo „Przywróć” i ponowny Kosz w drugiej karcie przeglądarki między decyzją a fazą
+//        przeniesień — bez zapisu (zielone z natury); przełączenie na konto B w decyzji i w szyfrowaniu rekordu — żadnego
+//        zapisu po przełączeniu; kontrola bez haka i strażnik źródła decyzji i zapisu (czerwone na bazie: reguły nie ma).
 //   Strażniki źródła: Bkz_obceKarty — pierwszy odczyt pod blokadą to listSnapshotsForUser (przed getPatientForUser),
 //        każda decyzja do ctx i zapis podniesionej rev tuż po Bses_pilnuj; Bkz_usunZObcych — Bses_pilnuj tuż przed
 //        removePatientForUser, Bpc_usunieta, nagrobkiem karty (F-R2) i removeSnapshotForUser; Bsl_przeniesWersje —
@@ -1373,5 +1377,173 @@ describe('P-KOSZ-PO-KLUCZU — R6: nagrobek pacjenta tylko w sesji scalania (Bsl
     await zalogujA(P);
     expect(await scal(K, P)).toBe('ok');
     expect((await P.__baza.listTombstonesForUser(P.__uid)).filter((t) => t.patientId === X), 'po zalogowaniu A przegrany nagrobek X zdjęty').toEqual([]);
+  });
+});
+
+// ══ Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (E3-PR0e3): karta wpisu, stan z chwili decyzji, sesja ══
+// Trzy urządzenia z pełnych kopii (A z hakiem): A — karta Q „Testowa Ola” [q] i karta P „Testowy Jan” [v, w], komplet
+// na B i C. A: „Scal pacjentów” P → Q, v do Kosza pod Q. C (bez wiedzy o scaleniu) daje v gwiazdkę w P; B (też bez
+// wiedzy) zapisuje w P nową wizytę n; B → A — P wraca na A z n (D-4 A); A drugi raz „Scal pacjentów” P → Q. Dopiero
+// potem C → A: karta P z C przegrywa z nagrobkiem scalenia, v ma wpis Kosza pod żywą Q, a gwiazdka C jest późniejsza
+// niż Kosz — v wraca do karty wpisu Q z gwiazdką, wpis zdjęty (decyzja w pętli kart, zapis w fazie przeniesień pod
+// blokadą Q). v — wersja, którą eksport C podaje pierwszą (po niej w: na A leży pod Q bez wpisu, więc jej wyszukanie
+// w tej samej pętli kart idzie zaraz po decyzji dla v — także na sejfie bez reguły; tam hak „między decyzją a fazą”).
+// Przypadki:
+//   karta wpisu Q usunięta („Usuń pacjenta”) w drugiej karcie przeglądarki między decyzją a fazą przeniesień — bez
+//        zapisu: v w żadnej karcie, rekordu v nie ma, wpis Kosza zostaje pod Q (ukryty) (zielony z natury: na sejfie
+//        bez reguły wynik ten sam);
+//   „Przywróć” v w drugiej karcie przeglądarki między decyzją a fazą — v jest już pod Q: jeden rekord, z treścią
+//        przywróconą (bez gwiazdki — „Przywróć” jest zmianą późniejszą niż gwiazdka C), bez drugiego zapisu (zielony
+//        z natury);
+//   „Przywróć” i ponowny Kosz v w drugiej karcie (wpis późniejszy niż gwiazdka C) — wpis wygrywa: bez zapisu, v w Koszu
+//        (zielony z natury);
+//   przełączenie na konto B przy odczycie karty wpisu w decyzji i w szyfrowaniu rekordu wracającego pod Q —
+//        SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A to samo scalenie: v z gwiazdką pod Q, bez
+//        wpisu (czerwony na bazie: reguły nie ma — przełączenie nie zachodzi, scalenie „ok”, gwiazdka C ginie);
+//   kontrola: to samo scalenie bez haka — v z gwiazdką pod Q, bez wpisu Kosza, karta P usunięta (czerwony na bazie:
+//        wpis zostaje, v nie wraca).
+const MA_REGULE_WPISU = /async function Bsw_doWpisu\(/.test(kod(SEJF.N));
+async function wpisPodQTrzy() {
+  sztucznyZegar();
+  const A = await urzadzenieH('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+  const Q = (await zapisz(A, ola(110, 18))).patientId;
+  const x1 = await zapisz(A, jan(120, 20));
+  const P = x1.patientId;
+  await zapisz(A, jan(121, 21), { patientId: P });
+  const kol = (await A.exportSyncPayload()).patients.find((p) => p.patientId === P).snapshots.map((s) => s.snapshotId);
+  const [v, w] = kol;
+  await sync(A, B); await sync(A, C);
+  przesunZegar(M); await A.mergePatients(P, Q);
+  przesunZegar(M); await A.moveSnapshotToTrash(Q, v);
+  przesunZegar(M); await C.setSnapshotPinned(P, v, true);
+  przesunZegar(M); const n = (await zapisz(B, jan(122, 22), { patientId: P })).snapshotId;
+  przesunZegar(M); await sync(B, A);
+  expect(!!(await A.getPatient(P)), 'kontrola: P wraca na A z nową wizytą B').toBe(true);
+  przesunZegar(M); await A.mergePatients(P, Q);
+  przesunZegar(M);
+  return { A, B, C, P, Q, v, w, n };
+}
+async function stanWpisu(u) {
+  const { A } = u;
+  const vq = (await A.getPatient(u.Q))?.snapshots.find((s) => s.snapshotId === u.v) || null;
+  const g = await gdzie(A, u.v);
+  const kosz = ((await A.exportSyncPayload()).snapshotTombstones || []).filter((e) => e.snapshotId === u.v)
+    .map((e) => ({ karta: e.patientId === u.Q ? 'Q' : e.patientId === u.P ? 'P' : '?', masa: e.payload ? e.payload.user.weight : null, gwiazdka: !!(e.gwiazdka && e.gwiazdka.pin) }));
+  return {
+    kartaP: !!(await A.getPatient(u.P)), kartaQ: !!(await A.getPatient(u.Q)),
+    v: vq ? { pod: 'Q', masa: vq.payload.user.weight, gwiazdka: !!vq.payload._pinned } : g ? { pod: g.pid === u.P ? 'P' : '?' } : null,
+    rekordyV: (await A.__baza.listSnapshotsForUser(A.__uid, u.Q)).filter((s) => s.snapshotId === u.v).length + (await A.__baza.listSnapshotsForUser(A.__uid, u.P)).filter((s) => s.snapshotId === u.v).length,
+    kosz,
+  };
+}
+// Hak „między decyzją a fazą”: zaraz po wyszukaniu wersji w (pętla kart, karta P z ładunku w zbiorze N).
+const poDecyzji = (u) => (k, a, stos) => k === 'getSnapshotForUser' && a[0] === u.A.__uid && a[1] === u.w && stos.includes('Bsw_zKartyZNagrobkiem');
+const V_Z_GWIAZDKA = { kartaP: false, kartaQ: true, v: { pod: 'Q', masa: 20, gwiazdka: true }, rekordyV: 1, kosz: [] };
+describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3): karta wpisu, stan z chwili decyzji i sesja', () => {
+  it('kontrola: C → A bez haka — v wraca do karty wpisu Q z gwiazdką C, wpis Kosza zdjęty, karta P usunięta', async () => {
+    const u = await wpisPodQTrzy();
+    expect(await scal(u.C, u.A)).toBe('ok');
+    expect(await stanWpisu(u)).toEqual(V_Z_GWIAZDKA);
+  });
+
+  it('karta wpisu Q usunięta („Usuń pacjenta”) w drugiej karcie przeglądarki między decyzją a fazą przeniesień — bez zapisu: rekordu v nie ma, wpis Kosza zostaje pod Q', async () => {
+    const u = await wpisPodQTrzy();
+    let zrobione = false;
+    u.A.__hak.kiedy = poDecyzji(u);
+    u.A.__hak.akcja = async () => { zrobione = true; przesunZegar(1000); await u.A.removePatient(u.Q); };
+    expect(await scal(u.C, u.A)).toBe('ok');
+    expect(zrobione, 'hak między decyzją a fazą').toBe(true);
+    expect(await stanWpisu(u)).toEqual({ kartaP: false, kartaQ: false, v: null, rekordyV: 0, kosz: [{ karta: 'Q', masa: 20, gwiazdka: false }] });
+  });
+
+  it('„Przywróć” v w drugiej karcie przeglądarki między decyzją a fazą — v jest już pod Q: jeden rekord z treścią przywróconą, bez drugiego zapisu', async () => {
+    const u = await wpisPodQTrzy();
+    let zrobione = false;
+    u.A.__hak.kiedy = poDecyzji(u);
+    u.A.__hak.akcja = async () => { zrobione = true; przesunZegar(1000); await u.A.restoreTrashedSnapshot(u.Q, u.v); };
+    expect(await scal(u.C, u.A)).toBe('ok');
+    expect(zrobione, 'hak między decyzją a fazą').toBe(true);
+    expect(await stanWpisu(u)).toEqual({ kartaP: false, kartaQ: true, v: { pod: 'Q', masa: 20, gwiazdka: false }, rekordyV: 1, kosz: [] });
+  });
+
+  it('„Przywróć” i ponowny Kosz v w drugiej karcie przeglądarki między decyzją a fazą (wpis późniejszy niż gwiazdka C) — wpis wygrywa: bez zapisu, v w Koszu', async () => {
+    const u = await wpisPodQTrzy();
+    let zrobione = false;
+    u.A.__hak.kiedy = poDecyzji(u);
+    u.A.__hak.akcja = async () => { zrobione = true; przesunZegar(1000); await u.A.restoreTrashedSnapshot(u.Q, u.v); przesunZegar(1000); await u.A.moveSnapshotToTrash(u.Q, u.v); };
+    expect(await scal(u.C, u.A)).toBe('ok');
+    expect(zrobione, 'hak między decyzją a fazą').toBe(true);
+    expect(await stanWpisu(u)).toEqual({ kartaP: false, kartaQ: true, v: null, rekordyV: 0, kosz: [{ karta: 'Q', masa: 20, gwiazdka: false }] });
+  });
+
+  it('przełączenie na konto B przy odczycie karty wpisu Q w decyzji — SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A v z gwiazdką pod Q', async () => {
+    const u = await wpisPodQTrzy();
+    const st = przelacz(u.A, (k, a, stos) => k === 'getPatientForUser' && a[0] === u.A.__uid && a[1] === u.Q && stos.includes('Bsw_doWpisu'), true);
+    expect(await scal(u.C, u.A)).toBe('SESSION_CHANGED');
+    expect(st.zrobione, 'przełączenie w decyzji').toBe(true);
+    expect(zapisyPo(u.A, st), 'po przełączeniu żadnego zapisu').toEqual([]);
+    await zalogujA(u.A);
+    expect(await scal(u.C, u.A)).toBe('ok');
+    expect(await stanWpisu(u)).toEqual(V_Z_GWIAZDKA);
+  });
+
+  it('przełączenie na konto B w szyfrowaniu rekordu wersji wracającej pod Q — SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A v z gwiazdką pod Q', async () => {
+    const u = await wpisPodQTrzy();
+    const st = przelaczWSzyfrowaniu(u.A, 'Bsw_doKartyWpisu', true);
+    expect(await scal(u.C, u.A)).toBe('SESSION_CHANGED');
+    expect(st.zrobione, 'przełączenie w szyfrowaniu').toBe(true);
+    expect(zapisyPo(u.A, st), 'po przełączeniu żadnego zapisu').toEqual([]);
+    vi.restoreAllMocks();
+    await zalogujA(u.A);
+    expect(await scal(u.C, u.A)).toBe('ok');
+    expect(await stanWpisu(u)).toEqual(V_Z_GWIAZDKA);
+  });
+
+  it('strażnik źródła: decyzja (Bsw_doWpisu) i zapis pod kartą wpisu (Bsw_doKartyWpisu) — odczyty i zapisy po await tuż po Bses_pilnuj, świeży stan pod blokadą karty wpisu, bez Bem_/Bob_ i bez napisu pola przypisania', () => {
+    const ODCZYT = /I\(\)\.(?:get|list)\w+ForUser\(|Bsw_wersjaLokalna\(|Bkz_czytaj\(/;
+    const ZAPIS_MAG = /I\(\)\.(put|remove)\w*ForUser\(|Bkz_przebudujNaglowek\(/;
+    const l = kod(SEJF.N).split('\n');
+    const cialo = (nazwa) => {
+      const od = l.findIndex((x) => x.startsWith(`async function ${nazwa}(`));
+      if (od < 0) throw new Error(`brak funkcji ${nazwa}`);
+      let i = od + 1;
+      while (i < l.length && !/^(async )?function /.test(l[i]) && !/^\/\//.test(l[i])) i += 1;
+      return l.slice(od, i).map((x) => x.replace(/\s*\/\/.*$/, ''));
+    };
+    const bezStrazy = (nazwa, re) => {
+      const w = cialo(nazwa);
+      const zle = [];
+      let ile = 0;
+      w.forEach((x, i) => {
+        const m = x.match(re);
+        if (!m) return;
+        ile += 1;
+        const przed = x.slice(0, m.index).replace(/await\s*$/, '');
+        if (/Bses_pilnuj\(opcje\);/.test(przed)) return;
+        if (/\bawait\b/.test(przed)) { zle.push(x.trim()); return; }
+        for (let j = i - 1; j >= 0; j -= 1) { if (/Bses_pilnuj\(opcje\);/.test(w[j])) return; if (/\bawait\b/.test(w[j])) break; }
+        zle.push(x.trim());
+      });
+      return { ile, zle };
+    };
+    const decyzja = cialo('Bsw_doWpisu').join('\n');
+    const zapis = cialo('Bsw_doKartyWpisu').join('\n');
+    // decyzja: karta wpisu inna niż karta z ładunku, spoza zbioru N, istnieje (jeden odczyt); odłożenie do fazy po straży
+    expect(decyzja, 'decyzja: zbiór N').toContain('ctx.Bsw_N.has(');
+    expect(bezStrazy('Bsw_doWpisu', ODCZYT), 'decyzja: jeden odczyt karty wpisu po straży').toEqual({ ile: 1, zle: [] });
+    expect(bezStrazy('Bsw_doWpisu', /ctx\.Bsw_P\b/), 'decyzja: odłożenie do fazy przeniesień po straży').toEqual({ ile: 1, zle: [] });
+    expect(bezStrazy('Bsw_doWpisu', ZAPIS_MAG).ile, 'decyzja bez zapisów').toBe(0);
+    // zapis: świeży odczyt karty wpisu, wersji i wpisów Kosza; wpis nadal przegrywa; rekord z jednej kopii; nagłówek
+    for (const s of ['Bsw_wersjaLokalna(', 'Bkz_czytaj(', 'Bkz_wygrywa(', 'Bvisit_bindTombstone(', 'Bsl_wersjaZLadunku(']) expect(zapis, `zapis: ${s}`).toContain(s);
+    expect(bezStrazy('Bsw_doKartyWpisu', ODCZYT).zle, 'zapis: odczyty po straży').toEqual([]);
+    expect(bezStrazy('Bsw_doKartyWpisu', ZAPIS_MAG), 'zapis: rekord wersji i nagłówek karty wpisu po straży').toEqual({ ile: 2, zle: [] });
+    for (const [n, t] of [['Bsw_doWpisu', decyzja], ['Bsw_doKartyWpisu', zapis]]) {
+      expect(t, `${n}: bez części emisji i kolejki`).not.toMatch(/\bBem_|\bBob_/);
+      expect(t, `${n}: bez napisu pola przypisania (łączy je Bsw_przypisanie w Bsl_wersjaZLadunku)`).not.toContain('assignedAtISO');
+    }
+    // faza przeniesień: zapis pod jedną blokadą karty wpisu, wynik liczony jak wersja zabrana (lista pacjentów)
+    const faza = cialo('Bsl_przeniesWersje').join('\n');
+    expect(faza, 'faza: zapis pod blokadą karty wpisu').toMatch(/Bsl_podBlokada\([^;]*Bsw_doKartyWpisu\(/);
+    expect(faza, 'faza: wersja, która wróciła pod kartę wpisu, liczy się jak wersja zabrana (lista pacjentów)').toMatch(/Bsw_doKartyWpisu\([\s\S]{0,200}zabrane \+= 1/);
   });
 });
