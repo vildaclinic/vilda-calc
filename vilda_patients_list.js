@@ -1048,7 +1048,12 @@
       node.setAttribute('data-view', key); node.setAttribute('aria-pressed', 'false');
       viewNodes[key] = node; viewSwitch.appendChild(node);
     });
-    titleRow.appendChild(titles); titleRow.appendChild(viewSwitch); titleRow.appendChild(add); header.appendChild(titleRow);
+    // Przełącznik widoku i „Dodaj pacjenta” stoją w jednej grupie: jedna linia i ta sama wysokość
+    // (grupa rozciąga oba elementy do wyższego z nich). Na telefonie grupa znika z układu
+    // (display: contents) i elementy układają się jak dotąd — przełącznik pod tytułem.
+    const actions = el('div', 'pt-head-actions');
+    actions.appendChild(viewSwitch); actions.appendChild(add);
+    titleRow.appendChild(titles); titleRow.appendChild(actions); header.appendChild(titleRow);
 
     const toolbar = el('div', 'pt-toolbar');
     const searchBox = el('div', 'pt-search');
