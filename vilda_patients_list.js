@@ -600,61 +600,67 @@
    * bez płci — do żadnej płci. Liczą się wyłącznie pacjenci z bazy.
    *
    * P-BAZA-ZAKRES (decyzja właściciela 2026-11-24: „popracuj nad selektorem Zakres bo tam jest mały wybór”).
-   * Pole „Zakres” ma jedną pozycję naraz, z dwóch rodzin:
-   *   - ostatni zapis karty: zapis w ostatnich 3, 6 albo 12 miesiącach oraz ich dopełnienie — bez zapisu od ponad
-   *     12 albo 24 miesięcy. Granicą jest ta sama data N miesięcy wstecz (arytmetyka kalendarzowa — dla 12 mies.
-   *     dokładnie reguła kafelka „z zapisem w ostatnich 12 mies.” z demographics). „Bez zapisu od ponad N mies.”
-   *     to każdy, kto nie ma zapisu w ostatnich N miesiącach — także pacjent bez daty zapisu;
-   *   - leczenie: „leczeni hormonem wzrostu” i „leczeni z powodu otyłości” — ci sami pacjenci, których liczą
-   *     sekcje leczenia („leczonych”): karta ma co najmniej jeden punkt leczenia (ghPatient / obesityPatient
-   *     dały wynik). Te pozycje potrzebują wyniku liczenia kart (options.cards); bez niego zakresu nie da się
+   * Dwa pola wyboru (P-BAZA-SEKCJE, decyzja właściciela 2026-11-24: „wydziel to pole Leczenie” — odtąd da się
+   * połączyć np. „bez zapisu od ponad 12 mies.” z „leczeni hormonem wzrostu”):
+   *   - „Zakres” — ostatni zapis karty: zapis w ostatnich 3, 6 albo 12 miesiącach oraz ich dopełnienie — bez zapisu
+   *     od ponad 12 albo 24 miesięcy. Granicą jest ta sama data N miesięcy wstecz (arytmetyka kalendarzowa — dla
+   *     12 mies. dokładnie reguła kafelka „z zapisem w ostatnich 12 mies.” z demographics). „Bez zapisu od ponad
+   *     N mies.” to każdy, kto nie ma zapisu w ostatnich N miesiącach — także pacjent bez daty zapisu;
+   *   - „Leczenie” — „leczeni hormonem wzrostu” albo „leczeni z powodu otyłości”: ci sami pacjenci, których liczą
+   *     sekcje leczenia („leczonych”) — karta ma co najmniej jeden punkt leczenia (ghPatient / obesityPatient
+   *     dały wynik). To pole potrzebuje wyniku liczenia kart (options.cards); bez niego zakresu nie da się
    *     jeszcze policzyć (null), tak jak przy niewczytanej liście. */
   const SCOPE_SEX = { M: 'chłopcy', F: 'dziewczęta' };
-  const SCOPE_SAVED = 'Ostatni zapis karty', SCOPE_TREATED = 'Leczenie';
   const SCOPE_RANGES = [
-    { key: 'm3', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 3 mies.', months: 3, within: true },
-    { key: 'm6', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 6 mies.', months: 6, within: true },
-    { key: 'm12', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 12 mies.', months: 12, within: true },
-    { key: 'o12', group: SCOPE_SAVED, label: 'bez zapisu od ponad 12 mies.', months: 12, within: false },
-    { key: 'o24', group: SCOPE_SAVED, label: 'bez zapisu od ponad 24 mies.', months: 24, within: false },
-    { key: 'gh', group: SCOPE_TREATED, label: 'leczeni hormonem wzrostu', cards: 'gh' },
-    { key: 'ob', group: SCOPE_TREATED, label: 'leczeni z powodu otyłości', cards: 'ob' }
+    { key: 'm3', label: 'z zapisem w ostatnich 3 mies.', months: 3, within: true },
+    { key: 'm6', label: 'z zapisem w ostatnich 6 mies.', months: 6, within: true },
+    { key: 'm12', label: 'z zapisem w ostatnich 12 mies.', months: 12, within: true },
+    { key: 'o12', label: 'bez zapisu od ponad 12 mies.', months: 12, within: false },
+    { key: 'o24', label: 'bez zapisu od ponad 24 mies.', months: 24, within: false }
+  ];
+  // cards — pole wyniku karty (details z cardsResult), section — klucz sekcji raportu, option — napis w polu wyboru.
+  const SCOPE_TREATMENTS = [
+    { key: 'gh', label: 'leczeni hormonem wzrostu', option: 'hormon wzrostu', cards: 'gh', section: 'gh' },
+    { key: 'ob', label: 'leczeni z powodu otyłości', option: 'otyłość', cards: 'ob', section: 'obesity' }
   ];
   function scopeRange(key) { return SCOPE_RANGES.find((range) => range.key === key) || null; }
-  // Pozycje pola „Zakres” dla widoku i testów: klucz, rodzina, opis i to, czy pozycja potrzebuje wyniku kart.
-  function scopeRanges() { return SCOPE_RANGES.map((range) => ({ key: range.key, group: range.group, label: range.label, needsCards: Boolean(range.cards) })); }
-  function scopeNeedsCards(filters) { const range = scopeRange(filters && filters.range); return Boolean(range && range.cards); }
+  function scopeTreatment(key) { return SCOPE_TREATMENTS.find((treatment) => treatment.key === key) || null; }
+  // Pozycje pól „Zakres” i „Leczenie” dla widoku i testów.
+  function scopeRanges() { return SCOPE_RANGES.map((range) => ({ key: range.key, label: range.label })); }
+  function scopeTreatments() { return SCOPE_TREATMENTS.map((treatment) => ({ key: treatment.key, label: treatment.label, option: treatment.option })); }
+  function scopeNeedsCards(filters) { return Boolean(scopeTreatment(filters && filters.treatment)); }
   /* P-BAZA-SEKCJE (uwaga właściciela 2026-11-24: leczenia hormonem wzrostu i leczenia otyłości nie prowadzi się
    * jednocześnie). W zakresie jednego leczenia sekcja drugiego byłaby z definicji pusta, więc się jej nie pokazuje —
    * ani na ekranie, ani w raporcie. Zwraca klucze takich sekcji raportu: 'gh' albo 'obesity'. cards — wynik kart
    * policzony dla zakresu (gh.treated, obesity.treated). Gdy w zakresie jest choć jeden pacjent z punktami drugiego
    * leczenia, sekcja zostaje: danych z kart się nie chowa. */
   function scopeHiddenSections(filters, cards) {
-    const range = scopeRange(filters && filters.range);
-    if (!range || !range.cards || !cards) return [];
-    const other = range.cards === 'gh' ? 'obesity' : 'gh', cohort = cards[other];
-    return cohort && !cohort.treated ? [other] : [];
+    const chosen = scopeTreatment(filters && filters.treatment);
+    if (!chosen || !cards) return [];
+    return SCOPE_TREATMENTS.filter((treatment) => treatment !== chosen && cards[treatment.section] && !cards[treatment.section].treated)
+      .map((treatment) => treatment.section);
   }
   function scopeFilters(value) {
     const source = value && typeof value === 'object' ? value : {};
     return {
       range: scopeRange(source.range) ? source.range : null,
+      treatment: scopeTreatment(source.treatment) ? source.treatment : null,
       listId: typeof source.listId === 'string' && source.listId ? source.listId : null,
       listName: typeof source.listName === 'string' ? source.listName : '',
       sex: source.sex === 'M' || source.sex === 'F' ? source.sex : null,
       band: AGE_BANDS.some((band) => band.key === source.band) ? source.band : null
     };
   }
-  function scopeActive(filters) { return Boolean(filters && (filters.range || filters.listId || filters.sex || filters.band)); }
+  function scopeActive(filters) { return Boolean(filters && (filters.range || filters.treatment || filters.listId || filters.sex || filters.band)); }
   // Klucz pamięci wyniku dla zakresu; dx — grupa rozpoznania ({ key }) albo null.
   function scopeKey(filters, dx) {
     const f = scopeFilters(filters);
-    return [f.range ? 'z:' + f.range : '', f.listId ? 'l:' + f.listId : '', f.sex ? 's:' + f.sex : '', f.band ? 'b:' + f.band : '', dx && dx.key ? 'd:' + dx.key : ''].filter(Boolean).join('|');
+    return [f.range ? 'z:' + f.range : '', f.treatment ? 't:' + f.treatment : '', f.listId ? 'l:' + f.listId : '', f.sex ? 's:' + f.sex : '', f.band ? 'b:' + f.band : '', dx && dx.key ? 'd:' + dx.key : ''].filter(Boolean).join('|');
   }
   // Opis zakresu dla banera, nagłówka raportu i nazwy grupy — w kolejności filtrów na ekranie, rozpoznanie na końcu.
   function scopeLabel(filters, dx) {
-    const f = scopeFilters(filters), band = AGE_BANDS.find((item) => item.key === f.band), range = scopeRange(f.range);
-    return [range ? range.label : '', f.listId ? 'lista „' + (f.listName || 'bez nazwy') + '”' : '', f.sex ? SCOPE_SEX[f.sex] : '',
+    const f = scopeFilters(filters), band = AGE_BANDS.find((item) => item.key === f.band), range = scopeRange(f.range), treatment = scopeTreatment(f.treatment);
+    return [range ? range.label : '', treatment ? treatment.label : '', f.listId ? 'lista „' + (f.listName || 'bez nazwy') + '”' : '', f.sex ? SCOPE_SEX[f.sex] : '',
       band ? band.label : '', dx && dx.label ? String(dx.label) : ''].filter(Boolean).join(' · ');
   }
   /* Identyfikatory pacjentów z bazy, którzy spełniają wszystkie filtry. options: now, ageMonths (jak w demographics),
@@ -668,14 +674,13 @@
     const asSet = (value) => value instanceof Set ? value : Array.isArray(value) ? new Set(value) : null;
     const listIds = asSet(settings.listIds), groupIds = asSet(settings.ids);
     if (f.listId && !listIds) return null;
-    const range = scopeRange(f.range);
+    const range = scopeRange(f.range), treatment = scopeTreatment(f.treatment);
     let treated = null, edge = null;
-    if (range && range.cards) {
+    if (treatment) {
       if (!Array.isArray(settings.cards)) return null;
-      treated = new Set(settings.cards.filter((item) => item && item[range.cards]).map((item) => item.id));
-    } else if (range) {
-      edge = new Date(now.getTime()); edge.setMonth(edge.getMonth() - range.months);
+      treated = new Set(settings.cards.filter((item) => item && item[treatment.cards]).map((item) => item.id));
     }
+    if (range) { edge = new Date(now.getTime()); edge.setMonth(edge.getMonth() - range.months); }
     const band = AGE_BANDS.find((item) => item.key === f.band) || null;
     return (Array.isArray(patientRecords) ? patientRecords : []).filter((record) => {
       if (!record || record.__ext) return false;
@@ -1602,6 +1607,7 @@
       if (busy) return;
       const next = Object.assign({}, state.filters);
       if (key === 'range') next.range = value || null;
+      else if (key === 'treatment') next.treatment = value || null;
       else if (key === 'list') {
         const entry = value && listCache ? listCache.find(({ list }) => list.id === value) : null;
         next.listId = value || null; next.listName = entry ? entry.list.name || '' : '';
@@ -2799,12 +2805,12 @@
     }
     /* P-BAZA-GRUPY: pasek filtrów zakresu nad statystykami. Zwykłe pola wyboru (klawiatura, czytnik ekranu i telefon
      * obsługują je same). Lista pacjentów jest tylko przy dostępie do list; jej pozycje dochodzą po odczycie katalogu.
-     * P-BAZA-ZAKRES: pole „Zakres” ma pozycje w dwóch rodzinach (ostatni zapis karty, leczenie); każda pokazuje, ilu
-     * pacjentów całej bazy obejmuje. Liczniki zakresów leczenia dochodzą, gdy skończy się liczenie kart. */
+     * P-BAZA-ZAKRES, P-BAZA-SEKCJE: „Zakres” (ostatni zapis karty) i „Leczenie” to osobne pola; każda pozycja
+     * pokazuje, ilu pacjentów całej bazy obejmuje. Liczniki „Leczenia” dochodzą, gdy skończy się liczenie kart. */
     function filterBar(sequence) {
-      const bar = el('div', 'pt-filters'), base = basePatients();
+      const bar = el('div', 'pt-filters' + (mayUseLists() ? ' pt-filters--lists' : '')), base = basePatients();
       bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zakres statystyk');
-      // rows: [wartość, napis, rodzina]; kolejne pozycje tej samej rodziny trafiają do jednej grupy opcji.
+      // options: [wartość, napis]; wide — pole z długimi pozycjami (na telefonie cały wiersz).
       function field(key, labelText, options, value, wide) {
         const holder = el('label', 'pt-filter' + (wide ? ' pt-filter--wide' : ''));
         holder.appendChild(el('span', 'pt-filter-label', labelText));
@@ -2813,13 +2819,7 @@
         node.setAttribute('data-filter-key', key);
         const fill = (rows) => {
           clear(node);
-          let family = null, host = node;
-          rows.forEach(([id, text, group]) => {
-            if (!group) host = node;
-            else if (group !== family) { host = doc.createElement('optgroup'); host.label = group; node.appendChild(host); }
-            family = group || null;
-            const option = doc.createElement('option'); option.value = id; option.textContent = text; host.appendChild(option);
-          });
+          rows.forEach(([id, text]) => { const option = doc.createElement('option'); option.value = id; option.textContent = text; node.appendChild(option); });
           node.value = value;
         };
         fill(options);
@@ -2828,19 +2828,21 @@
         holder.appendChild(node); bar.appendChild(holder);
         return { node, fill };
       }
-      const rangeRows = () => {
+      field('range', 'Zakres', [['', 'cała baza (' + base.length + ')']].concat(SCOPE_RANGES.map((range) =>
+        [range.key, range.label + ' (' + scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault }).length + ')'])), state.filters.range || '', true);
+      const treatmentRows = () => {
         const saved = savedCards();
-        return [['', 'cała baza (' + base.length + ')']].concat(SCOPE_RANGES.map((range) => {
-          const members = scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault, cards: saved ? saved.details : null });
-          return [range.key, range.label + (members ? ' (' + members.length + ')' : ''), range.group];
+        return [['', 'wszyscy']].concat(SCOPE_TREATMENTS.map((treatment) => {
+          const members = scopeMembers(base, { treatment: treatment.key }, { ageMonths: ageFromVault, cards: saved ? saved.details : null });
+          return [treatment.key, treatment.option + (members ? ' (' + members.length + ')' : '')];
         }));
       };
-      const rangeField = field('range', 'Zakres', rangeRows(), state.filters.range || '', true);
+      const treatmentField = field('treatment', 'Leczenie', treatmentRows(), state.filters.treatment || '', true);
       // Po liczeniu kart zmieniają się tylko napisy pozycji — pole zostaje to samo (także otwarte albo z fokusem).
       filterRefresh = () => {
         if (!bar.isConnected) return;
-        const texts = new Map(rangeRows().map(([id, text]) => [id, text]));
-        Array.from(rangeField.node.options).forEach((option) => { if (texts.has(option.value)) option.textContent = texts.get(option.value); });
+        const texts = new Map(treatmentRows());
+        Array.from(treatmentField.node.options).forEach((option) => { if (texts.has(option.value)) option.textContent = texts.get(option.value); });
       };
       if (mayUseLists()) {
         const chosen = state.filters.listId || '';
@@ -2946,7 +2948,7 @@
         // Karta, której nie udało się odczytać, nie mówi nic o leczeniu — ekran mówi wprost, że jej pacjenta tu nie ma.
         const unread = savedCards().failed;
         if (unread) {
-          const note = el('p', 'pt-stat-note pt-filters-note', 'Nie udało się odczytać kart: ' + unread + '. Ci pacjenci nie są liczeni w zakresie „' + scopeRange(state.filters.range).label + '”.');
+          const note = el('p', 'pt-stat-note pt-filters-note', 'Nie udało się odczytać kart: ' + unread + '. Ci pacjenci nie są liczeni w zakresie „' + scopeTreatment(state.filters.treatment).label + '”.');
           note.setAttribute('role', 'status'); wrap.appendChild(note);
         }
       }
@@ -2975,12 +2977,12 @@
 
       /* P-BAZA-SEKCJE: elementy, które wybrany filtr czyni z definicji pustymi albo oczywistymi, nie są rysowane.
        * Przy wybranej płci nie ma kafelków płci (jeden miałby zawsze 100% i powtarzał liczbę oraz średni wiek grupy,
-       * drugi zawsze 0); przy zakresie z rodziny „Ostatni zapis karty” nie ma dopisku „z zapisem w ostatnich
+       * drugi zawsze 0); przy wybranym „Zakresie” (ostatni zapis karty) nie ma dopisku „z zapisem w ostatnich
        * 12 mies.” (w oknach 3, 6 i 12 mies. to zawsze wszyscy, w „bez zapisu od ponad 12 / 24 mies.” — nikt). */
-      const activeRange = scopeRange(state.filters.range), sexChosen = Boolean(state.filters.sex);
+      const sexChosen = Boolean(state.filters.sex);
       const tiles = el('div', 'pt-stat-tiles' + (sexChosen ? ' pt-stat-tiles--two' : ''));
       tiles.appendChild(statTile(scopeOn() ? 'Pacjenci w grupie' : 'Pacjenci w bazie', String(model.total), '',
-        activeRange && activeRange.months ? '' : model.recent + ' z zapisem w ostatnich 12 mies.'));
+        state.filters.range ? '' : model.recent + ' z zapisem w ostatnich 12 mies.'));
       if (model.withAge) {
         const meanAge = ageParts(model.meanMonths);
         tiles.appendChild(statTile('Średni wiek', meanAge[0], meanAge[1],
@@ -3505,5 +3507,5 @@
   win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
     statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName,
     journalIndex, cardsPlan, cardsResult, diagnosisIndex, diagnosisCohort,
-    scopeFilters, scopeActive, scopeKey, scopeLabel, scopeMembers, scopeRanges, scopeNeedsCards, scopeHiddenSections });
+    scopeFilters, scopeActive, scopeKey, scopeLabel, scopeMembers, scopeRanges, scopeTreatments, scopeNeedsCards, scopeHiddenSections });
 })(typeof window !== 'undefined' ? window : null);

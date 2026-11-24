@@ -173,7 +173,7 @@ describe('Model raportu (statsReport)', () => {
     const grupa = L.statsReport({ ...wejscie, cards: pusteGh, scope: 'dziewczęta' });
     expect(sekcja(grupa, 'gh').notes).toEqual(['W tej grupie nie ma pacjentów z punktami leczenia hormonem wzrostu.']);
     const zakres = 'leczeni z powodu otyłości';
-    const pominiete = L.scopeHiddenSections({ range: 'ob' }, pusteGh);
+    const pominiete = L.scopeHiddenSections({ treatment: 'ob' }, pusteGh);
     expect(pominiete).toEqual(['gh']);
     const raport = L.statsReport({ ...wejscie, cards: pusteGh, scope: zakres, omit: pominiete });
     expect(raport.sections.map((s) => s.key)).not.toContain('gh');

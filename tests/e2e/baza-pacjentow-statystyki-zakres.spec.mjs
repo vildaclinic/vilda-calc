@@ -2,7 +2,8 @@ import { expect, test } from '../support/test-czas.mjs';
 import { otworzStatystyki, przygotujStatystyki } from '../support/baza-pacjentow-statystyki.mjs';
 
 // P-BAZA-ZAKRES (decyzja właściciela 2026-11-24: „popracuj nad selektorem Zakres bo tam jest mały wybór”):
-// pole „Zakres” w Statystykach Bazy — okna ostatniego zapisu karty i zakresy leczenia. Prawdziwy renderer,
+// pole „Zakres” w Statystykach Bazy — okna ostatniego zapisu karty — i osobne pole „Leczenie” (P-BAZA-SEKCJE,
+// decyzja właściciela 2026-11-24: „wydziel to pole Leczenie”). Prawdziwy renderer,
 // prawdziwy szyfrowany sejf i wyłącznie fikcyjne osoby (osiem osób a–h: tests/support/baza-pacjentow-statystyki.mjs;
 // zegar testu stoi na 17.06.2026). Test dopisuje fikcyjne osoby z dawnym zapisem karty:
 //   i  dziewczynka, leczona GH (SNP), ostatni zapis 15.01.2025 — 17 mies. temu
@@ -17,6 +18,7 @@ const gotowe = async (database) => {
 const kafel = (frame, database, etykieta) => database.locator('.pt-stat-tile')
   .filter({ has: frame.locator('.pt-stat-label', { hasText: new RegExp(`^${etykieta}$`, 'i') }) });
 const zakres = (database) => database.locator('.pt-filter-select[data-filter-key="range"]');
+const leczenie = (database) => database.locator('.pt-filter-select[data-filter-key="treatment"]');
 const filtr = (database, klucz) => database.locator(`.pt-filter-select[data-filter-key="${klucz}"]`);
 const pacjenci = async (database) => (await database.locator('.pt-row').evaluateAll((rows) => rows.map((row) => row.getAttribute('data-patient-id')))).sort();
 const posortowane = (...ids) => ids.slice().sort();
@@ -62,18 +64,17 @@ async function start(page) {
   return baza;
 }
 
-test('pole „Zakres”: pozycje w dwóch rodzinach z licznikami; okna ostatniego zapisu i zakresy leczenia zawężają statystyki bez czytania sejfu', async ({ page }) => {
+test('pola „Zakres” i „Leczenie”: pozycje z licznikami; okna ostatniego zapisu i leczenie zawężają statystyki — także razem — bez czytania sejfu', async ({ page }) => {
   const { frame, database, ids } = await start(page);
 
-  // Pozycje: cała baza i dwie rodziny; każda mówi, ilu pacjentów bazy obejmuje (liczniki leczenia — po policzeniu kart).
-  await expect(zakres(database).locator('optgroup')).toHaveCount(2);
-  expect(await zakres(database).locator('optgroup').evaluateAll((grupy) => grupy.map((grupa) => grupa.label))).toEqual(['Ostatni zapis karty', 'Leczenie']);
+  // Dwa osobne pola; każda pozycja mówi, ilu pacjentów bazy obejmuje (liczniki leczenia — po policzeniu kart).
+  await expect(database.locator('.pt-filters .pt-filter-label')).toHaveText(['Zakres', 'Leczenie', 'Lista pacjentów', 'Płeć', 'Wiek']);
   await expect(zakres(database).locator('option')).toHaveText([
     'cała baza (10)',
     'z zapisem w ostatnich 3 mies. (8)', 'z zapisem w ostatnich 6 mies. (8)', 'z zapisem w ostatnich 12 mies. (8)',
     'bez zapisu od ponad 12 mies. (2)', 'bez zapisu od ponad 24 mies. (1)',
-    'leczeni hormonem wzrostu (5)', 'leczeni z powodu otyłości (5)',
   ]);
+  await expect(leczenie(database).locator('option')).toHaveText(['wszyscy', 'hormon wzrostu (5)', 'otyłość (5)']);
   await expect(kafel(frame, database, 'Pacjenci w bazie').locator('.pt-stat-value')).toHaveText('10');
   await expect(kafel(frame, database, 'Pacjenci w bazie').locator('.pt-stat-sub')).toHaveText('8 z zapisem w ostatnich 12 mies.');
 
@@ -106,7 +107,10 @@ test('pole „Zakres”: pozycje w dwóch rodzinach z licznikami; okna ostatnieg
   await expect(database.locator('.pt-gh .pt-stat-card-hint')).toHaveText('leczonych: 4 · SNP 2 · bez programu 1 · ZT 1');
 
   // Leczeni z powodu otyłości: d, e, f, g, h; z płcią „dziewczęta”: d, f.
-  await zakres(database).selectOption('ob');
+  await zakres(database).selectOption('');
+  await leczenie(database).selectOption('ob');
+  await expect(leczenie(database)).toBeFocused();
+  await expect(leczenie(database)).toHaveClass(/\bon\b/);
   await expect(baner.locator('.pt-scope-name')).toHaveText('leczeni z powodu otyłości');
   await expect(baner.locator('.pt-scope-count')).toHaveText('5 osób w tym zakresie');
   await expect(database.locator('.pt-ob .pt-stat-card-hint')).toHaveText('leczonych: 5 · Saxenda 3 · Wegovy 2');
@@ -117,7 +121,7 @@ test('pole „Zakres”: pozycje w dwóch rodzinach z licznikami; okna ostatnieg
   await filtr(database, 'sex').selectOption('');
 
   // Leczeni hormonem wzrostu: b, c, d, e oraz i — ci sami, których liczy sekcja „leczonych”.
-  await zakres(database).selectOption('gh');
+  await leczenie(database).selectOption('gh');
   await expect(baner.locator('.pt-scope-name')).toHaveText('leczeni hormonem wzrostu');
   await expect(baner.locator('.pt-scope-count')).toHaveText('5 osób w tym zakresie');
   await expect(database.locator('.pt-gh .pt-stat-card-hint')).toHaveText('leczonych: 5 · SNP 3 · bez programu 1 · ZT 1');
@@ -126,16 +130,29 @@ test('pole „Zakres”: pozycje w dwóch rodzinach z licznikami; okna ostatnieg
   await filtr(database, 'sex').selectOption('F');
   await expect(baner.locator('.pt-scope-name')).toHaveText('leczeni hormonem wzrostu · dziewczęta');
   await expect(baner.locator('.pt-scope-count')).toHaveText('2 osoby w tym zakresie');
-  expect(await frame.evaluate(() => window.__zakresOdczyty), 'zmiana zakresu nie czyta kart ani notatek — wybiera z policzonego wyniku').toBe(0);
+  // Oba pola naraz: leczeni hormonem wzrostu bez zapisu od ponad 12 mies. — tylko i; z zapisem w ostatnich 12 mies. — b, c, d, e.
+  await filtr(database, 'sex').selectOption('');
+  await zakres(database).selectOption('o12');
+  await expect(baner.locator('.pt-scope-name')).toHaveText('bez zapisu od ponad 12 mies. · leczeni hormonem wzrostu');
+  await expect(baner.locator('.pt-scope-count')).toHaveText('1 osoba w tym zakresie');
+  await expect(database.locator('.pt-gh .pt-stat-card-hint')).toHaveText('leczonych: 1 · SNP 1');
+  await zakres(database).selectOption('m12');
+  await expect(baner.locator('.pt-scope-name')).toHaveText('z zapisem w ostatnich 12 mies. · leczeni hormonem wzrostu');
+  await expect(baner.locator('.pt-scope-count')).toHaveText('4 osoby w tym zakresie');
+  await zakres(database).selectOption('');
+  await filtr(database, 'sex').selectOption('F');
+  await expect(baner.locator('.pt-scope-count')).toHaveText('2 osoby w tym zakresie');
+  expect(await frame.evaluate(() => window.__zakresOdczyty), 'zmiana zakresu i leczenia nie czyta kart ani notatek — wybiera z policzonego wyniku').toBe(0);
 
   // „Pokaż listę” otwiera pacjentów zakresu; nazwa grupy niesie zakres. Powrót zachowuje wybór.
   await baner.getByRole('button', { name: 'Pokaż listę' }).click();
   expect(await pacjenci(database)).toEqual(posortowane(ids.d, ids.i));
   await expect(database.locator('.pt-groupbar .lt')).toHaveText('Grupa ze statystyk: leczeni hormonem wzrostu · dziewczęta · 2 osoby');
   await database.getByRole('button', { name: '← Statystyki' }).click();
-  await expect(zakres(database)).toHaveValue('gh');
+  await expect(leczenie(database)).toHaveValue('gh');
   await expect(baner.locator('.pt-scope-count')).toHaveText('2 osoby w tym zakresie');
   await filtr(database, 'sex').selectOption('');
+  await leczenie(database).selectOption('');
   await zakres(database).selectOption('o12');
   await baner.getByRole('button', { name: 'Pokaż listę' }).click();
   expect(await pacjenci(database)).toEqual(posortowane(ids.i, ids.j));
@@ -143,17 +160,20 @@ test('pole „Zakres”: pozycje w dwóch rodzinach z licznikami; okna ostatnieg
   await database.getByRole('button', { name: '← Statystyki' }).click();
   await expect(baner.locator('.pt-scope-name')).toHaveText('bez zapisu od ponad 12 mies.');
 
-  // „Cała baza” zdejmuje zakres.
+  // „Cała baza” zdejmuje zakres i leczenie.
+  await leczenie(database).selectOption('gh');
+  await expect(baner.locator('.pt-scope-count')).toHaveText('1 osoba w tym zakresie');
   await baner.getByRole('button', { name: 'Cała baza' }).click();
   await expect(database.locator('.pt-scope')).toHaveCount(0);
   await expect(zakres(database)).toHaveValue('');
+  await expect(leczenie(database)).toHaveValue('');
   await expect(kafel(frame, database, 'Pacjenci w bazie').locator('.pt-stat-value')).toHaveText('10');
 });
 
-test('zakres leczenia po zmianie w bazie: statystyki czekają na policzenie kart i pokazują nowy skład', async ({ page }) => {
+test('wybrane „Leczenie” po zmianie w bazie: statystyki czekają na policzenie kart i pokazują nowy skład', async ({ page }) => {
   const { frame, database, ids } = await start(page);
   const baner = database.locator('.pt-scope');
-  await zakres(database).selectOption('gh');
+  await leczenie(database).selectOption('gh');
   await expect(baner.locator('.pt-scope-count')).toHaveText('5 osób w tym zakresie');
 
   // Nowa fikcyjna osoba leczona GH zapisana w tle; odświeżony widok zachowuje wybrany zakres i liczy karty od nowa.
@@ -165,13 +185,13 @@ test('zakres leczenia po zmianie w bazie: statystyki czekają na policzenie kart
   });
   await odswiezBaze(frame);
   await expect(database).toHaveAttribute('data-view', 'stats');
-  await expect(zakres(database)).toHaveValue('gh');
+  await expect(leczenie(database)).toHaveValue('gh');
   await expect(baner.locator('.pt-scope-name')).toHaveText('leczeni hormonem wzrostu');
   await expect(baner.locator('.pt-scope-count')).toHaveText('6 osób w tym zakresie');
   await gotowe(database);
   await expect(database.locator('.pt-gh .pt-stat-card-hint')).toHaveText('leczonych: 6 · SNP 3 · bez programu 1 · SGA 1 · ZT 1');
   await expect(zakres(database).locator('option').first()).toHaveText('cała baza (11)');
-  await expect(zakres(database).locator('option[value="gh"]')).toHaveText('leczeni hormonem wzrostu (6)');
+  await expect(leczenie(database).locator('option[value="gh"]')).toHaveText('hormon wzrostu (6)');
   await baner.getByRole('button', { name: 'Pokaż listę' }).click();
   expect(await pacjenci(database)).toEqual(posortowane(ids.b, ids.c, ids.d, ids.e, ids.i, nowi.k));
 });

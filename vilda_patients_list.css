@@ -741,10 +741,13 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 /* P-BAZA-GRUPY (makieta statystyk; decyzja właściciela 2026-11-24: „praca nad grupami pacjentów z makiety”).
    Pasek filtrów zakresu nad statystykami (zwykłe pola wyboru) oraz praca z grupą na liście: formularz
    „Zapisz jako listę” i komunikat w pasku grupy. */
-/* P-BAZA-ZAKRES: „Zakres” (pierwsze pole) ma najdłuższe pozycje, więc dostaje szerszą kolumnę. */
+/* P-BAZA-ZAKRES, P-BAZA-SEKCJE: pól jest cztery albo pięć (z „Listą pacjentów”). „Zakres” ma najdłuższe pozycje,
+   więc dostaje najszerszą kolumnę; „Leczenie” — nieco szerszą niż krótkie „Płeć” i „Wiek”. */
 .pt-filters {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr);
+  grid-auto-columns: minmax(0, .8fr);
   gap: var(--space-10px) var(--space-12px);
 }
 
@@ -842,17 +845,36 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   color: var(--danger-strong);
 }
 
-/* P-BAZA-ZAKRES: najdłuższa pozycja „Zakresu” z licznikiem ma mieścić się w polu bez ucinania. Poniżej 1180 px
-   pola stoją po dwa; poniżej 760 px pola z długimi pozycjami („Zakres”, „Lista pacjentów”) zajmują cały wiersz,
-   a „Płeć” i „Wiek” zostają obok siebie. */
-@media (max-width: 1180px) {
+.pt-filters--lists {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 1fr);
+}
+
+/* P-BAZA-ZAKRES, P-BAZA-SEKCJE: najdłuższa pozycja „Zakresu” z licznikiem ma mieścić się w polu bez ucinania.
+   Do 1366 px pola stoją w dwóch wierszach: „Zakres” i „Leczenie” po połowie, pod nimi pozostałe (trzy pola
+   po jednej trzeciej albo dwa po połowie). Poniżej 760 px pola z długimi pozycjami („Zakres”, „Leczenie”,
+   „Lista pacjentów”) zajmują cały wiersz, a „Płeć” i „Wiek” zostają obok siebie. */
+@media (max-width: 1366px) {
   .pt-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .pt-filter {
+    grid-column: span 3;
+  }
+
+  .pt-filters--lists .pt-filter:nth-child(n+3) {
+    grid-column: span 2;
   }
 }
 
 @media (max-width: 760px) {
-  .pt-filter--wide {
+  .pt-filters--lists .pt-filter:nth-child(n+3) {
+    grid-column: span 3;
+  }
+
+  .pt-filters .pt-filter.pt-filter--wide,
+  .pt-filters--lists .pt-filter.pt-filter--wide:nth-child(n+3) {
     grid-column: 1 / -1;
   }
 }

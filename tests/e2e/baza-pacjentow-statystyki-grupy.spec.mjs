@@ -43,7 +43,7 @@ test('filtry zakresu: płeć, wiek, lista pacjentów i rozpoznanie łączą się
   const { frame, database, ids } = await start(page, { rozpoznania: true });
 
   // Pasek filtrów: cztery pola wyboru z podpisami; lista pacjentów zna zapisaną listę.
-  await expect(database.locator('.pt-filters .pt-filter-label')).toHaveText(['Zakres', 'Lista pacjentów', 'Płeć', 'Wiek']);
+  await expect(database.locator('.pt-filters .pt-filter-label')).toHaveText(['Zakres', 'Leczenie', 'Lista pacjentów', 'Płeć', 'Wiek']);
   await expect(filtr(database, 'range').locator('option').first()).toHaveText('cała baza (8)');
   await expect(filtr(database, 'list').locator('option')).toHaveText(['wszystkie', LISTA]);
   await expect(filtr(database, 'sex').locator('option')).toHaveText(['wszyscy', 'chłopcy', 'dziewczęta']);
@@ -124,7 +124,7 @@ test('filtry zakresu: płeć, wiek, lista pacjentów i rozpoznanie łączą się
   await database.locator('.pt-stats .pt-empty').getByRole('button', { name: 'Cała baza' }).click();
   await expect(database.locator('.pt-scope')).toHaveCount(0);
   await expect(kafel(frame, database, 'Pacjenci w bazie').locator('.pt-stat-value')).toHaveText('8');
-  for (const klucz of ['range', 'list', 'sex', 'band']) await expect(filtr(database, klucz)).toHaveValue('');
+  for (const klucz of ['range', 'treatment', 'list', 'sex', 'band']) await expect(filtr(database, klucz)).toHaveValue('');
   await expect(database.locator('.pt-ob .pt-stat-card-hint')).toHaveText('leczonych: 5 · Saxenda 3 · Wegovy 2');
 });
 
@@ -231,7 +231,7 @@ test('bez dostępu do list pacjentów: nie ma filtra listy ani „Zapisz jako li
   await expect.poll(() => frame.evaluate(() => window.VildaProAccess.hasAccess())).toBe(false);
   // Filtr listy przestaje zawężać i znika; statystyki wracają do całej bazy.
   await expect(filtr(database, 'list')).toHaveCount(0);
-  await expect(database.locator('.pt-filters .pt-filter-label')).toHaveText(['Zakres', 'Płeć', 'Wiek']);
+  await expect(database.locator('.pt-filters .pt-filter-label')).toHaveText(['Zakres', 'Leczenie', 'Płeć', 'Wiek']);
   await expect(database.locator('.pt-scope')).toHaveCount(0);
   await expect(kafel(frame, database, 'Pacjenci w bazie').locator('.pt-stat-value')).toHaveText('8');
   await gotowe(database);
@@ -254,17 +254,20 @@ test.describe('telefon', () => {
       const ramka = node.getBoundingClientRect();
       return { wysokosc: ramka.height, pismo: parseFloat(getComputedStyle(node).fontSize), lewa: ramka.left, prawa: ramka.right };
     }));
-    expect(pola).toHaveLength(4);
+    expect(pola).toHaveLength(5);
     expect(Math.min(...pola.map((pole) => pole.wysokosc))).toBeGreaterThanOrEqual(44);
     expect(Math.min(...pola.map((pole) => pole.pismo)), 'pismo < 16 px powiększa widok na iPhonie przy wejściu w pole').toBeGreaterThanOrEqual(16);
-    // P-BAZA-ZAKRES: „Zakres” i „Lista pacjentów” mają cały wiersz (długa pozycja nie jest ucinana), „Płeć” i „Wiek” stoją obok siebie.
+    // P-BAZA-ZAKRES, P-BAZA-SEKCJE: „Zakres”, „Leczenie” i „Lista pacjentów” mają cały wiersz (długa pozycja nie jest
+    // ucinana), „Płeć” i „Wiek” stoją obok siebie.
     const szerokosc = (pole) => pole.prawa - pole.lewa;
-    expect(Math.round(pola[1].lewa)).toBe(Math.round(pola[0].lewa));
-    expect(Math.round(pola[1].prawa)).toBe(Math.round(pola[0].prawa));
-    expect(szerokosc(pola[0])).toBeGreaterThan(szerokosc(pola[2]) * 1.8);
-    expect(Math.round(pola[2].lewa)).toBe(Math.round(pola[0].lewa));
-    expect(pola[3].lewa).toBeGreaterThan(pola[2].prawa);
-    expect(Math.round(pola[3].prawa)).toBe(Math.round(pola[0].prawa));
+    for (const pole of [pola[1], pola[2]]) {
+      expect(Math.round(pole.lewa)).toBe(Math.round(pola[0].lewa));
+      expect(Math.round(pole.prawa)).toBe(Math.round(pola[0].prawa));
+    }
+    expect(szerokosc(pola[0])).toBeGreaterThan(szerokosc(pola[3]) * 1.8);
+    expect(Math.round(pola[3].lewa)).toBe(Math.round(pola[0].lewa));
+    expect(pola[4].lewa).toBeGreaterThan(pola[3].prawa);
+    expect(Math.round(pola[4].prawa)).toBe(Math.round(pola[0].prawa));
 
     await filtr(database, 'band').selectOption('6-9');
     await expect(database.locator('.pt-scope-name')).toHaveText('6–9 lat');

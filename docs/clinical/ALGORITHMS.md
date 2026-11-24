@@ -48465,6 +48465,9 @@ dostaje nowe pozycje wyboru pacjentów; statystyki zakresu liczą te same funkcj
 **Decyzja właściciela.** 2026-11-24, po scaleniu P-BAZA-GRUPY: „ok, nieźle, popracuj na selektorem Zakres bo tam jest mały
 wybór”. Dobór pozycji jest propozycją wykonawcy do potwierdzenia przy przeglądzie PR.
 
+*(2026-11-24, P-BAZA-SEKCJE: pozycje rodziny „Leczenie” są odtąd osobnym polem „Leczenie” obok „Zakresu” — definicje
+bez zmian, a oba pola łączą się spójnikiem „i”; opis niżej, w sekcji „P-BAZA-SEKCJE”, pkt 4.)*
+
 **Pozycje pola (`scopeRanges`).** Jedna pozycja naraz; każda pokazuje w nawiasie, ilu pacjentów całej bazy obejmuje.
 
 | Rodzina | Pozycja | Kto wchodzi |
@@ -48540,7 +48543,7 @@ dostosowane do pola `range` i nowego układu filtrów na telefonie.
 
 **Wersje.** `vilda_patients_list.js` 13 → 14, `vilda_patients_list.css` 11 → 12, wstrzykujące `vilda_chrome.js` 336 → 337 i `vilda_session_bridge.js` 252 → 253; SW 1.1.591 → 1.1.592 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
 
-## P-BAZA-SEKCJE — Baza pacjentów: zwijane „Rozpoznania” i „Kompletność danych”, bez pustej sekcji drugiego leczenia, bez elementów oczywistych przy filtrze (SW 1.1.593, `vilda_patients_list.js` 15, `vilda_patients_list.css` 13, 2026-11-24)
+## P-BAZA-SEKCJE — Baza pacjentów: osobne pole „Leczenie”, zwijane „Rozpoznania” i „Kompletność danych”, bez pustej sekcji drugiego leczenia, bez elementów oczywistych przy filtrze (SW 1.1.593, `vilda_patients_list.js` 15, `vilda_patients_list.css` 13, 2026-11-24)
 
 **Zmiana kliniczna: BRAK algorytmu.** Żadna liczba statystyk się nie zmienia. Zmienia się to, które sekcje i kafelki widać.
 
@@ -48548,11 +48551,11 @@ dostosowane do pola `range` i nowego układu filtrów na telefonie.
 W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.« nie powinno się raczej pokazywać (leczenia
 przeciwotyłościowego i hormonem wzrostu jednocześnie się nie stosuje) i odwrotnie. Dodatkowo pole Kompletność danych
 i Rozpoznania powinny być domyślnie zwinięte do jednego wiersza z opcją powiększenia. Sprawdź czy w tych selektorach nie ma
-innych kombinacji wykluczających się.”
+innych kombinacji wykluczających się.” Po przeglądzie (pkt 3), tego samego dnia: „tak wydziel to pole »Leczenie«”.
 
-**1. Sekcja drugiego leczenia w zakresie jednego leczenia (`scopeHiddenSections`).** Gdy „Zakres” to „leczeni z powodu
-otyłości”, sekcji „Leczenie hormonem wzrostu” nie ma — i odwrotnie — **o ile nikt w zakresie nie ma punktów drugiego
-leczenia**. „Leczeni” znaczy „leczeni kiedykolwiek” (P-BAZA-ZAKRES), więc pacjent leczony kolejno jednym i drugim ma w karcie
+**1. Sekcja drugiego leczenia przy wybranym leczeniu (`scopeHiddenSections`).** Gdy w polu „Leczenie” wybrano „leczeni
+z powodu otyłości”, sekcji „Leczenie hormonem wzrostu” nie ma — i odwrotnie — **o ile nikt w zakresie nie ma punktów
+drugiego leczenia**. „Leczeni” znaczy „leczeni kiedykolwiek” (P-BAZA-ZAKRES), więc pacjent leczony kolejno jednym i drugim ma w karcie
 punkty obu leczeń: wtedy sekcja zostaje, bo są w niej dane z kart (propozycja wykonawcy do potwierdzenia: danych się nie
 chowa). Ta sama reguła obowiązuje w raporcie PDF i w pliku dla Excela pobranym z zawężonych Statystyk (`statsReport`,
 pole `omit`) — plik ma te same sekcje co ekran.
@@ -48578,20 +48581,36 @@ Sekcje leczenia i „Wiek i płeć” nie są zwijane.
 |---|---|---|
 | „leczeni z powodu otyłości” ↔ sekcja „Leczenie hormonem wzrostu” (i odwrotnie) | pusta sekcja z komunikatem „W bazie nie ma…” | sekcji nie ma (pkt 1) |
 | „Płeć” ↔ kafelki „Chłopcy” / „Dziewczęta” | jeden kafelek zawsze 100% (powtarzał liczbę i średni wiek grupy), drugi zawsze 0 | przy wybranej płci kafelków płci nie ma; zostają dwa kafelki na całą szerokość |
-| okno ostatniego zapisu ↔ dopisek „N z zapisem w ostatnich 12 mies.” | zawsze wszyscy (3, 6, 12 mies.) albo nikt (bez zapisu od ponad 12 / 24 mies.) | dopisku nie ma przy zakresie z rodziny „Ostatni zapis karty” |
+| okno ostatniego zapisu ↔ dopisek „N z zapisem w ostatnich 12 mies.” | zawsze wszyscy (3, 6, 12 mies.) albo nikt (bez zapisu od ponad 12 / 24 mies.) | dopisku nie ma, gdy wybrano „Zakres” |
 | dowolny zakres ↔ pusta sekcja leczenia | „W bazie nie ma pacjentów…” w statystykach grupy | „W tej grupie nie ma pacjentów…” |
 | wybory, które dają zero pacjentów (np. „leczeni hormonem wzrostu” i rozpoznanie E66; lista automatyczna leczonych z powodu otyłości i „leczeni hormonem wzrostu”) | — | bez zmian: pola są jednokrotnego wyboru, więc sprzecznego wyboru w jednym polu nie da się zrobić; pusty wynik pokazuje „Brak pacjentów w tym zakresie” z „Cała baza” |
 | „Wiek” ↔ wykres „Wiek i płeć”; „Płeć” ↔ legenda wykresu i wiersz „Płeć” w kompletności; „Wiek” ↔ wiersz „Data urodzenia” | elementy poprawne, lecz mało mówiące (jeden słupek, 100%) | bez zmian (do decyzji właściciela) |
-| okno ostatniego zapisu **i** leczenie naraz (np. leczeni GH bez zapisu od ponad 12 mies.) | niemożliwe: obie rodziny są w jednym polu „Zakres” | bez zmian; do decyzji właściciela — osobne pole „Leczenie” |
-| lista automatyczna „leczeni” (domyślnie: obecnie leczeni — ostatni punkt nie jest Zakończeniem) ↔ „Zakres: leczeni…” (leczeni kiedykolwiek) | dwa pola o podobnej nazwie mają różne definicje | bez zmian; łączone dają część wspólną (obecnie leczeni) |
+| okno ostatniego zapisu **i** leczenie naraz (np. leczeni GH bez zapisu od ponad 12 mies.) | niemożliwe: obie rodziny były w jednym polu „Zakres” | osobne pole „Leczenie” (pkt 4) — decyzja właściciela |
+| lista automatyczna „leczeni” (domyślnie: obecnie leczeni — ostatni punkt nie jest Zakończeniem) ↔ pole „Leczenie” (leczeni kiedykolwiek) | dwa pola o podobnej nazwie mają różne definicje | bez zmian; łączone dają część wspólną (obecnie leczeni) |
+
+**4. Osobne pole „Leczenie”.** Pasek filtrów ma odtąd pola: „Zakres” (ostatni zapis karty — pięć okien z P-BAZA-ZAKRES),
+„Leczenie” („wszyscy”, „hormon wzrostu (N)”, „otyłość (N)”), „Lista pacjentów”, „Płeć”, „Wiek”. Definicje się nie
+zmieniają: „hormon wzrostu” to „leczeni hormonem wzrostu”, „otyłość” to „leczeni z powodu otyłości” — pacjenci liczeni
+jako „leczonych” w sekcjach leczenia, czyli leczeni kiedykolwiek. Pola łączą się spójnikiem „i”, więc można wybrać
+np. „bez zapisu od ponad 12 mies.” **i** „hormon wzrostu” (leczeni, których karta nie była zapisana od ponad roku).
+Opis zakresu ma kolejność pól: `bez zapisu od ponad 12 mies. · leczeni hormonem wzrostu · dziewczęta`. Model filtrów:
+`range` (okno ostatniego zapisu) i `treatment` (`gh` / `ob`); `scopeRanges` ma pięć pozycji, `scopeTreatments` — dwie.
+Liczniki pozycji „Leczenia” pojawiają się po policzeniu kart; wybrane „Leczenie” przed policzeniem kart pokazuje
+„Liczenie kart…” (jak dotąd pozycje leczenia w „Zakresie”).
+Układ: powyżej 1366 px pięć pól w jednym wierszu („Zakres” najszersze); do 1366 px dwa wiersze („Zakres” i „Leczenie”,
+pod nimi pozostałe); poniżej 760 px „Zakres”, „Leczenie” i „Lista pacjentów” zajmują cały wiersz, „Płeć” i „Wiek” stoją
+obok siebie — wybrana pozycja z licznikiem nie jest ucinana (progi z istniejącej listy).
 
 **Przypadek syntetyczny (dane fikcyjne; osiem osób a–h z bazy testowej, rozpoznania jak w racie 2).**
 - Wejście w Statystyki: „Rozpoznania — z aktywnym rozpoznaniem: 5 z 8 (63%) — Rozwiń”, „Kompletność danych — z brakami:
   5 z 5 pozycji — Rozwiń”; treść obu sekcji ukryta. Bez rozpoznań w bazie: „Rozpoznania — brak rozpoznań”.
-- „leczeni hormonem wzrostu” i wiek 6–9 lat → c (bez leczenia otyłości): sekcji „Leczenie otyłości” nie ma na ekranie ani
-  w pliku. „leczeni z powodu otyłości” i wiek 18+ → f: sekcji „Leczenie hormonem wzrostu” nie ma.
-- „leczeni z powodu otyłości”, cały wiek → d, e, f, g, h; d i e mają w karcie punkty GH → sekcja „Leczenie hormonem
-  wzrostu” zostaje („leczonych: 2 · SNP 1 · ZT 1”).
+- Leczenie „hormon wzrostu” i wiek 6–9 lat → c (bez leczenia otyłości): sekcji „Leczenie otyłości” nie ma na ekranie ani
+  w pliku. Leczenie „otyłość” i wiek 18+ → f: sekcji „Leczenie hormonem wzrostu” nie ma.
+- Leczenie „otyłość”, cały wiek → d, e, f, g, h; d i e mają w karcie punkty GH → sekcja „Leczenie hormonem wzrostu”
+  zostaje („leczonych: 2 · SNP 1 · ZT 1”).
+- Oba pola naraz (baza z osobami i, j z P-BAZA-ZAKRES): „bez zapisu od ponad 12 mies.” i „hormon wzrostu” → i (1 osoba);
+  „z zapisem w ostatnich 12 mies.” i „hormon wzrostu” → b, c, d, e (4 osoby). Liczniki pól: „Zakres” — cała baza 10,
+  8 / 8 / 8, 2, 1; „Leczenie” — hormon wzrostu 5, otyłość 5.
 - Wiek 0–2 lata → a (bez leczenia): obie sekcje leczenia z „W tej grupie nie ma pacjentów z punktami leczenia…”.
 - Płeć „chłopcy” → kafelki „Pacjenci w grupie” i „Średni wiek”; okna 3 / 6 / 12 mies. → kafelek bez dopisku o zapisie.
 
@@ -48599,9 +48618,13 @@ Sekcje leczenia i „Wiek i płeć” nie są zwijane.
 widoku Bazy.
 
 **Zgodność wstecz.** Raport całej bazy i raport grupy z paska listy mają sekcje jak dotąd (zmienia się tylko komunikat
-pustej sekcji leczenia w raporcie grupy). `statsReport` bez pola `omit` działa jak dotąd.
+pustej sekcji leczenia w raporcie grupy). `statsReport` bez pola `omit` działa jak dotąd. Stan filtrów nie jest nigdzie
+utrwalany, więc przeniesienie leczenia z `range` do `treatment` nie wymaga migracji.
 
-**Strażnicy.** `tests/unit/baza-statystyki-sekcje.test.mjs` (4; plik produkcyjny: reguła chowania sekcji, pacjent z obu
+**Strażnicy.** `tests/unit/baza-statystyki-zakres.test.mjs` (12; pola „Zakres” i „Leczenie”: pozycje, opis i klucz, oba
+pola naraz, wynik kart); `tests/e2e/baza-pacjentow-statystyki-zakres.spec.mjs` (3; oba pola z licznikami, każde osobno
+i razem, bez odczytów sejfu, ponowne liczenie po zmianie w bazie, telefon);
+`tests/unit/baza-statystyki-sekcje.test.mjs` (4; plik produkcyjny: reguła chowania sekcji, pacjent z obu
 leczeniami, zakresy spoza leczenia, brak wyniku kart); `tests/unit/baza-statystyki-eksport.test.mjs` (+1: komunikat
 grupy i `omit` w raporcie i arkuszu); `tests/e2e/baza-pacjentow-statystyki-sekcje.spec.mjs` (5; prawdziwy szyfrowany sejf,
 fikcyjne osoby: stan domyślny i podsumowania, rozwijanie myszą i klawiaturą, trwałość wyboru po wyborze rozpoznania,

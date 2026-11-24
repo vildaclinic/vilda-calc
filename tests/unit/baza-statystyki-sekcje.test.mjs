@@ -21,29 +21,29 @@ describe('Sekcja drugiego leczenia w zakresie jednego leczenia (scopeHiddenSecti
     const L = modul();
     expect(L.ghCohort([]).treated).toBe(0);
     expect(L.obesityCohort([], { thresholds: [5, 10] }).treated).toBe(0);
-    expect(L.scopeHiddenSections({ range: 'ob' }, karty(L, { otylosc: 5 }))).toEqual(['gh']);
-    expect(L.scopeHiddenSections({ range: 'gh' }, karty(L, { gh: 4 }))).toEqual(['obesity']);
+    expect(L.scopeHiddenSections({ treatment: 'ob' }, karty(L, { otylosc: 5 }))).toEqual(['gh']);
+    expect(L.scopeHiddenSections({ treatment: 'gh' }, karty(L, { gh: 4 }))).toEqual(['obesity']);
     // Pozostałe filtry nie zmieniają reguły.
-    expect(L.scopeHiddenSections({ range: 'ob', sex: 'F', band: '18+' }, karty(L, { otylosc: 1 }))).toEqual(['gh']);
+    expect(L.scopeHiddenSections({ treatment: 'ob', range: 'o12', sex: 'F', band: '18+' }, karty(L, { otylosc: 1 }))).toEqual(['gh']);
   });
 
   it('pacjent z punktami obu leczeń zostawia sekcję: danych z kart się nie chowa', () => {
     const L = modul();
-    expect(L.scopeHiddenSections({ range: 'ob' }, karty(L, { gh: 1, otylosc: 5 }))).toEqual([]);
-    expect(L.scopeHiddenSections({ range: 'gh' }, karty(L, { gh: 4, otylosc: 2 }))).toEqual([]);
+    expect(L.scopeHiddenSections({ treatment: 'ob' }, karty(L, { gh: 1, otylosc: 5 }))).toEqual([]);
+    expect(L.scopeHiddenSections({ treatment: 'gh' }, karty(L, { gh: 4, otylosc: 2 }))).toEqual([]);
   });
 
   it('poza zakresami leczenia niczego nie chowa: cała baza, okna ostatniego zapisu, płeć, wiek, lista', () => {
     const L = modul();
     const puste = karty(L, {});
-    for (const filtry of [null, {}, { range: 'm12' }, { range: 'o24' }, { sex: 'F' }, { band: '0-2' }, { listId: 'l1' }, { range: 'nie-ma' }]) {
+    for (const filtry of [null, {}, { range: 'm12' }, { range: 'o24' }, { sex: 'F' }, { band: '0-2' }, { listId: 'l1' }, { treatment: 'nie-ma' }, { range: 'gh' }]) {
       expect(L.scopeHiddenSections(filtry, puste), JSON.stringify(filtry)).toEqual([]);
     }
   });
 
   it('bez wyniku kart niczego nie rozstrzyga', () => {
     const L = modul();
-    expect(L.scopeHiddenSections({ range: 'ob' }, null)).toEqual([]);
-    expect(L.scopeHiddenSections({ range: 'gh' }, {})).toEqual([]);
+    expect(L.scopeHiddenSections({ treatment: 'ob' }, null)).toEqual([]);
+    expect(L.scopeHiddenSections({ treatment: 'gh' }, {})).toEqual([]);
   });
 });

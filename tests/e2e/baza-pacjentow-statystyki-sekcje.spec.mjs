@@ -94,14 +94,14 @@ async function arkusz(pobranie) {
   return archiwum.file('xl/worksheets/sheet1.xml').async('string');
 }
 
-test('zakres jednego leczenia: bez pustej sekcji drugiego leczenia na ekranie i w pliku; sekcja z danymi zostaje', async ({ page }) => {
+test('wybrane „Leczenie”: bez pustej sekcji drugiego leczenia na ekranie i w pliku; sekcja z danymi zostaje', async ({ page }) => {
   const { database } = await start(page);
   const gh = database.locator('.pt-stat-card.pt-gh'), otylosc = database.locator('.pt-stat-card.pt-ob');
   await expect(gh).toBeVisible();
   await expect(otylosc).toBeVisible();
 
   // Leczeni hormonem wzrostu w wieku 6–9 lat: c (bez leczenia otyłości) — sekcji „Leczenie otyłości” nie ma.
-  await filtr(database, 'range').selectOption('gh');
+  await filtr(database, 'treatment').selectOption('gh');
   await filtr(database, 'band').selectOption('6-9');
   await expect(database.locator('.pt-scope-count')).toHaveText('1 osoba w tym zakresie');
   await expect(gh).toBeVisible();
@@ -117,7 +117,7 @@ test('zakres jednego leczenia: bez pustej sekcji drugiego leczenia na ekranie i 
   expect(podsumowanie).not.toContain('>Leczenie otyłości</t>');
 
   // Leczeni z powodu otyłości w wieku 18+: f (bez leczenia GH) — sekcji „Leczenie hormonem wzrostu” nie ma.
-  await filtr(database, 'range').selectOption('ob');
+  await filtr(database, 'treatment').selectOption('ob');
   await filtr(database, 'band').selectOption('18+');
   await expect(database.locator('.pt-scope-count')).toHaveText('1 osoba w tym zakresie');
   await expect(otylosc).toBeVisible();
@@ -130,7 +130,7 @@ test('zakres jednego leczenia: bez pustej sekcji drugiego leczenia na ekranie i 
   await expect(gh.locator('.pt-stat-card-hint')).toHaveText('leczonych: 2 · SNP 1 · ZT 1');
 
   // Zakres spoza leczenia (wiek 0–2 lata: a, bez leczenia): obie sekcje zostają i mówią o grupie, nie o bazie.
-  await filtr(database, 'range').selectOption('');
+  await filtr(database, 'treatment').selectOption('');
   await filtr(database, 'band').selectOption('0-2');
   await expect(database.locator('.pt-scope-count')).toHaveText('1 osoba w tym zakresie');
   await expect(gh.locator('.pt-stat-note')).toHaveText('W tej grupie nie ma pacjentów z punktami leczenia hormonem wzrostu.');
@@ -171,8 +171,9 @@ test('filtr, który czyni element oczywistym, zdejmuje go: kafelki płci przy wy
     await expect(kafelki.first()).toHaveText('Pacjenci w grupie');
     await expect(dopisek).toHaveCount(0);
   }
-  // Zakres leczenia nie mówi nic o dacie zapisu — dopisek zostaje.
-  await filtr(database, 'range').selectOption('gh');
+  // „Leczenie” nie mówi nic o dacie zapisu — dopisek zostaje.
+  await filtr(database, 'range').selectOption('');
+  await filtr(database, 'treatment').selectOption('gh');
   await expect(dopisek).toHaveText('4 z zapisem w ostatnich 12 mies.');
 });
 
