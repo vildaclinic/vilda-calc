@@ -2895,6 +2895,13 @@ trwałych wizyt: SHA-256 `3e7bcd5a4ef38b482c00d318db8cf9c126b50d024dcc182e65bb11
 vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-PR0e1 (`audyt` `a7b2920b`); bieżącą bazę daje to samo
 odwrócenie delty co wyżej.
 
+Od E3-PR0e2a (P-SYNC-WLASCICIEL, chwila przypisania wersji do karty — pierwsze wydanie nowego pola; zmiana poza blokiem
+trwałych wizyt, w bloku P-DZIENNIK-ZDARZEN tylko kształt koperty i reguła pola odsyłania; wstawki w eksportach za końcem
+tekstów haków, teksty 41 haków bez zmian) bazą delty jest obraz sejfu po tej zmianie bez bloku trwałych wizyt: SHA-256
+`8dc93f9539addde546e81bad3e756e5789a47cc6591e335c8ae63caec6368eef`, a wynikiem — bieżący `vilda_vault.js`
+(`34270b175b725f17b9552cbc2127da70180f293608d3dad877910d6a6dc6cd0e`). Baza `3e7bcd5a…` (po vildaclinic/vilda-calc#1045)
+odpowiada stanowi sprzed E3-PR0e2a (`audyt` `d6f133eb`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
 i wynik różniący się od zapisanego skrótu. Odwrócenie delty musi odtworzyć
@@ -3048,6 +3055,14 @@ i komentarze) baza sejfu to `75fa66c9e580e9ac051c7300b621de8cb03ede637cad026afc0
 Baza `1464cdf4…` (po vildaclinic/vilda-calc#1026) odpowiada stanowi sprzed E3-PR0e1 (`audyt` `a7b2920b`). Blok
 natywny, haki natywne, rodzina modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości
 są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Od E3-PR0e2a (P-SYNC-WLASCICIEL; zmiana sejfu tylko poza blokiem natywnym — chwila przypisania wersji do karty: łączenie
+w drogach zapisu, eksporty, importy, porównanie właściciela wersji, kształt koperty i reguła pola odsyłania, komentarze)
+baza sejfu to `c3ccdcf2c8f5735fc1cb693a39d828c06b1727ca5608ab94b19de2697fe3a458`, a `integratedVaultSHA256` (obraz
+pośredni) — `a77b7973c3ba13ea9f09ebda4cce27e305a9bd3f8e2b91ada5dc82825b18ecc5`. Baza `75fa66c9…` (po
+vildaclinic/vilda-calc#1045) odpowiada stanowi sprzed E3-PR0e2a (`audyt` `d6f133eb`). Blok natywny, haki natywne, rodzina
+modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w
+`runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych

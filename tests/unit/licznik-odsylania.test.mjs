@@ -1,7 +1,8 @@
 // Licznik odsyłania (E3-PR0b, tests/support/licznik-odsylania.mjs): przypadki na syntetycznych trójkach (przed, po,
 // ładunek) — warstwy echa, reguły pola (T domyślna, A i B diagnostyczne), klasy, przydział, usunięcia, żądania jak
 // Bob_wez, strony, bajty realne, budżet minuty slotu, echo na klonach na kluczach E, strażnik pól zawsze obecnych
-// i odcisk zgodny z sejfem. Dane wyłącznie fikcyjne („Ala”, masy umowne).
+// i odcisk zgodny z sejfem; od E3-PR0e2a kanon wersji warstwy po2a bez rev i bez pól POLA_POMIJANE (chwila przypisania
+// wersji do karty, jak Bev_ECHO_POMIJANE sejfu). Dane wyłącznie fikcyjne („Ala”, masy umowne).
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

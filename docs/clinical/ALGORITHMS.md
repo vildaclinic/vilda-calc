@@ -27847,7 +27847,9 @@ Walidacja (`EVENT_ENVELOPE_INVALID`, błąd programisty) odrzuca:
   `label`, `partialSince`, sekcje innych rodzajów);
 - więcej niż jedną encję albo encję z innym identyfikatorem niż `key`. Wyjątkiem jest `stomb`: niesie wszystkie wpisy
   kosza tego samego `snapshotId` i karty bez wersji (niżej);
-- `seq` wersji i `headerUpdatedAtISO` karty.
+- `seq` wersji i `headerUpdatedAtISO` karty. *(2026-11-23, E3-PR0e2a, P-SYNC-WLASCICIEL: wersja może nieść też chwilę
+  przypisania wersji do karty `assignedAtISO` — tylko gdy jest, w kształcie elementu `exportSyncPayload`; inne pola
+  spoza listy wersji dalej odrzucane; wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku.)*
 
 Klucz `snapshotTombstones` może nieść wyłącznie `stomb`. Sama obecność tego klucza, także z pustą tablicą, włącza
 w `Le` przebieg kosza między kartami.
@@ -31756,7 +31758,9 @@ wizyta 125 cm / 24 kg).
 - **Bez zmian:** reguła właściciela wersji wspólnej dwom kartom (`Bsw_nowszyRekord`, najpierw `rev`, PD-1), wybór
   treści między kartami (`Bsw_nowszaTresc`, PD-11), `rev + 1` w „Scal pacjentów”, `rev` wyniku między kartami = wyższa
   z dwóch, kolejność wersji karty (`yr`), import pliku karty i „Scal kopię konta” dalej pomijają wersje, które już są
-  (PD-15).
+  (PD-15). *(2026-11-23, E3-PR0e2a, P-SYNC-WLASCICIEL: o właścicielu wersji wspólnej dwóm kartom decyduje przed `rev`
+  późniejsza chwila przypisania wersji do karty, gdy jest (brak = najwcześniej); dziś żadna wersja jej nie ma, więc
+  wynik bez zmian — wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku.)*
 
 **Przypadki** (`tests/unit/pozniejsza-poprawka.test.mjs`, `tests/unit/kosz-nowsza-tresc.test.mjs`,
 `tests/unit/sync-wlasciciel-wersji.test.mjs`, `tests/unit/kosz-przywroc-nowsza.test.mjs`):
@@ -32705,7 +32709,8 @@ scalenia tej samej karty z różnymi celami — rozjazd i ping-pong. Żadna wers
   w historii, bieżąca wersja karty) — ze strony, która wygrała przypisanie karty, więc synchronizacja nie stawia
   przeniesionej wersji przed głową scalenia. Wersje tej samej karty — bez zmian (najpierw `rev`, potem chwila zmiany).
   *(Aktualizacja 2026-10-21, P-POZNIEJSZA-POPRAWKA (D-7 wariant 2): wersje tej samej karty — najpierw chwila zmiany, przy równej `rev`; właściciela wersji wspólnej dwom kartom
-  wybiera nadal „najpierw `rev`”.)*
+  wybiera nadal „najpierw `rev`”.)* *(2026-11-23, E3-PR0e2a: przed `rev` — późniejsza chwila przypisania wersji do karty,
+  gdy jest (brak = najwcześniej); dziś żadna wersja jej nie ma, więc wynik bez zmian — wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku.)*
 - Przeniesienie między istniejącymi kartami — osobna faza (`Bsl_przeniesWersje`) po pętli pacjentów, przed usuwaniem
   kart z wygrywającym nagrobkiem i końcem scalania kosza, pod blokadami obu kart w kolejności rosnących id (jak „Scal
   pacjentów”), na świeżym odczycie: wersja poprawiona w międzyczasie zostaje, F z wygrywającym już nagrobkiem nie powstaje.
@@ -43694,6 +43699,9 @@ prywatności (gdy użytkownik może ustawić klucz); E3-PR0i zmienia znaczenie n
 
 **Bez pętli.**
 1. Odesłanie tylko przy różnicy (bez `rev`) wobec stanu przed scaleniem i wobec ładunku — nigdy na samym fakcie zapisu.
+   *(2026-11-23, E3-PR0e2a, P-SYNC-WLASCICIEL: we wszystkich porównaniach odsyłania wersji także bez chwili przypisania
+   wersji do karty (`Bev_ECHO_POMIJANE`); dla danych bez tej chwili dowód bez zmian, dowód przy jej zapisie — przy
+   E3-PR0e2b; wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku.)*
 2. Rekord pochodny dominuje oba wejścia: odbiorca bez nowszego składnika zapisuje dokładnie odesłany rekord albo nic
    (`Bgw_scal`: rekord wobec siebie — brak zapisu; wobec starszego — cały rekord).
 3. Rekord pochodny jest deterministyczną funkcją dwóch wejść (`rev` = wyższy + 1, chwile tylko prawdziwe); dwa różne
@@ -46903,7 +46911,9 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
 **Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
 - **E3-PR0e2a:** nowa informacja w rekordzie wersji „kiedy wizytę przeniesiono przez „Scal pacjentów”” —
   przechowywana, zachowywana przy każdym zapisie (późniejsza z obu kopii), przesyłana (eksport, importy, koperta
-  zdarzenia z listą pól wersji), porównywana, gdy jest; nikt jej nie zapisuje — bez zmiany działania.
+  zdarzenia z listą pól wersji), porównywana, gdy jest; nikt jej nie zapisuje — bez zmiany działania. *(2026-11-23:
+  przygotowany — wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku; zachowywana przy każdym zapisie, który łączy dwie kopie, zapisy z jednej kopii biorą ją z tej
+  kopii, faza przeniesień sprawdza ją od decyzji, wpis Kosza jej nie przechowuje.)*
 - **E3-PR0e3:** zmiana wizyty po Koszu na innym urządzeniu wraca do karty wpisu po „Scal pacjentów” (wpis pod żywą
   kartą; dziś gwiazdka albo poprawka ginie) oraz wąski wyjątek wyroczni z decyzji 4 z 2026-11-23 dla „Usuń pacjenta”
   zwróconej starej karty z nowymi wizytami (świat 885 do CI, ziarna 8 i 37 profilu pełnego) — test, nie zmiana sejfu.
@@ -46911,7 +46921,8 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
   zapisuje nową informację; poprawki i gwiazdki wizyt przeniesionych scaleniem zostają w karcie scalonej (D-4 A i PD-1
   dla nich zmienione decyzją 2 z 2026-11-23); wejścia: E4b, „Usuń pacjenta” duplikatu (światy 881–884), „tylko lista
   usuniętych pacjentów”, „miejsce wizyty po „Scal pacjentów”” w W1, ziarno 38 profilu pełnego; sprawdzić, czy znika
-  klasa „nagrobek karty opróżnionej” w zdarzeniach.
+  klasa „nagrobek karty opróżnionej” w zdarzeniach. *(2026-11-23: warunek — każde urządzenie ma SW 1.1.577 (wydanie
+  E3-PR0e2a) albo wyższy; dalsze wejścia — wpis „Chwila przypisania wersji do karty — pierwsze wydanie nowego pola” na końcu pliku, „Wejście do kolejnych PR”.)*
 - **E3-PR0f:** wizyta nieznana urządzeniu scalającemu (E1/E1b, także w zwróconej starej karcie i w przypadku
   z „Do akceptacji”, punkt 5), ziarno 39 profilu pełnego razem z kolejnością klas wyroczni, świat 885 poza wyjątkiem,
   „Usuń pacjenta” właściwej karty przed dotarciem poprawki ze starej karty, wpis Kosza pod kartą, której nie ma albo
@@ -46937,3 +46948,462 @@ sejf), SW 1.1.575 → 1.1.576 — `npm run podbij-wersje`; baza `origin/audyt` `
 sejf, `vilda_sync.js`, `runtime/` i `tools/` bez zmian od `a7b2920b`, więc czerwone na bazie i piny granicy
 liczone na `a7b2920b` są ważne).
 Bez nowego pliku w pamięci offline.
+
+## Chwila przypisania wersji do karty — pierwsze wydanie nowego pola (P-SYNC-WLASCICIEL, E3-PR0e2a, SW 1.1.577, `vilda_vault.js` 286, 2026-11-23)
+
+**Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Dziś dla lekarza nic
+się nie zmienia: rekord wersji wizyty może nieść jedno nowe, jawne pole opcjonalne `assignedAtISO` — chwilę, w której
+„Scal pacjentów” przypisało wersję do karty — ale w tym wydaniu żadne urządzenie go nie zapisuje, więc wszystkie dane
+są bez niego, a wynik każdej synchronizacji, kopii i importu jest bajt w bajt taki jak dotąd (długie przebiegi niżej).
+Bez nowych tekstów i bez zmian ekranów. Nowe pole w dwóch wydaniach (decyzja 3 z 2026-11-23, jak dowód kroku planu
+z 2026-11-17): to wydanie pole przechowuje, zachowuje przy zapisach, przesyła i według niego porównuje; zapisywać je
+zacznie „Scal pacjentów” w E3-PR0e2b, dopiero gdy właściciel potwierdzi, że wszystkie urządzenia mają to wydanie.
+Klasyfikacja jak przy pierwszym wydaniu dowodu kroku planu (P-DOWOD-KROKU): to wydanie zmienia format rekordu wersji,
+eksportu pełnego, delty karty, pliku karty, kopii konta i koperty zdarzenia (koperta z polem jest teraz przyjmowana,
+dotąd `EVENT_ENVELOPE_INVALID`) i wprowadza zasadę synchronizacji, która — gdy pole jest — rozstrzyga, do której karty
+należy wizyta wspólna dwóm kartom: najpierw chwila przypisania, potem `rev` (zmienia PD-1 dla wersji z polem, decyzja
+2 z 2026-11-23). Zasada zacznie działać, gdy pole zacznie powstawać. Serwer, `vilda_sync.js`, schemat IndexedDB, API
+`window.VildaVault`, wpisy Kosza, fragment natywny i teksty 41 haków trwałych wizyt bez zmian.
+
+Po co jest to pole — przykład (fikcyjny) działania od E3-PR0e2b: komputer w gabinecie i telefon, „Pacjent Testowy 1”
+ma starą kartę X i właściwą kartę Y; wizyta z 3 marca (20 kg) leży w X.
+- 8:01 komputer robi „Scal pacjentów” X → Y: wizyta przechodzi do Y jako nowa rewizja (`rev` + 1), X dostaje nagrobek.
+- 8:02 telefon bez sieci, bez wiedzy o scaleniu, poprawia tę wizytę w X na 21 kg; poprawka też podnosi `rev` o 1,
+  a chwilę zmiany ma późniejszą.
+- Dziś i w tym wydaniu: po synchronizacji reguła „najpierw `rev`, potem chwila zmiany” uznaje rekord z telefonu za
+  nowsze przypisanie — wizyta wraca do X, a stara karta wraca jako duplikat (do ponownego scalenia; D-4 A).
+- Od E3-PR0e2b: wersja w Y niesie „przypisana do Y o 8:01”, a poprawka w X takiej chwili nie ma (poprawka nie zmienia
+  przypisania), więc wizyta zostaje w Y, a 21 kg przechodzi do jej treści — poprawka trafia do karty scalonej, a stara
+  karta nie wraca z jej powodu (decyzja 2 z 2026-11-23). Nowe wizyty i notatki zapisane w starej karcie dalej ją
+  zwracają (D-4 A dla nich bez zmian).
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 5a (E3-PR0e2a).
+Decyzje z 2026-11-23 (plan, rozdział 6, blok „Decyzje z 2026-11-23 (E3-PR0e, pytania 1–4 projektu)”): 1 — zmiany etapu
+działają od razu u wszystkich urządzeń, nie za przełącznikiem odsyłania, każdy PR przyjmowany osobno; 2 — poprawki
+i gwiazdki wizyt przeniesionych „Scal pacjentów”, zrobione w starej karcie na urządzeniu bez wiedzy o scaleniu, trafiają
+do karty scalonej (E3-PR0e2b); 3 — nowa informacja „kiedy wizytę przeniesiono przez „Scal pacjentów”” w dwóch
+wydaniach: ten PR ją przechowuje i przesyła, nikt jej nie zapisuje; E3-PR0e2b zaczyna ją zapisywać po potwierdzeniu
+właściciela, że wszystkie urządzenia mają to wydanie. Precedens: decyzja z 2026-11-17 o formacie dowodu kroku (plan,
+rozdział 6, „Decyzja z 2026-11-17 (2c, format dowodu kroku)”) i jej pierwsze wydanie (wpis P-DOWOD-KROKU wyżej). Powód
+dwóch wydań — niżej, „Starsza aplikacja”. Sprawy, których projekt i decyzje nie rozstrzygały, rozstrzygnięto wariantem
+najbezpieczniejszym dla danych — „Do akceptacji właściciela przy PR”.
+
+### E3-PR0e2a
+
+**Co było** (`audyt` `d6f133eb`). O właścicielu wersji wspólnej dwóm kartom decyduje `Bsw_ladunekWygrywa`: najpierw
+`rev`, potem chwila zmiany, przy pełnym remisie mniejszy `patientId` (PD-1). „Scal pacjentów” i poprawka podnoszą `rev`
+o 1 każde, więc `rev` nie odróżnia przeniesienia od poprawki (przykład wyżej). Rekord wersji ma zamknięty zestaw pól
+jawnych, a poprawka, gwiazdka i wiersz pomiaru (`Bzw_aktualizujWersje`), scalanie wersji tej samej karty i wersji
+wspólnej dwóm kartom, eksporty i importy budują rekord albo element eksportu z listy pól; builder koperty (`Bev_wersja`)
+też, a walidacja koperty przyjmuje tylko klucze z `Bev_POLA_WERSJI`. Pole spoza listy ginęło więc przy pierwszym takim
+zapisie albo eksporcie, a koperta z nim kończyła się w `encryptEvent` błędem `EVENT_ENVELOPE_INVALID` (sprawdzone na
+kopii, dane fikcyjne). Pole zapisane przez jedno urządzenie ginęłoby na pozostałych.
+
+**Pole.**
+- `assignedAtISO` — chwila, w której „Scal pacjentów” przypisało wersję do karty; napis w postaci `toISOString`
+  (`RRRR-MM-DDTgg:mm:ss.mmmZ`, sprawdzian jak `Bnp_iso`: trzy cyfry milisekund, `Z`, prawdziwa chwila). Jawne, jak
+  `savedAtISO` i `updatedAtISO` — poza zaszyfrowaną treścią wizyty (`payloadCipher`), bez treści klinicznej: chwila
+  przy losowym identyfikatorze wersji. Opcjonalne: brak = chwila nieznana (wszystkie dzisiejsze dane).
+- Jedyny odczyt — `Bsw_chwilaPrzypisania`: pole w postaci kanonicznej albo pusty napis. Każda inna wartość (bez
+  milisekund, liczba, pusty napis, rok 10000) liczy się jak brak: nie decyduje o właścicielu i nie przechodzi do
+  eksportu, koperty ani rekordu budowanego z listy pól.
+- Jedyne miejsce, w którym powstaje obiekt z polem — `Bsw_przypisanie(S, g)`: pole z późniejszą chwilą dwóch kopii albo
+  obiekt pusty, gdy żadna kopia go nie ma. Tylko kopia albo późniejsza z istniejących wartości, bez zegara. Bez pola
+  rekord i element są bajt w bajt jak dotąd.
+
+**Łączenie.** Każdy zapis rekordu wersji, który łączy dwie kopie (tutejszą i z ładunku), bierze późniejszą chwilę
+przypisania z obu — przemiennie i łącznie, niezależnie od tego, która kopia wygrała treść, gwiazdkę albo kartę
+(sprawdza to test zbieżności trzech urządzeń w sześciu kolejnościach wymian pełnych kopii). Zapisy z jednej kopii
+biorą chwilę z tej kopii.
+
+| Droga zapisu | Chwila przypisania w zapisanym rekordzie |
+|---|---|
+| poprawka wizyty, gwiazdka i zdjęcie gwiazdki, edycja i usunięcie wiersza pomiaru (`Bzw_aktualizujWersje`) | z tutejszego rekordu (dotąd ginęła) |
+| „Scal pacjentów” (rozpięty rekord źródła, nowa karta, `rev` + 1) | bez zmian; nowej scalenie nie ustawia; nowa głowa scalenia bez niej |
+| wersja tej samej karty: wygrywa treść z ładunku, rekord złożony W3 (`Bgw_scal`, oba literały), wygrywa tutejsza treść z zapisem samego `rev` | późniejsza z obu |
+| wersja tej samej karty, kopie różnią się tylko tą chwilą (także przy tym samym `rev` i chwili zmiany) | nowy zapis samej późniejszej chwili z ładunku — treść, `rev` i chwile bez zmian, numer kolejny jak przy zapisie samego `rev`; ładunek bez niej albo z wcześniejszą — bez zapisu, jak dotąd |
+| wersja wspólna dwóm kartom: „przenieś”, „zabierz” (także gdy wersja zniknęła z tutejszej karty przed fazą przeniesień — rekord z chwili decyzji), „treść”, rekord W3 i reguła zapasowa (`Bsw_rekordW3`, `Bsw_rekord`, `Bsw_poprawTresc`, `Bsw_doF`), następca (scalenie w drugiej karcie przeglądarki między decyzją a fazą) | późniejsza z obu |
+| decyzja „nowa” — wersji tu nie ma albo leży tu bez karty (`Bsl_wersjaZLadunku`) | z ładunku |
+| wersja przeżywająca przycięcie (`Bsw_przeniesPrzezyta`), magazyn IndexedDB „Komputer prywatny” | bez zmian (rekord rozpięty) |
+| „Przywróć” z Kosza (`Bkz_przywroc`) | z wersji leżącej też w karcie, gdy jest; zapis tylko z Kosza — bez niej |
+| wskrzeszenie z cienia Kosza (`Bgw_wskrzes`) | bez niej (wpis Kosza jej nie przechowuje) |
+| import karty z pliku, „Scal kopię konta” (karta jest, karty brak), odtworzenie konta z kopii | z pliku |
+| nowa wersja (zapis z formularza) | bez niej |
+
+**Przesyłanie.** Eksport pełny (`exportSyncPayload`), delta karty (`buildPatientDelta`), plik karty
+(`exportPatientEnvelope`) i kopia konta (`exportVaultBackup`): element wersji niesie pole za `payload`, gdy rekord je
+ma; bez pola element bajt w bajt jak dotąd (ta sama kolejność kluczy, test). Koperta zdarzenia: `Bev_POLA_WERSJI`
+z `assignedAtISO`, a `Bev_wersja` dodaje pole za `payload`, gdy jest — koperty `snap`, `pfull` i `ptomb` z kartą
+docelową mają element wersji równy elementowi eksportu; `encryptEvent` przyjmuje kopertę z polem, a obce pola wersji
+i `seq` wersji dalej dają `EVENT_ENVELOPE_INVALID`. Odbiorca scala kopertę tym samym `Le` co pełny ładunek, więc
+zapisuje pole regułą łączenia. Koperta wpisu Kosza (`stomb`, `Bev_POLA_KOSZA`) bez zmian, bez pola. `vilda_sync.js`
+i serwer bez zmian: ładunek, delta i zdarzenie są dla serwera nieprzezroczystym szyfrogramem (sprawdza tylko postać
+i rozmiar), a `vilda_sync.js` wysyła eksport w całości. Rozmiar: 43 znaki JSON na wersję z polem (w tym wydaniu 0).
+
+**Porównanie: do której karty należy wersja wspólna dwóm kartom** (`Bsw_ladunekWygrywa`). Najpierw późniejsza chwila
+przypisania (brak albo zła postać = najwcześniej); przy równej — także przy braku po obu stronach, czyli dla wszystkich
+dzisiejszych danych — jak dotąd: `rev`, chwila zmiany, przy pełnym remisie mniejszy `patientId`. Treść i gwiazdka
+dalej według W3 (`Bsw_wklad`, `Bsw_rekordW3`): gdy tutejsza chwila przypisania jest późniejsza, a treść z ładunku
+nowsza, wersja zostaje, a treść przechodzi decyzją „treść”. Poprawka i gwiazdka podnoszą `rev` i chwilę zmiany, ale
+nie chwilę przypisania. Strażnik natywny przed scaleniem (`PatientPortablePreflightMerge`; fragment natywny bez zmian)
+woła tę samą funkcję z surowym elementem ładunku i tutejszym rekordem, więc przewiduje przeniesienia i odmowy przy
+planie z etapami tą samą regułą (e2e niżej). Wersje tej samej karty rozstrzyga jak dotąd `Bkz_nowszaWersja`
+(P-POZNIEJSZA-POPRAWKA).
+
+| Ładunek | Tutaj | Właściciel wersji |
+|---|---|---|
+| chwila 9:40 | chwila 9:30, dowolny `rev` i chwila zmiany | karta z ładunku |
+| chwila 9:30 | chwila 9:40 | tutejsza, także przy wyższym `rev` i późniejszej chwili zmiany w ładunku |
+| chwila 9:30 | bez chwili | karta z ładunku |
+| bez chwili | chwila 9:30 | tutejsza |
+| ta sama chwila albo bez chwili po obu stronach | — | jak dotąd: `rev`, chwila zmiany, mniejszy `patientId` |
+| chwila w złej postaci | — | jak brak chwili |
+
+**Faza przeniesień.** Decyzję „przenieś” wykonuje faza przeniesień chwilę później, pod blokadami obu kart, na świeżym
+odczycie, i przenosi tylko rekord niezmieniony od decyzji. Od tego wydania „niezmieniony” obejmuje też chwilę
+przypisania (`Bsw_odloz` ją zapamiętuje, `Bsw_przenies` porównuje), bo ta chwila może się zmienić sama, bez `rev`
+i chwili zmiany — zapisem samej późniejszej chwili wersji tej samej karty, np. przy scaleniu w drugiej karcie
+przeglądarki między decyzją a fazą. Wtedy wersja zostaje pod tutejszą kartą z późniejszą chwilą, a następne scalanie
+rozstrzyga zwykłą regułą (test). Bez pola po obu stronach porównanie dwóch pustych napisów — jak dotąd. Decyzje
+„zabierz” i „treść” bez zmian.
+
+**Odsyłanie** (E3-PR0c; za przełącznikiem odsyłania). Pole jest pomijane we wszystkich czterech porównaniach
+odsyłania wersji — rekord sklepu przed i po, wersja przed i po w kształcie eksportu, wersja z ładunku — tak jak `rev`
+(stała `Bev_ECHO_POMIJANE` w bloku P-DZIENNIK-ZDARZEN; ta sama lista co `POLA_POMIJANE.snap` modelu licznika
+odsyłania w testach, ze strażnikiem równości). Sama chwila przypisania nie wywołuje więc odesłania, także gdy po
+scaleniu tutejsza jest późniejsza niż w ładunku: każde urządzenie dostaje ją z kopertami scalenia i z pełną kopią,
+a scalanie wersji tej samej karty zapisuje późniejszą z obu. Wybrana osobna lista pól pomijanych, a nie reguła jak
+`Bev_ECHO_ZAWSZE` (pole pomijane tylko wtedy, gdy nie ma go w ładunku): ta odsyłałaby wersję z powodu samego pola, gdy
+ładunek niesie chwilę wcześniejszą niż tutejsza, a `Bev_ECHO_ZAWSZE` znaczy „pola zapisywane zawsze przez bieżącą
+wersję”, czym to pole nie jest. Brak pętli: przy tym samym wyniku scalania pozostałych pól zbiór wersji do odesłania
+jest ten sam co bez pola, więc dla dzisiejszych danych obowiązuje bez zmian dowód z wpisu E3-PR0c („Bez pętli”). Sama
+chwila może jednak zmienić wynik scalania (właściciela wersji wspólnej dwóm kartom) — dowód braku pętli przy zapisie
+pola, z flotą 276, powtarza E3-PR0e2b.
+
+**Nikt nie ustawia.** W tym wydaniu żadna droga nie tworzy pola od zera: „Scal pacjentów” (`Bsw_poScaleniu`, `Bsc0`)
+zachowuje chwilę przenoszonej wersji i nowej nie ustawia, a nowa wersja, poprawka i import nie dostają chwili zapisu
+ani importu. Strażnik drzewa składni sejfu: klucz `assignedAtISO` powstaje tylko w `Bsw_przypisanie`, odczyt jest tylko
+w `Bsw_chwilaPrzypisania`, a napis — tylko na liście pól koperty i w stałej pól pomijanych w odsyłaniu; obie funkcje
+bez zegara. Drugi strażnik: przebieg wszystkich dróg (zapisy, poprawka, gwiazdka, Kosz i „Przywróć”, „Scal pacjentów”,
+„Usuń pacjenta”, przycięcie, synchronizacja z urządzeniami 221 i 276, import karty, „Scal kopię konta”, odtworzenie
+konta) bez pola na wejściu — żadnego pola w rekordach, eksportach, kopertach i plikach.
+
+**Kosz i „Przywróć”.** Wpis Kosza pola nie przechowuje: półkrata Kosza odbudowuje wpis ze swoich składników (`Bpk_*`),
+więc pole spoza nich ginęłoby przy pierwszym łączeniu, a nowy składnik zmieniałby najdelikatniejszą część scalania
+(ok. 10 miejsc: półkrata, eksport Kosza, koperta `stomb`, reguła odsyłania Kosza, modele w testach). „Przywróć” bierze
+pole z wersji leżącej też w karcie, gdy jest; wersja tylko w Koszu i wskrzeszenie z cienia Kosza wracają bez niego —
+do reguły dla danych bez pola, czyli z wynikiem jak dziś, bez utraty. Przykład (fikcyjny, po E3-PR0e2b): o 8:01
+komputer scala starą kartę „Pacjenta Testowego 1” z właściwą; o 8:05 lekarz daje wizytę z 3 marca do Kosza, o 8:06
+przywraca ją — wizyta jest we właściwej karcie, ale bez „8:01”; poprawki tej wizyty w starej karcie na telefonie bez
+wiedzy o scaleniu rozstrzygają się wtedy jak dziś (stara karta może wrócić jako duplikat). Dopisanie pola do Kosza nie
+wymaga dwóch wydań (urządzenie bez tej zmiany zachowa się jak dziś) — decyzja przy E3-PR0e2b.
+
+**Import karty z pliku i inne zapisy z jednej kopii.** Import karty zapisuje wersje z chwilą z pliku. Wersja, która
+leży tu pod inną kartą, przechodzi — jak dotąd — do importowanej karty, z chwilą z pliku, a nie tutejszą (import
+świadomie przywraca stan z pliku; najbliższa synchronizacja z innymi urządzeniami rozstrzyga zwykłą regułą). „Scal
+kopię konta” dopisuje tylko wersje, których tu nie ma (PD-15), a odtworzenie konta działa na pustym koncie — chwila
+z pliku. Decyzja „nowa” nad rekordem wersji bez karty (rzadki ślad po przerwanym zapisie, niewidoczny w żadnej karcie)
+zastępuje go wersją z ładunku z jej chwilą — jak dziś całą wersją.
+
+**Starsza aplikacja** (sejfy 221 i 276 z fikstur `tests/fixtures/vilda_vault-221.js.txt` i `vilda_vault-276.js.txt`):
+- pełny ładunek z polem — 221 i 276 scalają go bez błędu, wersję zapisują bez pola;
+- koperta z polem — 276 `applyEncryptedEvent` → `applied`; 221 (bez dziennika zdarzeń) scala ją jak ładunek, bez błędu;
+- plik karty, „Scal kopię konta” i odtworzenie konta z kopii z polem — bez błędu, wersje bez pola;
+- bieżąca wersja przyjmuje plik karty z polem i je zapisuje.
+Starsza aplikacja gubi więc pole przy przyjęciu, przy własnym zapisie i eksporcie, a jej późniejsze „Scal pacjentów”
+daje rekordy bez pola, które przegrywają z wcześniejszym przypisaniem z polem: na nowszych urządzeniach wizyty
+wróciłyby do zwróconego duplikatu, a na starszym wynik zależałby od kolejności dostaw, także po pełnej synchronizacji.
+To powód dwóch wydań: E3-PR0e2b zacznie zapisywać pole dopiero wtedy, gdy właściciel potwierdzi, że wszystkie
+urządzenia mają to wydanie (numer SW — „Wersje” i „Wejście do kolejnych PR”). Każde urządzenie z tym wydaniem pole
+zachowuje (sprawdzenie kompletności niżej).
+
+**Odczyty, zapisy, sesja, blokady, błędy, usuwanie konta.**
+- **Odczyty:** żadnego nowego odczytu magazynu; pole jest w rekordach, które dana droga już czyta.
+- **Zapisy:** przy danych bez pola żadnego nowego zapisu. Jedyny nowy zapis — sama późniejsza chwila przypisania
+  wersji tej samej karty, gdy kopie różnią się tylko nią (bez pola w danych nieosiągalny): tuż po `Bses_pilnuj(opcje)`,
+  bez `await` pomiędzy, przez `PatientClinicalWriteValue`, pod blokadą karty, z nagłówkiem karty przeliczanym jak przy
+  zapisie samego `rev` (bez treści jawnej). Strażnik źródła liczby zapisów wersji w `Bsl_scalPacjenta` przepisany
+  z uzasadnieniem w komentarzu testu (5 → 6); pozostałe przypięte napisy strażników źródła bez zmian.
+- **Sesja, blokady, usuwanie konta:** te same `Bses_pilnuj`, blokady kart, `PatientClinicalGuard`
+  i `PatientClinicalWriteValue` co w zapisie, do którego pole dochodzi. Chwila przypisania z decyzji „przenieś” żyje
+  tylko w pamięci tego scalania.
+- **Błędy:** jak w zapisach obok — nie są połykane. Zła postać pola nie jest błędem: liczy się jak brak.
+
+**Kolejka zdarzeń.** Bez nowych wierszy: zmiana nie dodaje wywołań części emisji (`Bem_`/`Bob_`), a odsyłanie pomija
+samo pole. „Scal pacjentów” wersji z polem przy otwartej bramce daje w kolejce te same wiersze co bez pola (przeniesione
+wersje, nowa głowa, nagrobek karty źródłowej z kartą docelową), a koperty przeniesionej wersji i nagrobka niosą pole
+(test; gdy lista pól koperty nie miała pola, a `Bev_wersja` je dodawała, wiersze znikały po cichu — wyjątek buildera
+nie przerywa scalania). Chwila wiersza kolejki bez zmian. Operacje kolejki i kwarantanny sprawdzają sesję tak jak zapis
+karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu.
+
+**Polityka prywatności — bez zmiany tekstu.** `polityka-prywatnosci.html` opisuje bazę konta na urządzeniu jako
+zaszyfrowane dane pacjentów, a metadane wizyt — jako pseudonimizowane, powiązane wyłącznie z losowym identyfikatorem
+rekordu; jawnych chwil technicznych rekordu wersji (`savedAtISO`, `updatedAtISO`, jawnych od dawna) nie wylicza.
+O kolejce zmian mówi, że jawne są tylko losowe identyfikatory, rodzaj zmiany i jej chwila — pole jest w zaszyfrowanej
+treści koperty, a chwila wiersza się nie zmienia; do serwera dane idą w całości zaszyfrowane, także z polem. Pole to
+chwila przy losowym identyfikatorze, bez danych pacjenta. Zdanie dla pełnej jawności — „Do akceptacji”, punkt 7.
+
+**Przy wyłączonym przełączniku odsyłania.** Łączenie, przesyłanie, porównanie i sprawdzenie w fazie przeniesień stoją
+poza blokiem P-DZIENNIK-ZDARZEN albo w kształcie koperty i nie czytają przełącznika — działają tak samo przy obu jego
+stanach (decyzja 1 z 2026-11-23). W bloku zmienia się tylko kształt koperty (`Bev_POLA_WERSJI`, `Bev_wersja`)
+i reguła pola odsyłania (`Bev_ECHO_POMIJANE`, potrzebna tylko przy włączonym przełączniku). Bez nowych wywołań
+`Bem_`/`Bob_` (poza blokiem 63 = 63), bez zmian kolejki, emiterów, haków scalania, przeglądu i bramki; literał miejsc
+poza blokiem (`MIEJSCA_POZA_BLOKIEM`) bez zmian.
+
+**Testy.** Dane wyłącznie fikcyjne („Testowy Jan…”, „Pacjent Testowy 1”), bez PESEL; prawdziwy `vilda_vault.js`
+w uprzęży (bliźniaki tego samego konta, magazyny w pamięci i atrapa IndexedDB, starsza aplikacja z sejfów 221 i 276,
+sterowany zegar). Pole wstrzykuje się jak rekord z urządzenia, które je zapisuje: wprost do rekordu w magazynie albo
+do elementu ładunku i pliku. Nowe przypadki: 80 jednostkowych i 1 e2e.
+- `tests/unit/sync-chwila-przypisania.test.mjs` (nowy, 71 przypadków, ok. 10 s): poprawka, gwiazdka i wiersz pomiaru;
+  „Scal pacjentów” (pole bez zmian, nowa głowa bez pola); wersja tej samej karty — 5 wariantów (treść z ładunku, treść
+  tutejsza, rekord złożony W3, ta sama wersja, zapis samego `rev`) × 4 układy pola, z wynikiem porównanym z przebiegiem
+  bez pola; dwa różne rekordy złożone z tą samą `rev` i chwilą zmiany × 3 układy; wersja wspólna dwóm kartom —
+  „przenieś”, „zabierz” (także po zniknięciu wersji w drugiej karcie przeglądarki), „treść”, „treść” z rekordem
+  złożonym, „nowa”, następca, „przenieś” z samą późniejszą tutejszą chwilą między decyzją a fazą przeniesień;
+  zbieżność trzech urządzeń w sześciu kolejnościach wymian pełnych kopii (wersja tej samej karty i wersja wspólna dwóm
+  kartom); wersja przeżywająca przycięcie, „Przywróć”, magazyn IndexedDB; eksporty z polem i bez pola (kształt jak
+  dotąd), import karty, „Scal kopię konta” (karta jest, karty brak), odtworzenie konta; koperty (element = element
+  eksportu, `encryptEvent`, zastosowanie, koperty „Scal pacjentów”, koperta wpisu Kosza bez pola); porównanie z kodu
+  sejfu (oba kierunki, brak = najwcześniej, ta sama chwila, tablica przypadków bez pola zgodna z regułą sprzed zmiany,
+  zła postać jak brak w porównaniu i w zapisie) i scalanie w obu kierunkach; strażnik natywny (tekst źródła); „nikt nie
+  ustawia” (drzewo składni, przebieg wszystkich dróg bez pola); zgodność wstecz z 221 i 276.
+- `tests/unit/sync-odsylanie.test.mjs` (129, było 121): stała pól pomijanych równa liście modelu licznika; ta sama
+  treść z chwilą tylko w kopercie, tylko tutaj albo różną po obu stronach, treść z koperty nowsza przy późniejszej
+  tutejszej chwili, zapis samego `rev` — 0 wierszy odsyłania; wymiana kopert różniących się samą chwilą w obie strony —
+  bez kopert odsyłania na obu; „Scal pacjentów” przy otwartej bramce — kolejka (wyżej).
+- `tests/unit/licznik-odsylania.test.mjs` (51, było 50) i `tests/support/licznik-odsylania.mjs`: kanon wersji bez `rev`
+  i bez pola (`POLA_POMIJANE.snap`); bez pola w danych wynik modelu bez zmian.
+- `tests/e2e/care-template-native-storage.spec.mjs` (11, było 10; desktop Chromium): sprawdzenie przed scaleniem przy
+  planie z etapami — ładunek z późniejszą chwilą przypisania przy tym samym `rev` i wcześniejszej chwili zmiany: odmowa
+  `CARE_NATIVE_PATIENT_REFERENCED`, żaden sklep nie zapisany; ładunek z wyższym `rev` i późniejszą chwilą zmiany, gdy
+  tutejsze rekordy mają późniejszą chwilę: bez odmowy, wersje zostają przy pierwszym pacjencie.
+- `tests/unit/sync-wlasciciel-wersji.test.mjs` (384): strażnik źródła „zabierz” przepisany (6 zapisów wersji
+  w `Bsl_scalPacjenta`).
+- Plik A ≡ B bez nowych przypadków i bez zmiany literałów (259 zielonych, 21 pominiętych).
+
+**Czerwone na bazie** (`d6f133eb` — sejf, manifesty i skróty z `origin/audyt`, testy tego PR): 53 jednostkowe i 1 e2e,
+wszystkie na asercji (żaden na błędzie składni ani braku funkcji pomocniczej). `sync-chwila-przypisania` 51 z 71 —
+pole ginie w danej drodze zapisu albo eksportu, builder koperty je gubi, `encryptEvent` odrzuca kopertę z polem
+(`EVENT_ENVELOPE_INVALID`), porównanie nie patrzy na pole, zapis samej chwili nie powstaje; `sync-odsylanie` 2 z 8 —
+brak stałej pól pomijanych, koperty „Scal pacjentów” bez pola; e2e 1 — na bazie odmowa tylko przy wyższym `rev`. Do
+tego przepisany strażnik źródła (na bazie 5 zapisów zamiast 6). `licznik-odsylania` na bazie zielony (model licznika
+jest częścią tego PR). Zielone z natury: kontrole bez zapisu rekordu, kształt bez pola, „nikt nie ustawia”, przyjęcie
+danych z polem przez 221 i 276, odsyłanie przy danych, które baza gubi — każdy strażnik z mutantem obok, poza kontrolami
+bez zapisu rekordu i zgodnością wstecz (opisuje niezmienne sejfy z fikstur).
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu po kotwicy; nowy plik testów, bloki tego PR w `sync-odsylanie`
+i `licznik-odsylania`, 51 plików z otoczenia zmiany, dla strażnika natywnego i porównania także e2e): 67 mutantów,
+potem 3 przy poprawce fazy przeniesień. Czerwienią co najmniej jeden test: pole gubione w każdej drodze osobno
+(poprawka, gwiazdka, wiersz pomiaru, „zabierz” z tutejszą kopią i bez niej, „przenieś”, „treść”, następca, wyjście
+„cała kopia” rekordu W3 między kartami, reguła zapasowa, rekord z chwili decyzji, `Bsl_wersjaZLadunku`, wersja
+przeżywająca przycięcie, „Scal pacjentów”, drugi literał rekordu złożonego tej samej karty, zapis z ładunku, tutejszy
+rekord bez późniejszego pola, brak zapisu samego pola, pole z ładunku zawsze, każdy eksport osobno, każdy import
+osobno, „Przywróć”, magazyn IndexedDB); eksport zawsze z polem; pole we wpisie Kosza (koperta i eksport); koperta —
+lista bez pola przy `Bev_wersja` z polem, `Bev_wersja` bez pola, obce pole bez walidacji i na liście; łączenie
+„wcześniejsza z obu”, „zawsze z ładunku”, „z ładunku, gdy jest”, „brak wygrywa”; odczyt bez sprawdzenia postaci;
+porównanie — brak liczony jak najpóźniej, chwila po `rev`, porównanie bez chwili, odwrócony remis; strażnik natywny bez
+pola (także e2e); odsyłanie — pole w każdym z czterech porównań osobno i we wszystkich naraz; model licznika — kanon
+z polem, pusta lista; „ktoś ustawia” — „Scal pacjentów” z chwilą bieżącą, nowa wersja z chwilą zapisu, poprawka,
+import karty z chwilą importu, decyzja „nowa” z chwilą scalania, `Bsw_przypisanie` z zegarem, pięć z nich także z nazwą pola
+składaną tak, że strażnik drzewa składni jej nie widzi (łapie je przebieg wszystkich dróg). Najpierw przeżyły 3:
+wyjście „rekord złożony” rekordu W3 między kartami bez łączenia i pierwszy literał rekordu złożonego tej samej karty
+bez pola — teraz czerwienią je nowe testy („treść” z rekordem złożonym; dwa różne rekordy złożone z tą samą `rev`
+i chwilą zmiany × 3 układy); „przenieś” z chwilą tylko z ładunku — po poprawce fazy przeniesień równoważny: faza
+przenosi tylko rekord niezmieniony od decyzji, a „przenieś” zapada tylko przy chwili z ładunku nie wcześniejszej niż
+tutejsza, więc późniejsza z obu jest chwilą z ładunku (0 czerwonych w 79 przypadkach). Trzy mutanty sprawdzenia
+w fazie przeniesień (bez sprawdzenia chwili z decyzji, sprawdzenie tylko spadku chwili, bez zapamiętanej chwili)
+czerwienią test okna między decyzją a fazą.
+
+**Długie przebiegi** (ręcznie, 2026-11-23; kod tego PR i baza — ten sam plik testów i uprząż z `vilda_vault.js`,
+manifestami i skrótami z `origin/audyt` — na kopiach drzewa, te same zmienne; po poprawce fazy przeniesień wszystkie
+powtórzone na kodzie końcowym, z tym samym wynikiem). Kontrola braku zmiany działania:
+
+| Przebieg | Przełącznik | Czerwone: baza / po zmianie | Wyrocznia ziarno po ziarnie | Czas kodu |
+|---|---|---|---|---|
+| CI (cały plik) | nie | 0 / 0 | 20/20 (naruszenia 126 = 126, mutacje 1733 = 1733) | 129 s |
+| CI (cały plik) | tak | 40 / 40 (te same) | 20/20 (139 = 139, 1733 = 1733) | 154 s |
+| pełny 1–20 | nie | 0 / 0 | 20/20 (434 = 434, 1860 = 1860, P6 30 = 30) | 111 s |
+| pełny 1–20 | tak | ziarno 8 / ziarno 8 | 20/20 (462 = 462, 1860 = 1860, P6 30 = 30) | 126 s |
+| flota 276, ziarna 1–10 | tak | ziarno 2 / ziarno 2 | 10/10 (mutacje 938 = 938) | 38 s |
+| katalog Kosza (blok deterministyczny p. 5), tryb ścisły | nie / tak | 14 / 14, 15 / 15 (te same; „tylko nagrobki pacjentów” 5 = 5) | zrzut katalogu 32/32 | 22 / 22 s |
+| blok znanych usterek | nie / tak | 5 / 5, 5 / 5 (te same) | — | 5 / 5 s |
+| 91 plików z otoczenia zmiany (bez pliku A ≡ B) | — | po zmianie 0 czerwonych (4893 zielone, 1 pominięty jak dotąd) | — | 537 s |
+
+- Pliki wyników, wyroczni, zrzutu katalogu Kosza i notatek P6 dosłownie równe po usunięciu samych kluczy czasu; bloki
+  błędów czerwonych przypadków identyczne; klasy wyroczni z liczbami równe.
+- Licznik odsyłania floty 276 (ziarna 1–10, z przełącznikiem) ziarno po ziarnie taki sam: koperty z echem 250 = 250,
+  wiersze wykonalne 37 = 37, wiersze surowe 255 = 255; nieodesłane 0, ponad model 0.
+- Na kopii bez repozytorium 2 przypadki `sync-dziennik-uspienie` (strażnik `git ls-files`) czerwone tak samo na bazie;
+  w drzewie roboczym zielone.
+
+Sprawdzenie kompletności (tylko na kopii, nie w repozytorium): czy po tym wydaniu żaden zapis rekordu wersji nie gubi
+pola, gdy któraś łączona kopia je miała — czyli czy wszystkie drogi są gotowe na E3-PR0e2b.
+- Kopia z zapisem pola: „Scal pacjentów” ustawia chwilę przypisania = późniejsza z „teraz” i poprzedniej chwili tej
+  wersji + 1 ms, gałąź następcy tak samo (to, co ma zrobić E3-PR0e2b); sejf floty 276 bez zmian.
+- Ślad w adapterach magazynu (w pamięci i IndexedDB): przed każdym zapisem rekordu wersji — pole zapisywanego rekordu
+  wobec poprzedniego tutejszego rekordu i wobec najpóźniejszego pola tej wersji w ładunku scalanym w tej chwili; po
+  każdym scaleniu — każdy rekord wersji z ładunku ma pole nie wcześniejsze niż ładunek (łapie brak zapisu).
+- Samokontrola: baza z tym samym zapisem pola (bez łączenia) daje utraty dokładnie w drogach, którym ten PR dodaje
+  łączenie (faza przeniesień, scalanie wersji tej samej karty, poprawka, „treść”); kopia z dwiema celowymi utratami —
+  utraty z ładunku i po scaleniu.
+
+| Przebieg | Przełącznik | Zapisy rekordu wersji (z polem w którejś kopii) | Zapisy gubiące pole | Kontrola: baza z zapisem pola |
+|---|---|---|---|---|
+| blok znanych usterek | nie / tak | 124 (51) / 124 (51) | 0 / 0 | 6 / 6 |
+| katalog Kosza, tryb ścisły | nie / tak | 1755 (594) / 1758 (597) | 0 / 0 | 12 / 12 |
+| CI pliku A ≡ B | nie / tak | 7190 (859) / 7047 (861) | 0 / 0 | 27 / 27 |
+| pełny 1–20 | nie / tak | 5587 (919) / 5662 (970) | 0 / 0 | 100 / 115 |
+| pełny 22–25 | nie / tak | 1085 (204) / 1041 (161) | 0 / 0 | 6 / 12 |
+| „dłuższa praca bez połączenia” 101–120 | nie | 4748 (0) | 0 | 0 |
+| jw., z operacjami profilu pełnego | nie | 5205 (994) | 0 | 86 |
+| flota 276, 1–5 | nie / tak | 577 (0) / 556 (0) | 0 / 0 | 0 / 0 |
+| flota 276, 1–5, profil pełny | nie / tak | 634 (88) / 624 (81) | 0 / 0 | 5 / 5 |
+
+- Razem 16 przebiegów: 43 717 zapisów rekordu wersji na urządzeniach bieżących, w tym 6 430 z polem w którejś z łączonych
+  kopii — 0 zapisów gubiących pole; brak drogi do dopisania.
+- Wpisy informacyjne (żadna łączona kopia nie miała późniejszego pola): wersja usunięta tu i odtworzona z Kosza albo
+  z kopii bez pola (wpis Kosza pola nie niesie); dalsze zapisy takiej wersji, gdy urządzenie pamięta tylko dawne pole;
+  kopia z polem w ładunku pod kartą, którą to urządzenie usunęło („Usuń pacjenta” po „Scal pacjentów” na innym
+  urządzeniu) — jak dziś urządzenie nie przyjmuje usuniętej karty ani jej wersji, a tutejsza kopia zostaje w starej
+  karcie bez pola, bez zapisu („Do akceptacji”, punkt 9).
+- Urządzenia floty 276 gubią pole z natury (CI: 5 utrat z ładunku i 10 po scaleniu; flota w profilu pełnym 22 / 16
+  i 173 / 141) — opisane ryzyko i powód dwóch wydań.
+- Profil podstawowy, „dłuższa praca bez połączenia” i domyślna flota 276 nie mają „Scal pacjentów”, więc pola nie
+  tworzą — dlatego warianty z operacjami profilu pełnego (dla „dłuższej pracy bez połączenia” jednowierszowa zmiana
+  pliku testów tylko w kopii).
+
+**Czas pliku A ≡ B** (lokalnie, sam plik, bez zmiennych, po kolei, bez innego obciążenia): przed kodem 154,5 s
+i 155,6 s, po kodzie 157,8 s i 156,4 s; po poprawce fazy przeniesień (osobna seria, na przemian) baza 126,5–138,7 s,
+kod 131,0–151,2 s (mediany 137,4 s i 143,0 s; rozrzut maszyny ok. ±12 s). Plik bez nowych przypadków i bez zmiany
+literałów; nowy plik testów chwili przypisania (ok. 10 s) biegnie osobno. Cel CI ok. 180 s nienaruszony.
+
+**Kontrola granicy obrazu sejfu.** Zmiany kodu poza blokiem P-DZIENNIK-ZDARZEN i poza fragmentem natywnym: dwie nowe
+funkcje czyste (`Bsw_chwilaPrzypisania`, `Bsw_przypisanie`), porównanie, łączenie w drogach zapisu, eksporty, importy,
+sprawdzenie w fazie przeniesień i komentarze; w bloku P-DZIENNIK-ZDARZEN wyłącznie kształt koperty (`Bev_POLA_WERSJI`,
+`Bev_wersja`) i reguła pola odsyłania (`Bev_ECHO_POMIJANE` w czterech porównaniach `Bev_echo`) z komentarzami.
+Fragment natywny i teksty 41 haków trwałych wizyt bajt w bajt (wstawki w eksportach stoją za końcem tekstów haków);
+zero nazw `Bem_`/`Bob_`/`Bev_` we fragmencie natywnym; bez nowych wywołań `Bem_`/`Bob_`. Przeliczone skróty: baza
+trwałych wizyt `8dc93f95…` i obraz `34270b17…` (`runtime/durable-visits-v1/manifest.json`, `tools/visits-vault-delta.mjs`,
+`tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `c3ccdcf2…`, `integratedVaultSHA256` `a77b7973…`
+i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0e2a w komentarzu); `fragmentSHA256` bez zmian.
+`node tools/visits-vault-delta.mjs` i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` bez
+zmian. Sejf się zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json`
+na `audyt`.
+
+**Ograniczenia.**
+- **Kosz i wskrzeszenie z cienia Kosza** pola nie przechowują — wersja stamtąd wraca do reguły dla danych bez pola,
+  wynik jak dziś (wyżej).
+- **Starsza aplikacja** (221, 276 i każde urządzenie sprzed tego wydania) gubi pole — powód dwóch wydań; po E3-PR0e2b
+  urządzenie, którego nie zaktualizowano, może zwrócić duplikat starej karty.
+- **Import karty z pliku** nad wersją leżącą tu pod inną kartą bierze chwilę z pliku (wyżej); istniejąca usterka tej
+  drogi — licznik i nagłówek karty, z której import zabiera wersję („Do akceptacji”, punkt 11).
+- **Karta scalona usunięta na tym urządzeniu** — chwila z ładunku nie trafia do kopii w starej karcie, jak dziś.
+- **Zła postać pola** liczy się jak brak; drogi, które przepisują cały rekord, zostawiłyby ją w rekordzie bez skutku
+  (sama aplikacja złej postaci nie zapisuje).
+- **Zegar**: chwile pochodzą z różnych urządzeń, jak w każdej regule „późniejsza zmiana” — znaczenie od E3-PR0e2b
+  (tam chwila nowego przypisania nie wcześniejsza niż poprzednia + 1 ms).
+- **Dowód braku pętli odsyłania przy zapisie pola** — przy E3-PR0e2b.
+- **Niestabilny e2e (istniejący)**: `tests/e2e/care-template-native-storage.spec.mjs`, „ordinary incoming sync cannot
+  delete or reassign a staged plan, its patient, reminder or referenced source” — przy dziesięciu powtórzeniach dwa
+  razy: 1 z 20 czerwonych na bazie i 2 z 20 na kodzie, za każdym razem inny wariant (skrót magazynu po odrzuconym
+  scaleniu, także w wariantach bez wersji) — niezwiązany z polem; w CI jedno ponowienie.
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla
+danych; dziś żadne z nich nie zmienia działania, bo pola nikt nie zapisuje). Rekomendacja przy każdym punkcie: przyjąć.
+1. **Klasyfikacja „Zmiana kliniczna: TAK — synchronizacja”.** Projekt proponował „NIE” (nikt nie zapisuje pola);
+   wybrane jak przy pierwszym wydaniu dowodu kroku planu (decyzja z 2026-11-17): to wydanie wprowadza zasadę, według
+   której — gdy pole jest — rozstrzyga się, do której karty należy wizyta, i rozszerza format danych.
+2. **Kosz nie przechowuje pola; „Przywróć” bierze je z wersji w karcie** (wyżej, przykład). Druga możliwość: nowy
+   składnik półkraty Kosza w tym PR — ok. 10 miejsc i ryzyko zmiany działania Kosza dziś; dopisanie później nie wymaga
+   dwóch wydań.
+3. **Samo pole nie powoduje odesłania.** Przykład (fikcyjny): komputer ma przy wizycie „przeniesiona o 8:01”, telefon
+   przysyła tę samą wizytę bez tej informacji (kopia sprzed scalenia) — komputer zostawia „8:01” u siebie i nie odsyła
+   wizyty. Informacja i tak dociera do wszystkich urządzeń z kopertami scalenia i z pełną synchronizacją.
+4. **Dwie kopie tej samej wizyty różniące się tylko polem — urządzenie zapisuje późniejsze.** Przykład (fikcyjny):
+   komputer i laptop przypadkiem scaliły te same karty o 8:01 i o 8:03 — po wymianie oba mają przy wizycie „8:03”.
+   Jedyny nowy zapis tej zmiany; bez niego dwa urządzenia mogłyby trwale różnić się polem i inaczej rozstrzygać
+   późniejszą poprawkę ze starej karty.
+5. **Faza przeniesień sprawdza też chwilę przypisania z chwili decyzji.** Przykład (fikcyjny, po E3-PR0e2b): wizyta
+   „Pacjenta Testowego 3” leży w karcie X; komputer dostaje z laptopa „przeniesiona do Y o 8:02” i postanawia ją
+   przenieść, a w tej samej chwili w drugiej karcie przeglądarki przychodzi z telefonu „przeniesiona do X o 8:03”. Bez
+   sprawdzenia wizyta lądowała w Y, a bez drugiej karty przeglądarki — w X; teraz zostaje w X z „8:03”, a następna
+   synchronizacja rozstrzyga zwykłą zasadą (laptop też przenosi ją do X). Nic nie ginie. Druga możliwość: zostawić to
+   do E3-PR0e2b.
+6. **Import pliku pacjenta bierze pole z pliku.** Przykład (fikcyjny): plik „Pacjent Testowy 1 (stara karta)” sprzed
+   scalenia, zaimportowany po scaleniu — wizyta z 3 marca wraca do starej karty bez „8:01” (jak dziś import przywraca
+   dawny stan); najbliższa synchronizacja przenosi ją z powrotem do karty scalonej, tak samo jak dziś.
+7. **Polityka prywatności bez zmiany tekstu** (wyżej). Dla pełnej jawności możliwe zdanie w opisie danych na urządzeniu
+   — tylko po akceptacji właściciela: „Przy każdej wersji wizyty aplikacja przechowuje na urządzeniu jawne chwile
+   techniczne (zapisu, poprawki i przeniesienia przez „Scal pacjentów”), powiązane wyłącznie z losowym identyfikatorem
+   rekordu; w kopii wysyłanej do serwera są one zaszyfrowane razem z wizytą.”
+8. **Pole w złej postaci = brak pola.** Przykład (fikcyjny): plik kopii z ręcznie zmienioną datą „3 marca” zamiast pełnej
+   chwili — aplikacja tę wartość pomija, wizyta zachowuje się jak dziś.
+9. **Karta scalona usunięta na tym urządzeniu.** Przykład (fikcyjny, po E3-PR0e2b): o 8:23 laptop scala starą kartę
+   „Pacjenta Testowego 2” z właściwą (wizyta z 5 maja: „przeniesiona o 8:23”); komputer jeszcze o tym nie wie i o 8:24
+   usuwa właściwą kartę („Usuń pacjenta”); synchronizacja z laptopa — komputer jak dziś odrzuca usuniętą kartę z jej
+   wizytami, a wizyta z 5 maja zostaje u niego w starej karcie, bez „8:23”. Dopisanie pola do kopii w starej karcie
+   dałoby jej pierwszeństwo, które jej nie przysługuje. W sprawdzeniu kompletności: ziarno 13 profilu pełnego (jedna
+   wizyta na trzech urządzeniach, oba stany przełącznika) i „dłuższa praca bez połączenia” z operacjami profilu
+   pełnego; do sprawdzenia przy E3-PR0e2b razem z E3-PR0e3 (decyzja 4 z 2026-11-23).
+10. **Wersja bez karty** (rzadki ślad po przerwanym zapisie, niewidoczny w żadnej karcie) — zastępowana wersją z
+    synchronizacji razem z jej polem, jak dziś cała wersja.
+11. **Osobne zadanie, poza tym PR: import pliku pacjenta nad wizytą z innej karty.** Import przenosi taką wizytę do
+    importowanej karty (punkt 6), ale nie poprawia licznika wizyt i nagłówka karty, z której ją zabiera, i nie bierze
+    jej blokady. Przykład (fikcyjny): „Pacjent Testowy 4” po scaleniu ma w karcie właściwej 3 wizyty, w tym wizytę
+    z 3 marca ze starej karty; po imporcie pliku starej karty sprzed scalenia wizyta wraca do starej karty, a karta
+    właściwa dalej pokazuje 3 wizyty, choć ma 2 — tak samo przed tym PR i po nim (sprawdzone na kopii). Propozycja:
+    poprawka importu (pod blokadą tamtej karty poprawić jej licznik i nagłówek albo pominąć taką wizytę, jak „Scal
+    kopię konta”); w tym PR nie, bo zmienia działanie importu dziś.
+12. **Ryzyko CI** — niestabilny, istniejący e2e („Ograniczenia”).
+13. **Warunek E3-PR0e2b:** potwierdzenie właściciela, że każde urządzenie (Ustawienia, linia „Wersja aplikacji”) ma
+    SW 1.1.577 albo wyższy.
+
+**Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
+- **E3-PR0e3** — bez zmian zakresu: zmiana wizyty po Koszu na innym urządzeniu wraca do karty wpisu po „Scal
+  pacjentów” (wpis pod żywą kartą) oraz wąski wyjątek wyroczni z decyzji 4 z 2026-11-23 (tylko w testach).
+- **E3-PR0e2b** — po E3-PR0e3 i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.577**
+  (to wydanie) albo wyższy:
+  - „Scal pacjentów” zapisuje pole w samej `Bsw_poScaleniu` (tekst haka trwałych wizyt bez zmian): chwila =
+    późniejsza z „teraz” i poprzedniej chwili tej wersji + 1 ms; w gałęzi następcy w fazie przeniesień — tak, żeby
+    wersja dostała to samo przypisanie co pozostałe wersje przeniesione tamtym scaleniem;
+  - decyzja, czy dopisać pole do wpisu Kosza; dowód braku pętli odsyłania przy zapisie pola z flotą 276;
+    przewidywane przeniesienia i odmowy strażnika natywnego przy planie z etapami dla wersji z polem — do akceptacji
+    jak zmiana odmów w 2c;
+  - z kopii z zapisem pola (bez literałów w repozytorium): blok znanych usterek — 3 czerwone bez przełącznika i 1 z nim
+    (baza 5 / 5); CI pliku A ≡ B — 10 i 48 czerwonych (baza 0 / 40) — literały katalogu Kosza rodziny E4b i światów 1030,
+    1031, które zmienią się przy zapisie pola; ziarno 22 profilu pełnego czerwone w obu stanach (baza zielone) —
+    mechanizm do prześledzenia przed PR; „dłuższa praca bez połączenia” z operacjami pełnymi 18 czerwonych (baza
+    z zapisem pola 17); flota 276 w profilu pełnym 4 / 3 (baza z zapisem pola 1 / 1);
+  - przy „Scal pacjentów” wersji odtworzonej bez pola nowa chwila bywa wcześniejsza niż chwila znana urządzeniu sprzed
+    usunięcia (zegary urządzeń w uprzęży są przesunięte) — razem z Koszem; karta scalona usunięta na tym urządzeniu
+    („Do akceptacji”, punkt 9); „Usuń pacjenta” właściwej karty przed dotarciem poprawki ze starej karty;
+  - wejścia z E3-PR0e1: E4b, „Usuń pacjenta” duplikatu (światy 881–884), „tylko lista usuniętych pacjentów”, „miejsce
+    wizyty po „Scal pacjentów”” po samych zdarzeniach, ziarno 38 profilu pełnego.
+- **E3-PR0f** — bez zmian zakresu (wizyta nieznana urządzeniu scalającemu i pozostałe wejścia z wpisu E3-PR0e1).
+- Osobne zadanie: import pliku pacjenta nad wizytą z innej karty („Do akceptacji”, punkt 11).
+
+**Cofnięcie** = rewert PR, bez migracji: w tym wydaniu żadne urządzenie pola nie zapisuje, więc w danych go nie ma;
+rewert cofa też skróty kontroli granicy. Po E3-PR0e2b cofnięcie tego wydania wymaga najpierw cofnięcia E3-PR0e2b
+(urządzenie z cofniętym wydaniem gubiłoby pole jak starsza aplikacja).
+
+**Gdzie w kodzie.** `vilda_vault.js`, poza blokiem P-DZIENNIK-ZDARZEN (6810–10459) i fragmentem natywnym (13454–14828):
+`Bsw_chwilaPrzypisania` i `Bsw_przypisanie` (3754–3774, nowe, z komentarzem), `Bsw_ladunekWygrywa` (3800–3814);
+łączenie — `Bsl_wersjaZLadunku` (3638–3646), `Bsw_rekordW3` (3925, 3932), `Bsw_rekord` (3966), `Bsw_odloz` (3984,
+3986), `Bgw_scal` (4042, 4053), `Bsl_scalPacjenta` (4142–4157: tutejszy rekord przyjmuje późniejsze pole i zapis samej
+chwili; 4165: zapis z ładunku), `Bkz_przywroc` (2669–2680), `Bzw_aktualizujWersje` (10460); sprawdzenie w fazie
+przeniesień — `Bsw_przenies` (4510–4514); eksporty i importy — 13141 (plik karty), 13155 (import karty, kopia konta,
+odtworzenie konta, „Scal kopię konta” ×2), 13168 (eksport pełny, delta karty); komentarze — nagłówek P-SYNC-WLASCICIEL
+(3682–3703), `Bsw_poScaleniu` (3708–3709), `Bsw_nowszyRekord` (3778–3780), `Bkz_nowszaWersja` (1460–1461), W3 między
+kartami (3878–3879), `Bgw_wskrzes` (2917–2918), `Bsw_rekordW3`, `Bsw_rekord`, `Bsw_odloz`, `Bgw_scal`, `Bsw_przenies`.
+W bloku P-DZIENNIK-ZDARZEN: `Bev_POLA_WERSJI` (6861–6863), komentarze `Bev_sprawdz` (6956–6957) i `Bev_karta`
+(7052–7053), `Bev_wersja` (7064), `Bev_ECHO_POMIJANE` (7617–7624), `Bev_echo` (komentarz 7713–7714; porównania 7740,
+7742, 7746, 7754). Strażnik natywny (14520) bez zmian — woła `Bsw_ladunekWygrywa`. Bez zmian: `Bsw_poScaleniu` (kod),
+`Bsc0`, `Bpz_zapisWSesji`, wpisy Kosza (`Bkz_doKosza`, półkrata `Bpk_*`, `Bkz_eksport`, `Bev_wpisKosza`,
+`Bev_POLA_KOSZA`), `Bgw_wskrzes` (kod), `Bev_kartaPoprawna`, fragment trwałych wizyt, `vilda_sync.js`,
+`vilda_sync_integration.js`.
+
+**Wersje.** `vilda_vault.js` 285 → 286, `vilda_chrome.js` 322 → 323 i `vilda_session_bridge.js` 238 → 239 (wstrzykują
+sejf), SW 1.1.576 → 1.1.577 — `npm run podbij-wersje`; baza `origin/audyt` `d6f133eb` (po vildaclinic/vilda-calc#1045).
+SW 1.1.577 to numer, który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b. Bez nowego pliku w pamięci
+offline.

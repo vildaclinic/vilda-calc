@@ -50,6 +50,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // z nową wizytą po scaleniu, późniejszy tutejszy nagrobek, błąd usunięcia karty, „zabierz”) i strażnik źródła importu;
 // na a7b2920b czerwone 9. Strażnik źródła fazy przeniesień przepisany razem z kodem (dotąd przypinał brak zapisu
 // nagrobka w Bsw_poOddaniu).
+// Od E3-PR0e2a (decyzja 3 właściciela z 2026-11-23) liczba testów bez zmian: strażnik źródła „zabierz” przepisany razem
+// z kodem — w Bsl_scalPacjenta 6 zapisów wersji (szósty: sama późniejsza chwila przypisania wersji tej samej karty).
+// Przypadki chwili przypisania wersji do karty — tests/unit/sync-chwila-przypisania.test.mjs.
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
