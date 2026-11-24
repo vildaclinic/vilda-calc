@@ -425,6 +425,8 @@ html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"]:has(#vh
   .vgs-office .vgs-appointment .vgs-reason { grid-column: 2 / -1; }
   .vgs-office .vgs-appointment > button { grid-row: 1; }
   .vgs-office .vgs-appointment .vgs-hour { align-self: start; padding-top: .72rem; }
+}
+@container vgs-office (max-width: 420px) {
   .vgs-office .vgs-appointment .vgs-name { font-size: .9375rem; }
 }
 @container vgs-office (max-width: 315px) {
@@ -432,6 +434,6 @@ html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"]:has(#vh
     grid-template-columns: 2.8rem minmax(0,1fr);
     grid-template-areas: 'time person' '. reason' '. action';
   }
-  .vgs-office .vgs-appointment > button { grid-row: 3; margin-top: .2rem; }
+  .vgs-office .vgs-appointment > button { grid-row: 3; justify-self: start; margin-top: .2rem; }
   .vgs-office .vgs-appointment .vgs-hour { padding-top: .125rem; }
 }

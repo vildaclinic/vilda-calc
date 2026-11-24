@@ -379,6 +379,7 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
     await search.fill('');
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
   const bell = page.locator('#vildaRemindersBtn');
   await bell.click();
   const remindersDialog = page.getByRole('dialog', { name: 'Przypomnienia', exact: true });
@@ -402,6 +403,7 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   expect(await breadcrumbPosition(patientCrumb)).toEqual(before);
 
   await page.setViewportSize({ width:390, height:844 });
+  await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
   const phone = await breadcrumbPosition(patientCrumb);
   await patientCrumb.getByRole('button').click();
   await expect(officeCrumb).toBeVisible();
