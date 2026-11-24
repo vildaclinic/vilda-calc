@@ -1,0 +1,33 @@
+ICD-10 — polska wersja językowa Centrum e-Zdrowia
+
+Źródło: Centrum e-Zdrowia / Centrum Systemów Informacyjnych Ochrony Zdrowia;
+klasyfikacja Światowej Organizacji Zdrowia (WHO).
+„Rejestr Systemów Kodowania”, dane.gov.pl, zasób 55725:
+https://dane.gov.pl/pl/dataset/27/resource/55725
+
+Polska wersja ICD-10-2008-PL, stan danych na 31.03.2021.
+Pozyskano 18.11.2026. Jest to przypięta wersja historyczna.
+
+Licencja danych: Creative Commons Uznanie autorstwa 4.0 Międzynarodowa
+(CC BY 4.0): https://creativecommons.org/licenses/by/4.0/
+
+Przetworzenie: konwersja oficjalnego XML do katalogu wyszukiwania,
+strukturalne rozwinięcie względnych końcówek kodów oraz oddzielenie
+identyfikatorów grup i dodatkowych podziałów od kodów kategorii.
+Zachowano źródłowe nazwy i oznaczenia klasyfikacyjne † oraz *.
+Kategoria nadrzędna jest osobną informacją. Nie dodano synonimów klinicznych
+ani indeksu wyłączeń.
+
+Prawa do polskiego wydania: © Centrum Systemów Informacyjnych Ochrony Zdrowia
+2012; oryginał angielski: © WHO 2009. Strona redakcyjna tomu I, wydanie 2008:
+https://ezdrowie.gov.pl/pobierz/icd_10_tom_i
+
+Warunki WHO dotyczące klasyfikacji:
+https://www.who.int/about/policies/publishing/copyright
+Polski zbiór CeZ ma własną, jawną licencję CC BY 4.0 opisaną powyżej.
+Użycie danych nie oznacza poparcia aplikacji przez WHO, CeZ ani CSIOZ.
+Licencja danych nie określa licencji kodu aplikacji.
+
+Katalog obejmuje kody i nazwy kategorii oraz podkategorii. Nie jest kompletnym
+indeksem alfabetycznym ani narzędziem rozstrzygającym zasady kodowania.
+Pełne uwagi i dodatkowe podziały zachowano w archiwum źródłowego XML.

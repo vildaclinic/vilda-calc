@@ -277,7 +277,8 @@ test.describe('Karta pacjenta — karta leczenia otyłości z przełącznikiem (
     await paski(page).nth(1).click(); // GH — drugi
     await expect(aktywna(page)).toHaveText('Leczenie');
     const bloki = await tresc(page, 'leczenie').evaluate((t) => [...t.children].map((c) => c.firstElementChild && c.firstElementChild.className));
-    expect(bloki).toEqual(['vilda-gh-summary vilda-ko-karta', 'vilda-gh-summary vilda-kg-karta']); // etap 3: GH — karta GH (dotąd 'vilda-gh-summary')
+    // P-ROZPOZNANIA, rata 1: pierwszym blokiem zakładki jest sekcja rozpoznań (jej pierwsze dziecko to nagłówek sekcji).
+    expect(bloki).toEqual(['vilda-kr-naglowek', 'vilda-gh-summary vilda-ko-karta', 'vilda-gh-summary vilda-kg-karta']); // etap 3: GH — karta GH (dotąd 'vilda-gh-summary')
     await expect(tresc(page, 'leczenie').locator('.vilda-gha-btn')).toHaveCount(0); // etap 3: bez belki GH (dotąd 1)
     await widokKarty(page, 'analiza').click();
     await paski(page).first().click(); // pasek leczenia: zakładka i przewinięcie, bez zmiany widoku karty

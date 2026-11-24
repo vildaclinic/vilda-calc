@@ -3,6 +3,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { extname, posix } from 'node:path';
 // P-NOTATKI rata 3 (G30): dane testowe nie mogą brzmieć jak prawdziwy pacjent.
 import { znajdzNaruszenia as naruszeniaNazwisk } from './regula-nazwisk-testowych.mjs';
+import { readPinnedReferenceArchive } from './pinned-reference-archive.mjs';
 
 const repositoryFiles = execFileSync(
   'git',
@@ -13,8 +14,9 @@ const repositoryFiles = execFileSync(
   },
 )
   .split('\0')
-  .filter(Boolean)
-  .map((file) => file.replaceAll('\\', '/'));
+  // Git emits repository-relative POSIX paths. Preserve literal backslashes
+  // in Unix filenames: normalizing them could alias the exact source pin.
+  .filter(Boolean);
 
 const forbiddenPathRules = [
   {
@@ -135,14 +137,18 @@ function hasValidPesel(content) {
 }
 
 for (const file of repositoryFiles) {
+  let referenceText;
+  try { referenceText = readPinnedReferenceArchive(file); }
+  catch (error) { violations.push(`${file}: ${error.message}`); continue; }
   for (const rule of forbiddenPathRules) {
+    if (referenceText !== null && rule.label === 'lokalna kopia lub archiwum') continue;
     if (rule.matches(file)) {
       violations.push(`${file}: ${rule.label}`);
       break;
     }
   }
 
-  if (!textExtensions.has(extname(file).toLowerCase())) continue;
+  if (referenceText === null && !textExtensions.has(extname(file).toLowerCase())) continue;
 
   let size;
   try {
@@ -153,12 +159,14 @@ for (const file of repositoryFiles) {
   }
 
   // Duży plik tekstowy nie może po cichu ominąć skanu treści.
-  if (size > 8 * 1024 * 1024) {
+  // The one pinned primary source has already passed BOTH exact byte/hash
+  // checks and bounded decompression. Its entire 12.7 MB XML is scanned below.
+  if (referenceText === null && size > 8 * 1024 * 1024) {
     violations.push(`${file}: plik tekstowy przekracza limit skanu 8 MiB`);
     continue;
   }
 
-  const content = readFileSync(file, 'utf8');
+  const content = referenceText === null ? readFileSync(file, 'utf8') : referenceText;
   if (hasValidPesel(content)) violations.push(`${file}: wykryto numer o poprawnej sumie PESEL`);
   for (const [label, pattern] of secretRules) {
     if (pattern.test(content)) violations.push(`${file}: wykryto ${label}`);

@@ -48101,3 +48101,81 @@ składa wersję z listy pól, więc pola nie pokazuje; bez nowych zapisów rekor
 ważne, czerwone na bazie powtórzone na `ac0869f2` (te same 51 + 2 + 1, wszystkie na asercji), a skróty kontroli granicy
 przeliczone dla sejfu po scaleniu. SW 1.1.586 to numer, który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b.
 Bez nowego pliku w pamięci offline.
+
+## P-ROZPOZNANIA, rata 1 — rozpoznania pacjenta w Karcie: zapis w sejfie, katalog ICD-10 i sekcja w zakładce „Leczenie” (SW 1.1.587, `vilda_vault.js` 288, `vilda_auth_ui.js` 584, `vilda_auth_ui.css` 92, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu — nowe pole dokumentacji.** Żadnego wzoru, progu, normy, jednostki ani interpretacji.
+Aplikacja nie wyprowadza rozpoznania z BMI, leku, programu GH ani notatek i nie nadaje kodu sama: rozpoznanie, jego kod,
+stan i datę wpisuje lekarz. Obliczenia GH, otyłości, siatek, list pacjentów i statystyk są bez zmian. Zmienia się wygląd
+Karty: zakładka „Leczenie” jest u każdego pacjenta (dotąd tylko przy leczeniu GH albo otyłości). Pasek zakładek ma więc
+zawsze siedem pozycji: przy szerokim oknie (1440 px) w jednym rzędzie, przy węższym (1100 px, kolumna Karty 675 px) w dwóch
+— tak jak dotąd u pacjentów leczonych (P-KARTA-LECZENIE); etykiety nie są ucinane.
+
+**Decyzja właściciela.** 2026-11-24: rozpoznanie ma pasować i do bieżącej aplikacji, i do nowej strony głównej (gałąź
+`agent/nowa-strona-glowna`, zaakceptowany tam wariant B1). Po analizie: „ok, rób teraz dwa PR-y” — ten (zapis, katalog,
+sekcja w dotychczasowej Karcie) i następny (statystyki według rozpoznania). Epizody leczenia zostają w nowej Karcie.
+
+**Jeden zapis w obu Kartach.** Rozpoznanie jest osobną notatką pacjenta kategorii `treatment` z zaszyfrowanym
+`treatmentContext` (wersja 1): `kind: 'diagnosis'`, `name` (obowiązkowa, do 200 znaków), `code` (opcjonalny, do 24
+znaków), `codingSystem: 'ICD-10'`, `status` (`active` albo `closed`), `dateISO` (obowiązkowa). Pacjent może mieć kilka
+rozpoznań; nie ma rozpoznania „głównego”. Tytuł i treść notatki są czytelnym opisem („Rozpoznanie · …”, „ICD-10: …”),
+więc wpis jest widoczny w „Notatkach”, „Historii” i wyszukiwaniu. Model, magazyn i transport (odczyt, import, kopia,
+synchronizacja, scalenie pacjentów) przeniesione bez zmian z gałęzi strony głównej — pełny kontrakt:
+[PATIENT_TREATMENT.md](../PATIENT_TREATMENT.md).
+
+**Katalog ICD-10.** Polski zbiór Centrum e-Zdrowia (Rejestr Systemów Kodowania, zasób 55725, ICD-10-2008-PL), **stan na
+31.03.2021**, 12 010 kodów, licencja CC BY 4.0; źródło, skróty, licencja i ograniczenia: [ICD10_CATALOGUE.md](ICD10_CATALOGUE.md).
+To wydanie historyczne — data jest widoczna przy polu. Brak kodu w katalogu nie oznacza kodu błędnego: lekarz może jawnie
+zatwierdzić własny wpis jako kod ręczny albo zapisać rozpoznanie bez kodu. Wyszukiwanie ignoruje wielkość liter i polskie
+znaki, a zapis bez kropki (`e660`) odnajduje `E66.0`. Wybór pozycji uzupełnia pustą nazwę nazwą z katalogu; własnej nazwy
+lekarza nie nadpisuje. Tekst wyszukiwania nie jest zapisywany i nie opuszcza urządzenia.
+
+**Sekcja w Karcie.** Zakładka „Leczenie” zaczyna się blokiem „Rozpoznania pacjenta”: lista (kod — nazwa, stan, data, od
+najnowszej daty), „Dodaj rozpoznanie”, „Edytuj”. Formularz: nazwa, kod (podpowiedzi z katalogu, najwyżej 12 naraz),
+stan, data (domyślnie dziś). Nierozstrzygnięte wyszukiwanie blokuje zapis. Usunąć rozpoznanie można w „Notatkach”
+(„Usuń”), jak każdą notatkę; „Edytuj” przy takim wpisie otwiera formularz rozpoznania, a nie edytor tekstu. Inne zapisy
+leczenia (epizody z nowej Karty) są w tej Karcie tylko do odczytu.
+
+**Przypadek syntetyczny (dane fikcyjne).** Pacjent „Fikcyjny Bez Leczenia”, 24.11.2026: w formularzu wpisane `e660` →
+pierwsza podpowiedź „E66.0 — Otyłość spowodowana nadmierną podażą energii”, kategoria „E66 — Otyłość”; wybór uzupełnia
+nazwę; zapis daje notatkę `tmt-<uuid>` kategorii `treatment`, tytuł „Rozpoznanie · Otyłość spowodowana nadmierną podażą
+energii”, treść „ICD-10: E66.0 / Stan rozpoznania: aktywne / Data rozpoznania: 2026-11-24” i kontekst
+`{ schemaVersion: 1, kind: 'diagnosis', name: 'Otyłość spowodowana nadmierną podażą energii', code: 'E66.0',
+codingSystem: 'ICD-10', status: 'active', dateISO: '2026-11-24' }`. Lista pokazuje „E66.0 — Otyłość spowodowana nadmierną
+podażą energii · Aktywne rozpoznanie · 24.11.2026”. Edycja na „Zamknięte” z datą 15.01.2024 zmienia ten sam zapis
+(kolejna rewizja), a lista pokazuje „Rozpoznanie zamknięte · 15.01.2024”.
+
+**Prywatność i cykl życia danych.** Rozpoznanie jest daną medyczną: nazwa, kod, stan i data są wyłącznie w zaszyfrowanej
+treści notatki; jawna koperta niesie tylko to, co każda notatka (kategoria, identyfikatory, chwile zmiany). Nic nie trafia
+do `localStorage`, `sessionStorage`, adresu strony, dziennika błędów ani poza urządzenie; synchronizacja i kopie
+przenoszą zapis istniejącą, szyfrowaną drogą notatek. Formularz znika przy zablokowaniu sejfu, a lista jest częścią Karty
+i znika razem z nią.
+
+**Sejf.** Nowa, odwracalna warstwa `VILDA PATIENT TREATMENT V1` (osiemnaście punktów włączenia, czytelne źródła
+`runtime/patient-treatment-v1/`), nałożona na cały dotychczasowy sejf. Dotychczasowe straże zdejmują ją jako pierwszą,
+więc siedem przypiętych skrótów (trwałe wizyty, blok natywny) się nie zmienia, a **obraz bazy dla `vilda-source` zostaje
+ten sam**. Nowe przypięcia: `baseVaultSHA256` `3bebcc8e…`, `integratedVaultSHA256` `4f625ec4…` w
+`runtime/patient-treatment-v1/manifest.json` i `BASE` w `tools/patient-treatment-vault-delta.mjs`. **Sejf ma nową
+warstwę — po następnym bloku natywnym z `vilda-source` trzeba ją nałożyć ponownie
+(`node tools/patient-treatment-vault-delta.mjs --rebuild`).** Opis łatek: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-ROZPOZNANIA, rata 1”.
+
+**Zgodność z gałęzią strony głównej.** Źródła modelu, magazynu i fragmentu sejfu są w stanie z commita `20a9b1b7`
+(sama warstwa leczenia); katalog ICD-10, wyszukiwarka, kontrolka, generator, źródło i ich testy — bez zmian. Tamta gałąź
+ma te same osiemnaście punktów włączenia i dokłada do nich dokumentację wizyt; przy jej aktualizacji z `audyt` warstwę
+z `audyt` zastępuje jej własna, szersza. Starsza wersja aplikacji, która dostanie z synchronizacji nowszy zapis leczenia,
+pokazuje go tylko do odczytu.
+
+**Strażnicy.** Z gałęzi strony głównej, bez zmian: `patient-treatment-model` (14), `patient-treatment-vault` (13, prawdziwy
+sejf: zapis, konflikt rewizji, nieobsługiwana wersja, synchronizacja, kopia, import, scalenie), `patient-treatment-vault-boundary`
+(2), `icd10-catalogue` (5, katalog odtworzony bajt w bajt ze źródła), `icd10-search`, `icd10-picker`,
+`pinned-reference-archive`. Nowe: `tests/e2e/karta-rozpoznania.spec.mjs` (6: pacjent bez leczenia i kształt zapisu;
+edycja, kod ręczny, nierozstrzygnięte wyszukiwanie, niezapisane zmiany; „Notatki” — edycja i usunięcie; pacjent leczony;
+brak katalogu i blokada sejfu; telefon) i `tests/e2e/karta-rozpoznania-offline.spec.mjs` (pierwsze otwarcie formularza po
+zimnym starcie bez sieci — katalog z pamięci service workera). Zmienione oczekiwania (zakładka „Leczenie” u każdego,
+sekcja rozpoznań jako pierwszy blok): `karta-leczenie.spec.mjs` KL-4, `karta-leczenie-mobile.spec.mjs`,
+`karta-leczenie-etap2.spec.mjs` KO-9, `karta-leczenie-etap3.spec.mjs` KG-5, `lab-historia-zakladka.spec.mjs` (siedem zakładek;
+przy oknie 1100 px dwa rzędy, przy 1440 px jeden — jak dotąd u pacjentów leczonych). Straże sejfu:
+`visits-vault-boundary`, `klirens-ktv-vault-boundary`, `klirens-existing-note-update-vault` czytają sejf po zdjęciu warstwy.
+
+**Wersje.** `vilda_vault.js` 287 → 288, `vilda_auth_ui.js` 583 → 584, `vilda_auth_ui.css` 91 → 92, wstrzykujące `vilda_chrome.js` 331 → 332 i `vilda_session_bridge.js` 247 → 248, nowe `vilda_icd10_pl_data.js` 1, `vilda_icd10_search.js` 1, `vilda_icd10_picker.js` 1; SW 1.1.586 → 1.1.587 — `npm run podbij-wersje`. Pamięć offline: trzy pliki katalogu w paczce interfejsu wizyt (jedno
+żądanie instalacji, jak dotąd; paczka 30 kB → 971 kB), liczba żądań instalacji bez zmian (600).

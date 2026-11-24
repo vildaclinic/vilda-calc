@@ -34,7 +34,8 @@ function worker({ scope = '/', response, failPut = () => false } = {}) {
   return { api, cache, requests, writes, installUI };
 }
 
-describe('three independent visit UI resources in one verified transport', () => {
+// P-ROZPOZNANIA, rata 1: the three ICD-10 catalogue files travel in the same archive (still one install request).
+describe('six independent visit UI and ICD-10 catalogue resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);

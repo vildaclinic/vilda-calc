@@ -1,4 +1,4 @@
-// Package transport only: the three authoritative files keep independent,
+// Package transport only: the visit UI and ICD-10 catalogue files keep independent,
 // versioned URLs and exact original UTF-8 bytes in Cache Storage.
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -6,7 +6,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const FILES = ['vilda_visit_context.js', 'vilda_visit_history_ui.js', 'vilda_visit_history_ui.css'];
+const FILES = ['vilda_visit_context.js', 'vilda_visit_history_ui.js', 'vilda_visit_history_ui.css',
+  'vilda_icd10_pl_data.js', 'vilda_icd10_search.js', 'vilda_icd10_picker.js'];
 const MANIFEST = 'runtime/visit-ui-precache/manifest.json';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 function fail(message) { throw new Error('Visit UI precache: ' + message); }
@@ -66,5 +67,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const args = process.argv.slice(2);
   if (args.length > 1 || args.length && args[0] !== '--write') fail('usage: node tools/build-visit-ui-precache.mjs [--write]');
   const built = args.length ? writeVisitUIPrecache() : verifyVisitUIPrecache();
-  process.stdout.write('Visit UI precache: 3 independent URLs, 1 verified request (' + built.manifest.pack.byteLength + ' bytes).\n');
+  process.stdout.write('Visit UI precache: ' + built.manifest.files.length + ' independent URLs, 1 verified request (' + built.manifest.pack.byteLength + ' bytes).\n');
 }

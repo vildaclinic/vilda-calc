@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.586';
+const SW_VERSION = '1.1.587';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1949,6 +1949,9 @@ const CORE_SHELL_URLS = [
   '/vilda_visit_context.js?v=1',
   '/vilda_visit_history_ui.js?v=1',
   '/vilda_visit_history_ui.css?v=1',
+  '/vilda_icd10_pl_data.js?v=1',
+  '/vilda_icd10_search.js?v=1',
+  '/vilda_icd10_picker.js?v=1',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
   '/vilda_chrome.js?v=11',
@@ -2269,6 +2272,7 @@ const CORE_SHELL_URLS = [
   '/vilda_chrome.js?v=329',
   '/vilda_chrome.js?v=330',
   '/vilda_chrome.js?v=331',
+  '/vilda_chrome.js?v=332',
   '/vilda_realtime.js?v=1',
   '/vilda_realtime.js?v=2',
   '/vilda_realtime.js?v=3',
@@ -2567,6 +2571,7 @@ const CORE_SHELL_URLS = [
   '/vilda_auth_ui.css?v=89',
   '/vilda_auth_ui.css?v=90',
   '/vilda_auth_ui.css?v=91',
+  '/vilda_auth_ui.css?v=92',
   '/vilda_urodzeniowe_rozbieznosc.css?v=1',
   '/vilda_file_export.js',
   '/vilda_file_export.js?v=4',
@@ -3172,6 +3177,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_vault.js?v=285',
   '/vilda_vault.js?v=286',
   '/vilda_vault.js?v=287',
+  '/vilda_vault.js?v=288',
   '/vilda_auth_ui.js?v=535',
   '/vilda_auth_ui.js?v=536',
   '/vilda_auth_ui.js?v=537',
@@ -3221,6 +3227,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_auth_ui.js?v=581',
   '/vilda_auth_ui.js?v=582',
   '/vilda_auth_ui.js?v=583',
+  '/vilda_auth_ui.js?v=584',
   '/vilda_session_bridge.js?v=148',
   '/vilda_session_bridge.js?v=149',
   '/vilda_session_bridge.js?v=150',
@@ -3321,6 +3328,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_session_bridge.js?v=245',
   '/vilda_session_bridge.js?v=246',
   '/vilda_session_bridge.js?v=247',
+  '/vilda_session_bridge.js?v=248',
   '/vilda_sync.js?v=48',
   '/vilda_sync.js?v=49',
   '/vilda_sync.js?v=50',
@@ -6974,8 +6982,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-f8becd2f7467.json",
-  "sha256": "f8becd2f746786cfcfee0c3b70ee2991072b54633de16cb6d9dae95cfe37df35",
+  "url": "/runtime/visit-ui-precache/precache-63f051a1a9db.json",
+  "sha256": "63f051a1a9db3a1f011b23ce8fbb9bb5f61271ff32722d62754762e0742c2fe2",
   "files": [
     {
       "url": "/vilda_visit_context.js?v=1",
@@ -6988,6 +6996,18 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     {
       "url": "/vilda_visit_history_ui.css?v=1",
       "sha256": "97ee23baf0a0f1e35ab2aa2cdbce998a7633a916e08b09d96e6fa5810e67d3f8"
+    },
+    {
+      "url": "/vilda_icd10_pl_data.js?v=1",
+      "sha256": "34d1a50e1b3c3cbf1272b6bff2b240ed640abb5778eb2ec4ffc8695beff8eb50"
+    },
+    {
+      "url": "/vilda_icd10_search.js?v=1",
+      "sha256": "cd85613a0f94a64bbae44d75f1d29d42fa73a81d2b0f69886fa2c6069bafe11c"
+    },
+    {
+      "url": "/vilda_icd10_picker.js?v=1",
+      "sha256": "c8a08858d131d26903f4c1b8b278b522aa4c526e4ace825d310b359dec3d0c93"
     }
   ]
 });
@@ -7108,6 +7128,9 @@ function createVisitUIPrecacheState(config = VISIT_UI_PRECACHE_PACK) {
     ['/vilda_visit_context.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.js', 'text/javascript; charset=utf-8'],
     ['/vilda_visit_history_ui.css', 'text/css; charset=utf-8'],
+    ['/vilda_icd10_pl_data.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_icd10_search.js', 'text/javascript; charset=utf-8'],
+    ['/vilda_icd10_picker.js', 'text/javascript; charset=utf-8'],
   ]);
   if (!config || !Array.isArray(config.files) || config.files.length !== types.size
     || !/^[a-f0-9]{64}$/.test(config.sha256)

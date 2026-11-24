@@ -15,11 +15,28 @@ subject to its own license and copyright notice. Full license texts are in the
 | `qrcode.min.js` | [QRCode.js](https://github.com/davidshimjs/qrcodejs) | — | `MIT` | Sangmin Shim (davidshimjs) |
 | `jspdf.umd.min.js` | [jsPDF](https://github.com/parallax/jsPDF) | 2.5.1 | `MIT` | 2010–2021 James Hall; 2015–2021 yWorks GmbH |
 | `html2canvas.min.js` | [html2canvas](https://github.com/niklasvh/html2canvas) | 1.4.1 | `MIT` | 2012 Niklas von Hertzen |
+| `vilda_icd10_pl_data.js`, `tools/icd10-pl-source/source.xml.gz` | [ICD-10 PL / Centrum e-Zdrowia](https://dane.gov.pl/pl/dataset/27/resource/55725) | 31.03.2021 | `CC-BY-4.0` (CeZ dataset) | CSIOZ 2012; original classification WHO 2009 |
 
 A dash in the *Version* column means the bundled build carries no version
 string; the component was identified from its upstream source.
 
 ---
+
+## ICD-10 PL — CeZ dataset, CC BY 4.0
+
+The Polish ICD-10 catalogue is the historical CeZ release dated 31 March 2021,
+retrieved on 18 November 2026 from resource 55725 in the official Rejestr
+Systemów Kodowania dataset. The dataset's explicit CC BY 4.0 terms require
+attribution and the data date. License text: [CC-BY-4.0](LICENSES/CC-BY-4.0.txt).
+
+The XML is converted into searchable code/title tuples, relative code suffixes
+are structurally resolved, and grouping/subdivision tokens are kept separate
+from selectable codes. Original titles and dagger/asterisk markers are retained.
+No clinical synonyms are added. See the [distribution notice](runtime/icd10-pl-v1/NOTICE.txt)
+for full attribution, source, dates and processing, and the
+[source and licensing evidence](docs/clinical/ICD10_CATALOGUE.md) for the
+Polish translation rights and WHO classification policy. Use does not imply
+endorsement by WHO, CeZ or CSIOZ. These data are not licensed under Apache-2.0.
 
 ## pdfmake — MIT
 
