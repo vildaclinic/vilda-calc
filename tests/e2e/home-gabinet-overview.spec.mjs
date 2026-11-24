@@ -343,6 +343,10 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
     // The shell updates the embedded document's host mode asynchronously.
     if (width >= 992) await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
     else await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
+    await expect.poll(() => frame.locator('#gbWorkspaceHeader').evaluate(node => {
+      const reserved = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gb-workspace-header-height'));
+      return Math.round(reserved * 100) === Math.round(node.getBoundingClientRect().height * 100);
+    })).toBe(true);
     await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await expect.poll(() => list.evaluate(node => {
       const button = node.getBoundingClientRect(), field = node.parentElement.querySelector('.vgs-search-field').getBoundingClientRect();
@@ -385,6 +389,7 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   const edges = await horizontalEdges(grid);
 
   await reminder.click();
+  await expect(frame.locator('#vhomePatientOverview .vhome-native-patient-card')).toBeVisible({ timeout: 15_000 });
   await expect(frame.locator('#vhomePatientOverview #remindersInline [aria-current="true"]')).toContainText(reminderTitle);
   expect(await breadcrumbPosition(patientCrumb)).toEqual(before);
   expect(await horizontalEdges(frame.locator('#vhomePatientOverview'))).toEqual(edges);
@@ -392,6 +397,7 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   await patientCrumb.getByRole('button').click();
   await expect(plan).toBeVisible();
   await plan.click();
+  await expect(frame.locator('#vhomePatientOverview .vhome-native-patient-card')).toBeVisible({ timeout: 15_000 });
   await expect(frame.locator('#vhomePatientOverview .vcp-detail .vcp-title')).toHaveText(planTitle);
   expect(await breadcrumbPosition(patientCrumb)).toEqual(before);
 
