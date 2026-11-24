@@ -737,3 +737,128 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
     text-align: left;
   }
 }
+
+/* P-BAZA-GRUPY (makieta statystyk; decyzja właściciela 2026-11-24: „praca nad grupami pacjentów z makiety”).
+   Pasek filtrów zakresu nad statystykami (zwykłe pola wyboru) oraz praca z grupą na liście: formularz
+   „Zapisz jako listę” i komunikat w pasku grupy. */
+.pt-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-10px) var(--space-12px);
+}
+
+.pt-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4px);
+  min-width: 0;
+}
+
+.pt-filter-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* Ramkę, zaokrąglenie i tło pola wyboru daje skórka szkła (wspólna reguła pól formularza) — tu tylko wymiary i pismo. */
+.pt-filter-select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-8px) var(--space-12px);
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 16px;
+  text-overflow: ellipsis;
+}
+
+.pt-filter-select.on {
+  border-color: var(--primary);
+  background-color: #eef8f8;
+  font-weight: 600;
+}
+
+.pt-filter-select:disabled {
+  opacity: var(--opacity-disabled-label);
+}
+
+.pt-filters-note {
+  margin: 0;
+}
+
+.pt-group-form {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-10px);
+  margin: 0;
+}
+
+.pt-group-field {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: var(--space-4px);
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pt-group-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-8px) var(--space-12px);
+  border: var(--border-hairline) solid #cfe0e2;
+  border-radius: var(--radius-8);
+  background: #fff;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: 16px;
+}
+
+.pt-group-result {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-10px);
+}
+
+.pt-group-note {
+  flex: 1 1 240px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.pt-group-note--error {
+  color: var(--danger-strong);
+}
+
+@media (max-width: 900px) {
+  .pt-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Na telefonie opis grupy ma własny wiersz, a przyciski układają się pod nim po dwa — inaczej opis ściskał się
+   obok przycisków do wąskiej kolumny. */
+@media (max-width: 640px) {
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-groupbar .lt {
+    flex: 1 1 100%;
+  }
+
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-groupbar > button {
+    flex: 1 1 calc(50% - var(--space-12px));
+  }
+
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-group-result > button {
+    flex: 1 1 100%;
+  }
+}
