@@ -138,13 +138,17 @@ test('liczenie przyrostowe: nowy wpis między wizytami i nowa wersja karty czyta
   const { frame, database, ids } = await przygotujStatystyki(page);
   await frame.evaluate(() => {
     const vault = window.VildaVault, newest = vault.getNewestSnapshot, category = vault.listPatientNotesByCategory, perPatient = vault.listPatientNotesForPatient;
-    window.__statKarty = []; window.__statWpisy = 0; window.__statNotatkiPacjenta = 0;
+    window.__statKarty = []; window.__statWpisy = 0; window.__statRozpoznania = 0; window.__statNotatkiPacjenta = 0;
     vault.getNewestSnapshot = function (...args) { window.__statKarty.push(args[0]); return newest.apply(this, args); };
-    vault.listPatientNotesByCategory = function (...args) { window.__statWpisy += 1; return category.apply(this, args); };
+    // P-ROZPOZNANIA, rata 2: ten sam odczyt (inna kategoria) daje rozpoznania — liczony osobno.
+    vault.listPatientNotesByCategory = function (...args) {
+      if (args[0] === 'treatment') window.__statRozpoznania += 1; else window.__statWpisy += 1;
+      return category.apply(this, args);
+    };
     vault.listPatientNotesForPatient = function (...args) { window.__statNotatkiPacjenta += 1; return perPatient.apply(this, args); };
   });
   const E = OCZEKIWANE.otylosc, ob = database.locator('.pt-ob');
-  const stan = () => frame.evaluate(() => ({ karty: window.__statKarty.slice(), wpisy: window.__statWpisy, notatkiPacjenta: window.__statNotatkiPacjenta }));
+  const stan = () => frame.evaluate(() => ({ karty: window.__statKarty.slice(), wpisy: window.__statWpisy, rozpoznania: window.__statRozpoznania, notatkiPacjenta: window.__statNotatkiPacjenta }));
   const gotowe = async () => { await expect(database.locator('.pt-stat-cardsbar')).toContainText('Karty policzone o'); await expect(database.locator('.pt-stat-check')).toBeEnabled(); };
 
   await otworzStatystyki(database);
@@ -153,6 +157,7 @@ test('liczenie przyrostowe: nowy wpis między wizytami i nowa wersja karty czyta
   let s1 = await stan();
   expect(s1.karty.slice().sort(), 'pierwsze wejście: każda karta raz').toEqual(Object.values(ids).filter((id) => id !== ids.spoza).sort());
   expect(s1.wpisy, 'wpisy między wizytami: jeden odczyt dla całej bazy').toBe(1);
+  expect(s1.rozpoznania, 'rozpoznania: jeden odczyt dla całej bazy').toBe(1);
   expect(s1.notatkiPacjenta, 'bez odczytu notatek przy każdym pacjencie').toBe(0);
 
   // Ponowne wejście: jeden odczyt wpisów, żadnej karty.
@@ -162,6 +167,7 @@ test('liczenie przyrostowe: nowy wpis między wizytami i nowa wersja karty czyta
   let s2 = await stan();
   expect(s2.karty).toHaveLength(8);
   expect(s2.wpisy).toBe(2);
+  expect(s2.rozpoznania).toBe(2);
 
   // Leczenie rozpoczęte wyłącznie wpisami między wizytami (karta c nie ma punktów otyłości w zapisie wizyty):
   // karta się nie zmienia, a statystyki i tak muszą to zobaczyć — i przeczytać ponownie tylko tę kartę.
