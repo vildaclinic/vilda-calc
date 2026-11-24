@@ -1,7 +1,8 @@
 // Licznik odsyłania (E3-PR0b, tests/support/licznik-odsylania.mjs): przypadki na syntetycznych trójkach (przed, po,
 // ładunek) — warstwy echa, reguły pola (T domyślna, A i B diagnostyczne), klasy, przydział, usunięcia, żądania jak
 // Bob_wez, strony, bajty realne, budżet minuty slotu, echo na klonach na kluczach E, strażnik pól zawsze obecnych
-// i odcisk zgodny z sejfem. Dane wyłącznie fikcyjne („Ala”, masy umowne).
+// i odcisk zgodny z sejfem; od E3-PR0e2a kanon wersji warstwy po2a bez rev i bez pól POLA_POMIJANE (chwila przypisania
+// wersji do karty, jak Bev_ECHO_POMIJANE sejfu). Dane wyłącznie fikcyjne („Ala”, masy umowne).
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -297,6 +298,19 @@ describe('licznik odsyłania: model odsyłania poprawionych wizyt (E3-PR0c) i wa
     const m = LO.modelEcha(przed, po, zdarzenie(P));
     expect(m.spoza.map((r) => r.k)).toEqual(['snap:P/x']);
     expect([...LO.kandydaciEcha(P)].sort()).toEqual(['v', 'y']);
+  });
+  it('chwila przypisania wersji do karty pomijana jak rev (E3-PR0e2a): sama różnica pola wobec ładunku albo stanu przed → surowe 1, po2a 0, model odsyłania pusto; pole i treść inne niż w ładunku → wiersz', () => {
+    expect(LO.POLA_POMIJANE.snap, 'lista pól pomijanych wersji').toEqual(['assignedAtISO']);
+    const przed = lad({ patients: [karta('P', [wersja('v', { assignedAtISO: T2, payload: { user: { weight: 30 } } })])] });
+    const P = { patients: [karta('P', [wersja('v', { rev: 2, updatedAtISO: T1, assignedAtISO: T1, payload: { user: { weight: 40 } } })])] };
+    const po = lad({ patients: [karta('P', [wersja('v', { rev: 2, updatedAtISO: T1, assignedAtISO: T2, payload: { user: { weight: 40 } } })])] });
+    expect(warstwy(echo(przed, po, P)), 'treść z ładunku, tutejsza późniejsza chwila przypisania').toEqual({ surowe: 1, po2a: 0, wykA: 0, wykB: 0, wykT: 0 });
+    expect(LO.modelEcha(przed, po, zdarzenie(P)).wiersze, 'model odsyłania').toEqual([]);
+    const bezPola = lad({ patients: [karta('P', [wersja('v')])] });
+    const tylkoPo = lad({ patients: [karta('P', [wersja('v', { assignedAtISO: T2 })])] });
+    expect(warstwy(echo(bezPola, tylkoPo, bezPola)), 'chwila przypisania tylko po scaleniu').toEqual({ surowe: 1, po2a: 0, wykA: 0, wykB: 0, wykT: 0 });
+    const inna = lad({ patients: [karta('P', [wersja('v', { rev: 3, updatedAtISO: T1, assignedAtISO: T2, payload: { user: { weight: 41 } } })])] });
+    expect(warstwy(echo(przed, inna, P)), 'pole i treść inne').toEqual({ surowe: 1, po2a: 1, wykA: 1, wykB: 1, wykT: 1 });
   });
   it('sam rev i tożsamość wizyty dopisana przez bieżącą wersję → pusto (warstwa wykonalna reguły pola)', () => {
     const przed = lad({ patients: [karta('P', [wersja('v')])] });

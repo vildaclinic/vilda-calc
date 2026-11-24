@@ -10,7 +10,8 @@
 //   ze starszej aplikacji wraca bez końca (rekord zapisany jeszcze raz w tej samej postaci nie jest echem).
 //   Warstwy (od najszerszej):
 //     surowe   — każda encja z E;
-//     po2a     — kanon decyzji 2a (PD-17): snap bez rev (R2); wpis Kosza bez opisu D7 (rev, updatedAtISO, zmianaISO,
+//     po2a     — kanon decyzji 2a (PD-17): snap bez rev (R2) i bez pól POLA_POMIJANE (od E3-PR0e2a chwila przypisania
+//                wersji do karty — pomijana jak rev, stała Bev_ECHO_POMIJANE sejfu); wpis Kosza bez opisu D7 (rev, updatedAtISO, zmianaISO,
 //                koszISO, revPary) i bez postaci gwiazdki w treści (payload._pinned, payload._pinnedState — R4n);
 //                nagrobki bez rev. Encja równa w kanonie stanowi przed albo ładunkowi — bez echa;
 //     wyk      — warstwa WYKONALNA: po2a bez encji z ładunku, których różnicę wobec P[k] tłumi reguła pola (REGULY;
@@ -63,7 +64,7 @@
 //
 // EKSPORTY
 //   LIMITY, EID_ZNAKOW, SZKIELET_CIALA, NAD_KOPERTA, TRESC_REALNA, BEZ_TRESCI_BAJTOW, MAKS_OBIEGOW, RODZAJE, ZRODLA,
-//   WARSTWY, POLA_D7, POSTAC_GWIAZDKI, POLA_221, POLA_ZAWSZE, POLA_KANDYDACI, REGULY.
+//   WARSTWY, POLA_D7, POSTAC_GWIAZDKI, POLA_221, POLA_ZAWSZE, POLA_KANDYDACI, POLA_POMIJANE, REGULY.
 //   kanon2a(kind, v), kanon221(kind, v), odcisk(tresc), roznicePol(x, y), wPolach(s, pola), bezIdentyfikatorow(s),
 //   rodzajEncji(kind), chwilaEncji(kind, e), trescWizyt(kind, e), klasaEcha(...), przydzial(r), kluczLiteralu(zrodlo, r).
 //   echoScalenia(przed, po, ladunek, { z221, rekordZlozony, klucze }) → wiersze z flagami warstw (po2a, wykA, wykB,
@@ -141,6 +142,11 @@ export const POLA_221 = Object.freeze({
 export const POLA_ZAWSZE = Object.freeze({ snap: Object.freeze(['payload.visit']), stomb: Object.freeze(['visitIdentity', 'payload.visit']) });
 // Kandydaci do POLA_ZAWSZE: strażnik liczy ich osobno; pole wchodzi do reguły dopiero przy 0 encji bez pola.
 export const POLA_KANDYDACI = Object.freeze({ stomb: Object.freeze(['visitCipher']) });
+// E3-PR0e2a (P-SYNC-WLASCICIEL): pola wersji pomijane w porównaniach odsyłania jak rev — chwila przypisania wersji do
+// karty (assignedAtISO). Samo pole nie wywołuje odesłania: zbieżność daje łączenie „późniejsza z obu” przy każdym zapisie
+// rekordu wersji. Ta sama lista co stała Bev_ECHO_POMIJANE części Bev_ sejfu (strażnik w tests/unit/sync-odsylanie.test.mjs).
+// Bez pola w danych kanon jest taki sam jak dotąd.
+export const POLA_POMIJANE = Object.freeze({ snap: Object.freeze(['assignedAtISO']) });
 
 const obiekt = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const bez = (o, pola) => { if (!obiekt(o)) return o; const x = { ...o }; for (const p of pola) delete x[p]; return x; };
@@ -159,7 +165,7 @@ export const rodzajEncji = (kind) => (RODZAJE.includes(kind) ? kind : 'inne');
 
 // Kanon decyzji 2a (warstwa po2a). Wartość: obiekt encji (JSON.parse(val)).
 export function kanon2a(kind, v) {
-  if (kind === 'snap') return bez(v, ['rev']);
+  if (kind === 'snap') return bez(v, ['rev', ...POLA_POMIJANE.snap]);
   // E3-PR0b2b (P-NOTATKA-POZNIEJSZA): scalenie, w którym zostaje tutejsza treść notatki, zapisuje sam rev = najwyższy
   // z obu wersji; ta różnica nie jest zmianą dla lekarza i nie jest odsyłana (jak R2 wersji, decyzja 2a) — klasa
   // „sam rev notatki” (echoScalenia).

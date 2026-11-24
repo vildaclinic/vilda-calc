@@ -176,6 +176,20 @@
 //        odczytu kart (czerwony na bazie);
 //   przełącznik wyłączony przy kopertach ukrytego wpisu — jak sejf bez odsyłania; zamknięta bramka i „Komputer
 //        w pracy” (zielony z natury).
+// PRZYPADKI E3-PR0e2a (P-SYNC-WLASCICIEL, chwila przypisania wersji do karty — pole rekordu wersji assignedAtISO,
+// w tym wydaniu nikt go nie zapisuje; tu wstawione wprost do rekordu w bazie atrapy IndexedDB, jak od urządzenia, które je
+// zapisuje): pole pomijane we wszystkich porównaniach odsyłania wersji, jak rev — sama chwila przypisania nie wywołuje
+// odesłania:
+//   stała pól pomijanych w części Bev_ = POLA_POMIJANE.snap licznika odsyłania (czerwony na bazie);
+//   ta sama treść, chwila przypisania tylko w kopercie, tylko tutaj albo różna po obu stronach — 0 wierszy, bez
+//        odszyfrowania w porównaniu (zielony z natury: na bazie koperta pola nie niesie);
+//   treść z koperty nowsza, tutejsza chwila przypisania późniejsza; tutejsza treść wygrywa chwilą, koperta z wyższym rev
+//        i późniejszą chwilą przypisania (zapis samego rev) — 0 wierszy, jak bez pola (zielony z natury);
+//   wymiana kopert różniących się chwilą przypisania w obie strony (oba okna z odsyłaniem) — bez wierszy odsyłania na obu,
+//        treść zbieżna (zielony z natury);
+//   „Scal pacjentów” przy otwartej bramce z chwilą przypisania przeniesionej wersji — w kolejce te same wiersze co bez niej
+//        (przeniesione wersje, nowa głowa, nagrobek karty źródłowej z kartą docelową), koperty wersji i nagrobka niosą tę
+//        chwilę (czerwony na bazie — builder koperty gubi pole).
 // Kopia sejfu tylko w tym pliku (busy, apply-error i błąd odczytu stanu): wstawka na początku Bkz_scalKoniec (faza Kosza,
 // po zapisie wersji w Le), na początku Le albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd
 // z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza wymaga limitu blokady; strażnik osiągalności: Le
@@ -188,7 +202,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SKRYPTY_PUNKTU, oknoMagazynu, przechwycZadaniaWTle } from '../support/okno-magazynu.mjs';
 import { naglowek, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { ZRODLO_SEJFU, bezOdsylania, licznikEmisji } from '../support/sejf-bez-wstawek.mjs';
-import { POLA_D7, POLA_ZAWSZE, POSTAC_GWIAZDKI, STALE_WYGRYWA, WYGRYWA_Z_SEJFU, odcisk, stalaZKodu } from '../support/licznik-odsylania.mjs';
+import { POLA_D7, POLA_POMIJANE, POLA_ZAWSZE, POSTAC_GWIAZDKI, STALE_WYGRYWA, WYGRYWA_Z_SEJFU, odcisk, stalaZKodu } from '../support/licznik-odsylania.mjs';
 
 const START = Date.parse('2026-03-02T08:00:00.000Z');
 const MIN = 60_000;
@@ -3213,3 +3227,157 @@ const RETENCJA_UKRYTEGO = {
   'karta usunięta': { przyciete: ['v'], status: 'applied', stan: { kartaP: false, vWKarcie: false, kosz: [{ karta: 'P', masa: null, gwiazdka: false, tresc: false }] }, wiersze: [['stomb', 'v', 'pending']], tresc: [{ karta: 'P', masa: null, gwiazdka: false, tresc: false }] },
   'karta żywa': { przyciete: ['v'], status: 'applied', stan: { kartaP: true, vWKarcie: true, kosz: [{ karta: 'P', masa: null, gwiazdka: true, tresc: false }] }, wiersze: [['stomb', 'v', 'pending']], tresc: [{ karta: 'P', masa: null, gwiazdka: true, tresc: false }] },
 };
+
+// ── chwila przypisania wersji do karty (E3-PR0e2a) — sama nie wywołuje odesłania ─────────────────────────────────────
+// Rekord wersji z chwilą przypisania (jak od urządzenia, które ją zapisuje): pole wprost w rekordzie bazy atrapy
+// IndexedDB okna (undefined — bez pola); wartość pola w rekordzie.
+function wSklepieWersji(o, tryb, f) {
+  return new Promise((ok, zle) => {
+    const r = o.idb.open(bazaSejfu(o));
+    r.onerror = () => zle(r.error);
+    r.onsuccess = () => {
+      const db = r.result;
+      const tx = db.transaction('snapshots', tryb);
+      let w;
+      f(tx.objectStore('snapshots'), (x) => { w = x; });
+      tx.oncomplete = () => { db.close(); ok(w); };
+      tx.onabort = tx.onerror = () => { db.close(); zle(tx.error); };
+    };
+  });
+}
+const PRZYPISANIE = 'assignedAtISO';
+const wstawPrzypisanie = (o, sid, wartosc) => wSklepieWersji(o, 'readwrite', (s) => {
+  const g = s.get(sid);
+  g.onsuccess = () => { const n = { ...g.result }; if (wartosc === undefined) delete n[PRZYPISANIE]; else n[PRZYPISANIE] = wartosc; s.put(n); };
+});
+const przypisanie = (o, sid) => wSklepieWersji(o, 'readonly', (s, daj) => {
+  const g = s.get(sid);
+  g.onsuccess = () => daj(g.result && PRZYPISANIE in g.result ? g.result[PRZYPISANIE] : null);
+});
+const PRZYPISANIE_WCZESNIEJ = '2026-03-02T09:30:00.000Z', PRZYPISANIE_POZNIEJ = '2026-03-02T09:40:00.000Z';
+
+describe('chwila przypisania wersji do karty (E3-PR0e2a) — sama nie wywołuje odesłania', () => {
+  it('stała pól pomijanych w odsyłaniu w części Bev_ równa liście pól pomijanych licznika odsyłania (rodzaj snap)', () => {
+    const m = ZRODLO_SEJFU.match(/const Bev_ECHO_POMIJANE = Object\.freeze\((\[[^\]]*\])\);/);
+    expect(m, 'stała Bev_ECHO_POMIJANE w sejfie').toBeTruthy();
+    expect(JSON.parse(m[1].replace(/'/g, '"'))).toEqual([...POLA_POMIJANE.snap]);
+  });
+
+  const UKLADY = [['tylko w kopercie', undefined, PRZYPISANIE_WCZESNIEJ], ['tylko tutaj', PRZYPISANIE_WCZESNIEJ, undefined], ['różna po obu stronach, późniejsza w kopercie', PRZYPISANIE_WCZESNIEJ, PRZYPISANIE_POZNIEJ], ['różna po obu stronach, późniejsza tutaj', PRZYPISANIE_POZNIEJ, PRZYPISANIE_WCZESNIEJ]];
+  for (const [nazwa, tu, wKopercie] of UKLADY) {
+    it(`ta sama treść, chwila przypisania ${nazwa} — 0 wierszy odsyłania, bez odszyfrowania w porównaniu`, async () => {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const k = await karta(o, 1, [20]);
+      const v = k.w[0];
+      await o.gotowe();
+      const B = await blizniak(o);
+      if (wKopercie) await wstawPrzypisanie(B, v, wKopercie);
+      const kB = await kopertaSnap(B, k.P, v);
+      if (tu) await wstawPrzypisanie(o, v, tu);
+      const przed = await stanWersji(o, k.P, v);
+      const s0 = ostatni(o);
+      const n = odszWersji(o);
+      expect((await zastosuj(o, kB.env)).status).toBe('applied');
+      expect(await stanWersji(o, k.P, v), 'kontrola: treść i rev bez zmian').toEqual(przed);
+      expect(wierszeOd(o, s0).map(opis), 'wiersze echa').toEqual([]);
+      expect(n.ile, 'bez odszyfrowania w porównaniu').toBe(0);
+    }, CZAS);
+  }
+
+  it('treść z koperty nowsza, a tutejsza chwila przypisania późniejsza — 0 wierszy, jak bez pola; tutejsza treść wygrywa chwilą, a koperta niesie wyższy rev i późniejszą chwilę przypisania (zapis samego rev) — 0 wierszy, jak bez pola', async () => {
+    const wynik = {};
+    for (const [nazwa, kopertaNowsza] of [['treść z koperty', true], ['treść tutejsza', false]]) {
+      for (const zPolem of [false, true]) {
+        naStart();
+        const o = await okno({ bramka: true, echo: true });
+        await o.zaloguj('A');
+        const k = await karta(o, 1, [20]);
+        const v = k.w[0];
+        await o.gotowe();
+        const B = await blizniak(o);
+        tik(MIN);
+        // tutejsza treść wygrywa chwilą, koperta ma wyższy rev (dwie poprawki B) — zapis samego rev, jak w przypadku „sam rev”
+        if (kopertaNowsza) { await popraw(o, k.P, v, 18); tik(MIN); await popraw(B, k.P, v, 17.2); } else { await popraw(B, k.P, v, 18); await popraw(B, k.P, v, 19); tik(MIN); await popraw(o, k.P, v, 23); }
+        if (zPolem) { await wstawPrzypisanie(B, v, kopertaNowsza ? PRZYPISANIE_WCZESNIEJ : PRZYPISANIE_POZNIEJ); await wstawPrzypisanie(o, v, kopertaNowsza ? PRZYPISANIE_POZNIEJ : PRZYPISANIE_WCZESNIEJ); }
+        const kB = await kopertaSnap(B, k.P, v);
+        await o.gotowe();
+        const s0 = ostatni(o);
+        expect((await zastosuj(o, kB.env)).status).toBe('applied');
+        wynik[`${nazwa}${zPolem ? ', z chwilą przypisania' : ''}`] = { wiersze: wierszeOd(o, s0).map((w) => w.kind), masa: (await stanWersji(o, k.P, v)).masa };
+      }
+    }
+    expect(wynik).toEqual({
+      'treść z koperty': { wiersze: [], masa: 17.2 }, 'treść z koperty, z chwilą przypisania': { wiersze: [], masa: 17.2 },
+      'treść tutejsza': { wiersze: [], masa: 23 }, 'treść tutejsza, z chwilą przypisania': { wiersze: [], masa: 23 },
+    });
+  }, 4 * CZAS);
+
+  it('brak pętli: wymiana kopert różniących się chwilą przypisania w obie strony (oba okna z odsyłaniem) — bez wierszy odsyłania na obu, treść zbieżna', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const k = await karta(o, 1, [20]);
+    const v = k.w[0];
+    await o.gotowe();
+    const B = await blizniak(o, { emisja: true, echo: true });
+    tik(MIN);
+    await popraw(B, k.P, v, 17.2);
+    await wstawPrzypisanie(B, v, PRZYPISANIE_WCZESNIEJ);
+    await wstawPrzypisanie(o, v, PRZYPISANIE_POZNIEJ);
+    await B.gotowe();
+    const a0 = ostatni(o), b0 = ostatni(B);
+    for (let i = 0; i < 2; i += 1) {
+      expect((await zastosuj(o, (await kopertaSnap(B, k.P, v)).env)).status).toBe('applied');
+      expect((await zastosuj(B, (await kopertaSnap(o, k.P, v)).env)).status).toBe('applied');
+    }
+    const sA = await stanWersji(o, k.P, v), sB = await stanWersji(B, k.P, v);
+    expect({ A: wierszeOd(o, a0).map(opis), B: wierszeOd(B, b0).map(opis) }, 'wiersze odsyłania').toEqual({ A: [], B: [] });
+    // zbieżność samej chwili przypisania (późniejsza z obu przy każdym zapisie) — tests/unit/sync-chwila-przypisania.test.mjs
+    expect([sA.masa, sB.masa, sA.rev === sB.rev], 'treść zbieżna').toEqual([17.2, 17.2, true]);
+  }, 2 * CZAS);
+});
+
+// ── chwila przypisania wersji do karty (E3-PR0e2a) — kolejka po „Scal pacjentów” ─────────────────────────────────────
+// Koperty „Scal pacjentów” powstają w łańcuchu emisji; builder z polem spoza listy pól koperty rzuciłby
+// EVENT_ENVELOPE_INVALID, a emiter zgubiłby wiersz po cichu. Ten sam przebieg z chwilą przypisania przeniesionej wersji
+// i bez niej (ten sam zegar od początku).
+describe('chwila przypisania wersji do karty (E3-PR0e2a) — kolejka po „Scal pacjentów”', () => {
+  it('„Scal pacjentów” przy otwartej bramce, przeniesiona wersja z chwilą przypisania: w kolejce te same wiersze co bez niej (przeniesione wersje, nowa głowa i nagrobek karty źródłowej z kartą docelową), a koperty przeniesionej wersji i nagrobka niosą tę chwilę', async () => {
+    const przebieg = async (zPolem) => {
+      naStart();
+      const o = await okno({ bramka: true });
+      await o.zaloguj('A');
+      const X = await karta(o, 1, [20, 21]);
+      const Y = await karta(o, 2, [30]);
+      const v = X.w[0];
+      await o.gotowe();
+      if (zPolem) await wstawPrzypisanie(o, v, PRZYPISANIE_WCZESNIEJ);
+      const s0 = ostatni(o);
+      tik(MIN);
+      const r = await o.v.mergePatients(X.P, Y.P);
+      tik();
+      await o.gotowe();
+      const et = { [X.P]: 'X', [Y.P]: 'Y', [v]: 'v', [X.w[1]]: 'x2', [r.snapshotId]: 'głowa' };
+      const wiersze = wierszeOd(o, s0);
+      const pola = [];
+      for (const w of wiersze) {
+        const k = await odszyfruj(o, w.env);
+        for (const p of k.patients || []) for (const s of p.snapshots || []) if (s.snapshotId === v) pola.push([w.kind, s[PRZYPISANIE] || null]);
+      }
+      return {
+        wiersze: wiersze.map((w) => [w.kind, String(w.entityKey).split('/').map((x) => et[x] || '?').join('/'), w.state]).sort(),
+        pola: pola.sort(), pole: await przypisanie(o, v),
+      };
+    };
+    const bez = await przebieg(false);
+    const z = await przebieg(true);
+    expect(bez.wiersze, 'kontrola: wiersze „Scal pacjentów” bez chwili przypisania').toEqual([
+      ['ptomb', 'X', 'pending'], ['snap', 'Y/głowa', 'pending'], ['snap', 'Y/v', 'pending'], ['snap', 'Y/x2', 'pending'],
+    ]);
+    expect(z.wiersze, 'te same wiersze z chwilą przypisania').toEqual(bez.wiersze);
+    expect({ pole: z.pole, pola: z.pola }, 'chwila przypisania w rekordzie i w kopertach przeniesionej wersji i nagrobka').toEqual({
+      pole: PRZYPISANIE_WCZESNIEJ, pola: [['ptomb', PRZYPISANIE_WCZESNIEJ], ['snap', PRZYPISANIE_WCZESNIEJ]],
+    });
+    expect(bez.pola, 'kontrola: bez chwili przypisania koperty bez niej').toEqual([['ptomb', null], ['snap', null]]);
+  }, 2 * CZAS);
+});
