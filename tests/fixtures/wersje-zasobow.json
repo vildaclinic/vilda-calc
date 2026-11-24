@@ -1292,8 +1292,8 @@
   "sha256": "68774729f33fe105e654d3490e4470aca49974fa6bb82c55add8ac33b98adb6a"
  },
  "vilda_chrome.js": {
-  "v": 332,
-  "sha256": "060b8f8683e5dec271df80d74de9a2e4aa3bd7db2d35eced58f87c4981e027c4"
+  "v": 333,
+  "sha256": "5a38156f4a728ea697ebe8239a26e2a245b8a41e5f27f94adca9985629062483"
  },
  "vilda_clinical_crypto.js": {
   "v": 2,
@@ -1592,8 +1592,8 @@
   "sha256": "e726b634ebbf79d73be158e38f3adddb8f29ee34270598833cf4e30cb8087256"
  },
  "vilda_home_gabinet.js": {
-  "v": 16,
-  "sha256": "dce1a11613c047d770a20b189a9c900470923202723e48d18e5a29a0b66d7d91"
+  "v": 17,
+  "sha256": "1ef1180eb887dd5deebb6aa327b72c7c4262641c25319e4cc9085dffc33e2732"
  },
  "vilda_home_gabinet_quick.js": {
   "v": 1,
@@ -2004,12 +2004,12 @@
   "sha256": "6c6301404ebc85daac4eafee80d5089bc048f5a67a1471b98f4263d8f3d90e16"
  },
  "vilda_patient_treatment_ui.css": {
-  "v": 1,
-  "sha256": "190ab193df13c34e6d64d05523ebea26c9dc612c6ce00ba03ca1b960f5e6d90b"
+  "v": 2,
+  "sha256": "cde83b4036c94e3f98e220762a2646b41e593871069c1b7f84445862dd2bdfa7"
  },
  "vilda_patient_treatment_ui.js": {
-  "v": 4,
-  "sha256": "a38bb8ffc775199b116c7723855cc57b84ace19e35f3184b65d26ea2816d1188"
+  "v": 5,
+  "sha256": "9a10dca6550851005701af92aef7a429c85c631a3d7c9678177fdf95bb128765"
  },
  "vilda_patients_list.css": {
   "v": 10,
@@ -2188,8 +2188,8 @@
   "sha256": "59dfe0d72f1c56950e8bfa44036bd1d02bf6a6aea16ce6e77a2644921e1e45cf"
  },
  "vilda_session_bridge.js": {
-  "v": 248,
-  "sha256": "8e37e8ab0e4adc42dfd35973cf906ffdcba9d0bcd4f2f57e598b213706229d8e"
+  "v": 249,
+  "sha256": "4f20088052b5848e95fdbf152a1d944673a1fec13b6267eabec7be7a9bf11b74"
  },
  "vilda_sga_birth_results.css": {
   "v": 1,
@@ -2288,8 +2288,8 @@
   "sha256": "59ee39776162dde3f0f8beb5d779ae68323128e2d7bd4c4fa21ce897f56f942e"
  },
  "vilda_vault.js": {
-  "v": 289,
-  "sha256": "e64bcc70d51fe290c4301db52207782c695f2502df6946f8be75c4d456457198"
+  "v": 290,
+  "sha256": "907660eb896d9c22677bcb9e5ddfaee1170ad333b5a1bb6b3307827fa8f7f44d"
  },
  "vilda_vault_protocol.js": {
   "v": 1,

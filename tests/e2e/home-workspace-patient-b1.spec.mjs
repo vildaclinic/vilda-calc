@@ -285,6 +285,82 @@ test('B1 Leczenie: independent manual diagnoses, multiple therapies and completi
   await expect(frame.locator(TREATMENT)).toContainText('I10'); await expect(frame.locator(TREATMENT)).toContainText('Fikcyjne rozpoznanie bez kodu');
 });
 
+test('B1 diagnosis deletion: patient-chart editors confirm removal, preserve independent documentation and do not restore it after F5', async ({ page }) => {
+  const { frame, id, ids } = await setup(page);
+  await frame.evaluate(patientId => window.VildaVault.savePatientNote({ patientId, category: 'observation',
+    title: 'Fikcyjna niezależna notatka przy usuwaniu rozpoznania', body: 'Fikcyjny wywiad pozostaje bez zmian.' }), id);
+  const otherBefore = await records(frame, ids.b), clinicalBefore = await clinical(frame);
+  await openTreatment(frame);
+  const editor = frame.locator(EDITOR);
+  const remove = editor.getByRole('button', { name: 'Usuń rozpoznanie', exact: true });
+  const targetName = 'Fikcyjne rozpoznanie przeznaczone do usunięcia';
+  await frame.locator(`${TREATMENT} [data-treatment-action="new-diagnosis"]`).click();
+  await expect(editor).toBeVisible();
+  await expect(editor.getByText('Zapis w kartotece pacjenta', { exact: true })).toBeVisible();
+  await expect(remove).toBeHidden();
+  await editor.locator('[name="name"]').fill(targetName);
+  await editor.locator('[name="dateISO"]').fill('2026-09-15');
+  await saveEditor(frame);
+  await createDiagnosis(frame, { name: 'Fikcyjne inne rozpoznanie zachowane w kartotece' });
+  const diagnoses = (await treatmentState(frame, id)).diagnoses;
+  const target = diagnoses.find(entry => entry.context.name === targetName);
+  expect(target).toBeDefined();
+  const independent = diagnoses.find(entry => entry.id !== target.id);
+  expect(independent).toBeDefined();
+  expect(diagnoses).toHaveLength(2);
+  expect(diagnoses.every(entry => entry.baseNote.visitContext == null)).toBe(true);
+  await createEpisode(frame, { title: 'Fikcyjny osobny epizod leczenia', diagnosisIds: [independent.id], method: 'other' });
+  const treatmentBefore = await treatmentState(frame, id), before = await records(frame, id);
+  expect(treatmentBefore.episodes).toHaveLength(1);
+  expect(treatmentBefore.episodes[0].context.diagnosisIds).toEqual([independent.id]);
+  expect(treatmentBefore.episodes[0].baseNote.visitContext ?? null).toBeNull();
+  expect(await clinical(frame)).toEqual(clinicalBefore);
+  const targetRow = frame.locator(`${TREATMENT} [data-treatment-diagnosis-id="${target.id}"]`);
+  await targetRow.getByRole('button', { name: 'Edytuj', exact: true }).click();
+  await expect(editor).toBeVisible();
+  await expect(editor.getByText('Zapis w kartotece pacjenta', { exact: true })).toBeVisible();
+  await expect(remove).toBeEnabled();
+  const confirmRemoval = accept => page.waitForEvent('dialog').then(async confirmation => {
+    const type = confirmation.type(), message = confirmation.message();
+    if (accept) await confirmation.accept(); else await confirmation.dismiss();
+    expect(type).toBe('confirm'); expect(message).toMatch(/rozpoznani/i);
+  });
+  await Promise.all([confirmRemoval(false), remove.click()]);
+  await expect(editor).toBeVisible();
+  await expect(editor.locator('[name="name"]')).toHaveValue(targetName);
+  await expect(targetRow).toHaveCount(1);
+  expect(await records(frame, id)).toEqual(before);
+  expect(await clinical(frame)).toEqual(clinicalBefore);
+
+  await Promise.all([confirmRemoval(true), remove.click()]);
+  await expect(editor).toBeHidden();
+  await expect(targetRow).toHaveCount(0);
+  const after = await records(frame, id), remaining = await treatmentState(frame, id);
+  expect(after.patient.snapshots).toEqual(before.patient.snapshots);
+  expect(after.patient.profile).toEqual(before.patient.profile);
+  expect(after.notes).toEqual(before.notes.filter(note => note.id !== target.id));
+  expect(after.plans).toEqual(before.plans);
+  expect(remaining.diagnoses).toEqual([independent]);
+  expect(remaining.episodes).toEqual(treatmentBefore.episodes);
+  expect(await clinical(frame)).toEqual(clinicalBefore);
+  expect(await records(frame, ids.b)).toEqual(otherBefore);
+
+  await closeCard(frame);
+  await page.reload({ waitUntil: 'load' });
+  await readyForPatient(frame); await settled(frame);
+  await openTreatment(frame);
+  await expect(frame.locator(`${TREATMENT} [data-treatment-diagnosis-id="${target.id}"]`)).toHaveCount(0);
+  await expect(frame.locator(`${TREATMENT} [data-treatment-diagnosis-id="${independent.id}"]`)).toBeVisible();
+  const restored = await treatmentState(frame, id), restoredRecords = await records(frame, id);
+  expect(restored.diagnoses).toEqual([independent]);
+  expect(restored.episodes).toEqual(treatmentBefore.episodes);
+  expect(restoredRecords.patient.snapshots).toEqual(before.patient.snapshots);
+  expect(restoredRecords.patient.profile).toEqual(before.patient.profile);
+  expect(restoredRecords.notes).toEqual(after.notes);
+  expect(restoredRecords.plans).toEqual(before.plans);
+  expect(await records(frame, ids.b)).toEqual(otherBefore);
+});
+
 test('B1 treatment editors: typing, a real sync refresh and Cancel preserve the draft and main clinical session', async ({ page }) => {
   const { frame, id } = await setup(page);
   const background = await frame.evaluate(async patientId => {

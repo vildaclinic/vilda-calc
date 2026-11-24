@@ -850,14 +850,28 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
     const foreign = window.VildaPatientTreatmentStore.createScope({vault, patientId:ids.b, isCurrent:()=>true});
     await foreign.createEpisode({title:treatment.foreign, method:'other', status:'active'});foreign.dispose();
   }, { ids, notes, treatment });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 320, height: 844 });
   await choosePatient(frame, 'Antoni');
   const header = frame.locator('#vhomeGabinetHeader');
   const context = header.locator('.gb-visit-context');
   const options = header.getByRole('button', { name: 'Opcje', exact: true });
   const newVisit = header.getByRole('button', { name: 'Nowa wizyta', exact: true });
-  await expect(context).toContainText('Dane z wizyty 17.06.2026');
-  await expect(context.getByText('Tylko odczyt', { exact: true })).toBeVisible();
+  await expect(context.locator('.gb-visit-source time')).toHaveText('17.06.2026');
+  await expect(context.locator('.gb-visit-source time')).toHaveAttribute('datetime', '2026-06-17');
+  await expect(context.locator('[data-state-label]')).toBeHidden();
+  const readOnly = context.locator('.gb-readonly-badge');
+  await expect(readOnly).toHaveText('Dane wizyty · tylko odczyt');
+  await expect(readOnly).toBeVisible();
+  const narrowBadge = await readOnly.evaluate(node => {
+    const bounds = node.getBoundingClientRect();
+    return { left: bounds.left, right: bounds.right, viewport: innerWidth,
+      content: node.scrollWidth, width: node.clientWidth };
+  });
+  expect(narrowBadge.left).toBeGreaterThanOrEqual(0);
+  expect(narrowBadge.right).toBeLessThanOrEqual(narrowBadge.viewport + 1);
+  expect(narrowBadge.content).toBeLessThanOrEqual(narrowBadge.width + 1);
+  expect(await frame.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 390, height: 844 });
   const [optionsBox, newVisitBox] = await Promise.all([options.boundingBox(), newVisit.boundingBox()]);
   expect(optionsBox.width).toBeCloseTo(newVisitBox.width, 0);
   expect(optionsBox.height).toBeCloseTo(newVisitBox.height, 0);
@@ -868,6 +882,8 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await expect(options).toBeFocused();
   await newVisit.click();
   await expect(header.getByRole('button', { name: 'Zapisz wizytę' })).toBeVisible();
+  await expect(readOnly).toBeHidden();
+  await expect(context.locator('[data-state-label]')).toHaveText('Nowa wizyta');
   const analysis = header.getByRole('tab', { name: 'Analiza', exact: true });
   await analysis.click();
   await frame.locator('#height').fill('159');
@@ -1045,6 +1061,59 @@ test('a new note in Overview keeps the active encounter and an independent clini
   }});
 });
 
+test('a visit diagnosis shows its destination and can be removed only from its own open visit', async ({ page }) => {
+  const { frame, ids } = await prepare(page);
+  await choosePatient(frame, 'Antoni');
+  const header = frame.locator('#vhomeGabinetHeader');
+  const card = frame.locator('#vhomePatientOverview');
+  const editor = frame.locator('#vhomePatientTreatmentDialog');
+  const treatment = card.getByRole('tab', { name: 'Leczenie', exact: true });
+  const name = 'Fikcyjne rozpoznanie powiązane z wizytą';
+  const diagnosis = () => frame.evaluate(async ({ patientId, name }) =>
+    (await window.VildaVault.listPatientNotesForPatient(patientId))
+      .find(note => note.treatmentContext?.kind === 'diagnosis' && note.treatmentContext.name === name) || null,
+  { patientId: ids.a, name });
+
+  await header.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
+  await treatment.click();
+  const visit = await frame.evaluate(id => window.VildaHomeEncounter.state(id), ids.a);
+  const date = visit.date.split('-').reverse().join('.');
+  await card.getByRole('button', { name: 'Dodaj rozpoznanie', exact: true }).click();
+  await expect(editor.getByText('Zapis z powiązaniem do wizyty z ' + date, { exact: true })).toBeVisible();
+  await editor.getByLabel('Nazwa rozpoznania').fill(name);
+  await editor.getByRole('button', { name: 'Zapisz', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await expect.poll(diagnosis).toMatchObject({ visitContext: { visitId: visit.visitId, clinicalDateISO: visit.date } });
+  const note = await diagnosis();
+  await header.getByRole('button', { name: 'Zapisz wizytę', exact: true }).click();
+  await expect(header.getByText('Dane wizyty · tylko odczyt', { exact: true })).toBeVisible();
+  const visits = () => frame.evaluate(id => window.VildaVault.getPatientVisits(id), ids.a);
+  const beforeRemoval = await visits();
+  const edit = card.locator(`[data-treatment-diagnosis-id="${note.id}"]`).getByRole('button', { name: 'Edytuj', exact: true });
+  await treatment.click();
+  await edit.click();
+  await expect(editor.getByText('Powiązanie z wizytą z ' + date, { exact: true })).toBeVisible();
+  await expect(editor.getByLabel('Nazwa rozpoznania')).not.toBeEditable();
+  await expect(editor.getByRole('button', { name: 'Usuń rozpoznanie', exact: true })).toBeDisabled();
+  await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  expect(await diagnosis()).toEqual(note);
+
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
+  await header.getByRole('button', { name: 'Edytuj wizytę z ' + date, exact: true }).click();
+  await expect(header.getByRole('button', { name: 'Zapisz zmiany', exact: true })).toBeVisible();
+  await header.getByRole('tab', { name: 'Przegląd', exact: true }).click();
+  await treatment.click();
+  await edit.click();
+  await expect(editor.getByText('Zapis z powiązaniem do wizyty z ' + date, { exact: true })).toBeVisible();
+  const remove = editor.getByRole('button', { name: 'Usuń rozpoznanie', exact: true });
+  await expect(remove).toBeEnabled();
+  page.once('dialog', confirmation => confirmation.accept());
+  await remove.click();
+  await expect(editor).toBeHidden();
+  await expect.poll(diagnosis).toBeNull();
+  expect(await visits()).toEqual(beforeRemoval);
+});
+
 test('the native patient card starts a full visit and the embedded card keeps one start action', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   await choosePatient(frame, 'Antoni');
@@ -1164,8 +1233,10 @@ test('a saved consultation without measurements stays read-only until a new visi
   await expect(weight).not.toBeEditable();
   await expect(frame.locator('#height')).not.toBeEditable();
   await expect(weight).toHaveValue('');
-  await expect(header.locator('.gb-visit-context')).toContainText('Dane z wizyty');
-  await expect(header.getByText('Tylko odczyt', { exact: true })).toBeVisible();
+  await expect(header.locator('.gb-visit-context time')).toHaveAttribute('datetime', persisted.date);
+  await expect(header.locator('.gb-visit-context [data-state-label]')).toBeHidden();
+  await expect(header.locator('.gb-readonly-badge')).toHaveText('Dane wizyty · tylko odczyt');
+  await expect(header.locator('.gb-readonly-badge')).toBeVisible();
   expect(await decision()).toBe('saved');
 
   await frame.locator('#vhomeGrowthExpand').click();

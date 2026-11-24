@@ -1,0 +1,101 @@
+{
+  "namespace": "vilda-diagnosis-mutation-vault",
+  "version": 1,
+  "baseVaultSHA256": "e64bcc70d51fe290c4301db52207782c695f2502df6946f8be75c4d456457198",
+  "source": "runtime/diagnosis-mutation-v1/vault-fragment.js",
+  "sourceSHA256": "ee6ab294d9be7f970a7f5fa1f3f562ade7626e3066ca4a69902c856fcb5a385b",
+  "integratedVaultSHA256": "907660eb896d9c22677bcb9e5ddfaee1170ad333b5a1bb6b3307827fa8f7f44d",
+  "hooks": [
+    {
+      "name": "diagnosis-bind-origin",
+      "before": "      check(); var original = captured(dto, kind), next = context(kind, values, original.context);",
+      "after": "      check(); var original = captured(dto, kind), next = context(kind, values, original.context);\n      if (kind === 'diagnosis') binding = DiagnosisMutationBinding(original, binding, check);",
+      "beforeSHA256": "052da365bd77b83ce6d6ab907517a8550efa0a1ff48c8bd843eb2455bb458647",
+      "afterSHA256": "9288dc354a44b610e8a3d138ed9668dc7fd80f0b65de4241c2b3738208e87161"
+    },
+    {
+      "name": "diagnosis-update-options",
+      "before": "vault.updateExistingPatientNote(request, TreatmentDocumentationUpdateOptions(binding, function () { return checkVisit(binding); }, newFollowup));",
+      "after": "vault.updateExistingPatientNote(request, kind === 'diagnosis' ? DiagnosisMutationOptions(original, function () { return checkVisit(binding); }) : TreatmentDocumentationUpdateOptions(binding, function () { return checkVisit(binding); }, newFollowup));",
+      "beforeSHA256": "969e94549a059cc98537383dda9a71a7e06d70f4a46a0870cb3f11b817ca9b8f",
+      "afterSHA256": "01426d4e7d6652257ea0a69260b8fd25a009fcc5a3e8a52de3bbc302e60bb91f"
+    },
+    {
+      "name": "diagnosis-remove-scope",
+      "before": "    async function followup(dto, id, values, binding) {",
+      "after": "    async function removeDiagnosis(dto, binding) {\n      check(); var original = captured(dto, 'diagnosis');\n      binding = DiagnosisMutationBinding(original, binding, check);\n      var request = { id: original.id, patientId: patientId, baseRev: original.rev, baseUpdatedAtISO: original.updatedAtISO, baseNote: original.baseNote };\n      checkVisit(binding);\n      var result = await guarded(function () { return vault.removeExistingPatientNote(request, DiagnosisMutationOptions(original, function () { return checkVisit(binding); })); });\n      if (!result || result.removed !== true) throw failure('TREATMENT_CONFLICT', 'Rozpoznanie zmieniło się lub zostało usunięte. Otwórz je ponownie.');\n      return result;\n    }\n    async function followup(dto, id, values, binding) {",
+      "beforeSHA256": "05a9193c0ff05dde00a6f2e8f0cd4ff014cb22500dd9a700d8507254bdd71af1",
+      "afterSHA256": "107c5c42bed8e5912df9d649e3fc0c94d5d123280da0e30dbd480ed35d9426e5"
+    },
+    {
+      "name": "diagnosis-public-scope",
+      "before": "      updateDiagnosis: function (dto, values) { return update('diagnosis', dto, values); },",
+      "after": "      updateDiagnosis: function (dto, values, binding) { return update('diagnosis', dto, values, binding); },\n      removeDiagnosis: removeDiagnosis,",
+      "beforeSHA256": "6d3ab88c9a9ba7c0fb39b02524e8c84ee5a35a47f40c783607d18a351ba777c9",
+      "afterSHA256": "32ae6743a35defa817ad493cafe486fd088ad9acd8cf91cc252f39388995d2bd"
+    },
+    {
+      "name": "diagnosis-native-lock",
+      "before": "  return TreatmentDocumentationLock(next, treatmentOptions, remove, function () { return Ac(next.id, async function () {",
+      "after": "  return DiagnosisMutationLock(next, treatmentOptions, remove, function () { return Ac(next.id, async function () {",
+      "beforeSHA256": "4995ab954017d2260f1cbaa664fbfeea883636e6a4c4642b4d7eb8107c1af03e",
+      "afterSHA256": "95653ceef1bb51c66b771954745f39ba0901e79fc8fbba21e1a4253eedf07618"
+    },
+    {
+      "name": "diagnosis-native-check",
+      "before": "    const careNote = await Ft(stored); assertSession();",
+      "after": "    const careNote = await Ft(stored); assertSession();\n    if (DiagnosisMutationWitness(treatmentOptions)) {\n      await DiagnosisMutationCheckExisting(next, careNote, treatmentOptions, assertSession, remove); assertSession();\n    }",
+      "beforeSHA256": "296cb4ebbb0c0171c7aee21579ecffd4d46d87749537f56cfe8f4bae0a44a7f1",
+      "afterSHA256": "a4037065d11da57807edd38c8ff25e75c93b6ff3b7679b67a99a3372db7863a5"
+    },
+    {
+      "name": "diagnosis-atomic-removal",
+      "before": "      // Invoke the existing remover directly, retaining its tombstone policy.\n      const removed = await Eb(next.id, undefined, undefined, guard);",
+      "after": "      if (DiagnosisMutationWitness(treatmentOptions)) return DiagnosisMutationRemove(stored, adapter, account, assertSession);\n      // Invoke the existing remover directly, retaining its tombstone policy.\n      const removed = await Eb(next.id, undefined, undefined, guard);",
+      "beforeSHA256": "36eadc002860cad46f5cfb1f636acb2096056078978640dea2d12e2ca566ba90",
+      "afterSHA256": "669443e5cdb81f889494af53c8a6744b26c464e32b4a7f1e1a5903f03b7c03b1"
+    },
+    {
+      "name": "diagnosis-remove-owner-options",
+      "before": "function VildaRemoveExistingPatientNote(payload) {\n  return VildaChangeExistingPatientNote(payload, true);",
+      "after": "function VildaRemoveExistingPatientNote(payload, treatmentOptions) {\n  return VildaChangeExistingPatientNote(payload, true, treatmentOptions);",
+      "beforeSHA256": "4a50126793bdd644bd9c055a1c65d3a1b711fedc4dd0e11ee6b4ada6a3d0910a",
+      "afterSHA256": "1f45e78f9ac0880d336448f99ac05a25ac6335007123e1c07bf0c5ab3d80f0a9"
+    },
+    {
+      "name": "diagnosis-idb-commit",
+      "before": "commitVisitTrashForUser(user, change, stagePatient) { return VisitTrashDatabase(user, change, stagePatient, r); },",
+      "after": "commitDiagnosisDeleteForUser(user, change) { return DiagnosisMutationDatabase(user, change, r); },\ncommitVisitTrashForUser(user, change, stagePatient) { return VisitTrashDatabase(user, change, stagePatient, r); },",
+      "beforeSHA256": "15c483d4e91d03af7e8cfa3b3d961e99ed5d914dc364c4566d731aa394c19885",
+      "afterSHA256": "394e3df150b0a520dc5d7da62f8c9c7b5ac1e57616d3fd8acfda20c82df04fc0"
+    },
+    {
+      "name": "diagnosis-memory-commit",
+      "before": "async commitVisitTrashForUser(user, change, stagePatient) {",
+      "after": "async commitDiagnosisDeleteForUser(user, change) { return DiagnosisMutationMemory(user, change, s(user), d); },\nasync commitVisitTrashForUser(user, change, stagePatient) {",
+      "beforeSHA256": "27969dcb595c6744ba00fd241e9cf534c7fb913eb481c9634dbac4ec0ee7d84a",
+      "afterSHA256": "28afc634eb8d40dd94f1f4cab0bccb4cc84fc49c9fdc847f8a2c0d0fbce0ba20"
+    },
+    {
+      "name": "diagnosis-hybrid-commit",
+      "before": "function ba(t,e){const Bpc_h=Bpc_hybryda(t,e);return{",
+      "after": "function ba(t,e){const Bpc_h=Bpc_hybryda(t,e);return{commitDiagnosisDeleteForUser(user,change){return e.commitDiagnosisDeleteForUser(user,change);},",
+      "beforeSHA256": "71dd764e526b1a155e5b1e85a90b3ceee295769e2e2ce00b2ae5c10130191418",
+      "afterSHA256": "9dcab6c29242cd0dd7ea80f488978beebb7b7cb6e36443d9ebe9d6a35d921d5a"
+    },
+    {
+      "name": "diagnosis-capture-before-queue",
+      "before": ";TreatmentDocumentationInstall($s);",
+      "after": ";TreatmentDocumentationInstall($s);DiagnosisMutationInstall($s);",
+      "beforeSHA256": "242513ba33d295468b79a8af5cc7c30d39fdd35f659d44bc495a0c6ef088df58",
+      "afterSHA256": "81055e3055d1a05c3bc44108b1abdf2ba6bd9e60a9cc5a7abec709535708f000"
+    },
+    {
+      "name": "diagnosis-readable-source",
+      "before": "/* END VILDA TREATMENT DOCUMENTATION V1 */\n",
+      "after": "/* END VILDA TREATMENT DOCUMENTATION V1 */\n/* BEGIN VILDA DIAGNOSIS MUTATION V1 */\n/* Explicit edits and removal of a diagnosis keep its original provenance.\n * Only a matching open visit may mutate a visit-owned diagnosis. General\n * diagnoses stay patient-wide. Therapy references never cascade on removal. */\nfunction DiagnosisMutationFailure(code, message) {\n  const error = new Error(message); error.code = 'TREATMENT_' + code; return error;\n}\nfunction DiagnosisMutationReadonly() {\n  return DiagnosisMutationFailure('VISIT_READONLY', 'To rozpoznanie pochodzi z innej wizyty. Otwórz właściwą wizytę, aby zmienić lub usunąć rozpoznanie.');\n}\nfunction DiagnosisMutationOrigin(note) {\n  try { return EncounterNoteFields(note).visitContext || null; }\n  catch (_) { throw DiagnosisMutationReadonly(); }\n}\nfunction DiagnosisMutationBinding(original, binding, assertOwner) {\n  const origin = DiagnosisMutationOrigin(original.baseNote);\n  if (!origin) return null;\n  const current = binding && binding.isCurrent, visit = binding && binding.visitContext;\n  if (typeof current !== 'function' || !visit || visit.visitId !== origin.visitId) throw DiagnosisMutationReadonly();\n  const check = function () {\n    assertOwner();\n    if (current.call(binding) !== true) throw DiagnosisMutationReadonly();\n    return true;\n  };\n  check();\n  return Object.freeze({ visitContext: Object.freeze(Object.assign({}, origin)), isCurrent: check });\n}\nfunction DiagnosisMutationWitness(options) {\n  if (!options || !Object.prototype.hasOwnProperty.call(options, 'diagnosisMutation')) return null;\n  const witness = options.diagnosisMutation;\n  if (!witness || typeof witness !== 'object' || Array.isArray(witness)\n      || Object.keys(witness).length !== 1 || !Object.prototype.hasOwnProperty.call(witness, 'visitContext')) {\n    throw DiagnosisMutationFailure('INVALID', 'Nieprawidłowy zapis rozpoznania. Otwórz formularz ponownie.');\n  }\n  const origin = witness.visitContext === null ? null : DiagnosisMutationOrigin(witness);\n  if (witness.visitContext !== null && !origin) throw DiagnosisMutationReadonly();\n  return { visitContext: origin };\n}\nfunction DiagnosisMutationOptions(original, isCurrent) {\n  return { isCurrent: isCurrent, diagnosisMutation: { visitContext: DiagnosisMutationOrigin(original.baseNote) } };\n}\nfunction DiagnosisMutationLock(note, options, remove, action) {\n  if (!DiagnosisMutationWitness(options)) return TreatmentDocumentationLock(note, options, remove, action);\n  return Bzw_podBlokada(note.patientId, action, options);\n}\nasync function DiagnosisMutationCheckExisting(next, stored, options, assertCurrent, remove) {\n  const witness = DiagnosisMutationWitness(options);\n  if (!witness) return;\n  const decoded = v.VildaPatientTreatmentModel.decode(stored);\n  if (decoded.kind !== 'diagnosis' || !remove && v.VildaPatientTreatmentModel.decode(next).kind !== 'diagnosis') {\n    throw DiagnosisMutationFailure('UNSUPPORTED', 'Ten zapis nie jest obsługiwanym rozpoznaniem i pozostaje tylko do odczytu.');\n  }\n  const origin = DiagnosisMutationOrigin(stored);\n  if (Bnp_kanon(origin) !== Bnp_kanon(witness.visitContext)) throw DiagnosisMutationReadonly();\n  if (!origin) return;\n  // A clinical-date correction does not reassign an existing document. Match\n  // the permanent visit ID, preserving the document's original date verbatim.\n  const session = Bses_opcje(null); assertCurrent(); Bpz_pilnuj(session);\n  const visits = await Bvisit_list(next.patientId); assertCurrent(); Bpz_pilnuj(session);\n  if (!visits.some(function (row) { return row.patientId === next.patientId && row.visitId === origin.visitId; })) throw DiagnosisMutationReadonly();\n}\nfunction DiagnosisMutationAssertDelete(change, stored, tombstone) {\n  change.assertCurrent();\n  if (!stored || tombstone || stored.id !== change.previous.id || stored.patientId !== change.previous.patientId\n      || Bnp_kanon(stored) !== Bnp_kanon(change.previous)) {\n    throw DiagnosisMutationFailure('CONFLICT', 'Rozpoznanie zmieniło się lub zostało usunięte. Otwórz je ponownie.');\n  }\n}\nasync function DiagnosisMutationDatabase(user, change, openDatabase) {\n  change.assertCurrent(); PatientClinicalGuard(user);\n  const db = await openDatabase(user); change.assertCurrent();\n  return new Promise(function (resolve, reject) {\n    let problem;\n    const tx = PatientClinicalWriteValue(user, db).transaction([vt, Kt], 'readwrite');\n    const notes = tx.objectStore(vt), tombstones = tx.objectStore(Kt);\n    const rows = [notes.get(change.previous.id), tombstones.get(change.previous.id)];\n    tx.oncomplete = function () { resolve(true); };\n    tx.onabort = function () { reject(problem || tx.error || DiagnosisMutationFailure('CONFLICT', 'Nie usunięto rozpoznania.')); };\n    let pending = rows.length;\n    rows.forEach(function (request) { request.onsuccess = function () {\n      if (--pending) return;\n      try {\n        DiagnosisMutationAssertDelete(change, rows[0].result, rows[1].result);\n        notes.delete(change.previous.id); tombstones.put(change.tombstone);\n        change.assertCurrent(); PatientClinicalGuard(user);\n      } catch (error) { problem = error; tx.abort(); }\n    }; });\n  });\n}\nfunction DiagnosisMutationMemory(user, change, store, flush) {\n  PatientClinicalGuard(user);\n  DiagnosisMutationAssertDelete(change, store.patientNotes.get(change.previous.id), store.patientNoteTombstones.get(change.previous.id));\n  const notes = new Map(store.patientNotes), tombstones = new Map(store.patientNoteTombstones);\n  notes.delete(change.previous.id); tombstones.set(change.tombstone.id, Object.assign({}, change.tombstone));\n  change.assertCurrent(); store.patientNotes = notes; store.patientNoteTombstones = tombstones; flush(); return true;\n}\nasync function DiagnosisMutationRemove(stored, adapter, account, assertCurrent) {\n  const now = new Date().toISOString(), removedAt = stored.updatedAtISO && stored.updatedAtISO > now ? stored.updatedAtISO : now;\n  const tombstone = { id: stored.id, deletedAtISO: removedAt };\n  if (typeof stored.rev === 'number' && Number.isFinite(stored.rev) && stored.rev > 0) tombstone.rev = stored.rev;\n  const change = { previous: stored, tombstone: tombstone, assertCurrent: assertCurrent };\n  assertCurrent();\n  if (PatientWorkspaceAdapter() === adapter) {\n    // Both changes remain in the existing native transaction until its one\n    // source commit. A rejected callback discards the entire native stage.\n    const existing = await adapter.getPatientNoteForUser(account, stored.id);\n    const deleted = await adapter.getPatientNoteTombstoneForUser(account, stored.id);\n    DiagnosisMutationAssertDelete(change, existing, deleted);\n    await adapter.removePatientNoteForUser(account, stored.id); assertCurrent();\n    await adapter.putPatientNoteTombstoneForUser(account, tombstone); assertCurrent();\n  } else if (typeof adapter.commitDiagnosisDeleteForUser === 'function') await adapter.commitDiagnosisDeleteForUser(account, change);\n  else throw DiagnosisMutationFailure('UNAVAILABLE', 'Ten magazyn nie obsługuje bezpiecznego usuwania rozpoznania.');\n  qr({ id: stored.id, patientId: stored.patientId, action: 'delete', deletedAtISO: removedAt });\n  try { if (yt && v.VildaSync && typeof v.VildaSync.syncPush === 'function') Promise.resolve(v.VildaSync.syncPush()).catch(function () {}); }\n  catch (error) { PatientClinicalRethrow(error); }\n  return { id: stored.id, removed: true };\n}\nfunction DiagnosisMutationInstall(api) {\n  ['updateExistingPatientNote', 'removeExistingPatientNote'].forEach(function (name) {\n    const original = api[name];\n    api[name] = function (payload, options) {\n      if (!options || !Object.prototype.hasOwnProperty.call(options, 'diagnosisMutation')) return original.apply(this, arguments);\n      try {\n        const captured = Object.assign({}, options, { diagnosisMutation: DiagnosisMutationWitness(options) });\n        return original.call(this, payload, captured);\n      } catch (error) { return Promise.reject(error); }\n    };\n  });\n}\n/* END VILDA DIAGNOSIS MUTATION V1 */\n",
+      "beforeSHA256": "689e8c820027f24c2ec860fa931f1e2d07c1cc2bbc25adeac7029ea5f804af12",
+      "afterSHA256": "0a6cdeb1182cf9be1f002a5fa3a11706c3fb5da96f12697c6dc261c66c33e33d"
+    }
+  ]
+}
