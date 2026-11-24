@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import { expect, test } from '../support/test-czas.mjs';
 import { bezPrzewijaniaPoziomego } from '../support/baza-pacjentow-lista.mjs';
 import { OCZEKIWANE, otworzStatystyki, przygotujStatystyki } from '../support/baza-pacjentow-statystyki.mjs';
@@ -296,6 +298,75 @@ test('leczenie otyłości: zmiana masy po 12 tyg. i po 6 mies., progi redukcji, 
   await expect(ob.locator('.pt-ob-gaps[data-window="m6"] button')).toHaveCount(2);
 });
 
+// P-BAZA-STATYSTYKI, etap 4: raport PDF i plik dla Excela — prawdziwe pobranie z prawdziwej aplikacji.
+// Biblioteki (pdfmake, JSZip) są lokalne; sieć zewnętrzna jest w teście odcięta.
+test('raport PDF i plik dla Excela: pobranie z lokalnych bibliotek, liczby z ekranu, bez danych osobowych', async ({ page }) => {
+  const zewnetrzne = [];
+  await page.route(/^https?:\/\/(?!127\.0\.0\.1|localhost)/, (route) => { zewnetrzne.push(route.request().url()); return route.abort(); });
+  const { frame, database, ids } = await przygotujStatystyki(page);
+  await otworzStatystyki(database);
+  const pasek = database.locator('.pt-stat-cardsbar');
+  await expect(pasek, 'przed policzeniem pasek zapowiada pliki, ale ich nie oferuje').toContainText('Po policzeniu można zapisać raport PDF i plik dla Excela.');
+  await expect(pasek.locator('[data-export]')).toHaveCount(0);
+
+  await database.locator('.pt-stat-check').click();
+  await expect(pasek.locator('[data-export]')).toHaveText(['Raport PDF', 'Eksport do Excela']);
+  await expect(pasek.locator('.pt-stat-export-status')).toHaveText('Raport i plik dla Excela zawierają liczby z tego ekranu, bez nazwisk i dat urodzenia.');
+
+  const pobierz = async (rodzaj) => {
+    const [pobranie] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), pasek.locator(`[data-export="${rodzaj}"]`).click()]);
+    const sciezka = await pobranie.path();
+    return { nazwa: pobranie.suggestedFilename(), bajty: fs.readFileSync(sciezka) };
+  };
+
+  // PDF: zegar testu stoi na 17.06.2026, więc data w nazwie jest stała; w nazwie nie ma nic poza datą.
+  const pdf = await pobierz('pdf');
+  expect(pdf.nazwa).toBe('statystyki-bazy-pacjentow-2026-06-17.pdf');
+  expect(pdf.bajty.subarray(0, 5).toString('latin1')).toBe('%PDF-');
+  expect(pdf.bajty.length, 'dokument z czcionką i trzema stronami').toBeGreaterThan(15_000);
+  await expect(pasek.locator('.pt-stat-export-status')).toHaveText('Zapisano plik statystyki-bazy-pacjentow-2026-06-17.pdf.');
+  await expect(pasek.locator('[data-export="pdf"]'), 'fokus wraca na przycisk').toBeFocused();
+
+  // Excel: prawdziwy plik .xlsx — archiwum z arkuszami „Podsumowanie” i „Pacjenci”.
+  const xlsx = await pobierz('xlsx');
+  expect(xlsx.nazwa).toBe('statystyki-bazy-pacjentow-2026-06-17.xlsx');
+  await expect(pasek.locator('.pt-stat-export-status')).toHaveText('Zapisano plik statystyki-bazy-pacjentow-2026-06-17.xlsx.');
+  const JSZip = createRequire(import.meta.url)('../../jszip.min.js');
+  const archiwum = await JSZip.loadAsync(xlsx.bajty);
+  const czesc = (sciezka) => archiwum.file(sciezka).async('string');
+  expect(Object.keys(archiwum.files).sort()).toEqual(['[Content_Types].xml', '_rels/.rels', 'xl/_rels/workbook.xml.rels', 'xl/styles.xml', 'xl/workbook.xml', 'xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml']);
+  expect(await czesc('xl/workbook.xml')).toContain('<sheet name="Podsumowanie" sheetId="1" r:id="rId1"/><sheet name="Pacjenci" sheetId="2" r:id="rId2"/>');
+  const podsumowanie = await czesc('xl/worksheets/sheet1.xml'), pacjenci = await czesc('xl/worksheets/sheet2.xml');
+  const wiersz = (xml, etykieta) => (xml.split('<row ').find((fragment) => fragment.includes(`>${etykieta}</t>`)) || '');
+  const liczby = (fragment) => Array.from(fragment.matchAll(/<v>([^<]*)<\/v>/g)).map((match) => Number(match[1]));
+  // Te same liczby, co na ekranie (OCZEKIWANE): GH 8,4 cm/rok; otyłość −2,8% i −4,67% (na ekranie −4,7%); progi 2 z 3.
+  expect(liczby(wiersz(podsumowanie, 'Pacjentów w bazie'))).toEqual([OCZEKIWANE.razem]);
+  expect(liczby(wiersz(podsumowanie, 'Tempo w 1. roku leczenia'))).toEqual([8.4]);
+  expect(liczby(wiersz(podsumowanie, 'Zmiana masy po 12 tyg.'))).toEqual([-2.8]);
+  expect(liczby(wiersz(podsumowanie, 'Zmiana masy po 6 mies.'))).toEqual([-4.67]);
+  expect(liczby(wiersz(podsumowanie, 'Redukcja o ≥ 5% po 6 mies.'))).toEqual([2]);
+  expect(liczby(wiersz(podsumowanie, 'Saxenda'))).toEqual([3, -0.5, 2, -1, 2]);
+  expect(liczby(wiersz(podsumowanie, 'Co najmniej 2 pomiary wzrostu'))).toEqual([7, 8, 88]);
+  // Arkusz pacjentów: nagłówek i osiem wierszy; pomiar po 6 mies. z wpisu dziennika (−12%) jest w pliku.
+  expect((pacjenci.match(/<row /g) || []).length).toBe(1 + OCZEKIWANE.razem);
+  expect(pacjenci).toContain('<v>-12</v>');
+  // Żadnych danych osobowych: nazwisk, imion, identyfikatorów ani dat urodzenia (nazwisko „Statystyk” pokrywa „Fikcyjn” —
+  // samo słowo występuje w tytule raportu).
+  const calosc = [podsumowanie, pacjenci, await czesc('xl/workbook.xml')].join('\n');
+  ['Fikcyjn', 'Bartek', 'Cezary', 'Dorota', 'Felicja', 'Gustaw', 'Bezplci', '2014-03-20', '2010-09-01', '2005-05-05', '2016-06-18'].concat(Object.values(ids))
+    .forEach((napis) => expect(calosc, `plik nie zawiera „${napis}”`).not.toContain(napis));
+
+  // Biblioteki przyszły z plików aplikacji; nic nie poszło do sieci zewnętrznej po bibliotekę.
+  const skrypty = await frame.evaluate(() => Array.from(document.querySelectorAll('script[data-vilda-pdfmake], script[data-vilda-jszip]')).map((node) => node.getAttribute('src')));
+  expect(skrypty.sort()).toEqual(['jszip.min.js?v=1', 'pdfmake.min.js?v=1', 'pdfmake_vfs_fonts.js?v=1']);
+  expect(zewnetrzne.filter((url) => /cdnjs|jsdelivr|sheetjs|pdfmake|jszip/i.test(url))).toEqual([]);
+
+  // Ponowne policzenie czyści komunikat o pliku; pliki dalej są dostępne.
+  await database.locator('.pt-stat-check').click();
+  await expect(pasek.locator('.pt-stat-export-status')).toHaveText('Raport i plik dla Excela zawierają liczby z tego ekranu, bez nazwisk i dat urodzenia.');
+  await expect(pasek.locator('[data-export]')).toHaveCount(2);
+});
+
 test.describe('telefon', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
@@ -342,5 +413,12 @@ test.describe('telefon', () => {
     expect(slupki.x + slupki.width, 'wykres mieści się w karcie').toBeLessThanOrEqual(390);
     const kropkaLeku = await ob.locator('.pt-ob-row[data-drug="Wegovy"] line.pt-gh-dot--first').boundingBox();
     expect(Math.round(kropkaLeku.width)).toBe(12);
+
+    // Etap 4: przyciski plików mieszczą się w pasku i mają cel dotyku co najmniej 44 px.
+    for (const przycisk of await database.locator('.pt-stat-cardsbar button').all()) {
+      const ramka = await przycisk.boundingBox();
+      expect(ramka.height, 'cel dotyku co najmniej 44 px').toBeGreaterThanOrEqual(44);
+      expect(ramka.x + ramka.width).toBeLessThanOrEqual(390);
+    }
   });
 });

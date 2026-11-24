@@ -385,6 +385,9 @@ body .vilda-pl-overlay .vilda-pl-modal .foot button.go:is(:hover,:focus-visible)
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-ob-bar--gain { fill: var(--pt-stat-girls, #eb6834); }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-ob-swatch--loss { background: var(--pt-teal, #087f89); }
 .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-ob-swatch--gain { background: var(--pt-stat-girls, #eb6834); }
+/* P-BAZA-STATYSTYKI, etap 4: przyciski plików i komunikat w pasku „z kart”. */
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-export { flex: 0 0 auto; }
+.vilda-auth-root .vilda-patients2.vilda-patient-database .pt-stat-export-status { flex: 1 1 100%; margin: 0; font-size: 14px; }
 
 @media (min-width: 1400px) {
   .vilda-auth-root:is(.vilda-auth-database, :has(.vilda-patient-database)) .vilda-auth-card { max-width: 1260px; }

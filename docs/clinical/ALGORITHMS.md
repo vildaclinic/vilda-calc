@@ -47473,3 +47473,67 @@ kafli, podziałka 1:1, bez przewijania w bok).
 **Wersje.** `vilda_patients_list.js` 7 → 8, `vilda_patients_list.css` 6 → 7, `vilda_chrome.js` 326 → 327
 i `vilda_session_bridge.js` 242 → 243 (wstrzykują pliki z nowym `?v=`), SW 1.1.581 → 1.1.582 — `npm run podbij-wersje`.
 Bez nowego pliku w pamięci offline.
+
+## P-BAZA-STATYSTYKI, etap 4 — Baza pacjentów: raport PDF i plik dla Excela (SW 1.1.583, `vilda_patients_list.js` 9, `vilda_patients_list.css` 8, 2026-11-24)
+
+**Zmiana kliniczna: BRAK — te same liczby, co na ekranie „Statystyki”, zapisane do pliku.** Żadnego nowego wzoru, progu ani
+definicji: model raportu (`statsReport`) czyta gotowe obiekty z etapów 1–3 (`demographics`, `ghCohort`, `obesityCohort`,
+kompletność kart) i niczego nie liczy od nowa. Wynik pojedynczego pacjenta, zapis karty i sejf — bez zmian.
+
+**Decyzja właściciela.** 2026-11-23: plan etapów (etap 4 — eksport i raport PDF; na makiecie przyciski „Eksport do Excela”
+i „Raport PDF”). 2026-11-24: „zrób etap 4 — eksport i raport PDF”.
+
+**Co powstaje.** Po „Policz z kart” pasek nad sekcjami dostaje dwa przyciski:
+- **Raport PDF** — A4, sekcje jak na ekranie: Pacjenci (kafle, tabela „Wiek i płeć” ze słupkami), Leczenie hormonem wzrostu
+  (kafle, „Wg programu”, „Kolejne lata leczenia”, „Bez tempa w 1. roku”), Leczenie otyłości (kafle, „Zmiana masy ciała”,
+  „Dzieci: zmiana BMI”, „Wg leku”, „Bez wyniku”, wykres „Każdy pacjent”), Kompletność danych; pod sekcjami te same teksty
+  definicji, co na ekranie, na końcu zastrzeżenie o charakterze opisowym. Stopka: numer strony.
+- **Eksport do Excela** — prawdziwy plik `.xlsx` z dwoma arkuszami: „Podsumowanie” (te same sekcje i tabele; liczby jako
+  liczby, żeby Excel mógł z nich liczyć dalej) i „Pacjenci” (jeden wiersz na pacjenta z bazy: płeć, wiek, przedział wieku,
+  kompletność karty, program i tempa GH, zmiana hSDS, lek i wyniki leczenia otyłości w obu oknach, powód braku wyniku).
+
+**Jeden model dla obu plików.** `statsReport(wejście)` → `{ title, stamp, total, sections[], closing, people }`; sekcja niesie
+`facts` (etykieta, wartość liczbowa, jednostka, napis, dopisek), `tables` (kolumny z rodzajem `text`/`int`/`num`/`bar`
+i surowe wartości), `notes` i opcjonalny `chart`. Z niego `statsDocument` buduje dokument pdfmake, a `statsWorkbook` arkusze
+— liczby w plikach i na ekranie pochodzą z tych samych obiektów. Teksty definicji mają jedno źródło (`ghNote`, `obesityNote`,
+`footNote`), wspólne z ekranem. Znacznik czasu i data w nazwie pliku to chwila policzenia kart.
+
+**Prywatność (do akceptacji właściciela).**
+1. Pliki nie zawierają nazwisk, imion, dat urodzenia, PESEL ani identyfikatorów kart. Raport PDF to wyłącznie liczby zbiorcze.
+2. Arkusz „Pacjenci” ma wiersze bez danych osobowych: płeć, wiek w latach z jednym miejscem po przecinku i wyniki leczenia.
+   Kolejność wierszy wg wieku (potem płci), nie wg nazwiska, żeby numer wiersza nie zdradzał pozycji na liście alfabetycznej.
+3. Nazwa pliku: `statystyki-bazy-pacjentow-RRRR-MM-DD.pdf` / `.xlsx` — bez nazwy gabinetu i bez danych pacjentów.
+4. Pliki powstają na urządzeniu; nic nie jest wysyłane. Biblioteki są lokalne (niżej), więc eksport działa offline.
+
+**Biblioteki — bez nowych plików i bez sieci.** PDF składa pdfmake z lokalnych plików `pdfmake.min.js?v=1`
+i `pdfmake_vfs_fonts.js?v=1` (czcionka Roboto z polskimi znakami), wczytywanych tą samą funkcją, co wydruk postępów dorosłego
+(`VildaPostepyDoroslegoWydruk.zapewnijPdfmake`, moduł obecny na tych samych 8 stronach przed listą pacjentów). Strzałek w tej
+czcionce nie ma, więc w PDF zastępuje je „»” — ta sama podmiana, co w tamtym wydruku. Plik `.xlsx` to pakiet Office Open XML
+złożony przez `xlsxParts` (typy, relacje, skoroszyt, style, arkusze; teksty jako `inlineStr`, styl 1 = pogrubienie, przypięty
+wiersz nagłówka w „Pacjenci”) i spakowany lokalną biblioteką `jszip.min.js?v=1`. Wszystkie trzy pliki są od dawna w pamięci
+offline service workera; SheetJS z CDN nie jest używany.
+
+**Zapis pliku.** Zwykłe pobranie; na iPhonie w trybie aplikacji (gdzie pobranie nie działa) arkusz udostępniania — ta sama
+reguła i to samo rozpoznanie platformy, co w wydruku postępów (`mozliwosci().iosStandalone`). Zamknięcie arkusza udostępniania
+nie jest błędem. Komunikat pod przyciskami mówi, co zapisano, albo dlaczego się nie udało; kolejne kliknięcie może spróbować
+ponownie.
+
+**Rysowanie w PDF.** Wykresy to SVG z samych kształtów (bez tekstu, więc bez zależności od czcionek SVG): słupki w tabelach
+„Wiek i płeć” i „Kolejne lata leczenia” oraz wykres „Każdy pacjent” z tą samą skalą, co na ekranie (`fallScale`). Nagłówek
+sekcji idzie na stronę razem z pierwszą tabelą, żeby nie zostawał sam na dole strony.
+
+**Sprawdzenie plików.** Wygenerowany `.xlsx` otwierają bez ostrzeżeń dwa niezależne czytniki (openpyxl i LibreOffice);
+PDF obejrzany strona po stronie (polskie znaki, „≥”, „−”, „»”, tabele, wykresy).
+
+**Strażnicy.** `tests/unit/baza-statystyki-eksport.test.mjs` (15: model raportu na prawdziwych modelach etapów 1–3 — liczby
+jak na ekranie, raport bez policzonych kart, puste grupy; arkusze — liczby jako liczby, kolejność wg wieku, karta nieodczytana,
+BRAK nazwisk, dat urodzenia i identyfikatorów; pakiet `.xlsx` — komplet części, poprawny XML, znaki specjalne, nazwy arkuszy,
+archiwum z lokalnego JSZip otwierane z powrotem; dokument PDF — A4, sekcje, liczby, podmiana strzałek, SVG bez tekstu,
+nagłówek z tabelą, brak danych osobowych; nazwa pliku; biblioteki lokalne i w pamięci offline, moduł wydruku przed listą na
+8 stronach); `tests/e2e/baza-pacjentow-statystyki.spec.mjs` (7; nowy test: sieć zewnętrzna odcięta, prawdziwe pobranie PDF
+i `.xlsx`, w arkuszu te same liczby, co na ekranie, osiem wierszy pacjentów bez danych osobowych, biblioteki z plików aplikacji;
+telefon — przyciski w pasku z celem dotyku co najmniej 44 px).
+
+**Wersje.** `vilda_patients_list.js` 8 → 9, `vilda_patients_list.css` 7 → 8, `vilda_chrome.js` 327 → 328
+i `vilda_session_bridge.js` 243 → 244 (wstrzykują pliki z nowym `?v=`), SW 1.1.582 → 1.1.583 — `npm run podbij-wersje`.
+Bez nowego pliku w pamięci offline.
