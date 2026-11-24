@@ -821,8 +821,16 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   font-size: 16px;
 }
 
+.pt-group-result {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-10px);
+}
+
 .pt-group-note {
-  flex: 1 1 320px;
+  flex: 1 1 240px;
   margin: 0;
   color: var(--text-muted);
   font-size: 14px;
@@ -848,5 +856,9 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 
   .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-groupbar > button {
     flex: 1 1 calc(50% - var(--space-12px));
+  }
+
+  .vilda-auth-root .vilda-patients2.vilda-patient-database .pt-group-result > button {
+    flex: 1 1 100%;
   }
 }

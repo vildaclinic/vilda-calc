@@ -1821,11 +1821,11 @@
  },
  "vilda_patients_list.css": {
   "v": 11,
-  "sha256": "1a97b55146200d1ffa4368fd4a8f3d23efa5e2452bfab5bba80699610b6702d8"
+  "sha256": "18d4888db9aa24a9079e72a825169c956089086d380d86f8f6d1d88192d9a4f0"
  },
  "vilda_patients_list.js": {
   "v": 13,
-  "sha256": "ca1760d7ff446bbff2ef34ac92d0798c236337aefcf728fc528913cd2fdebb5c"
+  "sha256": "f116ae39fdf050cceebcb047340676e4c4f9408581ea5b55ff626459eaf81068"
  },
  "vilda_perinatal_source.js": {
   "v": 3,

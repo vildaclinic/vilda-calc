@@ -1405,7 +1405,10 @@
       const id = state.groupTask.listId;
       state.group = null; state.groupTask = null; chooseList(id);
     });
-    [groupText, groupSave, groupExport, groupBack, groupClear, groupForm, groupNote, groupOpen].forEach((node) => groupBar.appendChild(node));
+    // Komunikat i „Otwórz listę” mają własny wiersz pod przyciskami — obok nich ściskałyby opis grupy do wąskiej kolumny.
+    const groupResult = el('div', 'pt-group-result');
+    groupResult.appendChild(groupNote); groupResult.appendChild(groupOpen);
+    [groupText, groupSave, groupExport, groupBack, groupClear, groupForm, groupResult].forEach((node) => groupBar.appendChild(node));
     root.appendChild(groupBar);
     if (opts.legacyNotice) root.appendChild(opts.legacyNotice);
     const scroll = el('div', 'pt-scroll'); root.appendChild(scroll);
@@ -1466,6 +1469,7 @@
       groupNote.classList.toggle('pt-group-note--error', Boolean(task && task.failed));
       groupNote.setAttribute('role', task && task.failed ? 'alert' : 'status');
       groupOpen.hidden = !(task && task.listId && mayUseLists());
+      groupResult.hidden = groupNote.hidden && groupOpen.hidden;
       [groupSave, groupExport, groupBack, groupClear, groupConfirm, groupCancel, groupOpen, groupInput].forEach((node) => { node.disabled = lock; });
       Object.keys(tabNodes).forEach((key) => {
         const active = state.filter === key;
