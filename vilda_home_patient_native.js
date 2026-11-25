@@ -131,6 +131,7 @@
     d.removeEventListener('vilda:patient-profile-changed', view.profileChanged);
     clearFocus(view);
     if (view.observer) view.observer.disconnect();
+    if (view.centileObserver) view.centileObserver.disconnect();
     if (view.fit) { w.removeEventListener('resize', view.fit); w.visualViewport?.removeEventListener('resize', view.fit); }
     // Invalidate the exact owner before disposing native async editors. Their
     // existing submit guards must never borrow a replacement card's lifetime.
@@ -265,6 +266,71 @@
     observer = new w.MutationObserver(function () { if (!isOpen() || !current(view)) cleanup(); });
     observer.observe(d.documentElement, {childList: true, subtree: true});
     view.dialogCleanups.add(cleanup); fit(); cleanup.actorLifetimeVersion = 1; return cleanup;
+  }
+  function presentCentileCharts(view, panel) {
+    if (!view.workspaceHeader || !panel) return;
+    var charts = panel.querySelector('.vilda-siatka-charts');
+    if (!charts?.querySelector('svg.vilda-patient-chart')) return;
+    var titles = new Map([
+      ['Siatka centylowa wzrostu', 'Wzrost · cm'],
+      ['Siatka centylowa wagi', 'Masa ciała · kg'],
+      ['Siatka centylowa BMI', 'BMI · kg/m²']
+    ]);
+    var presets = new Map([['cały okres', 'Cały okres'], ['12 mies', '12 mies.'], ['6 mies', '6 mies.'], ['3 mies', '3 mies.']]);
+    var originalTitles = new WeakMap();
+    var reference = node('p', 'vhome-b1-centile-reference');
+    var range = panel.querySelector('.vilda-siatka-range');
+    var rangeLabel = range?.querySelector(':scope > span');
+    if (rangeLabel) rangeLabel.textContent = 'Zakres';
+    range?.querySelectorAll('.vilda-siatka-range-btn').forEach(function (item) {
+      var label = presets.get(item.textContent);
+      if (label) item.textContent = label;
+    });
+    var disclaimer = panel.querySelector('.vilda-patient-chart-disclaimer');
+    if (disclaimer) disclaimer.textContent = 'Uproszczony podgląd trajektorii.';
+    var pdf = panel.querySelector('.vilda-siatka-pdf-btn');
+    if (pdf) pdf.textContent = 'Pobierz pełne siatki (PDF)';
+    panel.classList.add('vhome-b1-centile');
+    panel.prepend(reference);
+
+    function refreshTitles() {
+      var items = Array.from(charts.querySelectorAll(':scope > .vilda-patient-section-h')).map(function (heading) {
+        if (!originalTitles.has(heading)) {
+          var original = heading.textContent.trim(), separator = original.indexOf(' · ');
+          var name = separator < 0 ? original : original.slice(0, separator);
+          originalTitles.set(heading, {
+            label: titles.get(name),
+            source: separator < 0 ? '' : original.slice(separator + 3)
+          });
+        }
+        return { heading: heading, title: originalTitles.get(heading) };
+      });
+      var source = items[0]?.title.source;
+      var shared = !!source && items.every(function (item) { return item.title.label && item.title.source === source; });
+      reference.hidden = !shared;
+      if (shared && reference.textContent !== 'Siatki ' + source) reference.textContent = 'Siatki ' + source;
+      items.forEach(function (item) {
+        if (!item.title.label) return;
+        var label = item.title.label + (!shared && item.title.source ? ' · ' + item.title.source : '');
+        if (item.heading.textContent !== label) item.heading.textContent = label;
+      });
+    }
+    function refreshComparison() {
+      var compare = panel.querySelector('.vilda-cmp-btn');
+      if (!compare) return;
+      var pressed = compare.classList.contains('on');
+      var label = pressed ? 'Zakończ porównanie' : 'Porównaj pomiary';
+      compare.setAttribute('aria-pressed', String(pressed));
+      if (compare.textContent !== label) compare.textContent = label;
+    }
+    refreshTitles(); refreshComparison();
+    // Native range changes replace the charts and comparison toolbar. Leave
+    // pointer readouts, overlays and the chart engine on their original nodes.
+    view.centileObserver = new w.MutationObserver(function (changes) {
+      if (changes.some(function (change) { return change.target === charts; })) refreshTitles();
+      if (changes.some(function (change) { return change.target === panel || change.target.classList?.contains('vilda-cmp-btn'); })) refreshComparison();
+    });
+    view.centileObserver.observe(panel, { childList: true, subtree: true });
   }
   function statusGroups(view, native) {
     var host = native.panels.antro;
@@ -482,7 +548,9 @@
       footer.appendChild(button('Zamknij kartę', function () { close(view); }));
       children.unshift(header); children.push(footer);
     }
-    statusGroups(view, native); root.replaceChildren.apply(root, children);
+    statusGroups(view, native);
+    presentCentileCharts(view, panels.traj);
+    root.replaceChildren.apply(root, children);
     view.outside = function (event) { if (view.menu && !view.menu.hidden && !menuWrap.contains(event.target)) hideMenu(view, false); };
     d.addEventListener('pointerdown', view.outside);
     root.addEventListener('keydown', function (event) {

@@ -115,12 +115,12 @@
       "sha256": "4d53f179f8ae5629b88b21f4682b768881ee395a69b295777ad37d0e3f398a36"
     },
     {
-      "path": "vilda_home_patient_native.js?v=12",
-      "sha256": "985b36f007408397c73838db2080d965a3a879e06c40a1621034ae21a524215d"
+      "path": "vilda_home_patient_native.js?v=13",
+      "sha256": "e0ce3fee9ccd981c46ff85149fe98baf54f274bdac87da0be67fac0b42a99c41"
     },
     {
-      "path": "vilda_home_patient_native.css?v=7",
-      "sha256": "44e721eb598c9bb9e2f1dd6ef871dee47706a249db6c3a995d42e0f76169a311"
+      "path": "vilda_home_patient_native.css?v=8",
+      "sha256": "55804b710551fbad0587f495cd61b843bca235af131819bd23c165136ce116f2"
     },
     {
       "path": "vilda_patient_treatment_ui.js?v=6",
@@ -228,9 +228,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-fb5fdb96a10b.json",
-    "sha256": "fb5fdb96a10b4ac8528cc90d61f549b0610152403f1e5cce9e4724901a4ebfe5",
-    "byteLength": 2118393
+    "path": "runtime/visit-ui-precache/precache-b09b2f0c0480.json",
+    "sha256": "b09b2f0c0480553ee64a5cc8b40a35f8a19817528ea1b00e5e394f901f5bb9b8",
+    "byteLength": 2128261
   },
   "historicalPacks": [
     {
@@ -732,6 +732,11 @@
       "path": "runtime/visit-ui-precache/precache-445b5e4c1915.json",
       "sha256": "445b5e4c1915ecf01c5f21f6aa58d1feaeae240d5b700ea8ea96d0aaa908ce78",
       "byteLength": 2104446
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-fb5fdb96a10b.json",
+      "sha256": "fb5fdb96a10b4ac8528cc90d61f549b0610152403f1e5cce9e4724901a4ebfe5",
+      "byteLength": 2118393
     }
   ]
 }
