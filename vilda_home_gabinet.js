@@ -243,9 +243,6 @@
     if (pane?.classList.contains('app-pane')) {
       pane.toggleAttribute('data-vhome-workspace', Boolean(value));
       pane.toggleAttribute('data-vhome-patient', patientView);
-      const directory = view === 'registration' ? 'registration' : view === 'start' ? '' : null;
-      if (directory === null) pane.removeAttribute('data-vhome-directory');
-      else if (pane.getAttribute('data-vhome-directory') !== directory) pane.setAttribute('data-vhome-directory', directory);
     }
   }
   function render() {
@@ -747,15 +744,6 @@
         event.preventDefault(); saveRapid();
       }
     });
-    if (w.frameElement?.classList.contains('app-pane')) {
-      const decorRail = w.parent.matchMedia('(min-width: 1400px)');
-      const syncHeaderWidth = () => header.toggleAttribute('data-decor-rail', decorRail.matches);
-      syncHeaderWidth();
-      decorRail.addEventListener('change', syncHeaderWidth);
-      w.addEventListener('pagehide', event => {
-        if (!event.persisted) decorRail.removeEventListener('change', syncHeaderWidth);
-      });
-    }
     header.querySelector('[data-start]').onclick = closePatientCard;
     for (const action of header.querySelectorAll('[data-patient-action]')) {
       action.onclick = () => openPatientAction(action.dataset.patientAction);

@@ -40,12 +40,12 @@ describe('independent visit UI resources in one verified transport', () => {
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
     expect(urls).toHaveLength(56);
     expect(urls).toContain('/vilda_docpro_visit_guard.js?v=2');
-    expect(urls).toContain('/vilda_home_gabinet.css?v=12');
-    expect(urls).toContain('/vilda_home_gabinet_start.css?v=6');
+    expect(urls).toContain('/vilda_home_gabinet.css?v=13');
+    expect(urls).toContain('/vilda_home_gabinet_start.css?v=7');
     expect(urls).toContain('/vilda_home_gabinet_quick.js?v=1');
     expect(urls).toContain('/vilda_home_gabinet_start.js?v=8');
     expect(urls).toContain('/vilda_home_encounter.js?v=10');
-    expect(urls).toContain('/vilda_home_gabinet.js?v=20');
+    expect(urls).toContain('/vilda_home_gabinet.js?v=21');
     expect(urls).toContain('/vilda_home_visit_scene.css?v=3');
     expect(urls).toContain('/vilda_home_visit_detail.css?v=2');
     expect(urls).toContain('/vilda_home_visit_projection.js?v=2');
