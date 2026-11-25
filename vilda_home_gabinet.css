@@ -279,7 +279,9 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
   #vhomeGabinetHeader .gb-header-top .gb-breadcrumb button { max-width: 100%; text-align: start; line-height: 1.25; white-space: normal; }
   #vhomeGabinetHeader .gb-header-top .gb-breadcrumb button span { min-width: 0; overflow-wrap: anywhere; }
   #vhomeGabinetHeader .gb-card-actions { --gb-action-icon-size: .875rem; }
-  #vhomeGabinetHeader .gb-card-actions button:is([data-home-encounter],[data-visit-actions]) { gap: .25rem; padding-inline: .25rem; }
+  #vhomeGabinetHeader .gb-card-actions button:is([data-home-encounter],[data-visit-actions]) {
+    gap: var(--space-0-25); padding-inline: var(--space-0-25);
+  }
   #vhomeGabinetHeader .gb-patient-tabs button {
     flex: 1 1 auto; min-width: 0; padding-inline: .12rem; line-height: 1.2;
     white-space: normal; overflow-wrap: anywhere;
