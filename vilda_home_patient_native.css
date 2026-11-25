@@ -1604,7 +1604,6 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vhome-timeli
 #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist button.vilda-lab-hist-result-row {
   min-height: 58px;
   padding: 9px var(--space-14px);
-  color: var(--lab-ink);
   line-height: 1.35;
 }
 #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist button.vilda-lab-hist-result-row:focus-visible {
