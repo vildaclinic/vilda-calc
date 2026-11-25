@@ -48125,6 +48125,444 @@ ważne, czerwone na bazie powtórzone na `ac0869f2` (te same 51 + 2 + 1, wszystk
 przeliczone dla sejfu po scaleniu. SW 1.1.586 to numer, który właściciel sprawdza na każdym urządzeniu przed E3-PR0e2b.
 Bez nowego pliku w pamięci offline.
 
+## P-ROZPOZNANIA, rata 1 — rozpoznania pacjenta w Karcie: zapis w sejfie, katalog ICD-10 i sekcja w zakładce „Leczenie” (SW 1.1.587, `vilda_vault.js` 288, `vilda_auth_ui.js` 584, `vilda_auth_ui.css` 92, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu — nowe pole dokumentacji.** Żadnego wzoru, progu, normy, jednostki ani interpretacji.
+Aplikacja nie wyprowadza rozpoznania z BMI, leku, programu GH ani notatek i nie nadaje kodu sama: rozpoznanie, jego kod,
+stan i datę wpisuje lekarz. Obliczenia GH, otyłości, siatek, list pacjentów i statystyk są bez zmian. Zmienia się wygląd
+Karty: zakładka „Leczenie” jest u każdego pacjenta (dotąd tylko przy leczeniu GH albo otyłości). Pasek zakładek ma więc
+zawsze siedem pozycji: przy szerokim oknie (1440 px) w jednym rzędzie, przy węższym (1100 px, kolumna Karty 675 px) w dwóch
+— tak jak dotąd u pacjentów leczonych (P-KARTA-LECZENIE); etykiety nie są ucinane.
+
+**Decyzja właściciela.** 2026-11-24: rozpoznanie ma pasować i do bieżącej aplikacji, i do nowej strony głównej (gałąź
+`agent/nowa-strona-glowna`, zaakceptowany tam wariant B1). Po analizie: „ok, rób teraz dwa PR-y” — ten (zapis, katalog,
+sekcja w dotychczasowej Karcie) i następny (statystyki według rozpoznania). Epizody leczenia zostają w nowej Karcie.
+
+**Jeden zapis w obu Kartach.** Rozpoznanie jest osobną notatką pacjenta kategorii `treatment` z zaszyfrowanym
+`treatmentContext` (wersja 1): `kind: 'diagnosis'`, `name` (obowiązkowa, do 200 znaków), `code` (opcjonalny, do 24
+znaków), `codingSystem: 'ICD-10'`, `status` (`active` albo `closed`), `dateISO` (obowiązkowa). Pacjent może mieć kilka
+rozpoznań; nie ma rozpoznania „głównego”. Tytuł i treść notatki są czytelnym opisem („Rozpoznanie · …”, „ICD-10: …”),
+więc wpis jest widoczny w „Notatkach”, „Historii” i wyszukiwaniu. Model, magazyn i transport (odczyt, import, kopia,
+synchronizacja, scalenie pacjentów) przeniesione bez zmian z gałęzi strony głównej — pełny kontrakt:
+[PATIENT_TREATMENT.md](../PATIENT_TREATMENT.md).
+
+**Katalog ICD-10.** Polski zbiór Centrum e-Zdrowia (Rejestr Systemów Kodowania, zasób 55725, ICD-10-2008-PL), **stan na
+31.03.2021**, 12 010 kodów, licencja CC BY 4.0; źródło, skróty, licencja i ograniczenia: [ICD10_CATALOGUE.md](ICD10_CATALOGUE.md).
+To wydanie historyczne — data jest widoczna przy polu. Brak kodu w katalogu nie oznacza kodu błędnego: lekarz może jawnie
+zatwierdzić własny wpis jako kod ręczny albo zapisać rozpoznanie bez kodu. Wyszukiwanie ignoruje wielkość liter i polskie
+znaki, a zapis bez kropki (`e660`) odnajduje `E66.0`. Wybór pozycji uzupełnia pustą nazwę nazwą z katalogu; własnej nazwy
+lekarza nie nadpisuje. Tekst wyszukiwania nie jest zapisywany i nie opuszcza urządzenia.
+
+**Sekcja w Karcie.** Zakładka „Leczenie” zaczyna się blokiem „Rozpoznania pacjenta”: lista (kod — nazwa, stan, data, od
+najnowszej daty), „Dodaj rozpoznanie”, „Edytuj”. Formularz: nazwa, kod (podpowiedzi z katalogu, najwyżej 12 naraz),
+stan, data (domyślnie dziś). Nierozstrzygnięte wyszukiwanie blokuje zapis. Usunąć rozpoznanie można w „Notatkach”
+(„Usuń”), jak każdą notatkę; „Edytuj” przy takim wpisie otwiera formularz rozpoznania, a nie edytor tekstu. Inne zapisy
+leczenia (epizody z nowej Karty) są w tej Karcie tylko do odczytu.
+
+**Przypadek syntetyczny (dane fikcyjne).** Pacjent „Fikcyjny Bez Leczenia”, 24.11.2026: w formularzu wpisane `e660` →
+pierwsza podpowiedź „E66.0 — Otyłość spowodowana nadmierną podażą energii”, kategoria „E66 — Otyłość”; wybór uzupełnia
+nazwę; zapis daje notatkę `tmt-<uuid>` kategorii `treatment`, tytuł „Rozpoznanie · Otyłość spowodowana nadmierną podażą
+energii”, treść „ICD-10: E66.0 / Stan rozpoznania: aktywne / Data rozpoznania: 2026-11-24” i kontekst
+`{ schemaVersion: 1, kind: 'diagnosis', name: 'Otyłość spowodowana nadmierną podażą energii', code: 'E66.0',
+codingSystem: 'ICD-10', status: 'active', dateISO: '2026-11-24' }`. Lista pokazuje „E66.0 — Otyłość spowodowana nadmierną
+podażą energii · Aktywne rozpoznanie · 24.11.2026”. Edycja na „Zamknięte” z datą 15.01.2024 zmienia ten sam zapis
+(kolejna rewizja), a lista pokazuje „Rozpoznanie zamknięte · 15.01.2024”.
+
+**Prywatność i cykl życia danych.** Rozpoznanie jest daną medyczną: nazwa, kod, stan i data są wyłącznie w zaszyfrowanej
+treści notatki; jawna koperta niesie tylko to, co każda notatka (kategoria, identyfikatory, chwile zmiany). Nic nie trafia
+do `localStorage`, `sessionStorage`, adresu strony, dziennika błędów ani poza urządzenie; synchronizacja i kopie
+przenoszą zapis istniejącą, szyfrowaną drogą notatek. Formularz znika przy zablokowaniu sejfu, a lista jest częścią Karty
+i znika razem z nią.
+
+**Sejf.** Nowa, odwracalna warstwa `VILDA PATIENT TREATMENT V1` (osiemnaście punktów włączenia, czytelne źródła
+`runtime/patient-treatment-v1/`), nałożona na cały dotychczasowy sejf. Dotychczasowe straże zdejmują ją jako pierwszą,
+więc siedem przypiętych skrótów (trwałe wizyty, blok natywny) się nie zmienia, a **obraz bazy dla `vilda-source` zostaje
+ten sam**. Nowe przypięcia: `baseVaultSHA256` `3bebcc8e…`, `integratedVaultSHA256` `4f625ec4…` w
+`runtime/patient-treatment-v1/manifest.json` i `BASE` w `tools/patient-treatment-vault-delta.mjs`. **Sejf ma nową
+warstwę — po następnym bloku natywnym z `vilda-source` trzeba ją nałożyć ponownie
+(`node tools/patient-treatment-vault-delta.mjs --rebuild`).** Opis łatek: `docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-ROZPOZNANIA, rata 1”.
+
+**Zgodność z gałęzią strony głównej.** Źródła modelu, magazynu i fragmentu sejfu są w stanie z commita `20a9b1b7`
+(sama warstwa leczenia); katalog ICD-10, wyszukiwarka, kontrolka, generator, źródło i ich testy — bez zmian. Tamta gałąź
+ma te same osiemnaście punktów włączenia i dokłada do nich dokumentację wizyt; przy jej aktualizacji z `audyt` warstwę
+z `audyt` zastępuje jej własna, szersza. Starsza wersja aplikacji, która dostanie z synchronizacji nowszy zapis leczenia,
+pokazuje go tylko do odczytu.
+
+**Strażnicy.** Z gałęzi strony głównej, bez zmian: `patient-treatment-model` (14), `patient-treatment-vault` (13, prawdziwy
+sejf: zapis, konflikt rewizji, nieobsługiwana wersja, synchronizacja, kopia, import, scalenie), `patient-treatment-vault-boundary`
+(2), `icd10-catalogue` (5, katalog odtworzony bajt w bajt ze źródła), `icd10-search`, `icd10-picker`,
+`pinned-reference-archive`. Nowe: `tests/e2e/karta-rozpoznania.spec.mjs` (6: pacjent bez leczenia i kształt zapisu;
+edycja, kod ręczny, nierozstrzygnięte wyszukiwanie, niezapisane zmiany; „Notatki” — edycja i usunięcie; pacjent leczony;
+brak katalogu i blokada sejfu; telefon) i `tests/e2e/karta-rozpoznania-offline.spec.mjs` (pierwsze otwarcie formularza po
+zimnym starcie bez sieci — katalog z pamięci service workera). Zmienione oczekiwania (zakładka „Leczenie” u każdego,
+sekcja rozpoznań jako pierwszy blok): `karta-leczenie.spec.mjs` KL-4, `karta-leczenie-mobile.spec.mjs`,
+`karta-leczenie-etap2.spec.mjs` KO-9, `karta-leczenie-etap3.spec.mjs` KG-5, `lab-historia-zakladka.spec.mjs` (siedem zakładek;
+przy oknie 1100 px dwa rzędy, przy 1440 px jeden — jak dotąd u pacjentów leczonych). Straże sejfu:
+`visits-vault-boundary`, `klirens-ktv-vault-boundary`, `klirens-existing-note-update-vault` czytają sejf po zdjęciu warstwy.
+
+**Wersje.** `vilda_vault.js` 287 → 288, `vilda_auth_ui.js` 583 → 584, `vilda_auth_ui.css` 91 → 92, wstrzykujące `vilda_chrome.js` 331 → 332 i `vilda_session_bridge.js` 247 → 248, nowe `vilda_icd10_pl_data.js` 1, `vilda_icd10_search.js` 1, `vilda_icd10_picker.js` 1; SW 1.1.586 → 1.1.587 — `npm run podbij-wersje`. Pamięć offline: trzy pliki katalogu w paczce interfejsu wizyt (jedno
+żądanie instalacji, jak dotąd; paczka 30 kB → 971 kB), liczba żądań instalacji bez zmian (600).
+
+## P-ROZPOZNANIA, rata 2 — Baza pacjentów: statystyki według rozpoznania i statystyki grupy (SW 1.1.588, `vilda_patients_list.js` 12, `vilda_patients_list.css` 10, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu — nowe zliczenie tego, co wpisał lekarz.** Statystyki nie wyprowadzają rozpoznania z BMI,
+leku ani programu i nie nadają kodów. Wzory i definicje etapów 1–4 (wiek, płeć, leczenie GH, leczenie otyłości, kompletność)
+są bez zmian; nowe jest tylko to, że te same liczby można policzyć dla grupy pacjentów z wybranym rozpoznaniem.
+
+**Decyzja właściciela.** 2026-11-24, po opisie sposobu liczenia: „ok, rób teraz dwa PR-y”. Rata 1 dała zapis rozpoznań
+(ten sam, co w nowej Karcie pacjenta) i sekcję w Karcie; ta rata — statystyki.
+
+**Skąd dane.** Rozpoznanie to notatka pacjenta kategorii `treatment` z kontekstem leczenia (`kind: 'diagnosis'`; kontrakt:
+[PATIENT_TREATMENT.md](../PATIENT_TREATMENT.md)). Rozpoznania całej bazy daje **jeden** odczyt
+`listPatientNotesByCategory('treatment')` w tym samym przebiegu, który czyta karty; dekoduje je model wbudowany w sejf
+(`VildaPatientTreatmentModel.decode`). Epizody leczenia, zwykłe notatki tej kategorii i zapisy w nieobsługiwanej wersji są
+pomijane. Zmiana rozpoznania nie zmienia karty, więc sekcja ma własny znacznik świeżości (identyfikatory i chwile zmiany
+rozpoznań) — po ponownym wejściu w Statystyki widać nowe rozpoznania bez czytania kart.
+
+**Jak się liczy (`diagnosisCohort`).**
+1. **Grupa to kod ICD-10 po ujednoliceniu zapisu**: bez kropki, spacji i znaczków †/*, wielkimi literami. „e660”, „E66.0”
+   i „E66.0†” to ten sam kod. Etykietą grupy jest najczęstszy zapis kodu i nazwa z katalogu ICD-10 (a gdy katalogu nie ma —
+   najczęstsza nazwa wpisana przez lekarzy).
+2. **Kategoria i podkody.** Kody o tych samych trzech pierwszych znakach (litera i dwie cyfry) tworzą kategorię, np. E66
+   z podkodami E66.0 i E66.9. Kategoria z jednym kodem jest pokazana jako ten kod, bez osobnego wiersza kategorii. Kod, który
+   nie zaczyna się od litery i dwóch cyfr (własny kod lekarza), jest osobną grupą.
+3. **Rozpoznanie bez kodu** grupuje się po nazwie — bez wielkości liter, polskich znaków i zbędnych spacji.
+4. **Pacjent liczy się w grupie raz**, a z kilkoma rozpoznaniami jest w każdej ze swoich grup. Liczby grup nie sumują się
+   więc do liczby pacjentów; ekran i raport mówią to wprost.
+5. **Aktywne i zamknięte.** Pacjent jest wśród „aktywnych” grupy, gdy ma w niej choć jedno aktywne rozpoznanie; w „tylko
+   zamkniętych” — gdy ma w niej wyłącznie zamknięte. Słupek, liczba i odsetek dotyczą aktywnych; zamknięte są dopiskiem.
+6. **Odsetek** liczony jest od wszystkich pacjentów bazy (albo grupy, gdy statystyki są zawężone), zaokrąglony do całości.
+7. Osobno: pacjenci **bez rozpoznania** (żadnego zapisu) i **tylko z zamkniętymi**.
+8. Kolejność: najwięcej aktywnych, potem najwięcej zamkniętych, potem alfabet.
+
+**Statystyki grupy.** Wybór rozpoznania zawęża całe Statystyki do pacjentów tej grupy (pacjenci z aktywnym rozpoznaniem,
+a gdy grupa ma same zamknięte — wszyscy z tym rozpoznaniem): wiek i płeć z nagłówków kart, leczenie GH, leczenie otyłości,
+kompletność i rozpoznania współwystępujące liczą te same funkcje (`demographics`, `cardsResult`, `ghCohort`,
+`obesityCohort`, `diagnosisCohort`) na mniejszym zbiorze, z pamięci wyników — bez ponownego czytania sejfu. Baner nad
+kafelkami mówi, czyje to liczby („Statystyki grupy”), i ma „Pokaż listę” oraz „Cała baza”. Raport PDF i plik dla Excela
+pobrane w tym widoku dotyczą grupy: mają jej nazwę w nagłówku i własną nazwę pliku (`…-grupa-RRRR-MM-DD`). Przy małej grupie
+średnie są niestabilne — działa to samo ostrzeżenie o małej grupie, co dotąd.
+
+**Nazwy kategorii.** Zapis rozpoznania niesie nazwę wybranego kodu, nie nazwę kategorii. Nazwę kategorii (np. „E66 — Otyłość”)
+daje katalog ICD-10 PL (CeZ, stan na 31.03.2021 — [ICD10_CATALOGUE.md](ICD10_CATALOGUE.md)), doczytywany przez Statystyki
+tylko wtedy, gdy w bazie jest rozpoznanie z kodem. Gdy katalogu nie da się wczytać, kategoria pokazuje sam kod.
+
+**Przypadek syntetyczny (dane fikcyjne; osiem osób z bazy testowej a–h).** Rozpoznania: b „Fikcyjna niskorosłość idiopatyczna”
+(bez kodu); c E23.0; d Q96 i E66.0; e E66.0 oraz zamknięte E23.0; f E66.9; h zamknięte E66.0; a i g bez rozpoznania.
+Wynik: z aktywnym rozpoznaniem 5 z 8 (63%); bez rozpoznania 2; tylko zamknięte 1. Wiersze: „E66 Otyłość” 3 (38%), + 1 zamkn.
+[podkody: E66.0 — 2 (25%), + 1 zamkn.; E66.9 — 1 (13%)]; „E23.0 Niedoczynność przysadki” 1 (13%), + 1 zamkn.;
+„Fikcyjna niskorosłość idiopatyczna” 1 (13%); „Q96 Zespół Turnera” 1 (13%). Statystyki grupy E66 (d, e, f): 3 pacjentów,
+1 chłopiec i 2 dziewczęta; leczenie otyłości „leczonych: 3 · Wegovy 2 · Saxenda 1”, zmiana masy po 12 tyg. −4,4%
+(d −3,0 · e −4,2 · f −6,0), po 6 mies. −8,5% (d −5,0 · f −12,0); leczenie GH „leczonych: 2 · SNP 1 · ZT 1”.
+
+**Pliki.** Raport PDF i arkusz „Podsumowanie” dostają sekcję „Rozpoznania” (pacjenci z aktywnym rozpoznaniem, bez
+rozpoznania, tabela „Pacjenci według rozpoznania” z wierszem kategorii „razem” i podkodami). Arkusz „Pacjenci” dostaje kolumny
+„Rozpoznania aktywne” i „Rozpoznania zamknięte” (kod, a bez kodu — nazwa).
+
+**Prywatność i cykl życia danych.** Rozpoznania są daną medyczną. W widoku żyją tak jak pozostałe wyniki statystyk: w pamięci
+RAM widoku Bazy (`state.cards.dx`, zakres `state.scope`), przekazywane przy powrocie do Bazy w tej samej sesji i czyszczone
+z blokadą sejfu; nic nie trafia do `localStorage`, `sessionStorage`, IndexedDB, adresu strony ani poza urządzenie. Pliki nadal
+nie zawierają nazwisk, dat urodzenia ani identyfikatorów; kolumny rozpoznań zawierają kody, a przy rozpoznaniu bez kodu —
+nazwę wpisaną przez lekarza (wolny tekst lekarza może więc trafić do pliku, który lekarz sam pobiera). W grupie złożonej
+z bardzo niewielu osób liczby są bliskie danym pojedynczego pacjenta — plik grupy należy traktować jak dokumentację medyczną.
+
+**Zgodność wstecz.** Sejf albo strona bez zapisu rozpoznań: sekcja się nie pokazuje, raport nie ma sekcji ani kolumn
+rozpoznań, reszta statystyk działa jak dotąd. Nieudany odczyt rozpoznań nie zatrzymuje liczenia kart.
+
+**Strażnicy.** `tests/unit/baza-statystyki-rozpoznania.test.mjs` (13; plik produkcyjny, prawdziwy model zapisu leczenia
+i prawdziwy katalog ICD-10: indeks i znacznik, kategorie i podkody, ujednolicenie zapisu kodu, grupowanie po nazwie,
+aktywne/zamknięte, kolejność, błąd katalogu, sekcja raportu, raport grupy, kolumny arkusza, starszy sejf);
+`tests/e2e/baza-pacjentow-statystyki-rozpoznania.spec.mjs` (3: sekcja, podkody, jeden odczyt notatek rozpoznań, świeżość po
+zamknięciu rozpoznania bez czytania kart; statystyki grupy liczone bez odczytu sejfu, lista grupy, plik grupy; telefon);
+`tests/e2e/baza-pacjentow-statystyki.spec.mjs` — licznik odczytów osobno dla wpisów między wizytami i rozpoznań.
+
+**Wersje.** `vilda_patients_list.js` 11 → 12, `vilda_patients_list.css` 9 → 10, wstrzykujące `vilda_chrome.js` 332 → 333 i `vilda_session_bridge.js` 248 → 249; SW 1.1.587 → 1.1.588 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline (katalog ICD-10 jest w niej od raty 1).
+
+## P-ROZPOZNANIA, rata 3 — usuwanie rozpoznania w Karcie pacjenta, tym samym mechanizmem co w nowej Karcie (SW 1.1.589, `vilda_vault.js` 289, `vilda_auth_ui.js` 585, `vilda_auth_ui.css` 93, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Aplikacja nadal niczego nie wyprowadza i nie ocenia. Zmienia się to, że rozpoznanie
+wpisane przez lekarza da się usunąć z kartoteki pacjenta.
+
+**Decyzja właściciela.** 2026-11-24: „na tej nowej stronie głównej weszła poprawka, dzięki której można usunąć rozpoznanie,
+tutaj też taka opcja usunięcia rozpoznania musi być, ale mechanizm powinien być zgodny, żeby można było potem łatwo scalić
+tą nową stronę z aplikacją”. Wzorzec: vildaclinic/vilda-calc#1061 na gałęzi `agent/nowa-strona-glowna`.
+
+**Co robi usunięcie.** Usuwa jeden zapis — notatkę rozpoznania — i zostawia zwykły nagrobek notatki, dzięki któremu
+usunięcie przechodzi przez synchronizację na pozostałe urządzenia i nie wraca ze starszej kopii. Nie da się go cofnąć
+z poziomu aplikacji (rozpoznanie można wpisać ponownie). **Nie rusza niczego innego:** kart leczenia GH i otyłości,
+pomiarów, wersji karty ani zapisów leczenia, które na to rozpoznanie wskazują (zostają ze swoim wskazaniem; nowa Karta
+pokaże przy nich „Rozpoznanie niedostępne”). Statystyki Bazy (rata 2) przestają liczyć usunięte rozpoznanie przy
+następnym wejściu — czytają notatki kategorii `treatment`, a usuniętej już wśród nich nie ma.
+
+**Zabezpieczenia (te same, co w nowej Karcie).**
+1. Usuwa magazyn leczenia (`removeDiagnosis`), nie zwykłe usuwanie notatki: sprawdza właściciela otwartej Karty, sesję
+   sejfu i to, że formularz dotyczy rozpoznania w wersji, którą lekarz widzi.
+2. Aktor sejfu porównuje wersję zapisu. Rozpoznanie zmienione albo usunięte w innym miejscu (druga karta przeglądarki,
+   inne urządzenie) → odmowa `TREATMENT_CONFLICT`, zapis zostaje, formularz można już tylko zamknąć i otworzyć aktualny.
+3. Zapis i nagrobek znikają i powstają w jednym niepodzielnym kroku (jedna transakcja IndexedDB; w trybie bez zapisu
+   na dysk — jedna podmiana w pamięci). Błąd zapisu nie zostawia stanu pośredniego ani zdarzenia zmiany.
+4. Tą drogą da się usunąć tylko obsługiwane rozpoznanie. Inny zapis leczenia (epizod z nowej Karty) jest w tej Karcie
+   tylko do odczytu — także dla przycisku „Usuń” w „Notatkach”.
+5. Przed usunięciem pytanie „Usunąć to rozpoznanie z kartoteki pacjenta?”, z dopiskiem o powiązanych zapisach leczenia
+   i o odrzuceniu niezapisanych zmian formularza.
+
+**Przypadki syntetyczne (dane fikcyjne).**
+- Pacjent z rozpoznaniami „E66.0 — Fikcyjna otyłość prosta” i „Q96 — Fikcyjny zespół Turnera”; „Usuń rozpoznanie” przy
+  E66.0 i zgoda → w sekcji zostaje Q96, komunikat „Usunięto rozpoznanie.”, w sejfie nie ma notatki E66.0, jest nagrobek
+  z jej wersją; odczyt statystyk zwraca tylko Q96. Odmowa w pytaniu → nic się nie zmienia.
+- To samo rozpoznanie zamknięte w drugim zakresie przed kliknięciem „Usuń rozpoznanie” → komunikat o zmianie zapisu,
+  rozpoznanie zostaje (zamknięte), bez nagrobka; po ponownym otwarciu usunięcie działa.
+- Rozpoznanie wskazane przez epizod leczenia → po usunięciu epizod zostaje, jego `diagnosisIds` bez zmian; „Usuń” przy
+  epizodzie w „Notatkach” → „Ten zapis leczenia jest tutaj tylko do odczytu.”, sejf bez zmian.
+- Dwa urządzenia: usunięcie na pierwszym, synchronizacja → na drugim rozpoznania nie ma; scalenie starszej kopii
+  z powrotem nie przywraca go.
+
+**Zgodność z gałęzią nowej strony głównej.** Ta sama funkcja magazynu, ten sam aktor, ten sam świadek opcji, ten sam
+niepodzielny zapis i te same kody odmów. `audyt` ma wydanie warstwy bez dokumentów wizyt: nie zna pochodzenia zapisu
+z wizyty, więc każde rozpoznanie jest tu rozpoznaniem pacjenta. Różnice i sposób scalenia:
+[PATIENT_TREATMENT.md](../PATIENT_TREATMENT.md), „Usuwanie rozpoznania”. **Sejf ma nową zewnętrzną warstwę** (skróty
+warstw pod nią i obraz bazy dla repozytorium źródeł modułu bez zmian); po następnym bloku natywnym nakłada się ją
+ponownie po warstwie leczenia (`node tools/diagnosis-mutation-vault-delta.mjs --build`). Opis łatek:
+`docs/ZRODLA_ARTEFAKTOW.md`, „Łatka P-ROZPOZNANIA, rata 3”.
+
+**Prywatność.** Bez nowych danych i bez nowych miejsc zapisu. Nagrobek zawiera identyfikator notatki, chwilę usunięcia
+i numer wersji — jak przy każdej usuniętej notatce. Dziennik działań dostaje wpis `note.delete` (identyfikator notatki
+i pacjenta), tak jak przy zwykłym usunięciu notatki.
+
+**Strażnicy.** `tests/unit/diagnosis-mutation-vault.test.mjs` (19; prawdziwy sejf na magazynie w pamięci i na IndexedDB:
+usunięcie z nagrobkiem i jednym zdarzeniem, powtórne i nieaktualne usunięcie, właściciel, zapis niebędący rozpoznaniem,
+świadek nazywający wizytę i świadek błędny, utrwalenie świadka przed kolejką, zwykłe usuwanie bez zmian, wiersz dziennika zmian synchronizacji, wycofanie całej
+transakcji po błędzie zapisu i po zmianie właściciela); `tests/unit/diagnosis-mutation-vault-boundary.test.mjs` (3;
+dokładne zdjęcie i nałożenie warstwy, blok natywny bez zmian); `tests/unit/patient-treatment-vault.test.mjs` — przypadek
+synchronizacji przeniesiony z tamtej gałęzi bez zmian; `tests/e2e/karta-rozpoznania-usuwanie.spec.mjs` (5: formularz,
+konflikt, „Notatki” z powiązanym epizodem, formularz z „Notatek”, telefon).
+
+**Wersje.** `vilda_vault.js` 288 → 289, `vilda_auth_ui.js` 584 → 585, `vilda_auth_ui.css` 92 → 93, wstrzykujące `vilda_chrome.js` 333 → 334 i `vilda_session_bridge.js` 249 → 250; SW 1.1.588 → 1.1.589 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## P-ROZPOZNANIA, rata 4 — rozpoznania wpisane na jednym urządzeniu widać na drugim także wtedy, gdy drugie dostało je na starszej wersji aplikacji (SW 1.1.590, `vilda_vault.js` 290, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Poprawka synchronizacji zapisu: to, co lekarz wpisał, ma być widoczne na każdym
+jego urządzeniu.
+
+**Zgłoszenie właściciela.** 2026-11-24: rozpoznania wpisane u pacjenta na komputerze w pracy nie są widoczne na telefonie.
+
+**Przyczyna.** Między urządzeniami z wersją aplikacji od raty 1 rozpoznania synchronizują się poprawnie. Urządzenie,
+które pobrało synchronizację, zanim samo się zaktualizowało, zapisało rozpoznanie jako zwykłą notatkę (tytuł
+„Rozpoznanie · …”, treść z kodem) bez zaszyfrowanego opisu rozpoznania, którego starsza wersja nie zna. Po aktualizacji
+ta sama wersja notatki nie była już dla scalania „nowsza”, więc opis nie wracał: wpis był w „Notatkach”, a sekcja
+„Rozpoznania pacjenta” i statystyki — puste. Na urządzeniu, na którym rozpoznanie wpisano, nic nie zginęło (starsza
+kopia bez opisu nie nadpisuje pełnej — tak było od raty 1). Odtworzone na prawdziwym kodzie obu wersji.
+
+**Reguła.** Gdy synchronizacja przynosi dokładnie tę samą wersję tej samej notatki (ten sam identyfikator, pacjent,
+numer wersji, chwila zapisu i cała czytelna treść), a tutejsza kopia nie ma opisu rozpoznania, tutejsza kopia przejmuje
+opis z synchronizacji. Bez nowej wersji i bez nowej chwili zapisu. Kopia, która opis już ma, inna wersja albo inna treść
+— bez zmian (zwykłe reguły scalania). Ta sama zasada od dawna uzupełnia plany opieki.
+
+**Co to znaczy w praktyce.** Po tej zmianie telefon uzupełnia rozpoznania sam przy najbliższej synchronizacji, w której
+serwer ma pełny zapis — czyli po tym, jak urządzenie, na którym je wpisano, zsynchronizuje się choć raz. Do tego czasu
+(i bez tej zmiany) działa obejście: na urządzeniu, na którym rozpoznanie jest widoczne, „Edytuj” → „Zapisz” — nowa
+wersja zapisu przechodzi na drugie urządzenie zwykłą drogą.
+
+**Przypadki syntetyczne (dane fikcyjne).**
+- Komputer: rozpoznanie „E66.0 — Fikcyjne rozpoznanie R4” i epizod leczenia, który je wskazuje. Telefon dostaje ten sam
+  stan bez opisów (tak, jak zostawia go starsza wersja) → sekcja rozpoznań pusta. Telefon scala pełny stan → rozpoznanie
+  i epizod widoczne, numery wersji i chwile zapisu bez zmian, dwa zgłoszenia zmiany notatki; drugie scalenie tego samego
+  stanu → nic nie zapisane.
+- To samo przez zaszyfrowaną deltę jednej notatki → rozpoznanie widoczne.
+- Ta sama wersja z innym tytułem → bez zmian; notatka zmieniona później na telefonie (wyższa wersja) → zostaje treść
+  z telefonu, bez opisu.
+- Telefon ma już opis, synchronizacja niesie tę samą wersję z innym opisem → bez zmian.
+- Opis w nowszym formacie → przeniesiony bez interpretowania (zapis „nieobsługiwany”, tylko do odczytu); zwykła notatka
+  bez zmian.
+
+**Sejf ma nową zewnętrzną warstwę** `VILDA TREATMENT SYNC HYDRATION V1` (skróty warstw pod nią i obraz bazy dla
+repozytorium źródeł modułu bez zmian); po następnym bloku natywnym nakłada się ją na końcu
+(`node tools/treatment-sync-hydration-vault-delta.mjs --build`). Opis łatek: `docs/ZRODLA_ARTEFAKTOW.md`,
+„Łatka P-ROZPOZNANIA, rata 4”. Sejf gałęzi nowej strony głównej ma ten sam błąd i te same kotwice. Przeniesienie warstwy
+tam to jednak więcej niż zmiana stałej `BASE` (sprostowanie z 2026-11-24): notatki tamtej gałęzi niosą też `visitContext`
+i `profileContext`, więc reguła „równe pola odczytu poza `treatmentContext`” nie uzupełni rozpoznania należącego do wizyty —
+porównanie i uzupełnianie trzeba tam rozszerzyć o te konteksty i objąć strażą.
+
+**Prywatność.** Bez nowych danych i miejsc zapisu; opis rozpoznania zostaje w zaszyfrowanej treści notatki.
+
+**Strażnicy.** `tests/unit/treatment-sync-hydration-vault.test.mjs` (5; prawdziwy sejf i WebCrypto: przypadki wyżej;
+bez poprawki trzy z nich są czerwone); `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs` (3; dokładne
+zdjęcie i nałożenie warstwy, blok natywny bez zmian); `tests/unit/notatka-pozniejsza-zapis.test.mjs` — nowy zapis jest
+jawnie na liście zapisów budowanych z poprzedniego rekordu, z warunkami: te same pola widoczne, ten sam numer wersji,
+ta sama chwila zapisu (test działania sprawdza, że w magazynie zmienia się wyłącznie szyfrogram). Poza repozytorium:
+odtworzenie zgłoszenia na kodzie obu wersji aplikacji (sejf sprzed raty 1 jako telefon, potem jego aktualizacja).
+
+**Wersje.** `vilda_vault.js` 289 → 290, wstrzykujące `vilda_chrome.js` 334 → 335 i `vilda_session_bridge.js` 250 → 251; SW 1.1.589 → 1.1.590 — `npm run podbij-wersje`. Bez zmian w interfejsie i bez nowego pliku w pamięci offline.
+
+## P-BAZA-GRUPY — Baza pacjentów: filtry zakresu w Statystykach, „Zapisz jako listę” i „Eksport do Excela” dla grupy (SW 1.1.591, `vilda_patients_list.js` 13, `vilda_patients_list.css` 11, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Żaden wzór, próg ani definicja z etapów 1–4 i z raty 2 rozpoznań się nie zmienia.
+Nowe jest tylko to, **dla kogo** liczą się te same statystyki (filtry zakresu) i co można zrobić z grupą pacjentów
+(zapisać ją jako listę, pobrać jej plik).
+
+**Decyzja właściciela.** Makieta Statystyk przyjęta 2026-11-23 (pasek „Zakres · Lista pacjentów · Płeć · Wiek” nad
+kafelkami; na pasku grupy „Zapisz jako listę pacjentów” i „Eksport do Excela”). 2026-11-24: „jedziemy z tym: praca nad
+grupami pacjentów z makiety”.
+
+**Filtry zakresu (`scopeFilters`, `scopeMembers`).** Cztery pola wyboru nad kafelkami Statystyk:
+1. **Zakres** — „cała baza (N)” albo „z zapisem w ostatnich 12 mies. (M)”. Reguła jest ta sama, co w kafelku „Z zapisem
+   w ostatnich 12 mies.” z etapu 1: data ostatniego zapisu karty (`lastSavedAtISO`) nie starsza niż rok od dziś.
+   *(2026-11-24, P-BAZA-ZAKRES: pole ma więcej pozycji — okna ostatniego zapisu i zakresy leczenia; opis niżej,
+   w sekcji „P-BAZA-ZAKRES”.)*
+2. **Lista pacjentów** — „wszystkie” albo jedna z zapisanych list. Członków daje ten sam odczyt, którym lista jest
+   otwierana w Bazie (`getPatientListMembers`: ręczni członkowie i pacjenci spełniający regułę listy, bez wykluczonych).
+   Pole jest widoczne tylko przy dostępie do list pacjentów (ten sam warunek, co listy w Bazie); bez dostępu filtr listy
+   nie zawęża. Listy, której już nie ma, filtr nie zawęża i mówi to wprost.
+3. **Płeć** — „wszyscy”, „chłopcy”, „dziewczęta”; z nagłówka karty, tak jak w kafelkach płci. Pacjent bez wpisanej płci
+   nie należy do żadnej z dwóch płci.
+4. **Wiek** — „wszystkie” albo jeden z przedziałów etapu 1 (0–2, 3–5, 6–9, 10–13, 14–17, 18+ lat). Wiek jest **wiekiem na
+   dziś** z pełnej daty urodzenia (ta sama funkcja, co w wykresie wieku). Pacjent bez daty urodzenia nie wchodzi do
+   żadnego przedziału.
+
+Filtry łączą się spójnikiem **„i”** — pacjent jest w zakresie, gdy spełnia wszystkie wybrane — i łączą się tak samo
+z rozpoznaniem wybranym w sekcji „Rozpoznania” (rata 2). Liczą się wyłącznie pacjenci z bazy (osoby spoza bazy nie).
+Zakres wybiera pacjentów z **gotowego wyniku całej bazy**: `demographics`, `cardsResult`, `ghCohort`, `obesityCohort`
+i `diagnosisCohort` liczą te same rzeczy na mniejszym zbiorze, z pamięci wyników — zmiana filtra nie czyta kart ani
+notatek z sejfu (jedyny odczyt to członkowie wybranej listy). Dopóki członkowie listy się wczytują, zakresu nie da się
+policzyć: ekran pokazuje „Wczytywanie listy…”, a nie zero pacjentów. Zakres, w którym nie ma nikogo, zostawia filtry na
+ekranie, mówi „Brak pacjentów w tym zakresie” i podaje wybrane filtry; „Cała baza” zdejmuje wszystkie naraz.
+
+**Opis zakresu (`scopeLabel`).** Baner „Statystyki grupy”, nagłówek raportu i nazwa grupy na liście niosą ten sam opis,
+w kolejności pól na ekranie i z rozpoznaniem na końcu, np. `lista „Fikcyjna lista kontrolna” · dziewczęta · E66 — Otyłość`.
+Kafelek liczby pacjentów nazywa się wtedy „Pacjenci w grupie”. Raport PDF i plik dla Excela pobrane z zawężonych
+Statystyk dotyczą zakresu (wiersz „Grupa pacjentów”, nazwa pliku `…-grupa-RRRR-MM-DD`), tak jak dotąd przy rozpoznaniu.
+Przy małej grupie średnie są niestabilne — działa to samo ostrzeżenie o małej grupie, co dotąd.
+
+**Grupa ze statystyk → lista pacjentów („Zapisz jako listę”).** Pasek grupy nad listą pacjentów (po kliknięciu słupka
+wieku, wiersza rozpoznania, „Pokaż listę” itp.) dostaje przycisk „Zapisz jako listę”. Formularz podpowiada nazwę grupy
+(do 80 znaków); pusta nazwa nie zapisuje. Zapis zakłada **listę ręczną** (bez reguły) z dokładnie tymi pacjentami grupy,
+którzy są w bazie, jednym zapisem `savePatientList({ name, description, memberIds })`; opis listy to „Grupa ze statystyk ·
+data”. Lista jest **stanem na chwilę zapisu** — nie zmienia się, gdy zmienią się statystyki; dalej zachowuje się jak
+każda lista ręczna (dodawanie, usuwanie, przypinanie, synchronizacja). Po zapisie pasek mówi „Zapisano listę „…” ·
+N osób” i daje „Otwórz listę”. Przycisk jest widoczny tylko przy dostępie do list pacjentów.
+
+**Plik grupy („Eksport do Excela”).** Ten sam przycisk-pasek daje plik `.xlsx` **tej grupy** — ten sam model raportu
+(`statsReport` → `statsWorkbook`) na pacjentach grupy, z nazwą grupy w wierszu „Grupa pacjentów” i nazwą pliku
+`statystyki-bazy-pacjentow-grupa-RRRR-MM-DD.xlsx`. Plik powstaje z policzonych statystyk (bez ponownego czytania sejfu);
+gdy karty nie są jeszcze policzone, pasek mówi, żeby wrócić do Statystyk i poczekać. Raport PDF grupy pobiera się, jak
+dotąd, z zawężonych Statystyk.
+
+**Przypadek syntetyczny (dane fikcyjne; osiem osób z bazy testowej a–h, zegar testu 17.06.2026).** Lista „Fikcyjna lista
+kontrolna” = c, d, e, f. Rozpoznania jak w racie 2 (aktywne E66: d, e, f).
+- Płeć „chłopcy” → b, c, e, g: 4 osoby; leczenie GH „leczonych: 3 · SNP 2 · bez programu 1”; leczenie otyłości
+  „leczonych: 2”; co najmniej 2 pomiary wzrostu 3 / 4.
+- „chłopcy” i wiek „6–9 lat” → c: 1 osoba (h jest w tym przedziale, ale nie ma wpisanej płci); GH „leczonych: 1 · SNP 1”.
+- Lista i „chłopcy” → c, e: 2 osoby; GH „leczonych: 2 · SNP 2”.
+- Lista, „dziewczęta” i rozpoznanie E66 → d, f: 2 osoby; leczenie otyłości „leczonych: 2 · Saxenda 1 · Wegovy 1”.
+- Dodatkowo wiek „0–2 lata” → nikt: „Brak pacjentów w tym zakresie”.
+- Grupa „6–9 lat” (c, h) zapisana jako lista: jedna lista ręczna z członkami c i h, opis „Grupa ze statystyk ·
+  17.06.2026”; plik grupy: „Pacjentów w grupie” 2, „Leczonych” 1 (GH: c, SNP) i 1 (otyłość: h, Saxenda), arkusz
+  „Pacjenci” z 2 wierszami.
+
+**Prywatność i cykl życia danych.** Wybrane filtry (`state.filters`) i stan paska grupy (`state.groupTask`) żyją w pamięci
+RAM widoku Bazy, razem z resztą stanu statystyk; nie trafiają do `localStorage`, `sessionStorage`, IndexedDB ani adresu
+strony. Zapisana lista jest zwykłą listą pacjentów: nazwa, opis i członkowie są w całości w zaszyfrowanej treści rekordu
+listy w sejfie i synchronizują się tak jak inne listy. Nazwa podpowiadana z grupy może zawierać rozpoznanie (np. „E66 —
+Otyłość”) — pozostaje w szyfrogramie. Plik grupy nie zawiera nazwisk, dat urodzenia ani identyfikatorów (pasek mówi to po
+zapisie); w grupie złożonej z bardzo niewielu osób liczby są bliskie danym pojedynczego pacjenta — plik należy traktować
+jak dokumentację medyczną. Bez nowego kontaktu z siecią.
+
+**Zgodność wstecz.** Bez zmian w sejfie i w zapisie list (istniejące `savePatientList`, `listPatientLists`,
+`getPatientListMembers`). Bez dostępu do list pacjentów: nie ma pola „Lista pacjentów” ani „Zapisz jako listę”; pozostałe
+filtry i plik grupy działają.
+
+**Strażnicy.** `tests/unit/baza-statystyki-grupy.test.mjs` (12; plik produkcyjny: normalizacja filtrów, opis i klucz
+zakresu, członkowie zakresu wg płci, wieku, ostatniego zapisu, listy i rozpoznania, zgodność z `demographics`, lista
+jeszcze niewczytana, łączenie „i”, nagłówek i nazwa pliku grupy); `tests/e2e/baza-pacjentow-statystyki-grupy.spec.mjs`
+(4; prawdziwy szyfrowany sejf, fikcyjne osoby: filtry łączone z listą i rozpoznaniem bez odczytu sejfu, plik zakresu,
+pusty zakres i „Cała baza”; zapis grupy jako listy i plik grupy bez danych osobowych; widok bez dostępu do list; telefon
+390 px — bez przewijania w poziomie, pola 44 px i 16 px pisma).
+
+**Wersje.** `vilda_patients_list.js` 12 → 13, `vilda_patients_list.css` 10 → 11, wstrzykujące `vilda_chrome.js` 335 → 336 i `vilda_session_bridge.js` 251 → 252; SW 1.1.590 → 1.1.591 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## P-BAZA-ZAKRES — Baza pacjentów: więcej pozycji w polu „Zakres” Statystyk (ostatni zapis karty, leczenie) (SW 1.1.592, `vilda_patients_list.js` 14, `vilda_patients_list.css` 12, 2026-11-24)
+
+**Zmiana kliniczna: BRAK algorytmu.** Żaden wzór, próg ani definicja statystyk się nie zmienia. Pole „Zakres” (P-BAZA-GRUPY)
+dostaje nowe pozycje wyboru pacjentów; statystyki zakresu liczą te same funkcje co dotąd na mniejszym zbiorze.
+
+**Decyzja właściciela.** 2026-11-24, po scaleniu P-BAZA-GRUPY: „ok, nieźle, popracuj na selektorem Zakres bo tam jest mały
+wybór”. Dobór pozycji jest propozycją wykonawcy do potwierdzenia przy przeglądzie PR.
+
+**Pozycje pola (`scopeRanges`).** Jedna pozycja naraz; każda pokazuje w nawiasie, ilu pacjentów całej bazy obejmuje.
+
+| Rodzina | Pozycja | Kto wchodzi |
+|---|---|---|
+| — | cała baza | wszyscy pacjenci z bazy (jak dotąd) |
+| Ostatni zapis karty | z zapisem w ostatnich 3 mies. | ostatni zapis karty nie starszy niż 3 miesiące od dziś |
+| Ostatni zapis karty | z zapisem w ostatnich 6 mies. | …nie starszy niż 6 miesięcy |
+| Ostatni zapis karty | z zapisem w ostatnich 12 mies. | …nie starszy niż 12 miesięcy (pozycja dotychczasowa; reguła kafelka z etapu 1) |
+| Ostatni zapis karty | bez zapisu od ponad 12 mies. | każdy, kto **nie** ma zapisu w ostatnich 12 miesiącach |
+| Ostatni zapis karty | bez zapisu od ponad 24 mies. | każdy, kto nie ma zapisu w ostatnich 24 miesiącach |
+| Leczenie | leczeni hormonem wzrostu | pacjenci liczeni jako „leczonych” w sekcji „Leczenie hormonem wzrostu” (etap 2) |
+| Leczenie | leczeni z powodu otyłości | pacjenci liczeni jako „leczonych” w sekcji „Leczenie otyłości” (etap 3) |
+
+**Ostatni zapis karty — jak się liczy (`scopeMembers`).**
+1. Datą jest chwila ostatniego zapisu karty pacjenta (`lastSavedAtISO` z nagłówka karty) — ta sama, którą pokazuje kolumna
+   „Ostatni zapis” na liście i którą liczy kafelek „z zapisem w ostatnich 12 mies.”. To data zapisu w aplikacji, nie data
+   wizyty wpisana w pomiarze.
+2. Granicą okna jest ta sama chwila N miesięcy wcześniej (arytmetyka kalendarzowa zegara urządzenia: 17.06 → 17.03 dla
+   3 mies.). Zapis dokładnie na granicy jeszcze się liczy. Gdy w miesiącu docelowym nie ma takiego dnia, granica przesuwa
+   się o brakujące dni na początek następnego miesiąca (31.05 − 3 mies. = 3.03) — tak samo, jak od etapu 1 działa reguła
+   12 miesięcy (29.02 → 1.03 poprzedniego roku), więc pozycja „12 mies.” i kafelek dają zawsze tę samą liczbę.
+3. „Bez zapisu od ponad N mies.” jest **dopełnieniem** okna: obejmuje także pacjenta bez daty zapisu albo z datą nie do
+   odczytania. „W ostatnich 12 mies.” i „bez zapisu od ponad 12 mies.” dzielą więc bazę bez reszty.
+
+**Leczenie — jak się liczy.** Pacjent jest „leczony hormonem wzrostu”, gdy jego karta ma co najmniej jeden punkt leczenia
+GH (Włączenie, Kontynuacja albo Zakończenie; `ghPatient` dał wynik), a „leczony z powodu otyłości” — gdy ma co najmniej
+jeden punkt leczenia otyłości w karcie albo we wpisach między wizytami (`obesityPatient` dał wynik). To dokładnie definicje
+liczb „leczonych” z etapów 2 i 3 — bez nowej reguły: zakres obejmuje pacjentów leczonych **kiedykolwiek** (także po
+zakończeniu leczenia), tak jak te sekcje. Skład pochodzi z policzonego wyniku kart (`details` z `cardsResult`), bez
+czytania sejfu przy zmianie zakresu.
+- Dopóki karty nie są policzone (pierwsze wejście, zmiana w bazie), zakresu leczenia nie da się ustalić: ekran pokazuje
+  „Liczenie kart…”, a nie zero pacjentów; po liczeniu statystyki rysują się dla właściwego składu. Liczniki przy
+  pozycjach leczenia pojawiają się po policzeniu kart.
+- Karta, której nie udało się odczytać, nie mówi nic o leczeniu: jej pacjent nie wchodzi do zakresu, a pod filtrami jest
+  o tym zdanie („Nie udało się odczytać kart: N. Ci pacjenci nie są liczeni w zakresie…”).
+
+**Łączenie.** Jak dotąd: pozycja „Zakresu” łączy się spójnikiem „i” z listą pacjentów, płcią, wiekiem i rozpoznaniem
+wybranym w sekcji „Rozpoznania”. Opis zakresu (`scopeLabel`) zaczyna się od pozycji „Zakresu”, np. `leczeni hormonem
+wzrostu · dziewczęta`; ten sam opis trafia do banera, nazwy grupy na liście, nagłówka raportu i podpowiadanej nazwy listy.
+
+**Wygląd.** Pozycje są w dwóch grupach opcji zwykłego pola wyboru („Ostatni zapis karty”, „Leczenie”). Pole „Zakres” ma
+szerszą kolumnę; poniżej 1180 px pola filtrów stoją po dwa, a poniżej 760 px „Zakres” i „Lista pacjentów” zajmują cały
+wiersz („Płeć” i „Wiek” obok siebie), tak żeby wybrana pozycja z licznikiem nie była ucinana (progi z istniejącej listy).
+
+**Przypadek syntetyczny (dane fikcyjne; osiem osób a–h z bazy testowej, zegar testu 17.06.2026, oraz dwie osoby z dawnym
+zapisem: i — dziewczynka leczona GH (SNP), ostatni zapis 15.01.2025; j — chłopiec bez leczenia, ostatni zapis 10.01.2024).**
+- Liczniki pozycji: cała baza 10; zapis w ostatnich 3 / 6 / 12 mies.: 8 / 8 / 8; bez zapisu od ponad 12 mies.: 2 (i, j);
+  od ponad 24 mies.: 1 (j); leczeni hormonem wzrostu: 5 (b, c, d, e, i); leczeni z powodu otyłości: 5 (d, e, f, g, h).
+- „bez zapisu od ponad 12 mies.” → 2 osoby; kafelek „Pacjenci w grupie” 2, „0 z zapisem w ostatnich 12 mies.”; GH
+  „leczonych: 1 · SNP 1”.
+- „leczeni hormonem wzrostu” → 5 osób; „leczonych: 5 · SNP 3 · bez programu 1 · ZT 1”; z płcią „dziewczęta” → d, i.
+- „leczeni z powodu otyłości” → 5 osób; „leczonych: 5 · Saxenda 3 · Wegovy 2”; z płcią „dziewczęta” → d, f („leczonych: 2 ·
+  Saxenda 1 · Wegovy 1”).
+- Po zapisaniu w tle nowej osoby leczonej GH i odświeżeniu widoku wybrany zakres zostaje, karty liczą się od nowa i zakres
+  obejmuje 6 osób.
+- Granice okien (test jednostkowy, „dziś” 17.06.2026 13:00): zapis 17.03.2026 13:00 jest w oknie 3 mies., zapis 12:59 już
+  nie; analogicznie 17.12.2025 (6 mies.), 17.06.2025 (12 mies.) i 17.06.2024 (24 mies.).
+
+**Prywatność i cykl życia danych.** Bez nowych danych, miejsc zapisu i kontaktu z siecią: wybrana pozycja żyje w pamięci
+widoku Bazy (`state.filters.range`) razem z pozostałymi filtrami; skład zakresów leczenia pochodzi z wyniku kart, który
+widok już trzyma w pamięci.
+
+**Zgodność wstecz.** Pozycja „z zapisem w ostatnich 12 mies.” działa jak dotąd. Model filtrów ma pole `range` (klucz
+pozycji) zamiast flagi `recent`; stan filtrów nie jest nigdzie utrwalany, więc nie ma czego migrować.
+
+**Strażnicy.** `tests/unit/baza-statystyki-zakres.test.mjs` (11; plik produkcyjny: lista pozycji, granice okien co do
+minuty, dopełnienia, zgodność z kafelkiem także 29 lutego, koniec miesiąca, zakresy leczenia z `cardsResult`, karta
+nieodczytana, brak wyniku kart, łączenie z innymi filtrami); `tests/e2e/baza-pacjentow-statystyki-zakres.spec.mjs` (3;
+prawdziwy szyfrowany sejf, fikcyjne osoby z dawnym zapisem: liczniki i grupy opcji, każdy rodzaj zakresu, łączenie z płcią,
+brak odczytów sejfu przy zmianie zakresu, lista grupy, ponowne liczenie po zmianie w bazie, telefon — wybrana pozycja
+mieści się w polu); `tests/unit/baza-statystyki-grupy.test.mjs` i `tests/e2e/baza-pacjentow-statystyki-grupy.spec.mjs` —
+dostosowane do pola `range` i nowego układu filtrów na telefonie.
+
+**Wersje.** `vilda_patients_list.js` 13 → 14, `vilda_patients_list.css` 11 → 12, wstrzykujące `vilda_chrome.js` 336 → 337 i `vilda_session_bridge.js` 252 → 253; SW 1.1.591 → 1.1.592 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
 ## Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (P-SYNC-WLASCICIEL, E3-PR0e3, SW 1.1.587, `vilda_vault.js` 288, 2026-11-24)
 
 **Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, gdzie po

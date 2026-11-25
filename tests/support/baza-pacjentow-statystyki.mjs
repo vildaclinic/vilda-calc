@@ -179,3 +179,46 @@ export async function otworzStatystyki(database) {
   await expect(database).toHaveAttribute('data-view', 'stats');
   await expect(database.locator('.pt-stats')).toBeVisible();
 }
+
+// P-ROZPOZNANIA, rata 2: rozpoznania (fikcyjne) dopisane tym samym magazynem, którego używa Karta pacjenta.
+//   b  „Fikcyjna niskorosłość idiopatyczna” (bez kodu), aktywne
+//   c  E23.0 aktywne
+//   d  Q96 aktywne, E66.0 aktywne
+//   e  E66.0 aktywne, E23.0 zamknięte
+//   f  E66.9 aktywne
+//   h  E66.0 zamknięte (tylko zamknięte)
+//   a, g — bez rozpoznania
+// Z aktywnym rozpoznaniem: b, c, d, e, f = 5 z 8 (63%); tylko zamknięte: h; bez rozpoznania: a, g.
+export const ROZPOZNANIA = Object.freeze({
+  podpowiedz: 'z aktywnym rozpoznaniem: 5 z 8 (63%)',
+  // [kod, nazwa, pacjenci, odsetek, dopisek o zamkniętych]
+  wiersze: [
+    ['E66', 'Otyłość', '3', '38%', '+ 1 zamkn.'],
+    ['E23.0', 'Niedoczynność przysadki', '1', '13%', '+ 1 zamkn.'],
+    ['', 'Fikcyjna niskorosłość idiopatyczna', '1', '13%', ''],
+    ['Q96', 'Zespół Turnera', '1', '13%', ''],
+  ],
+  podkodyE66: [
+    ['E66.0', 'Otyłość spowodowana nadmierną podażą energii', '2', '25%', '+ 1 zamkn.'],
+    ['E66.9', 'Otyłość, nieokreślona', '1', '13%', ''],
+  ],
+});
+export async function dodajRozpoznania(frame, ids) {
+  await frame.evaluate(async (pacjenci) => {
+    const lista = [
+      [pacjenci.b, { name: 'Fikcyjna niskorosłość idiopatyczna', code: '', status: 'active', dateISO: '2025-09-01' }],
+      [pacjenci.c, { name: 'Niedoczynność przysadki', code: 'E23.0', status: 'active', dateISO: '2024-01-15' }],
+      [pacjenci.d, { name: 'Zespół Turnera', code: 'Q96', status: 'active', dateISO: '2022-05-10' }],
+      [pacjenci.d, { name: 'Otyłość spowodowana nadmierną podażą energii', code: 'E66.0', status: 'active', dateISO: '2025-09-10' }],
+      [pacjenci.e, { name: 'Otyłość spowodowana nadmierną podażą energii', code: 'E66.0', status: 'active', dateISO: '2026-02-04' }],
+      [pacjenci.e, { name: 'Niedoczynność przysadki', code: 'E23.0', status: 'closed', dateISO: '2023-03-03' }],
+      [pacjenci.f, { name: 'Otyłość, nieokreślona', code: 'E66.9', status: 'active', dateISO: '2025-10-01' }],
+      [pacjenci.h, { name: 'Otyłość spowodowana nadmierną podażą energii', code: 'E66.0', status: 'closed', dateISO: '2025-11-05' }],
+    ];
+    for (const [patientId, values] of lista) {
+      const scope = window.VildaPatientTreatmentStore.createScope({ vault: window.VildaVault, patientId, isCurrent: () => true });
+      await scope.createDiagnosis(values);
+      scope.dispose();
+    }
+  }, ids);
+}

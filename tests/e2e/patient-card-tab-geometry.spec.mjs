@@ -97,7 +97,10 @@ async function fixture(page, context, baseURL, shell) {
 const phone = devices['iPhone 15 Pro'];
 for (const profile of [
   { name: 'desktop shell', shell: true, use: { viewport: { width: 1440, height: 1000 } } },
-  { name: 'desktop standalone', shell: false, use: { viewport: { width: 1440, height: 1000 } } },
+  // P-ROZPOZNANIA, rata 1: the treatment tab now starts with the "Rozpoznania pacjenta" section, so the short
+  // treatment overview is one block taller (1004 px with a 1000 px viewport). 1100 px keeps this profile's premise:
+  // the overview fits without scrolling while the chart view still needs a scroll owner.
+  { name: 'desktop standalone', shell: false, use: { viewport: { width: 1440, height: 1100 } } },
   { name: 'phone shell', shell: true, use: { viewport: { width: 390, height: 844 },
     userAgent: phone.userAgent, deviceScaleFactor: phone.deviceScaleFactor, isMobile: true, hasTouch: true } },
 ]) test.describe(profile.name, () => {

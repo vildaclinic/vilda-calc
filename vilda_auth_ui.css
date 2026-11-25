@@ -3767,3 +3767,371 @@ textarea.vdo-input {
     text-align: left;
   }
 }
+
+/* P-ROZPOZNANIA, rata 1 (decyzja właściciela 2026-11-24): sekcja „Rozpoznania pacjenta” — pierwszy blok zakładki
+   „Leczenie” — i jej formularz. Ten sam zapis co w nowej Karcie pacjenta (docs/PATIENT_TREATMENT.md); wygląd jak
+   pozostałe bloki tej Karty. Pole kodu ICD-10 buduje vilda_icd10_picker.js (klasy vpt-icd10*), stąd reguły dla
+   tych klas zawężone do arkusza formularza. */
+.vilda-kr {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: var(--space-14px) var(--space-16px);
+  border: var(--border-hairline) solid #d5e7e8;
+  border-radius: var(--radius-14);
+  background: #fff;
+}
+
+.vilda-kr-naglowek {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12px);
+}
+
+.vilda-kr-tytul {
+  min-width: 0;
+}
+
+.vilda-kr-tytul h4 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.vilda-kr-opis {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.vilda-kr-lista {
+  margin-top: var(--space-10px);
+}
+
+.vilda-kr-wiersz {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12px);
+  padding: var(--space-10px) 0;
+  border-top: var(--border-hairline) solid #e3eeef;
+}
+
+.vilda-kr-tresc {
+  min-width: 0;
+}
+
+.vilda-kr-tresc strong {
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.vilda-kr-wiersz--zamkniete .vilda-kr-tresc strong {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.vilda-kr-pusto {
+  margin: 0;
+  padding: var(--space-10px) 0 2px;
+  border-top: var(--border-hairline) solid #e3eeef;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.vilda-kr-inne {
+  padding-top: var(--space-10px);
+  border-top: var(--border-hairline) solid #e3eeef;
+}
+
+.vilda-kr-komunikat {
+  margin: var(--space-8px) 0 0;
+  color: #0f6e56;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.vilda-kr-komunikat--blad,
+.vilda-kr-blad {
+  color: var(--danger);
+}
+
+/* Formularz: arkusz jak pozostałe arkusze Karty, szerszy (dwa pola w wierszu) i przewijany w środku. */
+.vilda-kr-arkusz {
+  max-width: 520px;
+}
+
+.vilda-kr-formularz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12px);
+  min-width: 0;
+  margin: 0;
+}
+
+.vilda-kr-arkusz .vilda-auth-sheet-title {
+  margin: 0;
+}
+
+.vilda-kr-pacjent {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.vilda-kr-blad {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.vilda-kr-pole,
+.vilda-kr-arkusz .vpt-icd10 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6px);
+  min-width: 0;
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.vilda-kr-arkusz .vpt-icd10 > label {
+  margin: 0;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Pola ukrywane atrybutem hidden (wybrany kod, lista podpowiedzi, komunikat błędu) mają tu własne display. */
+.vilda-kr-arkusz [hidden] {
+  display: none !important;
+}
+
+.vilda-kr-arkusz :is(.vilda-kr-pole, .vpt-icd10) :is(input, select) {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-10px) var(--space-12px);
+  border: var(--border-hairline) solid #cfe0e2;
+  border-radius: var(--radius-10);
+  background: #fff;
+  color: var(--text-strong);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.vilda-kr-arkusz :is(input, select, button):focus-visible {
+  outline: var(--border-emphasis) solid var(--primary);
+  outline-offset: 2px;
+}
+
+.vilda-kr-dwa {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12px);
+}
+
+.vilda-kr-arkusz :is(.vpt-icd10-help, .vpt-icd10-status, .vpt-icd10-source, .vpt-icd10-parent, .vpt-icd10-official, .vpt-icd10-empty) {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.vilda-kr-arkusz .vpt-icd10-source {
+  font-size: 12px;
+}
+
+.vilda-kr-arkusz .vpt-icd10-status:empty {
+  display: none;
+}
+
+.vilda-kr-arkusz .vpt-icd10-official {
+  color: var(--text-strong);
+}
+
+.vilda-kr-arkusz .vpt-icd10-empty {
+  padding: var(--space-12px);
+}
+
+.vilda-kr-arkusz .vpt-icd10-list {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-height: min(280px, 36dvh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: var(--border-hairline) solid #cfe0e2;
+  border-radius: var(--radius-10);
+  background: #fff;
+}
+
+/* Podpowiedzi i „Użyj nazwy z katalogu” to przyciski: skórka szkła i reguły przycisków Karty działają z !important,
+   więc te same własności wracają tu z !important przy wyższej szczegółowości (jak .vilda-kl-pasek). */
+.vilda-kr-arkusz .vpt-icd10 .vpt-icd10-option {
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch !important;
+  justify-content: center !important;
+  gap: 2px;
+  width: 100% !important;
+  min-height: 44px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--space-8px) var(--space-12px) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: var(--text-strong) !important;
+  font-family: inherit;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transform: none !important;
+}
+
+.vilda-kr-arkusz .vpt-icd10 .vpt-icd10-option + .vpt-icd10-option {
+  border-top: var(--border-hairline) solid #e3eeef !important;
+}
+
+.vilda-kr-arkusz .vpt-icd10 .vpt-icd10-option[aria-selected="true"],
+.vilda-kr-arkusz .vpt-icd10 .vpt-icd10-option:hover {
+  background: #eef6f6 !important;
+}
+
+.vilda-kr-arkusz .vpt-icd10-option-name {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.vilda-kr-arkusz .vpt-icd10-selected {
+  display: grid;
+  gap: var(--space-4px);
+  min-width: 0;
+}
+
+.vilda-kr-arkusz .vpt-icd10 .vpt-icd10-use-name {
+  justify-self: start;
+  width: auto !important;
+  min-height: 40px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--space-6px) 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--primary) !important;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transform: none !important;
+}
+
+.vilda-kr-arkusz .vilda-auth-sheet-actions {
+  margin-top: var(--space-4px);
+}
+
+/* Arkusz jest dzieckiem <body>, poza .vilda-auth-root: skórka szkła przycisków działa tu z !important. */
+.vilda-kr-arkusz .vilda-auth-sheet-actions .vilda-auth-btn {
+  width: 100% !important;
+  min-height: 46px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--space-12px) var(--space-16px) !important;
+  border: 1.5px solid #cfe0e2 !important;
+  border-radius: var(--radius-12) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: var(--text-strong) !important;
+  font-size: 15px;
+  font-weight: 500;
+  transform: none !important;
+}
+
+.vilda-kr-arkusz .vilda-auth-sheet-actions .vilda-auth-btn-primary {
+  border-color: var(--primary) !important;
+  background: var(--primary) !important;
+  color: #fff !important;
+}
+
+.vilda-kr-arkusz .vilda-auth-sheet-actions .vilda-auth-btn:disabled {
+  cursor: default;
+  opacity: var(--opacity-disabled-label);
+}
+
+/* P-ROZPOZNANIA, rata 3: „Usuń rozpoznanie” — osobny, cichy przycisk na końcu formularza, pod „Anuluj”, za cienką
+   linią: rzadka, nieodwracalna czynność nie stoi obok zapisu i nie przesuwa „Zapisz” ani „Anuluj”. */
+.vilda-kr-usuwanie {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: var(--space-4px);
+  padding-top: var(--space-12px);
+  border-top: var(--border-hairline) solid var(--line-teal-soft);
+}
+
+.vilda-kr-arkusz .vilda-kr-usun {
+  width: auto !important;
+  max-width: 100%;
+  min-height: 44px !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: var(--space-8px) var(--space-14px) !important;
+  border: 1.5px solid var(--danger-strong) !important;
+  border-radius: var(--radius-12) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: var(--danger-strong) !important;
+  font-size: 14px;
+  font-weight: 500;
+  transform: none !important;
+}
+
+.vilda-kr-arkusz .vilda-kr-usun:disabled {
+  cursor: default;
+  opacity: var(--opacity-disabled-label);
+}
+
+@media (min-width: 700px) {
+  .vilda-kr-arkusz {
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 560px) {
+  .vilda-kr-naglowek {
+    flex-wrap: wrap;
+  }
+
+  .vilda-kr-dwa {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

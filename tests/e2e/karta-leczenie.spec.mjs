@@ -127,18 +127,30 @@ test.describe('Karta pacjenta — zakładka „Leczenie” i pasek leczenia (kom
     expect(await bezPrzewijaniaWBok(page)).toBe(true);
   });
 
-  test('KL-4 pacjent bez leczenia: sześć zakładek, bez paska; prośba o „leczenie” → Status', async ({ page }) => {
+  // P-ROZPOZNANIA, rata 1 (decyzja właściciela 2026-11-24): zakładka „Leczenie” jest u każdego pacjenta, bo jej
+  // pierwszym blokiem jest sekcja „Rozpoznania pacjenta” (dotąd pacjent bez leczenia miał sześć zakładek, a prośba
+  // o „leczenie” otwierała „Status”). Pasek leczenia nad zakładkami nadal pojawia się tylko przy leczeniu.
+  test('KL-4 pacjent bez leczenia: siedem zakładek, bez paska; „Leczenie” zawiera samą sekcję rozpoznań', async ({ page }) => {
     test.setTimeout(120_000);
     await otworz(page);
     const pid = await zapisz(page, BEZ);
     await karta(page, pid);
-    await expect(zakladki(page)).toHaveText(['Status', 'Siatki centylowe', 'Notatki', 'Historia', 'Badania', 'Plany opieki']);
-    await expect(page.locator('.vilda-kl-pasek, .vilda-kl-paski, [data-tab="leczenie"]')).toHaveCount(0);
-    const zaNaglowkiem = await page.evaluate(() => document.querySelector('.vilda-patient-hero').nextElementSibling.className);
-    expect(zaNaglowkiem).toBe('vilda-patient-tabs');
-    await karta(page, pid, { activeTab: 'leczenie' });
+    await expect(zakladki(page)).toHaveText(['Status', 'Leczenie', 'Siatki centylowe', 'Notatki', 'Historia', 'Badania', 'Plany opieki']);
     await expect(aktywna(page)).toHaveText('Status');
-    await expect(tresc(page, 'antro')).toBeVisible();
+    await expect(page.locator('.vilda-kl-pasek')).toHaveCount(0);
+    // Pusty kontener pasków (display: contents) nie zajmuje miejsca: zakładki stoją tuż pod nagłówkiem, jak dotąd.
+    const uklad = await page.evaluate(() => {
+      const naglowek = document.querySelector('.vilda-patient-hero'), paski = naglowek.nextElementSibling, zakladki = paski.nextElementSibling;
+      return { paski: paski.className, dzieci: paski.children.length, zakladki: zakladki.className,
+        pudelko: getComputedStyle(paski).display };
+    });
+    expect(uklad).toEqual({ paski: 'vilda-kl-paski', dzieci: 0, zakladki: 'vilda-patient-tabs', pudelko: 'contents' });
+    await karta(page, pid, { activeTab: 'leczenie' });
+    await expect(aktywna(page)).toHaveText('Leczenie');
+    await expect(tresc(page, 'leczenie')).toBeVisible();
+    await expect(tresc(page, 'antro')).toBeHidden();
+    expect(await tresc(page, 'leczenie').evaluate((t) => [...t.children].map((c) => c.className.split(' ')[0]))).toEqual(['vilda-kr']);
+    await expect(tresc(page, 'leczenie').locator('.vilda-kr-pusto')).toHaveText('Rozpoznania nie uzupełniono.');
   });
 
   test('KL-5 przywrócenie zakładki „Leczenie”: opcja activeTab, powrót „wstecz” i odświeżenie po synchronizacji', async ({ page }) => {

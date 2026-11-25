@@ -88,10 +88,25 @@ async function otworzKarte(page, id) {
   await expect(page.locator('.vhv-tile')).toBeVisible();
 }
 
+// Kafelki widocznej zakładki, każdy rozłożony na części. Od P-STATUS-KAFLE-ROWNE (decyzja
+// właściciela 2026-11-23) kafelek tempa ma w dużej czcionce samą wartość, a odstęp i flagę
+// w osobnych wierszach pod nią — dlatego wartość i podpisy sprawdzamy osobno. `podpisy` to
+// wszystko, co stoi w kafelku poza etykietą i wartością, w kolejności dokumentu (kafelek
+// układa wiersze w kolumnie, więc to także kolejność na ekranie).
 const kafelki = (page) => page.evaluate(() => {
   const pane = [...document.querySelectorAll('.vilda-patient-tab-content')]
     .find((x) => !x.classList.contains('vilda-patient-tab-content--hidden'));
-  return [...pane.querySelectorAll('.vilda-patient-stat')].map((t) => (t.textContent || '').replace(/\s+/g, ' ').trim());
+  const tekst = (e) => ((e && e.textContent) || '').replace(/\s+/g, ' ').trim();
+  return [...pane.querySelectorAll('.vilda-patient-stat')].map((t) => {
+    const etykieta = t.querySelector(':scope > .vilda-patient-stat-label');
+    const wartosc = t.querySelector(':scope > .vilda-patient-stat-value');
+    return {
+      tekst: tekst(t),
+      etykieta: tekst(etykieta),
+      wartosc: tekst(wartosc),
+      podpisy: [...t.children].filter((d) => d !== etykieta && d !== wartosc).map(tekst),
+    };
+  });
 });
 
 async function historia(page) {
@@ -111,11 +126,12 @@ test.describe('Karta pacjenta — tempo z jednego modelu', () => {
     await otworzKarte(page, id);
 
     const k = await kafelki(page);
-    const tempo = k.find((t) => /^Tempo wzrastania/.test(t));
+    const tempo = k.find((t) => t.etykieta === 'Tempo wzrastania');
     expect(tempo, 'kafelek nazywa się „Tempo wzrastania", nie „Prędkość"').toBeTruthy();
-    expect(tempo).toContain('7,0 cm/rok (z 12 mies.)');
-    expect(tempo).not.toMatch(/⚠/);
-    expect(k.some((t) => /Prędkość wzrastania/.test(t))).toBe(false);
+    expect(tempo.wartosc, 'w dużej czcionce sama wartość').toBe('7,0 cm/rok');
+    expect(tempo.podpisy, 'odstęp w podpisie, bez nawiasów; w normie nic więcej').toEqual(['z 12 mies.']);
+    expect(tempo.tekst).not.toMatch(/⚠/);
+    expect(k.some((t) => /Prędkość wzrastania/.test(t.tekst))).toBe(false);
 
     await page.locator('.vhv-tile').click();
     const panel = page.locator('.vhv-panel');
@@ -137,9 +153,11 @@ test.describe('Karta pacjenta — tempo z jednego modelu', () => {
     await otworzKarte(page, id);
 
     const k = await kafelki(page);
-    const tempo = k.find((t) => /^Tempo wzrastania/.test(t));
-    expect(tempo).toContain('4,0 cm/rok (z 12 mies.)');
-    expect(tempo).toContain('⚠ tempo poniżej normy');
+    const tempo = k.find((t) => t.etykieta === 'Tempo wzrastania');
+    expect(tempo, 'kafelek „Tempo wzrastania" jest w Statusie').toBeTruthy();
+    expect(tempo.wartosc, 'w dużej czcionce sama wartość').toBe('4,0 cm/rok');
+    expect(tempo.podpisy, 'odstęp w podpisie, bez nawiasów; flaga pod nim')
+      .toEqual(['z 12 mies.', '⚠ tempo poniżej normy']);
 
     const h = await historia(page);
     expect(h).toContain('Tempo 4,0 cm/rok (z 12 mies.)');

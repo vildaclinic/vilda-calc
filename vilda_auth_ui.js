@@ -952,6 +952,8 @@ async function CareReadNoteAccess(note, patientId, isCurrent) {
   return { note: fresh, destination: CareNoteDestination(fresh, patientId, values[1]), owner: owner };
 }
 async function CareDeleteCheckedNote(note, patientId, onChanged, isCurrent) {
+  // P-ROZPOZNANIA, rata 3: zapis leczenia (treatmentContext) usuwa magazyn leczenia; zwykłe usuwanie notatki go nie dotyka.
+  if (note && note.id && Object.prototype.hasOwnProperty.call(note, "treatmentContext")) return Kr_usunZNotatek(note, patientId, onChanged, isCurrent);
   var owner = remReadOwner();
   try {
     var access = await CareReadNoteAccess(note, patientId, isCurrent);
@@ -1017,6 +1019,8 @@ function CareShowReadOnlyNote(note, destination, options) {
 }
 var CareEditorSequence = 0;
 function ga(options) {
+  // P-ROZPOZNANIA, rata 1: zapis leczenia (treatmentContext) ma własny formularz; edytor tekstu nie może nadpisać jego pól.
+  if (options && options.note && options.note.id && Object.prototype.hasOwnProperty.call(options.note, "treatmentContext")) return Kr_zNotatki(options);
   var sequence = ++CareEditorSequence, owner = remReadOwner();
   if (!options || !options.note || !options.note.id) return CareOpenLegacyNoteEditor(options);
   var anchor = i.document.activeElement, card = anchor && typeof anchor.closest === "function" ? anchor.closest(".vilda-auth-patient-card") : null;
@@ -3403,6 +3407,467 @@ function Kl_przewin(cel) {
 }
 /** Zakładka „Leczenie”, jej treść i paski nad zakładkami; null, gdy Karta nie ma żadnego bloku leczenia.
     o: patientId, rekord (migawka), plec, zaawansowane, siatka, notatki, user, zakladka (HTML ikony i etykiety). */
+/* P-ROZPOZNANIA, rata 1 (decyzja właściciela 2026-11-24): sekcja „Rozpoznania pacjenta” w zakładce „Leczenie” Karty.
+   Rozpoznanie jest TYM SAMYM zapisem, którego używa nowa Karta pacjenta (strona główna): osobną notatką pacjenta
+   kategorii „treatment” z zaszyfrowanym treatmentContext (schemaVersion 1, kind „diagnosis”) — źródła w
+   runtime/patient-treatment-v1, opis w docs/PATIENT_TREATMENT.md. Sekcja niczego nie wylicza i nie podpowiada:
+   pokazuje i zapisuje to, co wpisał lekarz. Zapis i odczyt robi VildaPatientTreatmentStore (rewizja, właściciel,
+   sesja sejfu); katalog ICD-10 (CeZ, stan na 31.03.2021) doczytuje się dopiero przy otwarciu formularza. */
+var Kr_KATALOG = [
+  { adres: "vilda_icd10_pl_data.js?v=1", jest: function () { return !!i.VildaICD10PLData; } },
+  { adres: "vilda_icd10_search.js?v=1", jest: function () { return !!i.VildaICD10Search; } },
+  { adres: "vilda_icd10_picker.js?v=1", jest: function () { return !!i.VildaICD10Picker; } }
+], Kr_katalogWTrakcie = null, Kr_sekcje = [], Kr_sejfy = typeof WeakSet == "function" ? new WeakSet() : null;
+function Kr_data(iso) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso || "") ? iso.slice(8, 10) + "." + iso.slice(5, 7) + "." + iso.slice(0, 4) : "brak daty";
+}
+function Kr_dzis() {
+  var d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function Kr_etykieta(k) {
+  return (k.code ? k.code + " — " : "") + k.name;
+}
+function Kr_komunikat(blad) {
+  var kod = String((blad && blad.code) || "");
+  if (kod === "TREATMENT_VISIT_READONLY") return "To rozpoznanie pochodzi z wizyty. Można je zmienić lub usunąć tylko w wizycie, w której zostało zapisane.";
+  if (/CONFLICT|REVISION|CHANGED/.test(kod)) return "Zapis zmienił się w innym miejscu. Zachowaj wpisaną treść, anuluj formularz i otwórz aktualny zapis.";
+  if (/STALE|SESSION|LOCK|OWNER/.test(kod)) return "Sesja lub pacjent uległy zmianie. Otwórz ponownie Kartę pacjenta.";
+  if (/INVALID|VALIDATION/.test(kod)) return "Sprawdź nazwę, kod i datę. Nie udało się zapisać rozpoznania.";
+  return "Nie udało się potwierdzić zapisu. Zachowaj wpisaną treść, anuluj formularz i sprawdź listę rozpoznań przed kolejną próbą.";
+}
+/** Pytanie przed usunięciem rozpoznania. Usunięcie nie rusza zapisów leczenia, które na to rozpoznanie wskazują. */
+function Kr_pytanieUsun(dane, id, zmienione) {
+  var powiazane = !!(dane && Array.isArray(dane.episodes)) && dane.episodes.some(function (x) {
+    return !!(x && x.context && Array.isArray(x.context.diagnosisIds)) && x.context.diagnosisIds.indexOf(id) >= 0;
+  });
+  return "Usunąć to rozpoznanie z kartoteki pacjenta?"
+    + (powiazane ? " Powiązane z nim zapisy leczenia zostaną w karcie bez zmian." : "")
+    + (zmienione ? " Zmiany w formularzu zostaną odrzucone." : "");
+}
+/** Usunięcie rozpoznania przez magazyn leczenia (ten sam aktor sejfu co w nowej Karcie) i wpis w dzienniku działań. */
+function Kr_usun(zakres, dto, patientId) {
+  return Promise.resolve().then(function () { return zakres.removeDiagnosis(dto); }).then(function (wynik) {
+    try { if (i.VildaAuditLog) i.VildaAuditLog.log("note.delete", { noteId: dto.id, patientId: patientId }); } catch (x) { Ot("karta rozpoznania dziennik", x); }
+    return wynik;
+  });
+}
+/** Trzy pliki katalogu ICD-10 po kolei, raz na okno. false — pliku nie ma (np. offline przed pierwszym pobraniem). */
+function Kr_katalog() {
+  function komplet() { return Kr_KATALOG.every(function (p) { return p.jest(); }); }
+  if (komplet()) return Promise.resolve(true);
+  if (Kr_katalogWTrakcie) return Kr_katalogWTrakcie;
+  Kr_katalogWTrakcie = Kr_KATALOG.reduce(function (kolejka, p) {
+    return kolejka.then(function () {
+      if (p.jest()) return null;
+      return new Promise(function (gotowe, blad) {
+        var skrypt = i.document.createElement("script");
+        skrypt.src = p.adres;
+        skrypt.async = false;
+        skrypt.addEventListener("load", function () { gotowe(null); }, { once: true });
+        skrypt.addEventListener("error", function () { skrypt.remove(); blad(new Error("brak pliku " + p.adres)); }, { once: true });
+        i.document.head.appendChild(skrypt);
+      });
+    });
+  }, Promise.resolve(null)).then(function () {
+    Kr_katalogWTrakcie = null;
+    return komplet();
+  }, function (x) {
+    Kr_katalogWTrakcie = null;
+    Ot("karta rozpoznania katalog ICD-10", x);
+    return false;
+  });
+  return Kr_katalogWTrakcie;
+}
+/** Zmiana notatki pacjenta gdziekolwiek (historia notatek, inne urządzenie) odświeża widoczne sekcje rozpoznań. */
+function Kr_obserwuj(vault) {
+  if (!vault || !Kr_sejfy || Kr_sejfy.has(vault) || typeof vault.onPatientNoteChanged != "function") return;
+  Kr_sejfy.add(vault);
+  vault.onPatientNoteChanged(function () {
+    Kr_sekcje = Kr_sekcje.filter(function (x) { return x.el.isConnected; });
+    Kr_sekcje.forEach(function (x) { x.odswiez(); });
+  });
+}
+/** Formularz rozpoznania (dodanie albo edycja). w: { nazwa, dto, otwieracz, biezace(), zapisz(wartosci), poZapisie(dto) }. */
+function Kr_formularz(w) {
+  if (i.document.querySelector(".vilda-kr-nakladka")) return false;
+  var vault = jt(), k = (w.dto && w.dto.context) || {}, zamkniete = false, zapis = false, niepewne = false, zmienione = false;
+  var wybor = null, stopBlokady = null, obserwator = null, nakladka = null, kodGotowy = false;
+  function pole(etykieta, kontrolka) { return e("label", { class: "vilda-kr-pole" }, [e("span", { text: etykieta }), kontrolka]); }
+  var blad = e("p", { class: "vilda-kr-blad", role: "alert", tabindex: "-1" });
+  var nazwa = e("input", { type: "text", name: "name", required: "", maxlength: "200", autocomplete: "off" });
+  var kod = e("div", { class: "vilda-kr-kod" }, [e("p", { class: "vilda-kr-opis", text: "Wczytywanie katalogu ICD-10…" })]);
+  var stan = e("select", { name: "status" }, [e("option", { value: "active", text: "Aktywne" }), e("option", { value: "closed", text: "Zamknięte" })]);
+  var data = e("input", { type: "date", name: "dateISO", required: "" });
+  var zapisz = e("button", { type: "submit", class: "vilda-auth-btn vilda-auth-btn-primary", text: "Zapisz", "data-kr": "zapisz" });
+  var anuluj = e("button", { type: "button", class: "vilda-auth-btn", text: "Anuluj", "data-kr": "anuluj" });
+  var usun = w.dto && typeof w.usun == "function" ? e("button", { type: "button", class: "vilda-auth-btn vilda-kr-usun", text: "Usuń rozpoznanie", "data-kr": "usun" }) : null;
+  var naglowek = [e("h3", { class: "vilda-auth-sheet-title", id: "vilda-kr-arkusz-tytul", text: w.dto ? "Edytuj rozpoznanie" : "Dodaj rozpoznanie" })];
+  if (w.nazwa) naglowek.unshift(e("p", { class: "vilda-kr-pacjent", text: w.nazwa }));
+  var formularz = e("form", { class: "vilda-kr-formularz" },
+    naglowek.concat([blad, pole("Nazwa rozpoznania", nazwa), kod,
+      e("div", { class: "vilda-kr-dwa" }, [pole("Status rozpoznania", stan), pole("Data rozpoznania", data)]),
+      e("p", { class: "vilda-kr-opis", text: "Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10." })],
+      [e("div", { class: "vilda-auth-sheet-actions" }, [zapisz, anuluj])],
+      // Usuwanie na samym końcu formularza, pod „Anuluj”: rzadka, nieodwracalna czynność nie stoi obok zapisu.
+      usun ? [e("div", { class: "vilda-kr-usuwanie" }, [usun])] : []));
+  var arkusz = e("div", { class: "vilda-auth-sheet vilda-auth-sheet-info vilda-kr-arkusz", role: "dialog", "aria-modal": "true", "aria-labelledby": "vilda-kr-arkusz-tytul" }, [formularz]);
+  blad.hidden = true;
+  nazwa.value = k.name || "";
+  stan.value = k.status === "closed" ? "closed" : "active";
+  data.value = k.dateISO || Kr_dzis();
+  // Do chwili, gdy pole kodu jest gotowe, zapis jest wyłączony — inaczej edycja zapisałaby rozpoznanie bez jego kodu.
+  zapisz.disabled = true;
+  function aktualny() { return !zamkniete && w.biezace() === true; }
+  function przedWyjsciem(event) {
+    if (zamkniete || (!zmienione && !zapis && !niepewne)) return;
+    event.preventDefault();
+    event.returnValue = "";
+  }
+  function zamknij(wymus, fokus) {
+    if (zamkniete) return true;
+    if (!wymus) {
+      if (zapis) return false;
+      if (zmienione && !i.confirm("Masz niezapisane zmiany. Odrzucić je i zamknąć formularz?")) return false;
+    }
+    zamkniete = true;
+    i.removeEventListener("beforeunload", przedWyjsciem);
+    if (typeof stopBlokady == "function") stopBlokady();
+    if (obserwator) obserwator.disconnect();
+    if (wybor) { try { wybor.destroy(); } catch (x) { Ot("karta rozpoznania wybor kodu", x); } wybor = null; }
+    nakladka.textContent = "";
+    nakladka.remove();
+    if (fokus && w.biezace() === true && w.otwieracz && w.otwieracz.isConnected && typeof w.otwieracz.focus == "function") w.otwieracz.focus();
+    // Zmiana, która przyszła w trakcie edycji (także z formularza otwartego w „Notatkach”), czekała na zamknięcie.
+    Kr_sekcje.forEach(function (x) { x.poFormularzu(); });
+    return true;
+  }
+  function pracuje(tak) {
+    zapis = tak;
+    if (wybor) wybor.setWorking(tak || niepewne);
+    Array.prototype.forEach.call(arkusz.querySelectorAll("input,select,button"), function (x) { x.disabled = tak; });
+    arkusz.setAttribute("aria-busy", String(tak));
+    if (!tak) {
+      zapisz.disabled = niepewne || !kodGotowy;
+      if (usun) usun.disabled = niepewne;
+    }
+  }
+  function pokazBlad(tekst) {
+    blad.textContent = tekst;
+    blad.hidden = false;
+    blad.focus();
+  }
+  function kodReczny() {
+    var wpis = e("input", { type: "text", name: "code", maxlength: "24", autocomplete: "off", spellcheck: "false" });
+    wpis.value = k.code || "";
+    oe(kod);
+    kod.appendChild(pole("Kod ICD-10 · opcjonalnie", wpis));
+    kod.appendChild(e("p", { class: "vilda-kr-opis", text: "Katalog ICD-10 jest teraz niedostępny. Kod możesz wpisać ręcznie albo zostawić pole puste." }));
+  }
+  function wpisano(event) {
+    if (!aktualny()) return;
+    if (wybor && wybor.handleInput(event)) return;
+    zmienione = true;
+  }
+  formularz.addEventListener("input", wpisano, true);
+  formularz.addEventListener("change", wpisano, true);
+  formularz.addEventListener("submit", function (event) {
+    event.preventDefault();
+    if (zamkniete || zapis || niepewne) return;
+    if (!aktualny()) { zamknij(true, false); return; }
+    var f = new i.FormData(formularz), wartosci = {
+      name: String(f.get("name") || "").trim(), code: String(f.get("code") || "").trim(),
+      status: String(f.get("status") || "active"), dateISO: String(f.get("dateISO") || "")
+    };
+    blad.hidden = true;
+    blad.textContent = "";
+    pracuje(true);
+    Promise.resolve().then(function () { return w.zapisz(wartosci); }).then(function (zapisane) {
+      if (zamkniete) return;
+      // Najpierw właściciel formularza (sam odczyta listę), potem zamknięcie: zdarzenie własnego zapisu nie czyta drugi raz.
+      w.poZapisie(zapisane);
+      zamknij(true, false);
+    }, function (x) {
+      if (zamkniete) return;
+      if (w.biezace() !== true) { zamknij(true, false); return; }
+      // Po nieudanym odczycie kontrolnym wynik zapisu jest nieznany: ponowne „Zapisz” mogłoby dodać drugi zapis.
+      niepewne = !/INVALID|VALIDATION/.test(String((x && x.code) || ""));
+      pracuje(false);
+      pokazBlad(Kr_komunikat(x));
+    });
+  });
+  anuluj.addEventListener("click", function () { zamknij(false, true); });
+  if (usun) usun.addEventListener("click", function () {
+    if (zamkniete || zapis || niepewne) return;
+    if (!aktualny()) { zamknij(true, false); return; }
+    if (!i.confirm(w.pytanieUsun(zmienione)) || zamkniete) return;
+    if (!aktualny()) { zamknij(true, false); return; }
+    blad.hidden = true;
+    blad.textContent = "";
+    pracuje(true);
+    Promise.resolve().then(function () { return w.usun(); }).then(function (wynik) {
+      if (zamkniete) return;
+      w.poUsunieciu(wynik);
+      zamknij(true, false);
+    }, function (x) {
+      if (zamkniete) return;
+      if (w.biezace() !== true) { zamknij(true, false); return; }
+      // Wynik nieudanego usunięcia bywa nieznany (zapis mógł zniknąć): formularz zostaje tylko do zamknięcia.
+      niepewne = !/INVALID|VALIDATION|VISIT_READONLY/.test(String((x && x.code) || ""));
+      pracuje(false);
+      pokazBlad(Kr_komunikat(x));
+    });
+  });
+  arkusz.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") { event.preventDefault(); zamknij(false, true); return; }
+    if (event.key !== "Tab") return;
+    var pola = Array.prototype.filter.call(arkusz.querySelectorAll("input,select,button"), function (x) {
+      return !x.disabled && x.type !== "hidden" && x.tabIndex !== -1 && x.getClientRects().length > 0;
+    });
+    if (!pola.length) return;
+    if (event.shiftKey && i.document.activeElement === pola[0]) { event.preventDefault(); pola[pola.length - 1].focus(); }
+    else if (!event.shiftKey && i.document.activeElement === pola[pola.length - 1]) { event.preventDefault(); pola[0].focus(); }
+  });
+  nakladka = e("div", { class: "vilda-auth-overlay vilda-auth-overlay-sheet vilda-kr-nakladka" }, [arkusz]);
+  i.document.body.appendChild(nakladka);
+  i.addEventListener("beforeunload", przedWyjsciem);
+  if (vault && typeof vault.onLock == "function") stopBlokady = vault.onLock(function () { zamknij(true, false); });
+  if (typeof i.MutationObserver == "function") {
+    obserwator = new i.MutationObserver(function () { if (!nakladka.isConnected || w.biezace() !== true) zamknij(true, false); });
+    obserwator.observe(i.document.body, { childList: true, subtree: true });
+  }
+  nazwa.focus();
+  Kr_katalog().then(function (jest) {
+    if (!aktualny()) return;
+    if (jest) {
+      try {
+        oe(kod);
+        wybor = i.VildaICD10Picker.mount({
+          host: kod, nameInput: nazwa, code: k.code || "",
+          isCurrent: function () { return aktualny() && !zapis && !niepewne; },
+          onCommit: function () { if (aktualny() && !zapis && !niepewne) zmienione = true; }
+        });
+      } catch (x) {
+        Ot("karta rozpoznania wybor kodu", x);
+        wybor = null;
+        kodReczny();
+      }
+    } else kodReczny();
+    kodGotowy = true;
+    if (!zapis) zapisz.disabled = niepewne;
+  });
+  return true;
+}
+/** Sekcja „Rozpoznania pacjenta”. o: { patientId, nazwa, notatki }. Zwraca { el } albo null (brak modułu zapisu). */
+function Kr_sekcja(o) {
+  var vault = jt(), model = i.VildaPatientTreatmentModel, magazyn = i.VildaPatientTreatmentStore;
+  if (!vault || !model || !magazyn || !o || typeof o.patientId != "string" || !o.patientId || o.patientId.indexOf("__vilda") === 0) return null;
+  var wlasciciel = remReadOwner(), zakres = null, dane = null, proba = 0, odlozone = false, zalegle = false;
+  var lista = e("div", { class: "vilda-kr-lista" }), komunikat = e("p", { class: "vilda-kr-komunikat", role: "status" });
+  var dodaj = e("button", { type: "button", class: "vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost", text: "Dodaj rozpoznanie", "data-kr": "dodaj" });
+  var el = e("section", { class: "vilda-kr", "aria-label": "Rozpoznania pacjenta" }, [
+    e("div", { class: "vilda-kr-naglowek" }, [
+      e("div", { class: "vilda-kr-tytul" }, [e("h4", { text: "Rozpoznania pacjenta" }), e("p", { class: "vilda-kr-opis", text: "Kod ICD-10 jest opcjonalny." })]),
+      dodaj]),
+    lista, komunikat]);
+  komunikat.hidden = true;
+  function biezace() { return remReadCurrent(wlasciciel) && el.isConnected; }
+  function powiedz(tekst, blad) {
+    komunikat.textContent = tekst || "";
+    komunikat.hidden = !tekst;
+    komunikat.classList.toggle("vilda-kr-komunikat--blad", !!blad);
+    komunikat.setAttribute("role", blad ? "alert" : "status");
+  }
+  function magazynPacjenta() {
+    if (!zakres) zakres = magazyn.createScope({ vault: vault, patientId: o.patientId, isCurrent: biezace });
+    return zakres;
+  }
+  // Przycisk „Usuń rozpoznanie” tylko wtedy, gdy magazyn leczenia w sejfie ma usuwanie (starszy sejf: formularz bez niego).
+  function mozeUsunac() {
+    try { return typeof magazynPacjenta().removeDiagnosis == "function"; } catch (x) { Ot("karta rozpoznania magazyn", x); return false; }
+  }
+  function otworz(dto, otwieracz) {
+    if (!biezace() || !dane) return;
+    powiedz("");
+    Kr_formularz({
+      nazwa: o.nazwa || "", dto: dto, otwieracz: otwieracz, biezace: biezace,
+      zapisz: function (wartosci) { var z = magazynPacjenta(); return dto ? z.updateDiagnosis(dto, wartosci) : z.createDiagnosis(wartosci); },
+      usun: dto && mozeUsunac() ? function () { return Kr_usun(magazynPacjenta(), dto, o.patientId); } : null,
+      pytanieUsun: function (zmienione) { return Kr_pytanieUsun(dane, dto.id, zmienione); },
+      poUsunieciu: function () {
+        zalegle = false;
+        wczytaj().then(function () {
+          if (!biezace()) return;
+          powiedz("Usunięto rozpoznanie.");
+          dodaj.focus();
+        });
+      },
+      poZapisie: function (zapisane) {
+        zalegle = false;
+        wczytaj().then(function () {
+          if (!biezace()) return;
+          powiedz("Zapisano rozpoznanie.");
+          var cel = dodaj;
+          Array.prototype.forEach.call(lista.querySelectorAll("button[data-kr-id]"), function (x) {
+            if (zapisane && x.getAttribute("data-kr-id") === zapisane.id) cel = x;
+          });
+          cel.focus();
+        });
+      }
+    });
+  }
+  function rysuj() {
+    oe(lista);
+    dodaj.disabled = !dane;
+    if (!dane) {
+      var ponow = e("button", { type: "button", class: "vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost", text: "Spróbuj ponownie", "data-kr": "ponow" });
+      ponow.addEventListener("click", function () { wczytaj(); });
+      lista.appendChild(e("p", { class: "vilda-kr-pusto", text: "Nie udało się odczytać rozpoznań." }));
+      lista.appendChild(ponow);
+      return;
+    }
+    if (!dane.diagnoses.length) lista.appendChild(e("p", { class: "vilda-kr-pusto", text: "Rozpoznania nie uzupełniono." }));
+    dane.diagnoses.forEach(function (dto) {
+      var k = dto.context, czynne = k.status === "active";
+      var edytuj = e("button", {
+        type: "button", class: "vilda-auth-btn vilda-auth-btn-small vilda-auth-btn-ghost", text: "Edytuj",
+        "data-kr": "edytuj", "data-kr-id": dto.id, "aria-label": "Edytuj rozpoznanie: " + Kr_etykieta(k)
+      });
+      edytuj.addEventListener("click", function () { otworz(dto, edytuj); });
+      lista.appendChild(e("div", { class: "vilda-kr-wiersz" + (czynne ? "" : " vilda-kr-wiersz--zamkniete"), "data-kr-rozpoznanie": dto.id }, [
+        e("div", { class: "vilda-kr-tresc" }, [
+          e("strong", { text: Kr_etykieta(k) }),
+          e("p", { class: "vilda-kr-opis", text: (czynne ? "Aktywne rozpoznanie" : "Rozpoznanie zamknięte") + " · " + Kr_data(k.dateISO) })]),
+        edytuj]));
+    });
+    var inne = dane.episodes.length + dane.unsupported.length;
+    if (inne) lista.appendChild(e("p", { class: "vilda-kr-opis vilda-kr-inne", text: "Pozostałe zapisy leczenia tego pacjenta (" + inne + ") są w zakładce „Notatki”." }));
+  }
+  function wczytaj() {
+    var ta = ++proba;
+    if (!biezace()) return Promise.resolve(false);
+    return Promise.resolve().then(function () { return magazynPacjenta().read(); }).then(function (wynik) {
+      if (ta !== proba || !biezace()) return false;
+      dane = wynik;
+      rysuj();
+      return true;
+    }, function (x) {
+      if (ta !== proba || !biezace()) return false;
+      Ot("karta rozpoznania odczyt", x);
+      dane = null;
+      rysuj();
+      return false;
+    });
+  }
+  dodaj.addEventListener("click", function () { otworz(null, dodaj); });
+  // Karta już odczytała notatki pacjenta — pierwszy obraz nie wymaga drugiego odczytu sejfu.
+  try { if (Array.isArray(o.notatki)) dane = model.project(o.notatki, { patientId: o.patientId }); } catch (x) { Ot("karta rozpoznania notatki", x); dane = null; }
+  if (dane) rysuj();
+  else {
+    lista.appendChild(e("p", { class: "vilda-kr-pusto", text: "Wczytywanie rozpoznań…" }));
+    dodaj.disabled = true;
+    i.setTimeout(function () { wczytaj(); }, 0);
+  }
+  Kr_obserwuj(vault);
+  Kr_sekcje = Kr_sekcje.filter(function (x) { return x.el.isConnected; });
+  Kr_sekcje.push({
+    el: el,
+    odswiez: function () {
+      // Kilka zmian pod rząd (zapis i jego zdarzenie, scalenie z innego urządzenia) kończy się jednym odczytem.
+      // Pod otwartym formularzem lista się nie przebudowuje — odczyt czeka na jego zamknięcie.
+      if (odlozone) return;
+      odlozone = true;
+      i.setTimeout(function () {
+        odlozone = false;
+        if (!biezace()) return;
+        if (i.document.querySelector(".vilda-kr-nakladka")) zalegle = true;
+        else wczytaj();
+      }, 0);
+    },
+    poFormularzu: function () {
+      if (!zalegle) return;
+      zalegle = false;
+      if (biezace()) wczytaj();
+    }
+  });
+  return { el: el };
+}
+/** Edycja wpisu leczenia z historii notatek. Rozpoznanie ma własny formularz; zwykły edytor tekstu nie może
+    nadpisać jego pól. Pozostałe zapisy leczenia (z nowszej wersji aplikacji) są tu tylko do odczytu. */
+function Kr_zNotatki(options) {
+  var notatka = options.note, patientId = options.patientId || notatka.patientId, vault = jt();
+  var model = i.VildaPatientTreatmentModel, magazyn = i.VildaPatientTreatmentStore, wlasciciel = remReadOwner();
+  var otwieracz = i.document.activeElement, rodzaj = null, zakres = null;
+  function biezace() { return remReadCurrent(wlasciciel) && (!options.isCurrent || options.isCurrent() === true); }
+  function odmow(tytul, tresc) {
+    Gd5(tytul, tresc);
+    if (typeof options.onCancel == "function") options.onCancel();
+    return false;
+  }
+  try { rodzaj = model && magazyn && vault ? model.decode(notatka).kind : null; } catch (x) { Ot("karta rozpoznania rodzaj zapisu", x); }
+  if (rodzaj !== "diagnosis" || !patientId || notatka.patientId !== patientId) {
+    return odmow(notatka.title || "Zapis leczenia", (typeof notatka.body == "string" && notatka.body ? notatka.body + "\n\n" : "") + "Ten zapis leczenia jest tutaj tylko do odczytu.");
+  }
+  try { zakres = magazyn.createScope({ vault: vault, patientId: patientId, isCurrent: biezace }); } catch (x) {
+    Ot("karta rozpoznania otwarcie z notatek", x);
+    return odmow("Nie udało się otworzyć rozpoznania", "Otwórz ponownie Kartę pacjenta i spróbuj jeszcze raz.");
+  }
+  return zakres.read().then(function (dane) {
+    if (!biezace()) return false;
+    var dto = null;
+    dane.diagnoses.forEach(function (x) { if (x.id === notatka.id) dto = x; });
+    if (!dto) return odmow("Rozpoznanie", "Tego rozpoznania nie ma już w karcie pacjenta.");
+    return Kr_formularz({
+      nazwa: "", dto: dto, otwieracz: otwieracz, biezace: biezace,
+      zapisz: function (wartosci) { return zakres.updateDiagnosis(dto, wartosci); },
+      usun: typeof zakres.removeDiagnosis == "function" ? function () { return Kr_usun(zakres, dto, patientId); } : null,
+      pytanieUsun: function (zmienione) { return Kr_pytanieUsun(dane, dto.id, zmienione); },
+      poUsunieciu: function () { if (biezace() && typeof options.onSaved == "function") options.onSaved(); },
+      poZapisie: function () { if (biezace() && typeof options.onSaved == "function") options.onSaved(); }
+    });
+  }, function (x) {
+    if (!biezace()) return false;
+    Ot("karta rozpoznania otwarcie z notatek", x);
+    return odmow("Nie udało się otworzyć rozpoznania", "Spróbuj ponownie.");
+  });
+}
+/** „Usuń” przy wpisie leczenia w historii notatek. Rozpoznanie usuwa magazyn leczenia (sprawdzenie wersji, jedno
+    niepodzielne usunięcie z nagrobkiem); zwykłe usuwanie notatki go nie dotyka. Pozostałe zapisy leczenia są tu do odczytu. */
+function Kr_usunZNotatek(notatka, patientId, poZmianie, czyBiezace) {
+  var vault = jt(), model = i.VildaPatientTreatmentModel, magazyn = i.VildaPatientTreatmentStore, wlasciciel = remReadOwner();
+  var rodzaj = null, zakres = null;
+  function biezace() { return remReadCurrent(wlasciciel) && (!czyBiezace || czyBiezace() === true); }
+  try { rodzaj = model && magazyn && vault ? model.decode(notatka).kind : null; } catch (x) { Ot("karta rozpoznania rodzaj zapisu", x); }
+  if (rodzaj !== "diagnosis" || !patientId || notatka.patientId !== patientId) {
+    Gd5(notatka.title || "Zapis leczenia", "Ten zapis leczenia jest tutaj tylko do odczytu.");
+    return Promise.resolve(false);
+  }
+  try {
+    zakres = magazyn.createScope({ vault: vault, patientId: patientId, isCurrent: biezace });
+    if (typeof zakres.removeDiagnosis != "function") throw new Error("removeDiagnosis");
+  } catch (x) {
+    Ot("karta rozpoznania usuniecie z notatek", x);
+    Gd5("Nie usunięto rozpoznania", "Otwórz ponownie Kartę pacjenta i spróbuj jeszcze raz.");
+    return Promise.resolve(false);
+  }
+  return zakres.read().then(function (dane) {
+    if (!biezace()) return false;
+    var dto = null;
+    dane.diagnoses.forEach(function (x) { if (x.id === notatka.id) dto = x; });
+    if (!dto) { Gd5("Rozpoznanie", "Tego rozpoznania nie ma już w karcie pacjenta."); return false; }
+    if (!i.confirm(Kr_pytanieUsun(dane, dto.id, false)) || !biezace()) return false;
+    return Kr_usun(zakres, dto, patientId).then(function () {
+      if (!biezace()) return false;
+      if (typeof poZmianie == "function") poZmianie();
+      return true;
+    });
+  }).then(null, function (x) {
+    if (!biezace()) return false;
+    Ot("karta rozpoznania usuniecie z notatek", x);
+    Gd5("Nie usunięto rozpoznania", Kr_komunikat(x));
+    return false;
+  });
+}
 function Kl_leczenie(o) {
   var s = (o && o.rekord) || {}, lista = [], obWpis = null, gotowe = false, paski = [], ro = null, szer = null;
   // P-KARTA-LECZENIE, etap 2: widok karty leczenia przetrwa tylko odświeżenie Karty po synchronizacji (o.tlo);
@@ -3423,8 +3888,12 @@ function Kl_leczenie(o) {
     obBox = null;
   }
   if (obBox) { obWpis = { el: obBox, dane: obDane }; lista.push(obWpis); }
-  if (!lista.length) return null;
+  // P-ROZPOZNANIA, rata 1: sekcja rozpoznań jest pierwszym blokiem zakładki; zakładka jest więc u każdego pacjenta.
+  var rozp = null;
+  try { rozp = Kr_sekcja({ patientId: o.patientId, nazwa: (s && s.name) || "", notatki: o.notatki }); } catch (x) { Ot("karta rozpoznania", x); rozp = null; }
+  if (!lista.length && !rozp) return null;
   var tresc = e("div", { class: "vilda-patient-tab-content vilda-patient-tab-content--hidden vilda-kl-tresc", "data-tab": "leczenie" });
+  if (rozp) tresc.appendChild(rozp.el);
   var zakladka = e("button", { class: "vilda-patient-tab", type: "button", html: o.zakladka, "data-tab": "leczenie" });
   var kontener = e("div", { class: "vilda-kl-paski" });
   function dopasuj(wymus) {
@@ -3450,7 +3919,7 @@ function Kl_leczenie(o) {
   function uloz() {
     var kol = Kl_kolejnosc(lista);
     // Bloki przestawiane tylko przy zmianie kolejności (D2) — bez zbędnego odpinania grupy otyłości po każdym rysunku.
-    var jest = Array.prototype.slice.call(tresc.children);
+    var jest = Array.prototype.slice.call(tresc.children).filter(function (x) { return !rozp || x !== rozp.el; });
     if (kol.some(function (x, j) { return jest[j] !== x.el; })) kol.forEach(function (x) { tresc.appendChild(x.el); });
     oe(kontener);
     paski = [];

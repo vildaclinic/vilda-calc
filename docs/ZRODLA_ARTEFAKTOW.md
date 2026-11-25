@@ -2941,6 +2941,180 @@ Nic istniejącego nie zostało zmienione. Opis i uzasadnienie: `docs/clinical/AL
 Strażnik: `tests/unit/sejf-odczyt-najnowszej.test.mjs` (prawdziwy sejf: ten sam wynik, co `getLatestSnapshot`, jedno
 odszyfrowanie zamiast sześciu; zgodność po poprawce, przypięciu i przywróceniu wersji; odczyt ścisły; blokada).
 
+## Łatka P-ROZPOZNANIA, rata 1 — zapis rozpoznań w sejfie i sekcja „Rozpoznania pacjenta” w Karcie (`vilda_vault.js`, `vilda_auth_ui.js`, `service-worker-kalorii.js`, 2026-11-24, decyzja właściciela „rób teraz dwa PR-y”)
+
+Opis działania i przypadki: `docs/clinical/ALGORITHMS.md`, wpis P-ROZPOZNANIA rata 1; kontrakt zapisu:
+`docs/PATIENT_TREATMENT.md`; katalog: `docs/clinical/ICD10_CATALOGUE.md`. Zapis rozpoznań, katalog ICD-10 i ich testy
+pochodzą z gałęzi `agent/nowa-strona-glowna` (PR-y vildaclinic/vilda-calc#992, #993, #999) i są z nią zgodne bajt
+w bajt tam, gdzie to możliwe — po to, żeby rozpoznanie wpisane w dotychczasowej Karcie było tym samym zapisem, którego
+używa nowa Karta pacjenta.
+
+**1. Sejf (`vilda_vault.js`) — warstwa `VILDA PATIENT TREATMENT V1`.** Czytelne źródła:
+`runtime/patient-treatment-v1/model.js`, `store.js`, `vault-fragment.js` (stan z commita `20a9b1b7`, czyli sama
+warstwa leczenia, bez późniejszych haków dokumentacji wizyt). `runtime/patient-treatment-v1/manifest.json` przypina
+skróty źródeł, skrót złożonego fragmentu (`83656ce1…`, ten sam co na tamtej gałęzi) i osiemnaście nazwanych podmian
+(`before` → `after`) ze skrótami. Względem tamtej gałęzi w manifeście różnią się tylko dwie wartości —
+`baseVaultSHA256` i `integratedVaultSHA256` — bo baza w `audyt` jest inna (P-BAZA-SZYBKIE, E3-PR0e2a). W narzędziu
+`tools/patient-treatment-vault-delta.mjs` różni się stała `BASE`.
+
+- Warstwa jest zewnętrzna: jej bazą jest cały sejf sprzed warstwy (`3bebcc8e…`, `audyt` po E3-PR0e2a), wynikiem — `4f625ec4…`.
+  `reduceClinicalWorkspaceVault` zdejmuje ją jako pierwszą, przed trwałymi wizytami i KtV, więc siedem dotychczas
+  przypiętych skrótów (wizyty trwałe, blok natywny) **nie zmienia się** i obraz bazy dla repozytorium źródeł modułu
+  zostaje ten sam. `node tools/visits-vault-delta.mjs` (wywołanie bez argumentów) też zdejmuje ją przed swoją kontrolą.
+- Odtworzenie: `node tools/patient-treatment-vault-delta.mjs --rebuild BAZA.js WYNIK.js`; kontrola bieżącego pliku:
+  `node tools/patient-treatment-vault-delta.mjs`. Po każdej zmianie sejfu pod warstwą (także po nowym bloku natywnym)
+  warstwę nakłada się ponownie i przypina nową parę skrótów w manifeście oraz `BASE` w narzędziu.
+- Trzy dotychczasowe testy granic czytają teraz sejf po zdjęciu warstwy (`visits-vault-boundary`,
+  `klirens-ktv-vault-boundary`, `klirens-existing-note-update-vault`) i dodatkowo sprawdzają, że pełny plik redukuje
+  się do tej samej bazy.
+- Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
+
+Od E3-PR0e3 (P-SYNC-WLASCICIEL, scalenie z `audyt` `65955ed4`, 2026-11-25; zmiana sejfu pod warstwą, teksty
+osiemnastu podmian i czytelne źródła bez zmian) bazą warstwy jest obraz trwałych wizyt po E3-PR0e3: SHA-256
+`119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf`, a wynikiem —
+`722d8ee00fbc7ff5d916ad40744a3760bcf90e5cb431ccfe85f5062dd195206b` (manifest warstwy i `BASE` w narzędziu). Obrazy
+`3bebcc8e…` i `4f625ec4…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
+
+**2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i trzy podmiany.** Plik jest zminifikowany; zmiany po unikalnych
+kotwicach, bez ponownej minifikacji:
+
+```js
+// a) przed `function Kl_leczenie(o) {` — czytelny blok: Kr_KATALOG, Kr_data, Kr_dzis, Kr_etykieta, Kr_komunikat,
+//    Kr_katalog (doczytanie trzech plików katalogu), Kr_obserwuj (onPatientNoteChanged), Kr_formularz, Kr_sekcja,
+//    Kr_zNotatki.
+// b) Kl_leczenie — zakładka „Leczenie” istnieje także bez leczenia GH/otyłości:
+//    było:  if (!lista.length) return null;
+//    jest:  var rozp = null; try { rozp = Kr_sekcja({ patientId: o.patientId, nazwa: (s && s.name) || "", notatki: o.notatki }); } catch (x) { … }
+//           if (!lista.length && !rozp) return null;   // …i zaraz po utworzeniu `tresc`: if (rozp) tresc.appendChild(rozp.el);
+// c) Kl_leczenie → uloz(): sekcja rozpoznań nie bierze udziału w porządkowaniu bloków leczenia
+//    było:  var jest = Array.prototype.slice.call(tresc.children);
+//    jest:  var jest = Array.prototype.slice.call(tresc.children).filter(function (x) { return !rozp || x !== rozp.el; });
+// d) ga(options) — pierwsza instrukcja funkcji: zapis leczenia nie trafia do zwykłego edytora notatki
+//    if (options && options.note && options.note.id && Object.prototype.hasOwnProperty.call(options.note, "treatmentContext")) return Kr_zNotatki(options);
+```
+
+Style sekcji i formularza są w czytelnym `vilda_auth_ui.css` (sekcja „P-ROZPOZNANIA, rata 1”); klasy `vpt-icd10*`
+nadaje `vilda_icd10_picker.js`, dlatego ich reguły są zawężone do arkusza `.vilda-kr-arkusz`. Arkusz jest dzieckiem
+`<body>`, więc przyciski mają własności skórki szkła nadpisane z `!important` (jak `.vilda-kl-pasek`).
+
+**3. Katalog ICD-10 w PWA.** `vilda_icd10_pl_data.js`, `vilda_icd10_search.js`, `vilda_icd10_picker.js` są czytelnymi
+plikami (generator: `python3 tools/build-icd10-pl.py`, kontrola: `--check`). Nie mają znacznika `<script>` na żadnej
+stronie — Karta wstawia je przy pierwszym otwarciu formularza (`Kr_katalog`). Limit żądań instalacji service workera
+był wyczerpany (600 z 600), dlatego trzy pliki weszły do paczki interfejsu wizyt, która idzie jednym żądaniem:
+
+- `tools/build-visit-ui-precache.mjs` — `FILES` z trzema nowymi plikami; po zmianie wersji któregokolwiek pliku
+  paczki: `node tools/build-visit-ui-precache.mjs --write` (nowe archiwum, poprzednie zostaje jako historyczne);
+- `service-worker-kalorii.js` — trzy adresy `?v=1` w `CORE_SHELL_URLS` i trzy wpisy mapy typów w
+  `createVisitUIPrecacheState`; blok `VISIT_UI_PRECACHE_PACK` zapisuje narzędzie;
+- `tests/support/static-server.mjs` — testowy service worker oczekuje sześciu zasobów paczki.
+
+Arkusz `vilda_icd10_picker.css` z tamtej gałęzi nie wszedł do `audyt`: jego reguły są zawężone do nowej strony głównej.
+
+## Łatka P-ROZPOZNANIA, rata 3 — usuwanie rozpoznania: warstwa sejfu i przycisk w Karcie (`vilda_vault.js`, `vilda_auth_ui.js`, `vilda_auth_ui.css`, 2026-11-24, prośba właściciela „tutaj też taka opcja usunięcia rozpoznania musi być, ale mechanizm powinien być zgodny”)
+
+Opis działania: `docs/clinical/ALGORITHMS.md`, wpis P-ROZPOZNANIA rata 3; kontrakt i porównanie z pełną warstwą:
+`docs/PATIENT_TREATMENT.md`, „Usuwanie rozpoznania”. Mechanizm pochodzi z gałęzi `agent/nowa-strona-glowna`
+(vildaclinic/vilda-calc#1061, commit `d5f77cbb`).
+
+**1. Sejf (`vilda_vault.js`) — warstwa `VILDA DIAGNOSIS MUTATION V1`, wydanie bez dokumentów wizyt.** Te same ścieżki
+i znaczniki co na tamtej gałęzi: czytelne źródło `runtime/diagnosis-mutation-v1/vault-fragment.js`, manifest
+`runtime/diagnosis-mutation-v1/manifest.json`, narzędzie `tools/diagnosis-mutation-vault-delta.mjs`.
+
+- Fragment: tekst z tamtej gałęzi z trzema różnicami — nagłówek, funkcja `DiagnosisMutationOrigin` (tam czyta
+  `visitContext` czytnikiem dokumentów wizyt, którego tu nie ma; tu zapis nazywający wizytę jest odrzucany) i brak
+  `DiagnosisMutationLock` (blokada pacjenta wspólna z koszem wizyt). Pozostałe funkcje bajt w bajt.
+- Dziesięć nazwanych podmian (`before` → `after`, skróty w manifeście). Ten sam tekst co na tamtej gałęzi:
+  `diagnosis-native-check`, `diagnosis-atomic-removal`, `diagnosis-remove-owner-options`, `diagnosis-hybrid-commit`.
+  Ta sama wstawka w innym miejscu (tam obok metod kosza wizyt, tu przed `commitCarePlanForUser` danego adaptera):
+  `diagnosis-idb-commit`, `diagnosis-memory-commit`. Własne kotwice tego obrazu: `diagnosis-remove-scope`
+  (`removeDiagnosis` w magazynie leczenia, przed `followup`), `diagnosis-public-scope` (eksport w zakresie),
+  `diagnosis-capture-before-queue` (`DiagnosisMutationInstall($s)` po `PatientWorkspaceInstall($s)` — owijka
+  zewnętrzna, żeby świadek był utrwalony przed kolejką workspace), `diagnosis-readable-source` (fragment po
+  `/* END VILDA PATIENT TREATMENT V1 */`). Bez podmian tamtej gałęzi dla edycji (`diagnosis-bind-origin`,
+  `diagnosis-update-options`) i blokady (`diagnosis-native-lock`).
+- Warstwa jest najbardziej zewnętrzna. Baza: obraz warstwy leczenia `4f625ec4…` (bez zmian od raty 1); wynik:
+  `46535d45…`. `restorePatientTreatmentBaseline` zdejmuje ją jako pierwszą (`restoreDiagnosisMutationBaseline`), więc
+  skróty warstwy leczenia, trwałych wizyt i bloku natywnego **nie zmieniają się**, a obraz bazy dla repozytorium źródeł
+  modułu zostaje ten sam. Blok natywny bez zmian (sprawdza `tests/unit/diagnosis-mutation-vault-boundary.test.mjs`).
+- Odtworzenie: `node tools/diagnosis-mutation-vault-delta.mjs --build LECZENIE.js vilda_vault.js` (zapisuje też
+  manifest); kontrola bieżącego pliku: `node tools/diagnosis-mutation-vault-delta.mjs`. Po zmianie sejfu pod spodem
+  najpierw `node tools/patient-treatment-vault-delta.mjs --rebuild`, potem nowy skrót do stałej `BASE` narzędzia tej
+  warstwy i `--build`.
+- Zmienione straże: `tools/patient-treatment-vault-delta.mjs` (zdejmuje warstwę zewnętrzną przed swoją),
+  `tests/unit/patient-treatment-vault-boundary.test.mjs` i `tests/unit/klirens-existing-note-update-vault.test.mjs`
+  (czytają i odtwarzają sejf przez obie warstwy).
+- Scalenie z gałęzią nowej strony głównej: tamtejsze pliki tych samych ścieżek zastępują tutejsze w całości (tutejsze
+  wydanie jest podzbiorem), a jej łańcuch warstw nakłada się na obraz warstwy leczenia.
+- Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
+
+Od E3-PR0e3 (P-SYNC-WLASCICIEL, scalenie z `audyt` `65955ed4`, 2026-11-25; zmiana sejfu pod warstwą, teksty
+dziesięciu podmian i czytelne źródło bez zmian) bazą warstwy jest obraz warstwy leczenia `722d8ee0…`, a wynikiem —
+`81de091bece15acf7d632bb44ba5411c5165d13efd90ea527594d01c577c9ee1` (manifest warstwy i `BASE` w narzędziu). Obrazy
+`4f625ec4…` i `46535d45…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
+
+**2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i jedna podmiana poza nim.** Zmiany po unikalnych kotwicach
+(skrypt łatki: każda kotwica dokładnie raz), bez ponownej minifikacji:
+
+- `Kr_komunikat`: komunikat dla `TREATMENT_VISIT_READONLY` (odpowiedź pełnej warstwy po scaleniu).
+- Nowe `Kr_pytanieUsun(dane, id, zmienione)` i `Kr_usun(zakres, dto, patientId)` (wywołanie `removeDiagnosis`
+  i wpis `note.delete` w dzienniku działań) przed `Kr_katalog`.
+- `Kr_formularz`: przycisk `[data-kr="usun"]` „Usuń rozpoznanie” w `.vilda-kr-usuwanie` na końcu formularza (tylko
+  edycja i tylko gdy magazyn ma `removeDiagnosis`), obsługa kliknięcia (pytanie, praca, wynik niepewny po błędzie),
+  zmienna `kodGotowy` — „Zapisz” po nieudanym usunięciu nie odblokuje się przed wczytaniem pola kodu.
+- `Kr_sekcja` (`mozeUsunac`, pola `usun`, `pytanieUsun`, `poUsunieciu` formularza) i `Kr_zNotatki` (te same pola).
+- Nowe `Kr_usunZNotatek` przed `Kl_leczenie`; kotwica poza blokiem: początek `CareDeleteCheckedNote` — wpis
+  z własnym `treatmentContext` idzie do `Kr_usunZNotatek` (rozpoznanie: pytanie i `removeDiagnosis`; inny zapis
+  leczenia: informacja „tylko do odczytu”), zamiast zwykłego `removePatientNote`.
+
+**3. Style (`vilda_auth_ui.css`)** — sekcja „P-ROZPOZNANIA, rata 3”: `.vilda-kr-usuwanie`, `.vilda-kr-arkusz .vilda-kr-usun`.
+
+Strażnicy: `tests/unit/diagnosis-mutation-vault.test.mjs`, `tests/unit/diagnosis-mutation-vault-boundary.test.mjs`,
+`tests/unit/patient-treatment-vault.test.mjs` (przypadek synchronizacji z tamtej gałęzi, bez zmian),
+`tests/e2e/karta-rozpoznania-usuwanie.spec.mjs`.
+
+## Łatka P-ROZPOZNANIA, rata 4 — synchronizacja: zapis leczenia bez kontekstu przejmuje go z tej samej wersji (`vilda_vault.js`, 2026-11-24, zgłoszenie właściciela: rozpoznania wpisane na komputerze niewidoczne na telefonie)
+
+Opis i przypadki: `docs/clinical/ALGORITHMS.md`, wpis P-ROZPOZNANIA rata 4; reguła: `docs/PATIENT_TREATMENT.md`,
+„Urządzenie, które dostało zapis leczenia na starszej wersji aplikacji”.
+
+**Sejf (`vilda_vault.js`) — warstwa `VILDA TREATMENT SYNC HYDRATION V1`.** Czytelne źródło
+`runtime/treatment-sync-hydration-v1/vault-fragment.js` (dwie funkcje: `TreatmentSyncHydrationCandidate`,
+`TreatmentHydrateSyncRecord`), manifest `runtime/treatment-sync-hydration-v1/manifest.json`, narzędzie
+`tools/treatment-sync-hydration-vault-delta.mjs`. Trzy nazwane podmiany (`before` → `after`, skróty w manifeście),
+wszystkie w scalaniu notatek pacjenta (`Le`), obok istniejącego uzupełniania planów opieki:
+
+1. `hydration-admit-pair` — filtr wstępny pary notatek: `&&!CareMvpMayMerge&&!CareMvpSyncHydrationCandidate(Ej,g)){`
+   dostaje `&&!TreatmentSyncHydrationCandidate(Ej,g)`, żeby para z tą samą wersją i kontekstem w ładunku doszła do
+   blokady notatki, mimo że ładunek nie jest „nowszy”.
+2. `hydration-under-lock` — pod blokadą notatki, na świeżo odczytanym rekordzie, tuż po bloku `CareMvpRecovered`: gdy
+   ładunek nie wygrywa, a para jest kandydatem, `TreatmentHydrateSyncRecord` zwraca tutejszy rekord z treścią
+   zaszyfrowaną ponownie z kontekstem z ładunku (reszta rekordu bez zmian) — zapis, wpis na listę zmian
+   (`action:"merge"`), licznik i koniec obsługi pary. Te same sprawdzenia sesji (`Bses_pilnuj`) co w bloku planów.
+3. `hydration-readable-source` — fragment po `/* END VILDA DIAGNOSIS MUTATION V1 */`.
+
+- Warstwa jest najbardziej zewnętrzna. Baza: obraz warstwy usuwania rozpoznania `46535d45…` (bez zmian od raty 3);
+  wynik: `d9efa2e5…`. `restoreDiagnosisMutationBaseline` zdejmuje ją jako pierwszą, więc skróty warstw pod nią i obraz
+  bazy dla repozytorium źródeł modułu **nie zmieniają się**; blok natywny bez zmian.
+- Odtworzenie: `node tools/treatment-sync-hydration-vault-delta.mjs --build USUWANIE.js vilda_vault.js`; kontrola:
+  `node tools/treatment-sync-hydration-vault-delta.mjs`.
+- Zmienione straże: `tools/diagnosis-mutation-vault-delta.mjs` (zdejmuje nową warstwę przed swoją),
+  `tests/unit/diagnosis-mutation-vault-boundary.test.mjs`, `tests/unit/klirens-existing-note-update-vault.test.mjs`.
+- Straż zapisów budowanych z poprzedniego rekordu (`tests/unit/notatka-pozniejsza-zapis.test.mjs`, E3-PR0b2b): zapis
+  `Object.assign({}, stored, { bodyCipher })` z `TreatmentHydrateSyncRecord` jest na jej liście jawnie — przenosi pola
+  chwil poprzedniego rekordu, więc wolno mu to tylko dlatego, że nie zmienia pól widocznych (równe pola odczytu poza
+  `treatmentContext` i polami chwil), numeru wersji ani chwili zapisu. Straż sprawdza te trzy warunki w źródle funkcji.
+- Kotwice 1–3 istnieją też w sejfie gałęzi `agent/nowa-strona-glowna`. Przeniesienie warstwy tam wymaga zmiany stałej
+  `BASE` **i** rozszerzenia reguły (sprostowanie z 2026-11-24): tamte notatki niosą także `visitContext` i `profileContext`,
+  więc ścisła równość pól odczytu poza `treatmentContext` nie uzupełni rozpoznania należącego do wizyty.
+- Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
+
+Od E3-PR0e3 (P-SYNC-WLASCICIEL, scalenie z `audyt` `65955ed4`, 2026-11-25; zmiana sejfu pod warstwą, teksty trzech
+podmian i czytelne źródło bez zmian) bazą warstwy jest obraz warstwy usuwania rozpoznania `81de091b…`, a wynikiem —
+bieżący `vilda_vault.js` (`7f863902e113d80d585e07d18a5e591a6e61f2120fddbf96dfc02baeddcebc29`; manifest warstwy
+i `BASE` w narzędziu). Obrazy `46535d45…` i `d9efa2e5…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
+
+Strażnicy: `tests/unit/treatment-sync-hydration-vault.test.mjs`, `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs`.
+
 ## Trwała tożsamość wizyt — źródło i granica artefaktu sejfu
 
 Zmiana funkcjonalna `P-TRWALE-WIZYTY` ma bazę `audyt` z commita
@@ -3032,9 +3206,9 @@ odpowiada stanowi sprzed E3-PR0e2a (`audyt` `ac0869f2`); bieżącą bazę daje t
 Od E3-PR0e3 (P-SYNC-WLASCICIEL, zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów”; zmiana poza blokiem
 trwałych wizyt i poza blokiem P-DZIENNIK-ZDARZEN, teksty 41 haków bez zmian) bazą delty jest obraz sejfu po tej zmianie
 bez bloku trwałych wizyt: SHA-256 `16f6d3717292c6ca7dea3ea25a676b3690567103a38758c95244db8c890a1941`, a wynikiem —
-bieżący `vilda_vault.js` (`119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf`). Baza `50063edf…` (po
-vildaclinic/vilda-calc#1053) odpowiada stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded`); bieżącą bazę daje to samo
-odwrócenie delty co wyżej.
+obraz pod trzema warstwami P-ROZPOZNANIA (`119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf`;
+warstwy i ich skróty — wyżej, łatki P-ROZPOZNANIA). Baza `50063edf…` (po vildaclinic/vilda-calc#1053) odpowiada
+stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded` i `65955ed4`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -3209,7 +3383,7 @@ Od E3-PR0e3 (P-SYNC-WLASCICIEL; zmiana sejfu tylko poza blokiem natywnym — dec
 wpisu Kosza, wpisy Kosza w przeniesieniu wersji karty usuwanej, komentarze; blok P-DZIENNIK-ZDARZEN bez zmian) baza sejfu
 to `a693e447bddeb0e021ee8b8187026956b9fddf87e477c9141f613e1152af0f11`, a `integratedVaultSHA256` (obraz pośredni) —
 `81671471feccf5ae6c92d772728a32520f199a545f0fcdb118f3d81f9074c947`. Baza `989fec00…` (po vildaclinic/vilda-calc#1053)
-odpowiada stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`,
+odpowiada stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded` i `65955ed4`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`,
 `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,

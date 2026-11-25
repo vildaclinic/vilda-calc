@@ -1,0 +1,150 @@
+{
+  "namespace": "vilda-patient-treatment-vault",
+  "version": 1,
+  "sourceRef": "992bf3c5fbc056b348dcfd4bcd83d4a48b961efd",
+  "baseVaultSHA256": "119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf",
+  "integratedVaultSHA256": "722d8ee00fbc7ff5d916ad40744a3760bcf90e5cb431ccfe85f5062dd195206b",
+  "fragmentSHA256": "83656ce16801fa2d042926a6126a08a9d6045f42d99fe721506c0378740cf699",
+  "sources": [
+    {
+      "path": "runtime/patient-treatment-v1/model.js",
+      "sha256": "1ef9f5abf9f4cdd5c20f240afc53b4f5b531838dab433c32de633651e7807f51"
+    },
+    {
+      "path": "runtime/patient-treatment-v1/store.js",
+      "sha256": "171002338d6348dc667f3c57b0374f60ea111f5cb020a781335560f1863f37fc"
+    },
+    {
+      "path": "runtime/patient-treatment-v1/vault-fragment.js",
+      "sha256": "deb7359c4c9afcc7aea66ec3c5b8e40ec100104bc50e692409fecbc05892a611"
+    }
+  ],
+  "hooks": [
+    {
+      "name": "visible-note-context",
+      "before": "'ghPointId', 'recheckDays', 'procedureType', 'waitlistPriority', 'igf1', 'reminderContext', 'careContext'];",
+      "after": "'ghPointId', 'recheckDays', 'procedureType', 'waitlistPriority', 'igf1', 'reminderContext', 'careContext', 'treatmentContext'];",
+      "beforeSHA256": "6218c2fff2e97e6dc763290d9ff8d1b82301cee02cdd5d47649687294ed3a3cb",
+      "afterSHA256": "a369f206c7cd84d65ff52346fa2c80e7ecdd9729bcdd23b206e84b887b28e0ea"
+    },
+    {
+      "name": "read-encrypted-context",
+      "before": "RemB22Context(e.reminderContext)?{reminderContext:RemB22Context(e.reminderContext)}:{},{id:t.id,patientId:t.patientId",
+      "after": "RemB22Context(e.reminderContext)?{reminderContext:RemB22Context(e.reminderContext)}:{},TreatmentContextField(TreatmentContextState(e)),{id:t.id,patientId:t.patientId",
+      "beforeSHA256": "1cb4bf53de022b45fd0d8afd435be765f42f88e78573de0fc7794e1dbc6b37b9",
+      "afterSHA256": "d56b1903043d4230e1f4563839335ecabfb2695fa07d6119270b76ed5b5b3a07"
+    },
+    {
+      "name": "once-context-identity",
+      "before": "Ct(note.clinicalDateISO), ye(note.linkedAgeMonths), kt(note.labResult),",
+      "after": "Ct(note.clinicalDateISO), ye(note.linkedAgeMonths), kt(note.labResult),\n    TreatmentContextState(note),",
+      "beforeSHA256": "b7b6dd0663d5a56dbe87f7e20ffc7c556eb6a79aac32685855a73deea1c3756c",
+      "afterSHA256": "f0a7b17a008efce4a54da2a09dd472d7da9e4fdc452e12505e1ad7c406d68cf3"
+    },
+    {
+      "name": "write-existing-state",
+      "before": "let RemB22ExistingContext=null;let n=Z",
+      "after": "let RemB22ExistingContext=null;let TreatmentExistingContext={present:false};let n=Z",
+      "beforeSHA256": "3b37487389ae49b92174c5de12d711ba6fd06519e6a1b5e0baf93ffaefedc8ee",
+      "afterSHA256": "77764632b065827f737f69aa0f5b66f9843fcecc37eb0027c6d92216a54c0610"
+    },
+    {
+      "name": "write-preserve-omitted-context",
+      "before": "RemB22ExistingContext=RemB22Context(g&&g.reminderContext);Qnp_t=",
+      "after": "RemB22ExistingContext=RemB22Context(g&&g.reminderContext);TreatmentExistingContext=TreatmentContextState(g);Qnp_t=",
+      "beforeSHA256": "8ce4faeab0cdce61f33da91c453fbaa41e0339fbe20b53365a2316753bb9c10a",
+      "afterSHA256": "4e83c6f220cd1429c2551e009ce850117a99b4e56848660da092a90d07071cfd"
+    },
+    {
+      "name": "write-prepare-context",
+      "before": "const Y=Qnp_sz||await V(Object.assign({title:n",
+      "after": "const TreatmentNextContext=TreatmentContextWrite(t,TreatmentExistingContext,e);const Y=Qnp_sz||await V(Object.assign({title:n",
+      "beforeSHA256": "ff10d6413bbc1168a1e80304da3a807f312e0ff978bce9b5a2641f78e1acdea7",
+      "afterSHA256": "e1312e1559ca1f1033306c39ad18a19aa8ba58a760e97e62d700b659476f0ded"
+    },
+    {
+      "name": "write-encrypt-context",
+      "before": "CareMvpNextContext?{careContext:CareMvpNextContext}:CareMvpNextNull?{careContext:null}:{})),nt=",
+      "after": "CareMvpNextContext?{careContext:CareMvpNextContext}:CareMvpNextNull?{careContext:null}:{},TreatmentContextField(TreatmentNextContext))),nt=",
+      "beforeSHA256": "60a30a27a5a0bf0b170ee86dc8065f8a4a7d3f271326fd9239a232484eb72166",
+      "afterSHA256": "9996cfd84081dd057838d4aea07ec8fcda9dbd4690d301cfc5228457e9cd05f3"
+    },
+    {
+      "name": "content-time-next-context",
+      "before": "P,j,CareMvpNextNull,RemB22NextContext||null])",
+      "after": "P,j,CareMvpNextNull,RemB22NextContext||null,TreatmentNextContext])",
+      "beforeSHA256": "c94e0f365ac3745e2f7c7a09c2f0ca58fbaad437e801e04a06840ad75305af7f",
+      "afterSHA256": "acd9fa60f08e126fda10c1910f51fa9088907d8a6c2aca924d49107429bfb73d"
+    },
+    {
+      "name": "content-time-old-context",
+      "before": "_,A,CareMvpExistingNull,RemB22ExistingContext||null]);",
+      "after": "_,A,CareMvpExistingNull,RemB22ExistingContext||null,TreatmentExistingContext]);",
+      "beforeSHA256": "3bf0908718ef611ef1246e97f5ee84cb7ebe50dcc4bc6e2545fd37e12cfb770c",
+      "afterSHA256": "2bfc01659ff2bb13395f674cf7ae3798e4caf013541021754094a5941ed7d837"
+    },
+    {
+      "name": "merge-existing-state",
+      "before": "let RemB22MergedContext=null;let Lt=",
+      "after": "let RemB22MergedContext=null;let TreatmentMergedContext={present:false};let Lt=",
+      "beforeSHA256": "c2b255cc1a735c0593bdb777112bd8dd872ac1c3086c0b579ce35a122d29720f",
+      "afterSHA256": "8c49830975afbc81976b1db0999accb69633f0929396657b717a04f8ce96b5ba"
+    },
+    {
+      "name": "merge-decode-context",
+      "before": "RemB22MergedContext=RemB22Context(z&&z.reminderContext);z&&",
+      "after": "RemB22MergedContext=RemB22Context(z&&z.reminderContext);TreatmentMergedContext=TreatmentContextState(z);z&&",
+      "beforeSHA256": "9f5e42ac5f19409878d6d4a6729e3b45c80162a77d0a946fa9a0abf57d0d6f01",
+      "afterSHA256": "e15a4c7d56158d300b08fa897c2c08245b40558ba99770266197f88e57b6848e"
+    },
+    {
+      "name": "merge-winner-context",
+      "before": "if(RemB22IncomingContext)ze.reminderContext=RemB22IncomingContext;const CareMvpIncomingContext=",
+      "after": "if(RemB22IncomingContext)ze.reminderContext=RemB22IncomingContext;Object.assign(ze,TreatmentContextField(TreatmentContextMerge(TreatmentMergedContext,g,CareMvpIncomingWins)));const CareMvpIncomingContext=",
+      "beforeSHA256": "575e6a1e97c5ce19e7c90fec73d4214e7cbd4ae25abc1e4bdbf177a3bd9c1a48",
+      "afterSHA256": "a91f2b2e5cd9a1e826f5b9d94ae56d9719a66cf2c068bf8f52b5f940a9aa1027"
+    },
+    {
+      "name": "existing-owner-option",
+      "before": "async function VildaChangeExistingPatientNote(payload, remove) {",
+      "after": "async function VildaChangeExistingPatientNote(payload, remove, treatmentOptions) {\n  const treatmentCurrent = TreatmentOperationCurrent(treatmentOptions);",
+      "beforeSHA256": "dd7a56e8b67a753315b1578200143c7145b5f9779925578573c640b8a47a3065",
+      "afterSHA256": "4aa43bbfb6370973ab172d2bc8f41aec734888e460de5bfead9fa151ab729e85"
+    },
+    {
+      "name": "existing-owner-precommit",
+      "before": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Otw\u00f3rz wynik ponownie.\");\n    }\n  }\n  return Ac(next.id",
+      "after": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Otw\u00f3rz wynik ponownie.\");\n    }\n    TreatmentOperationAssert(treatmentCurrent);\n  }\n  return Ac(next.id",
+      "beforeSHA256": "673e59af7671206bb77b019b2c7d361b8403150202c3ee4856bb6c50a2f06e5f",
+      "afterSHA256": "5af91fa0dd2851d97a19ab8080f20ec8cc39d61dd9a653acb5b5d2496f92784b"
+    },
+    {
+      "name": "existing-owner-forward",
+      "before": "function VildaUpdateExistingPatientNote(payload) {\n  return VildaChangeExistingPatientNote(payload, false);",
+      "after": "function VildaUpdateExistingPatientNote(payload, treatmentOptions) {\n  return VildaChangeExistingPatientNote(payload, false, treatmentOptions);",
+      "beforeSHA256": "167bb9900be91d90506869cbbd24439df59929e629acfb3953c872e67f1c59cb",
+      "afterSHA256": "e855eb149459640b5e38051bda26241129e533e63ff4ff7017dec8e72a4fa64e"
+    },
+    {
+      "name": "once-owner-option",
+      "before": "async function VildaSavePatientNoteOnce(payload) {",
+      "after": "async function VildaSavePatientNoteOnce(payload, treatmentOptions) {\n  const treatmentCurrent = TreatmentOperationCurrent(treatmentOptions);",
+      "beforeSHA256": "e2013173baa0eb4045374798b64fe5a2a4b4ff70aeecbf08c280bda808913b75",
+      "afterSHA256": "95fb53dc793176a29485ff143c91071ca389381b17cc9397229ad9648f9b7bbe"
+    },
+    {
+      "name": "once-owner-precommit",
+      "before": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Pon\u00f3w zapis po odblokowaniu.\");\n    }\n  }\n  return Ac(next.id",
+      "after": "throw new Error(\"Sesja sejfu zmieni\u0142a si\u0119. Pon\u00f3w zapis po odblokowaniu.\");\n    }\n    TreatmentOperationAssert(treatmentCurrent);\n  }\n  return Ac(next.id",
+      "beforeSHA256": "8bd74ca2ca1259594631db84740706805e0148e1ebf00848aa988070329a62d1",
+      "afterSHA256": "1a5e01742b2c6685e8a16a11452f0e23fd344f0350e853eeef0752e9c77d2797"
+    },
+    {
+      "name": "readable-source-block",
+      "before": "const $s={",
+      "after": "{{PATIENT_TREATMENT_FRAGMENT}}const $s={",
+      "beforeSHA256": "008a9480e584c023af8870967800dd91bd17595a239e655357ceaafa50566b1e",
+      "afterSHA256": "b81eee120f6040f720b88ef9a21580fbe3dce3cd15fe3101c6f170bee255cc0d"
+    }
+  ]
+}

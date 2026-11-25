@@ -13,7 +13,8 @@ test('Badania: domyślnie wyniki według dat, zapisane normy i kolory bez rozbud
   const patientId = await otworzSejf(page);
   const ids = await zapiszHistorie(page, patientId);
   await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
-  await expect(page.locator('.vilda-patient-tabs > .vilda-patient-tab')).toHaveText(['Status', 'Siatki centylowe', 'Notatki', 'Historia', 'Badania', 'Plany opieki']);
+  // P-ROZPOZNANIA, rata 1: zakładka „Leczenie” (sekcja rozpoznań) jest u każdego pacjenta — także bez leczenia.
+  await expect(page.locator('.vilda-patient-tabs > .vilda-patient-tab')).toHaveText(['Status', 'Leczenie', 'Siatki centylowe', 'Notatki', 'Historia', 'Badania', 'Plany opieki']);
   await page.locator('.vilda-patient-tab[data-tab="lab"]').click();
   await czekajNaBadania(page);
   const badania = sekcjaBadan(page);
@@ -228,15 +229,18 @@ test('pacjent bez wyników: stan pusty; Historia bez odnośnika', async ({ page 
   await expect(sekcjaHistorii(page).locator('.vilda-lab-trend-link')).toHaveCount(0);
 });
 
-test('okna 1100 i 1440 px: sześć zakładek w jednym wierszu bez uciętych etykiet', async ({ page }) => {
+// P-ROZPOZNANIA, rata 1 (decyzja właściciela 2026-11-24): zakładka „Leczenie” jest u każdego pacjenta, więc zakładek jest
+// siedem. Przy oknie 1440 px mieszczą się w jednym wierszu; przy 1100 px (kolumna Karty 675 px) ostatnie schodzą do
+// drugiego rzędu — tak jak dotąd u pacjentów leczonych (P-KARTA-LECZENIE). Etykiety nigdy nie są ucinane.
+test('okna 1100 i 1440 px: siedem zakładek bez uciętych etykiet — dwa rzędy przy 1100 px, jeden przy 1440 px', async ({ page }) => {
   await page.setViewportSize({ width: 1100, height: 900 });
   const patientId = await otworzSejf(page);
-  for (const width of [1100, 1440]) {
+  for (const [width, wiersze] of [[1100, 2], [1440, 1]]) {
     await page.setViewportSize({ width, height: 900 });
     await page.evaluate((pid) => window.VildaAuthUI.showPatientCard(pid), patientId);
     const zakladki = page.locator('.vilda-patient-tabs > .vilda-patient-tab');
-    await expect(zakladki).toHaveCount(6);
-    await expect(zakladki.locator('.vilda-patient-tab-lbl')).toHaveCount(6);
+    await expect(zakladki).toHaveCount(7);
+    await expect(zakladki.locator('.vilda-patient-tab-lbl')).toHaveCount(7);
     const pomiar = await page.evaluate(() => {
       const tabs = [...document.querySelectorAll('.vilda-patient-tabs > .vilda-patient-tab')];
       return {
@@ -244,6 +248,6 @@ test('okna 1100 i 1440 px: sześć zakładek w jednym wierszu bez uciętych etyk
         uciete: tabs.map((t) => t.querySelector('.vilda-patient-tab-lbl')).filter((l) => l.scrollWidth > l.clientWidth + 1).map((l) => l.textContent),
       };
     });
-    expect(pomiar, `etykiety zakładek przy szerokości okna ${width} px`).toEqual({ wiersze: 1, uciete: [] });
+    expect(pomiar, `etykiety zakładek przy szerokości okna ${width} px`).toEqual({ wiersze, uciete: [] });
   }
 });
