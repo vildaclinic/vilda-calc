@@ -10,6 +10,9 @@ test('rapid intake shows unclassified BMI for unspecified sex and preserves it t
   await frame.locator('#vhomeGabinetStart [data-entry="rapid"]').click();
   const values = {firstName:'Jan', lastName:'Próbny', age:'11', weight:'40', height:'145'};
   for (const [name, value] of Object.entries(values)) await frame.locator('#' + name).fill(value);
+  // The form can suggest a sex from the first name. Exercise the explicit
+  // unspecified choice that this scenario carries through a save and reload.
+  await frame.locator('#sex').selectOption('');
   async function checkRaw(owner) {
     await expect(owner.locator('#sex')).toHaveValue('');
     await expect(owner.locator('#vhomeRawBmi')).toBeVisible();
