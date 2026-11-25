@@ -1442,7 +1442,9 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     var rootBox=rect(owner.documentElement),viewport=owner.documentElement.clientWidth;
     // A stable gutter can already shrink the root's box before the page
     // overflows, while clientWidth still reports the whole iframe width.
-    if(rootBox)viewport=Math.min(viewport,rootBox.width);
+    // Match the integer precision of clientWidth to avoid resizing the pane
+    // in response to fractional rounding rather than a real scrollbar.
+    if(rootBox)viewport=Math.min(viewport,Math.round(rootBox.width));
     var scrollbar=frame&&form&&!compact()&&viewport>0?Math.max(0,frame.clientWidth-viewport):0;
     property("--chrome-pane-scrollbar-width",pixels(scrollbar));
     var authRoot=owner.querySelector(".vilda-auth-root"),authVisible=authRoot&&rect(authRoot);
