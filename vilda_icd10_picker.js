@@ -9,7 +9,7 @@
     return catalogue;
   }
   function mount(options) {
-    var host = options.host, d = host.ownerDocument, nameInput = options.nameInput;
+    var host = options.host, d = host.ownerDocument, nameInput = options.nameInput, compact = options.compact === true;
     var abort = new w.AbortController(), disposed = false, working = false, rows = [], choices = [], active = -1, selectedEntry = null, lastAutomaticName = null;
     var engine = getCatalogue(), id = 'vpt-icd10-' + (++serial);
     function node(tag, cls, text) {
@@ -23,7 +23,8 @@
     query.placeholder = 'Szukaj kodu lub polskiej nazwy';
     query.setAttribute('role', 'combobox'); query.setAttribute('aria-autocomplete', 'list'); query.setAttribute('aria-expanded', 'false'); query.setAttribute('aria-controls', id + '-list');
     var code = node('input'); code.type = 'hidden'; code.name = 'code'; code.value = options.code || ''; query.value = code.value;
-    var help = node('p', 'vpt-icd10-help', 'Wybierz podpowiedź albo zatwierdź wpis jako kod ręczny. Pole możesz pozostawić puste.'); help.id = id + '-help';
+    var help = node('p', 'vpt-icd10-help', compact ? 'Wybierz podpowiedź lub zatwierdź kod ręczny.'
+      : 'Wybierz podpowiedź albo zatwierdź wpis jako kod ręczny. Pole możesz pozostawić puste.'); help.id = id + '-help';
     query.setAttribute('aria-describedby', help.id);
     var live = node('p', 'vpt-icd10-status'); live.setAttribute('role', 'status'); live.setAttribute('aria-live', 'polite'); live.setAttribute('aria-atomic', 'true');
     var popup = node('div', 'vpt-icd10-list'); popup.id = id + '-list'; popup.hidden = true; popup.setAttribute('role', 'listbox'); popup.setAttribute('aria-label', 'Kody ICD-10');
@@ -31,8 +32,8 @@
     var officialName = node('p', 'vpt-icd10-official'), parent = node('p', 'vpt-icd10-parent');
     var useName = node('button', 'vpt-button vpt-text vpt-icd10-use-name', 'Użyj nazwy z katalogu'); useName.type = 'button';
     selected.append(officialName, parent, useName);
-    var source = node('p', 'vpt-icd10-source', 'Polski katalog ICD-10 · Centrum e-Zdrowia · 31.03.2021');
-    host.classList.add('vpt-field', 'vpt-icd10'); host.append(label, query, code, help, popup, live, selected, source);
+    host.classList.add('vpt-field', 'vpt-icd10'); host.append(label, query, code, help, popup, live, selected);
+    if (!compact) host.appendChild(node('p', 'vpt-icd10-source', 'Polski katalog ICD-10 · Centrum e-Zdrowia · 31.03.2021'));
     function current() { return !disposed && !working && options.isCurrent() === true; }
     function pending() { return query.value.trim() !== code.value; }
     function close() {
@@ -47,11 +48,11 @@
     }
     function showSelected() {
       selectedEntry = engine && code.value ? engine.lookup(code.value) : null;
-      selected.hidden = !code.value;
       officialName.textContent = selectedEntry ? selectedEntry.code + ' — ' + selectedEntry.name : 'Kod ręczny: ' + code.value;
       parent.textContent = selectedEntry && selectedEntry.parentName ? 'Kategoria: ' + selectedEntry.parentCode + ' — ' + selectedEntry.parentName : '';
       parent.hidden = !parent.textContent;
       useName.hidden = !selectedEntry || nameInput.value === selectedEntry.name;
+      selected.hidden = compact ? useName.hidden : !code.value;
     }
     function commit(entry, manual) {
       if (!current()) return;
@@ -128,6 +129,7 @@
       if (!current() || !selectedEntry) return;
       if (nameInput.value !== selectedEntry.name) { nameInput.value = selectedEntry.name; lastAutomaticName = selectedEntry.name; options.onCommit(); }
       showSelected(); live.textContent = 'Użyto nazwy z katalogu.';
+      if (compact) query.focus({ preventScroll: true });
     }, { signal: abort.signal });
     showSelected(); validate();
     return {

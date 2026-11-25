@@ -188,7 +188,7 @@
       return;
     }
     view.treatmentOptions = {
-      patientId: view.patientId, patientLabel: view.patientName, vault: view.vault,
+      patientId: view.patientId, patientLabel: view.patientName, vault: view.vault, compact: view.workspaceHeader,
       captureVisitBinding: function (id) {
         if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true) return view.inline?.captureVisitBinding?.(id) || null;
         if (!current(view) || id !== view.patientId) return {blocked:true};
@@ -197,6 +197,10 @@
       }, isCurrent: function () { return current(view); },
       titleNode: view.treatmentTitle,
       focusNoteId: view.treatmentFocus || null,
+      selectedEpisodeId: view.workspaceHeader ? view.inline.selectedTreatmentId : null,
+      onSelection: function (id) {
+        if (view.workspaceHeader && current(view)) view.inline.selectedTreatmentId = id;
+      },
       legacyPanels: view.legacy, registerBack: view.registerBack,
       onDialog: function (dialog, metadata) { return nativeDialog(view, dialog, Object.assign({}, metadata, {historyHandled: true})); },
       onSummary: function (summary) { if (current(view)) { treatmentSummary(view, summary); resumeRefresh(view); if (summary.status === 'ready' || summary.status === 'error') restoreFocus(view, true); } },
@@ -236,12 +240,15 @@
   function nativeDialog(view, target, metadata) {
     if (!current(view) || !target) return null;
     target.classList.add('vhome-patient-native-dialog', 'vhome-b1-child-dialog');
+    var compactDiary = view.workspaceHeader && target.classList.contains('vdo-dialog');
+    if (compactDiary) target.classList.add('vpt-compact');
     var closed = false, observer = null, release = null;
     function isOpen() { return target.isConnected && (typeof metadata?.isOpen === 'function' ? metadata.isOpen() : target.open); }
     function fit() { w.VildaHomeWorkspace?.fitDialog?.(target); }
     function cleanup() {
       if (closed) return; closed = true;
       target.classList.remove('vhome-b1-child-dialog');
+      if (compactDiary) target.classList.remove('vpt-compact');
       if (observer) observer.disconnect(); if (release) release();
       target.removeEventListener('close', sync); w.removeEventListener('resize', fit);
       w.visualViewport?.removeEventListener('resize', fit); view.dialogCleanups.delete(cleanup);

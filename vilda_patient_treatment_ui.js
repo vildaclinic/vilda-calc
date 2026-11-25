@@ -82,7 +82,11 @@
     copy.appendChild(node('h4', '', title)); if (detail) copy.appendChild(node('p', 'vpt-meta', detail));
     header.appendChild(copy); if (action) header.appendChild(action); return header;
   }
-  function badge(text) { return node('span', 'vpt-badge', text); }
+  function treatmentStatus(status) {
+    var active = status === 'active', tag = node('span', 'vpt-badge', active ? 'Aktywne' : 'Zakończone');
+    if (active) tag.dataset.active = '';
+    return tag;
+  }
   function blank(text) { return node('p', 'vpt-empty', text); }
   function diagnosisLabel(dto) { return (dto.context.code ? dto.context.code + ' — ' : '') + dto.context.name; }
   function indication(view, episode) {
@@ -93,19 +97,27 @@
       return diagnosis ? diagnosisLabel(diagnosis) : 'Rozpoznanie niedostępne';
     }).join(' · ');
   }
-  function line(label, value) {
-    var row = node('div', 'vpt-line'); row.append(node('span', 'vpt-meta', label), node('span', '', value)); return row;
+  function line(label, value, fact) {
+    var row = node('div', 'vpt-line');
+    if (fact) row.dataset.fact = fact;
+    row.append(node('span', 'vpt-meta', label), node('span', '', value)); return row;
   }
   function latestDate(entries) { return entries.reduce(function (latest, entry) { return entry.dateISO > latest ? entry.dateISO : latest; }, ''); }
   function renderDiagnoses(view) {
-    var section = node('section', 'vpt-section vpt-diagnoses');
-    section.appendChild(heading('Rozpoznania pacjenta', 'Kod ICD-10 jest opcjonalny.', button(view, 'Dodaj rozpoznanie', 'new-diagnosis', null, function () { diagnosisEditor(view); })));
-    if (!view.data.diagnoses.length) section.appendChild(blank('Rozpoznania nie uzupełniono.'));
+    var section = node('section', 'vpt-section vpt-diagnoses'), compact = view.options.compact;
+    var add = button(view, 'Dodaj rozpoznanie', 'new-diagnosis', null, function () { diagnosisEditor(view); });
+    var head = heading(compact ? 'Rozpoznania' : 'Rozpoznania pacjenta', compact ? '' : 'Kod ICD-10 jest opcjonalny.', add);
+    if (compact) head.appendChild(button(view, 'Dodaj leczenie', 'new-therapy', null, function () { episodeEditor(view); }, true));
+    section.appendChild(head);
+    if (!view.data.diagnoses.length) section.appendChild(blank(compact ? 'Brak rozpoznań.' : 'Rozpoznania nie uzupełniono.'));
     else {
       var list = node('div', 'vpt-diagnosis-list');
       view.data.diagnoses.forEach(function (dto) {
         var row = node('div', 'vpt-diagnosis-row'), copy = node('div'); row.dataset.treatmentDiagnosisId = dto.id; row.tabIndex = -1;
-        copy.append(node('strong', '', diagnosisLabel(dto)), node('p', 'vpt-meta', (dto.context.status === 'active' ? 'Aktywne rozpoznanie' : 'Rozpoznanie zamknięte') + ' · ' + dateLabel(dto.context.dateISO)));
+        var active = dto.context.status === 'active', date = dateLabel(dto.context.dateISO);
+        var status = active ? 'Aktywne rozpoznanie' : 'Rozpoznanie zamknięte';
+        if (compact) status = active ? '' : 'Zamknięte';
+        copy.append(node('strong', '', diagnosisLabel(dto)), node('p', 'vpt-meta', status ? status + ' · ' + date : date));
         row.append(copy, button(view, 'Edytuj', 'edit-diagnosis', dto.id, function () { diagnosisEditor(view, dto); })); list.appendChild(row);
       });
       section.appendChild(list);
@@ -113,29 +125,56 @@
     return section;
   }
   function renderEpisode(view, dto) {
-    var context = dto.context, card = node('article', 'vpt-section vpt-episode-card'); card.dataset.treatmentTherapyId = dto.id;
-    var head = heading(context.title, methodNames[context.method] || methodNames.other); head.appendChild(badge(context.status === 'active' ? 'Aktywne' : 'Zakończone')); card.appendChild(head);
-    card.appendChild(node('p', 'vpt-meta', indication(view, dto)));
-    var dates = node('div', 'vpt-episode-dates'), start = node('div'), latest = node('div');
-    start.append(node('span', 'vpt-meta', 'Początek'), node('strong', '', dateLabel(context.startDateISO)));
-    latest.append(node('span', 'vpt-meta', 'Ostatni wpis'), node('strong', '', dateLabel(latestDate(context.followups)))); dates.append(start, latest); card.appendChild(dates);
+    var context = dto.context, compact = view.options.compact, selected = view.selected === dto.id;
+    var card = node('article', 'vpt-section vpt-episode-card'); card.dataset.treatmentTherapyId = dto.id;
+    if (compact && selected) card.dataset.selected = '';
+    var head = heading(context.title, methodNames[context.method] || methodNames.other);
+    head.appendChild(treatmentStatus(context.status)); card.appendChild(head);
+    if (!compact) card.appendChild(node('p', 'vpt-meta', indication(view, dto)));
+    var startDate = dateLabel(context.startDateISO);
+    if (!compact || startDate !== 'Brak daty') {
+      var dates = node('div', 'vpt-episode-dates'), start = node('div');
+      start.append(node('span', 'vpt-meta', compact ? 'Od' : 'Początek'), node('strong', '', startDate));
+      dates.appendChild(start);
+      if (!compact) {
+        var latest = node('div');
+        latest.append(node('span', 'vpt-meta', 'Ostatni wpis'), node('strong', '', dateLabel(latestDate(context.followups))));
+        dates.appendChild(latest);
+      }
+      card.appendChild(dates);
+    }
     var actions = node('div', 'vpt-actions');
-    actions.append(button(view, view.selected === dto.id ? 'Wybrany przebieg' : 'Przebieg', 'show-therapy', dto.id, function () {
+    var course = button(view, !compact && selected ? 'Wybrany przebieg' : 'Przebieg', 'show-therapy', dto.id, function () {
       view.selected = dto.id; render(view); var detail = view.root.querySelector('[data-treatment-detail-id]'); if (detail) detail.focus({ preventScroll: true });
-    }), button(view, 'Edytuj', 'edit-therapy', dto.id, function () { episodeEditor(view, dto); }));
+    });
+    if (compact && selected) course.setAttribute('aria-current', 'true');
+    actions.appendChild(course);
+    if (!compact) actions.appendChild(button(view, 'Edytuj', 'edit-therapy', dto.id, function () { episodeEditor(view, dto); }));
     card.appendChild(actions); return card;
   }
   function renderDetail(view, dto) {
-    var context = dto.context, section = node('section', 'vpt-section vpt-detail'); section.dataset.treatmentDetailId = dto.id; section.tabIndex = -1;
-    section.appendChild(heading(context.title, 'Zapis leczenia i dokumentacja kontroli.', button(view, 'Edytuj leczenie', 'edit-therapy', dto.id, function () { episodeEditor(view, dto); })));
-    var state = node('div', 'vpt-line'); state.append(node('span', 'vpt-meta', 'Stan leczenia'), badge(context.status === 'active' ? 'Aktywne' : 'Zakończone')); section.appendChild(state);
-    section.append(line('Metoda', methodNames[context.method] || methodNames.other), line('Rozpoznanie', indication(view, dto)), line('Początek', dateLabel(context.startDateISO)));
-    if (context.status === 'closed') section.appendChild(line('Zakończenie', dateLabel(context.endDateISO)));
-    if (context.method === 'pharmacological') section.append(line('Zapisany preparat', context.medication || 'Nie zapisano preparatu'), line('Zapisana dawka', context.dose || 'Nie zapisano dawki'));
+    var context = dto.context, compact = view.options.compact, section = node('section', 'vpt-section vpt-detail');
+    section.dataset.treatmentDetailId = dto.id; section.tabIndex = -1;
+    var edit = button(view, 'Edytuj leczenie', 'edit-therapy', dto.id, function () { episodeEditor(view, dto); });
+    section.appendChild(heading(compact ? 'Przebieg leczenia' : context.title, compact ? '' : 'Zapis leczenia i dokumentacja kontroli.', edit));
+    if (compact) {
+      section.setAttribute('aria-label', 'Przebieg leczenia — ' + context.title);
+      if (context.diagnosisIds.length) section.appendChild(line('Powiązane z', indication(view, dto), 'diagnosis'));
+    } else {
+      var state = node('div', 'vpt-line');
+      state.append(node('span', 'vpt-meta', 'Stan leczenia'), treatmentStatus(context.status));
+      section.append(state, line('Metoda', methodNames[context.method] || methodNames.other), line('Rozpoznanie', indication(view, dto)), line('Początek', dateLabel(context.startDateISO)));
+    }
+    var endDate = dateLabel(context.endDateISO);
+    if (context.status === 'closed' && (!compact || endDate !== 'Brak daty')) section.appendChild(line('Zakończenie', endDate, 'end'));
+    if (context.method === 'pharmacological') {
+      if (!compact || context.medication) section.appendChild(line(compact ? 'Preparat' : 'Zapisany preparat', context.medication || 'Nie zapisano preparatu', 'medicine'));
+      if (!compact || context.dose) section.appendChild(line(compact ? 'Dawka' : 'Zapisana dawka', context.dose || 'Nie zapisano dawki', 'dose'));
+    }
     if (context.notes) section.appendChild(node('p', 'vpt-note', context.notes));
-    if (context.nextDateISO) section.appendChild(line('Następna kontrola', dateLabel(context.nextDateISO)));
-    var course = node('div', 'vpt-course'); course.appendChild(heading('Kontrole i przebieg', '', button(view, 'Dodaj wpis', 'new-followup', dto.id, function () { followupEditor(view, dto); })));
-    if (!context.followups.length) course.appendChild(blank('Brak zapisanych kontroli.'));
+    if (context.nextDateISO) section.appendChild(line('Następna kontrola', dateLabel(context.nextDateISO), 'next-control'));
+    var course = node('div', 'vpt-course'); course.appendChild(heading(compact ? 'Wpisy' : 'Kontrole i przebieg', '', button(view, 'Dodaj wpis', 'new-followup', dto.id, function () { followupEditor(view, dto); })));
+    if (!context.followups.length) course.appendChild(blank(compact ? 'Brak wpisów.' : 'Brak zapisanych kontroli.'));
     else {
       var list = node('ol', 'vpt-timeline');
       context.followups.slice().sort(function (a, b) { return b.dateISO.localeCompare(a.dateISO) || a.id.localeCompare(b.id); }).forEach(function (entry) {
@@ -198,11 +237,12 @@
         var retry = node('button', 'vpt-button', 'Spróbuj ponownie'); retry.type = 'button';
         retry.addEventListener('click', function () { refresh(view); }, { signal: view.renderAbort.signal }); view.content.appendChild(retry);
       }
-      view.add.disabled = true;
+      if (view.add) view.add.disabled = true;
       if (view.phase === 'error') clearFocusHint(view);
       return;
     }
-    view.add.disabled = false; view.content.appendChild(renderDiagnoses(view));
+    if (view.add) view.add.disabled = false;
+    view.content.appendChild(renderDiagnoses(view));
     if (view.data.unsupported.length) {
       var unsupported = node('section', 'vpt-section'); unsupported.appendChild(heading('Pozostałe zapisy leczenia', 'Te zapisy pochodzą z nowszej wersji aplikacji i pozostają tylko do odczytu.'));
       view.data.unsupported.forEach(function (dto) {
@@ -215,6 +255,10 @@
     var episodes = view.data.episodes.slice().sort(function (a, b) { return (a.context.status === 'closed') - (b.context.status === 'closed') || a.context.title.localeCompare(b.context.title, 'pl'); });
     if (view.focusId && episodes.some(function (entry) { return entry.id === view.focusId; })) view.selected = view.focusId;
     if (view.selected && !episodes.some(function (entry) { return entry.id === view.selected; })) view.selected = null;
+    if (view.options.compact) {
+      if (!view.selected) view.selected = episodes[0]?.id || null;
+      view.options.onSelection?.(view.selected);
+    }
     if (episodes.length) {
       var grid = node('div', 'vpt-episode-grid'); episodes.forEach(function (entry) { grid.appendChild(renderEpisode(view, entry)); }); view.content.appendChild(grid);
       var chosen = episodes.find(function (entry) { return entry.id === view.selected; }); if (chosen) view.content.appendChild(renderDetail(view, chosen));
@@ -354,6 +398,7 @@
     if (visitBinding?.blocked) { status(owner, 'Poczekaj na zakończenie operacji wizyty i ponownie otwórz formularz.', true); return false; }
     if (activeEditor && !closeEditor(activeEditor, false, true)) return false;
     var dialog = ensureEditor(); if (!dialog) { status(owner, 'Nie udało się otworzyć formularza.', true); return false; }
+    dialog.classList.toggle('vpt-compact', owner.options.compact === true);
     var diagnosisVisit = options.kind === 'diagnosis' ? options.dto?.baseNote.visitContext : null;
     var opener = d.activeElement, view = { owner: owner, dialog: dialog, kind: options.kind, dto: options.dto || null,
       opener: opener, hint: { action: opener && opener.dataset.treatmentAction, id: opener && opener.dataset.treatmentId },
@@ -434,8 +479,8 @@
           select('Status rozpoznania', 'status', [['active', 'Aktywne'], ['closed', 'Zamknięte']], context.status || 'active'), field('Data rozpoznania', 'dateISO', context.dateISO || today(), 'date', true));
         form.appendChild(grid);
         if (!editor.readOnly) {
-          form.appendChild(node('p', 'vpt-meta', 'Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10.'));
-          editor.picker = w.VildaICD10Picker.mount({ host: code, nameInput: name.querySelector('input'), code: context.code,
+          if (!view.options.compact) form.appendChild(node('p', 'vpt-meta', 'Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10.'));
+          editor.picker = w.VildaICD10Picker.mount({ host: code, nameInput: name.querySelector('input'), code: context.code, compact: view.options.compact,
             isCurrent: function () { return editorCurrent(editor) && !editor.saving && !editor.uncertain; },
             onCommit: function () { if (editorCurrent(editor) && !editor.saving && !editor.uncertain) { editor.dirty = true; syncEditor(editor); } } });
         }
@@ -533,15 +578,19 @@
     catch (_) { return null; }
     if (!host || !options.patientId || !user || !vault.isUnlocked() || !w.VildaPatientTreatmentStore) return null;
     var root = node('div', 'vhome-treatment'); root.dataset.treatmentRoot = '';
+    if (options.compact) root.classList.add('vpt-compact');
     var view = { host: host, root: root, options: options, vault: vault, userId: user.userId, token: token, loadedSequence: loadedSequence(), patientId: options.patientId,
-      disposed: false, phase: 'loading', data: null, readGeneration: 0, pendingRefresh: true, refreshQueued: false, selected: null, restoreHint: null, cancelFocus: null, restoringFocus: false,
+      disposed: false, phase: 'loading', data: null, readGeneration: 0, pendingRefresh: true, refreshQueued: false, selected: options.selectedEpisodeId || null, restoreHint: null, cancelFocus: null, restoringFocus: false,
       focusId: typeof options.focusNoteId === 'string' ? options.focusNoteId : null,
       legacyNodes: Array.isArray(options.legacyPanels) ? options.legacyPanels.filter(function (entry) { return entry && entry.nodeType === 1; }) : [], renderAbort: new w.AbortController(), ownerAbort: new w.AbortController(), wasConnected: false, scope: null };
-    var toolbar = node('div', 'vpt-toolbar'), toolbarCopy = node('div', 'vpt-toolbar-copy');
-    if (options.titleNode && options.titleNode.nodeType === 1 && options.titleNode.tagName === 'H3') toolbarCopy.appendChild(options.titleNode);
-    toolbarCopy.appendChild(node('p', 'vpt-meta', 'Rozpoznania, metody leczenia i zapisane kontrole.')); toolbar.appendChild(toolbarCopy);
-    view.add = node('button', 'vpt-button vpt-primary', 'Dodaj leczenie'); view.add.type = 'button'; view.add.dataset.treatmentAction = 'new-therapy';
-    view.add.addEventListener('click', function () { if (current(view) && view.phase === 'ready') episodeEditor(view); }, { signal: view.ownerAbort.signal }); toolbar.appendChild(view.add); root.appendChild(toolbar);
+    if (options.compact) options.titleNode?.remove();
+    else {
+      var toolbar = node('div', 'vpt-toolbar'), toolbarCopy = node('div', 'vpt-toolbar-copy');
+      if (options.titleNode && options.titleNode.nodeType === 1 && options.titleNode.tagName === 'H3') toolbarCopy.appendChild(options.titleNode);
+      toolbarCopy.appendChild(node('p', 'vpt-meta', 'Rozpoznania, metody leczenia i zapisane kontrole.')); toolbar.appendChild(toolbarCopy);
+      view.add = node('button', 'vpt-button vpt-primary', 'Dodaj leczenie'); view.add.type = 'button'; view.add.dataset.treatmentAction = 'new-therapy';
+      view.add.addEventListener('click', function () { if (current(view) && view.phase === 'ready') episodeEditor(view); }, { signal: view.ownerAbort.signal }); toolbar.appendChild(view.add); root.appendChild(toolbar);
+    }
     view.status = node('p', 'vpt-status'); view.status.hidden = true; root.appendChild(view.status); view.content = node('div', 'vpt-content'); root.appendChild(view.content);
     if (view.legacyNodes.length) {
       var legacy = node('div', 'vpt-legacy'); legacy.setAttribute('aria-label', 'Monitorowanie leczenia');
