@@ -56,8 +56,11 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // card back; a trash entry also keeps that moment for the entry's card, copied from the deleted version, joined
 // together with the entry card, carried by the trash export and the trash envelope and ignored when deciding whether
 // to queue a trash entry again, so a restore from the trash under the merged card keeps it; entries and envelopes
-// without it stay byte for byte as before; in effect at once).
-const BASE = 'beb9d122b455f2ccf2445668e8400af120390f59c31b03c78237950fc9f786b4';
+// without it stay byte for byte as before; a later correction or star of such a version lying in the trash under the
+// merged card, made in the old card on a device that did not know about the merge, takes the version out of the trash
+// in the merged card in the move phase when the trash entry knows the later moment, instead of bringing the old card
+// back; in effect at once).
+const BASE = '537e147e917ff68a23098fe1803350b1c51dc83b34cf85ba88c2bf88486e6f5e';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

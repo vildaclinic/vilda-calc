@@ -16,7 +16,7 @@ import { parse } from 'acorn';
 import { restoreTreatmentSyncHydrationBaseline } from './treatment-sync-hydration-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = 'fd091e49850b909bd560f19a3f163c730736abf8b2a6a3514ecf4c60356d1206';
+const BASE = '7f2e2a94f890c1ed5eaacd0416baac1a9c1a4fdc7c0a8541286b2c7ce9bf5ca4';
 const SOURCE = 'runtime/diagnosis-mutation-v1/vault-fragment.js';
 const MANIFEST = 'runtime/diagnosis-mutation-v1/manifest.json';
 const START = '/* BEGIN VILDA DIAGNOSIS MUTATION V1 */\n';

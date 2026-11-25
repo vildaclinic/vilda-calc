@@ -3743,6 +3743,13 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     eksport i koperta wpisu bez tego pola — bajt w bajt jak dotad. Sama ta chwila nie wywoluje odeslania wpisu kosza
  *     (kanon odsylania kosza w bloku P-DZIENNIK-ZDARZEN). Kosz z „Przywroc” w karcie scalonej i poprawka tej wizyty
  *     w starej karcie na urzadzeniu bez wiedzy o scaleniu konczy wiec w karcie scalonej, a stara karta nie wraca.
+ *     Od E3-PR0e2b (decyzja wlasciciela z 2026-11-25) takze bez „Przywroc”: wersja z ladunku, ktorej tu nie ma pod
+ *     zadna karta, a jej wpis kosza lezy pod inna zywa karta Q spoza N, jest koszem, zna pozniejsza chwile przypisania
+ *     wersji do karty niz kopia z ladunku i przegrywa z nia (zmiana po koszu — zasada „pozniejsza zmiana wygrywa
+ *     z koszem” bez zmian), wraca z kosza pod Q w fazie przeniesien (decyzja 'doWpisu', Bsw_wpisZnaKarte; wykonanie
+ *     jak E3-PR0e3 — Bsw_doKartyWpisu), a karta z ladunku nie powstaje z jej powodu (powstaje, gdy ma inne wersje, np.
+ *     nowa wizyte). Wpis bez tej chwili (sprzed E3-PR0e2b) — jak dotad. Strona tutejsza (urzadzenie, ktore samo
+ *     poprawilo wizyte w starej karcie) dochodzi do tego samego wyniku przy pelnej wymianie (decyzja 'przenies').
  * Format ladunku, delt i nagrobkow bez zmian (delta nagrobka wypelnia istniejace pole patients); od E3-PR0e2a wersja
  * moze niesc jedno pole wiecej (wyzej).
  */
@@ -3924,9 +3931,35 @@ async function Bsw_wersjaLokalna(ctx, snapshotId) {
 //                pozniejsza tresc albo pozniejszy rejestr gwiazdki (Bsw_wklad, W3; typowo poprawka w starej karcie po
 //                kilku „Scal pacjentow”): wklad przechodzi do tutejszego rekordu w fazie przeniesien;
 //   'pomin'    — lezy pod inna istniejaca karta, a tutejszy rekord i jego tresc sa nowsze: zostaje tam bez zmian.
+//   'doWpisu'  — nie ma jej tu nigdzie, a jej wpis kosza lezy pod inna zywa karta Q i zna pozniejsza chwile
+//                przypisania wersji do karty niz ladunek (Bsw_wpisZnaKarte): wraca z kosza pod Q w fazie przeniesien.
+// E3-PR0e2b (P-SYNC-WLASCICIEL, decyzja wlasciciela z 2026-11-25): wpis kosza wersji, ktorej tu nie ma pod zadna karta,
+// zna jej karte. Wpis lezy pod zywa karta Q (inna niz F, spoza N), jest koszem (nie samym przycieciem), zna pozniejsza
+// chwile przypisania wersji do karty niz kopia z ladunku (ta sama os co Bsw_ladunekWygrywa: „Scal pacjentow”
+// przypisalo wersje do Q pozniej niz do F) i przegrywa z nia (Bkz_wygrywa: zmiana po koszu). Typowo: „Scal pacjentow”
+// X -> Q tutaj, wizyta dana tu do kosza pod Q, a urzadzenie bez wiedzy o scaleniu poprawilo ja albo postawilo jej
+// gwiazdke w starej X pozniej niz kosz. Dotad wersja wracala z kosza do X i X wracala z nia (D-4 A); teraz wraca pod Q
+// (zasada „pozniejsza zmiana wygrywa z koszem” bez zmian — zmienia sie tylko karta), a X nie powstaje z jej powodu.
+// Wpis bez tej chwili (sprzed E3-PR0e2b) albo z ta sama — null, jak dotad. Tylko scalanie z magazynem nagrobkow
+// i poza importem (ctx.Bsw_m z Le; jak Bsw_przezyteRetencji): import pliku i „Scal kopie konta” — jak dotad.
+// Zwraca wpis albo null; bez odczytow.
+function Bsw_wpisZnaKarte(ctx, F, S) {
+  const e = ctx.mapa && ctx.mapa.get(S.snapshotId);
+  const Q = e && e.patientId;
+  if (!ctx.Bsw_m || !Q || Q === F.patientId || !Bkz_chwilaKosza(e) || (ctx.Bsw_N && ctx.Bsw_N.has(Q))) return null;
+  if (!(Bsw_chwilaPrzypisania(e) > Bsw_chwilaPrzypisania(S))) return null;
+  if (!S.payload || typeof S.payload !== 'object' || Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload))) return null;
+  return e;
+}
 async function Bsw_decyzja(ctx, F, S) {
   const g = await Bsw_wersjaLokalna(ctx, S.snapshotId);
-  if (!g || !g.patientId || g.patientId === F.patientId) return { co: 'nowa', g: null };
+  if (!g) {
+    // E3-PR0e2b: karta wpisu jest tu w chwili decyzji (bez niej — 'nowa', jak dotad: wersja nie znika razem z karta,
+    // ktorej nie ma); czy jest nadal, sprawdza faza przeniesien pod jej blokada (Bsw_doKartyWpisu).
+    const e = Bsw_wpisZnaKarte(ctx, F, S);
+    return e && (await I().getPatientForUser(b, e.patientId)) ? { co: 'doWpisu', g: null, e: e } : { co: 'nowa', g: null };
+  }
+  if (!g.patientId || g.patientId === F.patientId) return { co: 'nowa', g: null };
   if (!(await I().getPatientForUser(b, g.patientId))) return { co: 'nowa', g: null };
   if (ctx.Bsw_N && ctx.Bsw_N.has(g.patientId)) return { co: 'zabierz', g: g };
   if (Bsw_ladunekWygrywa(S, g, F.patientId, g.patientId)) return { co: 'przenies', g: g };
@@ -4038,6 +4071,17 @@ function Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta) {
 // rekord W3 obu kopii, Bsw_rekordW3), jak zapis od razu na 32b6557 (Bsw_rekord z d.g) — a nie sama tresc z ladunku, pod ktora ginela poprawka albo przypiecie zrobione tu
 // przed synchronizacja (uwaga recenzenta do eb81091).
 function Bsw_odloz(ctx, F, naglowek, S, szyfr, d) {
+  if (d.co === 'doWpisu') {
+    // E3-PR0e2b: Bkz_pomin zapisal juz przegrana wpisu z ta wersja pod F (W3 na wersje pod F, wpis do zdjecia);
+    // wersja idzie jednak pod Q, wiec wpis zostaje w tym scalaniu, a rozstrzyga go koniec scalania kosza pod Q
+    // (Bgw_zloz, Bkz_przegral) — jak po Bsw_doWpisu. Bez zapisu pod Q (Bsw_doKartyWpisu: Q zniknela, wersja juz jest,
+    // wpis wygrywa) wpis zostaje w koszu — nic nie znika.
+    ctx.nadpisane.delete(S.snapshotId);
+    if (ctx.przegraneDo) ctx.przegraneDo.delete(S.snapshotId);
+    if (ctx.Bgw_po) ctx.Bgw_po.delete(S.snapshotId);
+    (ctx.Bsw_P || (ctx.Bsw_P = [])).push({ F: { patientId: d.e.patientId }, naglowek: null, S: S, szyfr: null, G: d.e.patientId, doWpisu: true });
+    return;
+  }
   const g = d.g;
   (ctx.Bsw_P || (ctx.Bsw_P = [])).push({
     F: { patientId: F.patientId, createdAtISO: F.createdAtISO, lastSavedAtISO: F.lastSavedAtISO },
@@ -4234,7 +4278,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         // pod blokadami obu kart; tu, pod sama blokada F, zapisujemy wylacznie wersje, ktorej nie ma tu nigdzie ('nowa').
         const d = await Bsw_decyzja(ctx, F, S);
         Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): decyzja i zapis nowej wersji tylko w sesji scalania
-        if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
+        if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz' || d.co === 'doWpisu') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
         if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
         if (d.co !== 'nowa') continue;
         await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k])));
@@ -4276,7 +4320,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
       // dawne wersje, ktore leza tu pod inna karta, nie przechodza bez porownania rekordow.
       const d = await Bsw_decyzja(ctx, F, S);
       Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): decyzja i zapis nowej wersji tylko w sesji scalania
-      if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
+      if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz' || d.co === 'doWpisu') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
       if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
       if (d.co !== 'nowa') { czekaja += 1; continue; }
       await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k])));
@@ -4332,6 +4376,9 @@ function Bsw_bezNowych(rek, ileWersji, zapisZLadunku) {
 // E3-PR0e3: takze decyzja „do karty wpisu” (doWpisu, Bsw_doWpisu) — wersja z karty z ladunku przegranej z nagrobkiem
 // pacjenta wraca do karty swojego wpisu kosza albo retencji, z ktorym wygrywa; zapis pod jedna blokada tej karty
 // (Bsw_doKartyWpisu), a udany liczy sie w zabrane (nowa wersja karty — integracja odswieza liste pacjentow).
+// E3-PR0e2b (decyzja wlasciciela z 2026-11-25): ta sama droga takze dla decyzji 'doWpisu' z karty spoza N — wersji tu
+// nie ma, a jej wpis kosza pod zywa karta zna pozniejsza chwile przypisania wersji do karty niz ladunek
+// (Bsw_wpisZnaKarte, Bsw_decyzja).
 async function Bsl_przeniesWersje(ctx, teraz, opcje) {
   const lista = ctx.Bsw_P || [];
   ctx.Bsw_P = [];
@@ -4485,9 +4532,11 @@ async function Bsw_przezyteRetencji(ctx, lista, opcje) {
   return wynik;
 }
 
-// E3-PR0e3 (P-SYNC-WLASCICIEL): decyzja „do karty wpisu” (Bsw_doWpisu) w fazie przeniesien, pod blokada karty wpisu Q,
-// na swiezym odczycie — stan z chwili decyzji: karta Q nadal jest; wersji nadal nie ma tu pod zadna karta (pojawila
-// sie w miedzyczasie, np. „Przywroc” w innej karcie przegladarki — bez zapisu, rozstrzygnie nastepne scalanie); wpis
+// E3-PR0e3 (P-SYNC-WLASCICIEL): decyzja „do karty wpisu” (Bsw_doWpisu; od E3-PR0e2b takze decyzja 'doWpisu' z karty
+// spoza N, gdy wpis zna pozniejsza chwile przypisania wersji do karty — Bsw_wpisZnaKarte) w fazie przeniesien, pod
+// blokada karty wpisu Q, na swiezym odczycie — stan z chwili decyzji: karta Q nadal jest; wersji nadal nie ma tu pod
+// zadna karta (pojawila sie w miedzyczasie, np. „Przywroc” w innej karcie przegladarki — bez zapisu, rozstrzygnie
+// nastepne scalanie); wpis
 // tej wersji, razem z wpisami zapisanymi tu po starcie scalania (Bkz_czytaj, Bkz_dolacz — jak Bsw_bezSladu), nadal
 // lezy pod Q i nadal z nia nie wygrywa (np. ponowny kosz w innej karcie przegladarki wygrywa — bez zapisu). Wtedy
 // wersja z ladunku zostaje zapisana pod Q jako nowa wersja tej karty: rekord z jednej kopii (Bsl_wersjaZLadunku —
@@ -6492,6 +6541,10 @@ function Bsl_koszZLadunku(ctx, F) {
 // scalona dalej (w N) — bez zmian, wpis zostaje (ograniczenie). Strona tutejsza (to urzadzenie samo zmienilo wersje
 // w karcie z N i dostaje nagrobek tej karty razem z wpisem kosza w jednym ladunku — pelna kopia, typowo najpierw
 // pobranie): Bsw_przezyteRetencji, ta sama karta wpisu.
+// E3-PR0e2b (decyzja wlasciciela z 2026-11-25): do karty wpisu prowadza dwie drogi — karta z ladunku w N (tutaj, bez
+// warunku chwili przypisania: karta i tak znika) i karta z ladunku spoza N (Bsw_decyzja, 'doWpisu'), tylko gdy wpis
+// kosza zna pozniejsza chwile przypisania wersji do karty niz ladunek (Bsw_wpisZnaKarte) — inaczej karta z ladunku
+// wygrywa ze swoim nagrobkiem i wersja zostaje w niej, jak dotad (D-4 A).
 async function Bsw_zKartyZNagrobkiem(ctx, F, opcje) {
   const wersje = Array.isArray(F.snapshots) ? F.snapshots : [];
   for (let i = 0; i < wersje.length; i += 1) {

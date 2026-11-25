@@ -11,8 +11,7 @@
 //     pamięci wpisu Kosza, więc bez pierwszej części jest wyłączona.
 // Wyłączenie części (osobne wydanie): false w stałej. Testy tej części (osobne pliki i bloki) są wtedy pomijane,
 // a literały istniejących testów, które ta część zmienia, wracają do wyniku sprzed niej (wybór literału przy stałej).
-// Stan kodu: vilda_vault.js ma część pola („Scal pacjentów” zapisuje chwilę przypisania) i część Kosza (wpis Kosza
-// pamięta tę chwilę) — stała Kosza true; reguły z decyzji 2b jeszcze nie ma — jej stała false (kod reguły przestawia
-// ją na true).
+// Stan kodu: vilda_vault.js ma wszystkie trzy części — pole („Scal pacjentów” zapisuje chwilę przypisania), część
+// Kosza (wpis Kosza pamięta tę chwilę) i regułę z decyzji 2b (poprawka po Koszu w karcie scalonej) — obie stałe true.
 export const KOSZ_PAMIETA_PRZYPISANIE = true;
-export const POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ = KOSZ_PAMIETA_PRZYPISANIE && false;
+export const POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ = KOSZ_PAMIETA_PRZYPISANIE && true;
