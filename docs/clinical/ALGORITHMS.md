@@ -48853,7 +48853,7 @@ starsza aplikacja z sejfów 221 i 276, sterowany zegar). Nowe przypadki: 73.
   nigdzie). Uprząż: obserwacja stanów urządzeń i zapisów rekordu wersji dla wyroczni, przełącznik odsyłania świata
   przypadku.
 
-**Czerwone na bazie** (`d2f1eded` — sejf, manifesty i skróty z `origin/audyt`, testy i wsparcie testów tego PR): 47
+**Czerwone na bazie** (`d2f1eded` — sejf, manifesty i skróty z tej rewizji, testy i wsparcie testów tego PR): 47
 przypadków, wszystkie na asercji o stanie po scaleniu albo o tekście sejfu (strażniki źródła — brak nowych funkcji):
 plik A ≡ B 12 (światy 887–896 — wizyta w Koszu pod Q bez zmiany albo bez niej, 3 naruszenia bez klasy przy gwiazdce
 i 5–6 przy poprawce w każdym ze światów oceny; dwa przepisane literały `npret-K`), `kosz-po-kluczu-sesja` 15,
@@ -48893,7 +48893,7 @@ Mutant „bez odczytu karty Q przy decyzji” z pierwszej serii był równoważn
 a mutant odwrotny jest zabity. Mutantów pierwszej serii, których kotwice i testy się nie zmieniły, nie powtarzano.
 
 **Długie przebiegi** (ręcznie, 2026-11-24, na kodzie końcowym; baza — te same testy i uprząż z `vilda_vault.js`,
-manifestami, narzędziami granicy i testem granicy z `origin/audyt`; trzecia kopia — kod bez wyjątku wyroczni; po dwa
+manifestami, narzędziami granicy i testem granicy z `d2f1eded`; trzecia kopia — kod bez wyjątku wyroczni; po dwa
 przebiegi naraz):
 
 | Przebieg | Przełącznik | Czerwone: baza / po zmianie / bez wyjątku | Wyrocznia ziarno po ziarnie (naruszenia baza = po zmianie, mutacje) | Czas baza / po zmianie |
@@ -48937,8 +48937,10 @@ przebiegi naraz):
   `wersje-zasobow.test.mjs` („zmiana treści pliku wymaga podbicia ?v=”), oczekiwany przed `npm run podbij-wersje`.
 
 **Czas pliku A ≡ B** (lokalnie, sam plik, bez zmiennych, po kolei, bez innego obciążenia): po zmianie 139,1 s i 141,0 s
-(273 zielone, 20 pominiętych), plik sprzed tego PR na `origin/audyt` 132,0 s i 133,7 s (259 zielonych) — ok. +7 s;
-nowy blok trzech urządzeń i świata 885 (14 przypadków) 5,2–5,4 s, świat po 0,4–0,6 s. Cel CI ok. 180 s nienaruszony.
+(273 zielone, 20 pominiętych), plik sprzed tego PR na `d2f1eded` 132,0 s i 133,7 s (259 zielonych) — ok. +7 s;
+nowy blok trzech urządzeń i świata 885 (14 przypadków) 5,2–5,4 s, świat po 0,4–0,6 s. Po scaleniu `audyt` `65955ed4`
+(na przemian): po zmianie 131,1 s i 126,3 s, plik na `65955ed4` 125,7 s i 120,1 s — ok. +6 s. Cel CI ok. 180 s
+nienaruszony.
 
 **Zmienione literały istniejących testów** (każdy — skutek nowej zasady albo wyjątku):
 - `sync-odsylanie`, przypadek „wpis pod żywą kartą Q po „Scal pacjentów” P → Q tutaj … koperta snap v z gwiazdką B
@@ -49054,11 +49056,11 @@ Rekomendacja przy każdym punkcie: przyjąć.
 
 **Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
 - **E3-PR0e2b** — po scaleniu tego PR i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.586**
-  (wydanie E3-PR0e2a) albo wyższy; zakres bez zmian (wpis E3-PR0e2a, „Wejście do kolejnych PR”). Do tego: z zapisem pola
-  powtórzyć światy 887–896 i katalog Kosza `npret-K` (wizyta wracająca do karty wpisu bierze chwilę przypisania
-  z ładunku, bo wpis Kosza jej nie przechowuje); decyzja o polu we wpisie Kosza (wpis E3-PR0e2a, „Do akceptacji”,
-  punkt 2) dotyczy też tej drogi; karta scalona usunięta na urządzeniu (wpis E3-PR0e2a, „Do akceptacji”, punkt 9) — ta
-  zasada jej nie obejmuje (karta wpisu musi istnieć).
+  (wydanie E3-PR0e2a) albo wyższy *(2026-11-24: potwierdzenie jest — punkt 12)*; zakres bez zmian (wpis E3-PR0e2a,
+  „Wejście do kolejnych PR”). Do tego: z zapisem pola powtórzyć światy 887–896 i katalog Kosza `npret-K` (wizyta
+  wracająca do karty wpisu bierze chwilę przypisania z ładunku, bo wpis Kosza jej nie przechowuje); decyzja o polu we
+  wpisie Kosza (wpis E3-PR0e2a, „Do akceptacji”, punkt 2) dotyczy też tej drogi; karta scalona usunięta na urządzeniu
+  (wpis E3-PR0e2a, „Do akceptacji”, punkt 9) — ta zasada jej nie obejmuje (karta wpisu musi istnieć).
 - **E3-PR0f** — wejścia z tego PR: wpis Kosza pod kartą wpisu, której nie ma, usuniętą albo dalej scaloną (Q → R), i pod
   samą starą kartą (testy z wynikiem jak dotąd do przepisania); urządzenie, które zmieniło wizytę w starej karcie, po
   samych pojedynczych zmianach bez przełącznika (literał jednego naruszenia W1 w światach 887–896) — razem z wizytą
