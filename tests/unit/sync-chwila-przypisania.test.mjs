@@ -51,6 +51,10 @@
 //        i odtworzenie konta z kopii z polem (czerwone — bieżący eksport pola nie niesie).
 // Strażniki zielone z natury mają mutanta kodu, przy którym czerwienieją (poza kontrolami bez zapisu rekordu i zgodnością
 // wstecz, która charakteryzuje niezmienne sejfy z fikstur).
+// E3-PR0e3 (zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów”; 81 przypadków, +10; na d2f1eded czerwone
+// 8): wersja wracająca do karty wpisu z chwilą przypisania z ładunku i bez niej (nowy zapis pola nie tworzy); starsza
+// aplikacja (221, 276) tej zasady nie zna — 8 układów z literałem położenia wizyty (zielone z natury 2: starsza
+// aplikacja zmienia wizytę i najpierw pobiera — gwiazdka ginie jak dotąd).
 //
 // Prawdziwy vilda_vault.js (i vilda_crypto.js, vilda_retention.js) w oknie uprzęży tests/support/urzadzenie-sync.mjs:
 // bliźniaki tego samego konta (klon stanu magazynu w pamięci), starsza aplikacja przez zrodlaStarszej('S221' | 'S276'),
@@ -1188,3 +1192,93 @@ describe('zgodność wstecz — starsza aplikacja przyjmuje dane z chwilą przyp
     expect(wynik).toEqual({ S221: ['ok', null], S276: ['ok', null] });
   }, CZAS);
 });
+
+// ── E3-PR0e3: wersja wracająca do karty wpisu Kosza po „Scal pacjentów” — chwila przypisania z ładunku ───────────────
+// A: karta P „Testowy Jan” [v 20 kg, w 21 kg] i karta Q [q 30 kg]; bliźniak B (bez wiedzy o scaleniu). A scala P → Q
+// i daje v do Kosza pod Q; B stawia v gwiazdkę w starej P. Pełna kopia B z kartą P z zapisem sprzed scalenia: P
+// przegrywa z nagrobkiem scalenia, wpis Kosza v pod żywą Q przegrywa z gwiazdką B — v wraca do Q. Zapis z jednej kopii
+// (Bsl_wersjaZLadunku): chwila przypisania z ładunku, gdy jest; bez niej na wejściu — rekord bez niej (nowy zapis jej
+// nie tworzy).
+describe('wersja wracająca do karty wpisu Kosza po „Scal pacjentów” (E3-PR0e3) — chwila przypisania z ładunku', () => {
+  async function przebieg(wartosc) {
+    const A = await urzadzenie('A');
+    const { P, ids: [v] } = await karta(A, 1, [20, 21]);
+    const { P: Q } = await karta(A, 2, [30]);
+    const zapisP = (await eksport(A)).patients.find((p) => p.patientId === P).lastSavedAtISO;
+    const B = await blizniak(A, 'B');
+    krok(); await A.vault.mergePatients(P, Q);
+    krok(); await A.vault.moveSnapshotToTrash(Q, v);
+    await gwiazdka(B, v);
+    krok();
+    await scal(B, A, (l) => {
+      for (const p of l.patients || []) if (p.patientId === P) p.lastSavedAtISO = zapisP;
+      return wartosc === undefined ? l : zPolem(l, v, wartosc);
+    });
+    const r = await rek(A, v);
+    const s = await wersja(A, v);
+    return { karta: r ? (r.patientId === Q ? 'Q' : r.patientId === P ? 'P' : '?') : null, gwiazdka: !!(s && s.payload._pinned), pole: await pole(A, v) };
+  }
+  it('ładunek z chwilą przypisania: v wraca do Q z gwiazdką i z chwilą przypisania z ładunku', async () => {
+    expect(await przebieg(T1)).toEqual({ karta: 'Q', gwiazdka: true, pole: T1 });
+  }, CZAS);
+  it('ładunek bez chwili przypisania: v wraca do Q z gwiazdką, rekord bez pola (nowy zapis go nie tworzy)', async () => {
+    expect(await przebieg(undefined)).toEqual({ karta: 'Q', gwiazdka: true, pole: null });
+  }, CZAS);
+});
+
+// ── E3-PR0e3: starsza aplikacja (sejfy 221 i 276) zasady „zmiana wizyty po Koszu wraca do karty wpisu” nie zna ─────────
+// Skutek dla floty mieszanej (znane ograniczenie starszej wersji; decyzja właściciela 2 z 2026-11-16). Trzy urządzenia
+// z pełnych kopii, bliźniaki A: karta P „Testowy Jan” [v 20 kg, w 21 kg] i karta Q [q 30 kg]. S scala P → Q i daje v
+// do Kosza pod Q; Z (bez wiedzy o scaleniu) daje v gwiazdkę w starej P; B (bieżąca, bez wiedzy) zapisuje w P nową
+// wizytę; B → S (P wraca na S), S drugi raz „Scal pacjentów” P → Q. Potem Z i S wymieniają pełne kopie — Z najpierw
+// wysyła albo najpierw pobiera — i dwie kolejne pełne wymiany S, Z, B. Starsza aplikacja jako Z (zmienia wizytę, S i B
+// bieżące) albo jako S (scala i daje do Kosza, Z i B bieżące). Literał położenia v na każdym urządzeniu na końcu.
+// Wynik: gwiazdka ginie na wszystkich urządzeniach tylko wtedy, gdy zmieniła ją starsza aplikacja, która najpierw
+// pobiera (dostaje nagrobek P z wpisem Kosza i kasuje P razem ze swoją zmianą — strony tutejszej nie zna; tak jak przed
+// E3-PR0e3 na każdym urządzeniu). W pozostałych układach bieżące urządzenie oddaje v do Q, a starsza aplikacja przyjmuje
+// v pod Q z pełnej kopii (późniejsza niż jej wpis Kosza).
+describe('zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (E3-PR0e3) — starsza aplikacja (221, 276) tej zasady nie zna: skutek dla floty', () => {
+  const polozenie = async (d, P, Q, v) => {
+    const lad = await eksport(d);
+    const k = (lad.patients || []).find((p) => (p.snapshots || []).some((s) => s.snapshotId === v));
+    if (k) { const s = k.snapshots.find((x) => x.snapshotId === v); return `karta ${k.patientId === Q ? 'Q' : k.patientId === P ? 'P' : '?'}${s.payload && s.payload._pinned ? ' z gwiazdką' : ''}`; }
+    const e = (lad.snapshotTombstones || []).find((x) => x.snapshotId === v);
+    return e ? `Kosz pod ${e.patientId === Q ? 'Q' : e.patientId === P ? 'P' : '?'}` : 'brak';
+  };
+  async function flota(stary, kto, kolejnosc) {
+    const A = await urzadzenie('A');
+    const { P, ids: [v] } = await karta(A, 1, [20, 21]);
+    const { P: Q } = await karta(A, 2, [30]);
+    const B = await blizniak(A, 'B');
+    const O = await blizniak(A, stary, { zrodla: zrodlaStarszej(stary) });
+    const C = kto === 'scala' ? await blizniak(A, 'C') : null;
+    const S = kto === 'scala' ? O : A;
+    const Z = kto === 'scala' ? C : O;
+    krok(); await S.vault.mergePatients(P, Q);
+    krok(); await S.vault.moveSnapshotToTrash(Q, v);
+    krok(); await Z.vault.setSnapshotPinned(P, v, true);
+    krok(); await B.vault.savePatient(naglowek(1, { masa: 22 }), { dedup: false, patientId: P });
+    krok(); await scal(B, S);
+    krok(); await S.vault.mergePatients(P, Q);
+    if (kolejnosc === 'najpierw pobiera') { krok(); await scal(S, Z); krok(); await scal(Z, S); }
+    else { krok(); await scal(Z, S); krok(); await scal(S, Z); }
+    const urz = [S, Z, B];
+    for (let r = 0; r < 2; r += 1) for (const x of urz) for (const y of urz) if (x !== y) { krok(); await scal(x, y); }
+    return { S: await polozenie(S, P, Q, v), Z: await polozenie(Z, P, Q, v), B: await polozenie(B, P, Q, v) };
+  }
+  for (const stary of ['S221', 'S276']) for (const kto of ['zmienia', 'scala']) for (const kolejnosc of ['najpierw wysyła', 'najpierw pobiera']) {
+    it(`${stary === 'S221' ? 'sejf 221' : 'sejf 276'} ${kto === 'zmienia' ? 'zmienia wizytę (Z)' : 'scala i daje do Kosza (S)'}, Z ${kolejnosc}: literał położenia v na S, Z i B`, async () => {
+      const w = await flota(stary, kto, kolejnosc);
+      console.log('E3-PR0e3 flota', stary, kto, kolejnosc, JSON.stringify(w));
+      expect(w).toEqual(FLOTA_OCZEKIWANE[`${stary} ${kto} ${kolejnosc}`]);
+    }, CZAS);
+  }
+});
+const FLOTA_Q = { S: 'karta Q z gwiazdką', Z: 'karta Q z gwiazdką', B: 'karta Q z gwiazdką' };
+const FLOTA_KOSZ = { S: 'Kosz pod Q', Z: 'Kosz pod Q', B: 'Kosz pod Q' };
+const FLOTA_OCZEKIWANE = {
+  'S221 zmienia najpierw wysyła': FLOTA_Q, 'S221 zmienia najpierw pobiera': FLOTA_KOSZ,
+  'S221 scala najpierw wysyła': FLOTA_Q, 'S221 scala najpierw pobiera': FLOTA_Q,
+  'S276 zmienia najpierw wysyła': FLOTA_Q, 'S276 zmienia najpierw pobiera': FLOTA_KOSZ,
+  'S276 scala najpierw wysyła': FLOTA_Q, 'S276 scala najpierw pobiera': FLOTA_Q,
+};

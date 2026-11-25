@@ -2969,6 +2969,12 @@ skróty źródeł, skrót złożonego fragmentu (`83656ce1…`, ten sam co na ta
   się do tej samej bazy.
 - Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
 
+Od E3-PR0e3 (P-SYNC-WLASCICIEL, scalenie z `audyt` `65955ed4`, 2026-11-25; zmiana sejfu pod warstwą, teksty
+osiemnastu podmian i czytelne źródła bez zmian) bazą warstwy jest obraz trwałych wizyt po E3-PR0e3: SHA-256
+`119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf`, a wynikiem —
+`722d8ee00fbc7ff5d916ad40744a3760bcf90e5cb431ccfe85f5062dd195206b` (manifest warstwy i `BASE` w narzędziu). Obrazy
+`3bebcc8e…` i `4f625ec4…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
+
 **2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i trzy podmiany.** Plik jest zminifikowany; zmiany po unikalnych
 kotwicach, bez ponownej minifikacji:
 
@@ -3041,6 +3047,11 @@ i znaczniki co na tamtej gałęzi: czytelne źródło `runtime/diagnosis-mutatio
   wydanie jest podzbiorem), a jej łańcuch warstw nakłada się na obraz warstwy leczenia.
 - Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
 
+Od E3-PR0e3 (P-SYNC-WLASCICIEL, scalenie z `audyt` `65955ed4`, 2026-11-25; zmiana sejfu pod warstwą, teksty
+dziesięciu podmian i czytelne źródło bez zmian) bazą warstwy jest obraz warstwy leczenia `722d8ee0…`, a wynikiem —
+`81de091bece15acf7d632bb44ba5411c5165d13efd90ea527594d01c577c9ee1` (manifest warstwy i `BASE` w narzędziu). Obrazy
+`4f625ec4…` i `46535d45…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
+
 **2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i jedna podmiana poza nim.** Zmiany po unikalnych kotwicach
 (skrypt łatki: każda kotwica dokładnie raz), bez ponownej minifikacji:
 
@@ -3096,6 +3107,11 @@ wszystkie w scalaniu notatek pacjenta (`Le`), obok istniejącego uzupełniania p
   `BASE` **i** rozszerzenia reguły (sprostowanie z 2026-11-24): tamte notatki niosą także `visitContext` i `profileContext`,
   więc ścisła równość pól odczytu poza `treatmentContext` nie uzupełni rozpoznania należącego do wizyty.
 - Lint: warstwa nie dokłada naruszeń do `eslint-suppressions.json`.
+
+Od E3-PR0e3 (P-SYNC-WLASCICIEL, scalenie z `audyt` `65955ed4`, 2026-11-25; zmiana sejfu pod warstwą, teksty trzech
+podmian i czytelne źródło bez zmian) bazą warstwy jest obraz warstwy usuwania rozpoznania `81de091b…`, a wynikiem —
+bieżący `vilda_vault.js` (`7f863902e113d80d585e07d18a5e591a6e61f2120fddbf96dfc02baeddcebc29`; manifest warstwy
+i `BASE` w narzędziu). Obrazy `46535d45…` i `d9efa2e5…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
 
 Strażnicy: `tests/unit/treatment-sync-hydration-vault.test.mjs`, `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs`.
 
@@ -3186,6 +3202,13 @@ tekstów haków, teksty 41 haków bez zmian) bazą delty jest obraz sejfu po tej
 `50063edfbe97d1174c95e6be489c81ae5294749bff2fe0860ec426a7c20a31f8`, a wynikiem — bieżący `vilda_vault.js`
 (`3bebcc8ed48cd321ef5b2d2d5058fddebc40211d756f4978583a0f5d18cb9928`). Baza `776c4c69…` (po vildaclinic/vilda-calc#1058)
 odpowiada stanowi sprzed E3-PR0e2a (`audyt` `ac0869f2`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
+Od E3-PR0e3 (P-SYNC-WLASCICIEL, zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów”; zmiana poza blokiem
+trwałych wizyt i poza blokiem P-DZIENNIK-ZDARZEN, teksty 41 haków bez zmian) bazą delty jest obraz sejfu po tej zmianie
+bez bloku trwałych wizyt: SHA-256 `16f6d3717292c6ca7dea3ea25a676b3690567103a38758c95244db8c890a1941`, a wynikiem —
+obraz pod trzema warstwami P-ROZPOZNANIA (`119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf`;
+warstwy i ich skróty — wyżej, łatki P-ROZPOZNANIA). Baza `50063edf…` (po vildaclinic/vilda-calc#1053) odpowiada
+stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded` i `65955ed4`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -3355,6 +3378,13 @@ pośredni) — `916382e1b0b0a5f4985b105d396f5c60a1f702ccf9298d7c0861aeabefa0d6d6
 vildaclinic/vilda-calc#1058) odpowiada stanowi sprzed E3-PR0e2a (`audyt` `ac0869f2`). Blok natywny, haki natywne,
 rodzina modułów `0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w
 `runtime/clinical-workspace-v1/manifest.json`.
+
+Od E3-PR0e3 (P-SYNC-WLASCICIEL; zmiana sejfu tylko poza blokiem natywnym — decyzja i zapis wersji wracającej do karty
+wpisu Kosza, wpisy Kosza w przeniesieniu wersji karty usuwanej, komentarze; blok P-DZIENNIK-ZDARZEN bez zmian) baza sejfu
+to `a693e447bddeb0e021ee8b8187026956b9fddf87e477c9141f613e1152af0f11`, a `integratedVaultSHA256` (obraz pośredni) —
+`81671471feccf5ae6c92d772728a32520f199a545f0fcdb118f3d81f9074c947`. Baza `989fec00…` (po vildaclinic/vilda-calc#1053)
+odpowiada stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded` i `65955ed4`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`,
+`fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych

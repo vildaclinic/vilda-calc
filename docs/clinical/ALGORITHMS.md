@@ -41082,14 +41082,17 @@ test w CI (ziarna domyślne trzech profili, p. 5, p. 6).
 | D21-9 (notatka przepięta przy równoległym „Usuń pacjenta”) | „Scal pacjentów” X → Y równolegle z „Usuń pacjenta” X na drugim urządzeniu: notatki przepięte pod Y giną | W1, W4, bloby | P-NOTATKI-ZA-KARTA, „Poza zakresem (D21-9)” |
 | notatki od nowa po „Scal pacjentów” | zapis notatki przez scalenie późniejszy niż jej edycja albo usunięcie na innym urządzeniu (wskrzeszenie albo starsza treść, nie utrata) | W1, W4, bloby | P-DZIENNIK-ZDARZEN (E2-PR2a), „Osobna sprawa: „Scal pacjentów” zapisuje notatki źródła od nowa” |
 | retencja (przycięcie bez treści) | przycięcie późniejsze niż ostatni zapis treści wizyty (nagrobek retencji nie niesie treści) | tylko W1 | P-KOSZ-PO-KLUCZU („Retencja przez duplikat w obie strony”, P2; E4b-ret) |
-| npret (przypięta wizyta przeżywa przycięcie) | przycięcie wizyty z przypiętym ostatnim rejestrem gwiazdki | tylko W1 | p. 5: npret-pin, npret-K |
+| npret (przypięta wizyta przeżywa przycięcie) | przycięcie wizyty z przypiętym ostatnim rejestrem gwiazdki | tylko W1 | p. 5: npret-pin, npret-K *(2026-11-24, E3-PR0e3: npret-K bez naruszeń — przypięta wizyta wraca do karty docelowej po samych zdarzeniach; wpis na końcu pliku)* |
 | R4a | kosz na urządzeniu, które nie znało ostatniej gwiazdki wizyty | W1, bloby | klasa R4a; p. 6 R4-a |
 | R4a′ | kosz na urządzeniu, które nie znało ostatniej treści wizyty | W1, bloby | klasa R4a′; p. 6 R4-a′ |
 | karta częściowa (nagrobek przegrał lokalnie, bez haka H1) | „Usuń pacjenta”; karta wraca zmianą urządzenia, które o usunięciu nie wiedziało i wysłało tylko swoją zmianę (u odbiorców bez haka H1) | tylko W1 | P-DZIENNIK-ZDARZEN (E2-PR3b), „Świadomie bez haka H1”; p. 6 „R5-E1, C wysyła tylko zdarzenia” |
 | R5-E1 | „Przywróć” tej wizyty przed „Usuń pacjenta”; karta wraca późniejszą zmianą trzeciego urządzenia | W1, W4, bloby | p. 6 R5-E1; jawny wyjątek: wynik taki jak po pełnej synchronizacji (decyzja 1 z 2026-11-19 i decyzja z 2026-11-20; E3-PR0d2) *(do 2026-11-20: „naprawa w E3-PR0”, od 2026-11-19 — w E3-PR0d2)* |
 
 Klasa nie zależy od nazwy przebiegu: przebieg Q8-obca-2 dostaje E1 (obecność) i P5 z mechanizmu. Zawsze bez klasy:
-„zniknięcie bez operacji” i „retencja usunęła ostatni stan wizyty”.
+„zniknięcie bez operacji” i „retencja usunęła ostatni stan wizyty”. *(2026-11-24, E3-PR0e3, P-SYNC-WLASCICIEL: nowa klasa
+samych bieżących urządzeń „„Usuń pacjenta” zwróconej starej karty (wizyta nigdy w karcie scalonej)” — W1, W4, bloby;
+decyzja 4 z 2026-11-23, bez naprawy (świadome usunięcie); mechanizm — wpis „Zmiana wizyty po Koszu wraca do karty
+wpisu po „Scal pacjentów”” na końcu pliku.)*
 
 **Literały (charakterystyka dzisiejszego stanu).** `ZNANE_WYR` — liczba naruszeń na klasę i świat w ziarnach domyślnych;
 `KAT_WYR` — zbiór (klasa, świat) każdego przebiegu p. 5; `P6_WYR` — to samo dla p. 6. Nowe albo znikające naruszenie
@@ -41177,7 +41180,8 @@ decyzja 3 z 2026-11-03). Sama wyrocznia: zapis historii 262 ms, widoki 1821 ms, 
 - p. 5 (`KAT_WYR`): naruszenia w 19 z 32 przebiegów, wszystkie z klasą — E4b w W1 (E4b-1 ×2); P5 w W1, W4 i blobach
   (kosz-przed ×2, kosz-po ×2, kosz-po-2 ×2; w kosz-po-2 K←C,P←K przy blobach także kosz-po-2); npret w W1 (npret-pin
   K←C,P←K, npret-K ×2); E1 (obecność) w W1, W4 i blobach (PRZ0-bez ×2, E1-popr-C ×2, E1-C ×2); Q8-obca-2 ×2 —
-  E1 (obecność) i P5 w W1, W4 i blobach.
+  E1 (obecność) i P5 w W1, W4 i blobach. *(2026-11-24, E3-PR0e3: npret-K ×2 bez naruszeń — literał przepisany; wpis na
+  końcu pliku.)*
 - p. 6 (`P6_WYR`): 17 scenariuszy (14 dotychczasowych, dwa warianty „C wysyła tylko zdarzenia” i nowy scenariusz
   retencji), naruszenia w 4 (R4-a, R4-a′, R5-E1, „R5-E1, C wysyła
   tylko zdarzenia”), 13 bez naruszeń.
@@ -41207,7 +41211,9 @@ decyzja 3 z 2026-11-03). Sama wyrocznia: zapis historii 262 ms, widoki 1821 ms, 
   „rekord złożony” 2, „inne” 0; W4: „nagrobek karty opróżnionej” 1. AB7: 799 porównań, 799 zgodnych.
 - p. 5 (36,8 s): czerwone 14 z 32 przebiegów — tylko nagrobki pacjentów 5 (E4b ×2, E4b-ret ×2, kosz-po-2 K←C,P←K); widok
   różny bez klasy 5 (E4b-1 ×2, npret-K ×2, npret-pin K←C,P←K); E1-katalog 4 (PRZ0-bez ×2, E1-popr-C C←P,C←K, E1-C
-  C←P,C←K); wyrocznia „W1 poza W4 i blobami”: npret 5 (w 3 przebiegach), E4b 3 (w 2).
+  C←P,C←K); wyrocznia „W1 poza W4 i blobami”: npret 5 (w 3 przebiegach), E4b 3 (w 2). *(2026-11-24, E3-PR0e3: npret-K ×2
+  bez różnicy po samych zdarzeniach — na bazie tego PR tryb ścisły katalogu 14 → 12 czerwonych, „widok po zdarzeniach ≠
+  widok po W4” 5 → 3, „npret | W1 poza W4 i blobami” 5 → 2; wpis na końcu pliku.)*
 - p. 6: czerwone 6 z 17 — R4-a (R4a), R4-a′ (R4a′), R5-0 (R5), R5-E1 (W1 bez klasy 2: Kosz i wersja), „R5-E1, C wysyła
   tylko zdarzenia” (W1 bez klasy 1 i „karta częściowa” ×3), nowy scenariusz retencji (W1 bez klasy 1: nagrobek bez
   treści tylko na B). Dowód przechodzi R2-0, R4n (R4-b; „Przywróć” daje to samo) i „Kosz i Przywróć na B, porządkowanie
@@ -41850,7 +41856,7 @@ wynik.
 | `E2_AB_ECHO_KLONY=wszystkie` | echo na klonach każdego scalenia z echem w losowych flotach |
 | `E2_AB_NORM_VISIT=0` | wyrocznia bez normalizacji tożsamości wizyty (czerwienieje także literały scenariuszy) |
 | `E2_AB_P6_FLOTA=wszystkie` | scenariusze ręczne floty i kontrole C = N |
-| `E2_AB_ZNANE_USTERKI=1` | blok znanych usterek bieżącej aplikacji (dziś czerwony): notatka pacjenta — do naprawy w E3-PR0b2, „Usuń pacjenta” duplikatu karty — w E3-PR0e *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: notatka pacjenta naprawiona, przypadek w CI; w bloku zostaje duplikat karty.)* *(2026-11-23: „Usuń pacjenta” duplikatu karty — światy 881–884 E3-PR0e2b, świat 885 — wyjątek wyroczni z decyzji 4 z 2026-11-23 w E3-PR0e3.)* |
+| `E2_AB_ZNANE_USTERKI=1` | blok znanych usterek bieżącej aplikacji (dziś czerwony): notatka pacjenta — do naprawy w E3-PR0b2, „Usuń pacjenta” duplikatu karty — w E3-PR0e *(2026-11-17, E3-PR0b2b, P-NOTATKA-POZNIEJSZA: notatka pacjenta naprawiona, przypadek w CI; w bloku zostaje duplikat karty.)* *(2026-11-23: „Usuń pacjenta” duplikatu karty — światy 881–884 E3-PR0e2b, świat 885 — wyjątek wyroczni z decyzji 4 z 2026-11-23 w E3-PR0e3.)* *(2026-11-24, E3-PR0e3: świat 885 w CI — bez naruszeń bez klasy dzięki wyjątkowi; w bloku zostają światy 881–884; wpis na końcu pliku.)* |
 | `E2_AB_STRES=0`, `E2_AB_STRES_WARIANTY=<lista>`, `E2_AB_STRES_KART=<n>`, `E2_AB_STRES_TRESC=<n>` | stres: wyłączenie, warianty („C→A”, „C→A i C→B”, „C→A+konflikt”, „276→A”, „N→A”, „N→A+konflikt”), liczba kart, wypełniacz w treści każdej wersji |
 | `E2_AB_SLAD=<prefiks>[,…]` | stan wersji i wpisu Kosza na A, B, C po każdym wierszu dziennika floty |
 | `E2_AB_WYNIKI=<plik>` | JSONL: pole `odsyl` ziaren, wiersze `typ` 'flota221', 'flota276', 'flotaN', 'p6f', 'stres', 'znana usterka' |
@@ -41893,6 +41899,9 @@ i `E2_AB_SLAD`); warunki zieleni — zawsze.
   w E3-PR0e2b (decyzja 2), więc stara karta nie wróci z ich powodu; „Usuń pacjenta” zwróconej starej karty z nowymi
   wizytami zapisanymi bez wiedzy o scaleniu to świadome usunięcie (decyzja 4) — wąski wyjątek wyroczni w E3-PR0e3.
   Zalecenie „duplikat scalać ponownie, nie usuwać” zostaje.)*
+  *(2026-11-24, E3-PR0e3, P-SYNC-WLASCICIEL: wyjątek wdrożony — klasa „„Usuń pacjenta” zwróconej starej karty (wizyta
+  nigdy w karcie scalonej)”, tylko gdy urządzenie usuwające znało scalenie i miało wizytę w starej karcie, a karta po
+  usunięciu nie wróciła; świat 885 w CI; wpis na końcu pliku.)*
 - **Przypadki do rozpoznania, wywoływane danymi starszej wersji** (bez klasy i bez literału, tylko w seriach ręcznych):
   - *nieświeży odcisk `h` po scaleniu wersji z 276* — flota 276, profil pełny, `E2_AB_SWIAT_FLOTA=300000`, ziarno 2
     (świat 400 002), krok 88: różnica par BC i CA w W4 floty bez klasy (`payload._pinnedState.h`, `payload.visit`).
@@ -43768,7 +43777,9 @@ przełącznikiem ma jedno czerwone ziarno (8) do czasu E3-PR0e. Kontrola w drug�
 przełącznika odtworzony z przełącznikiem — te same mutacje, 7 kopert odsyłania, 0 naruszeń bez klasy (odsyłanie usuwa
 przy tym jedyną różnicę W1 tego przebiegu, „retencja — przycięcie bez treści”). *(2026-11-23, decyzja 4 z 2026-11-23: „Usuń
 pacjenta” zwróconej starej karty z nowymi wizytami zapisanymi bez wiedzy o scaleniu to świadome usunięcie; czystość
-ziarna 8 z przełącznikiem da wąski wyjątek wyroczni w E3-PR0e3 (świat 885 do CI), nie naprawa aplikacji.)*
+ziarna 8 z przełącznikiem da wąski wyjątek wyroczni w E3-PR0e3 (świat 885 do CI), nie naprawa aplikacji.)* *(2026-11-24,
+E3-PR0e3: wykonane — ziarno 8 profilu pełnego z przełącznikiem czyste dzięki wyjątkowi (16 naruszeń z klasą wyjątku),
+nie naprawie; świat 885 w CI; wpis na końcu pliku.)*
 
 **Flota ze starszą aplikacją.**
 - 221 (bez dziennika zdarzeń): wysyła pełne kopie i delty. Delty idą u bieżącego urządzenia przez
@@ -43825,7 +43836,7 @@ na kopii baz atrapy, kopia sejfu z licznikiem odczytów bramki).
   bez ponownego wysłania tej samej wartości, spoczynek, wyrocznia bez naruszeń bez klasy, zieleń profilu; lokalnie
   3 koperty, ok. 6 s); model haków i odsyłania; warstwa „odesłane”; trzecia kotwica kopii z rejestrem łańcucha (AB5);
   urządzenie ze starszą aplikacją bez modelu odsyłania; nowy przypadek ręcznego bloku znanych usterek (świat 885,
-  wyżej). Przy wyłączonym przełączniku wszystkie literały bajt w bajt.
+  wyżej; *2026-11-24, E3-PR0e3: w CI — wyjątek wyroczni z decyzji 4*). Przy wyłączonym przełączniku wszystkie literały bajt w bajt.
 - `tests/unit/sync-dziennik-uspienie.test.mjs` (53): reguły części `Bev_`, `Bob_` i `Bem_` dla przełącznika
   (`VILDA_EVENT_ECHO` i `localStorage` tylko w `Bob_bramkaEcha`, raz), formy `Bem_zastosuj` (zwykła funkcja, dwie
   instrukcje: przełącznik, potem `Bem_zastosujEcho`) i `Bem_zastosujEcho` (bramka, warunek kolejki, jedno
@@ -43982,7 +43993,7 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
    literału), a nie wpis w tabeli wyjątków — usterka zostaje widoczna; ręczny przebieg profilu pełnego z włączonym
    przełącznikiem ma jedno czerwone ziarno do E3-PR0e. Inna możliwość: wpis w tabeli wyjątków (przebieg zielony,
    usterka mniej widoczna). *(2026-11-23: decyzja 4 z 2026-11-23 — wąski wyjątek wyroczni w E3-PR0e3: czystość daje wyjątek,
-   nie naprawa.)*
+   nie naprawa.)* *(2026-11-24, E3-PR0e3: wykonane — wpis na końcu pliku.)*
 9. **Literały ręcznych przebiegów** (floty, `ZNANE_W1`) opisują przebieg z wyłączonym przełącznikiem; przebiegi
    z przełącznikiem ocenia wyrocznia, model odsyłania i zieleń profilu (przepisanie literałów — E3-PR0i).
 10. **Bez wpisu polityki prywatności** dla klucza `vilda-event-echo-v1` w tym PR (klucz ustawiają tylko testy; wpis
@@ -44002,6 +44013,7 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
   przełącznikiem ma być czyste; różnica „tylko lista usuniętych pacjentów” (odłożona tutaj decyzją z 2026-11-17).
   *(2026-11-23, decyzje z 2026-11-23: E3-PR0e = E3-PR0e1–E3-PR0e3; ziarno 8 i świat 885 — wąski wyjątek wyroczni
   z decyzji 4 w E3-PR0e3 (czystość ziarna 8 daje wyjątek, nie naprawa); „tylko lista” — E3-PR0e2b razem z E3-PR0e1.)*
+  *(2026-11-24, E3-PR0e3: ziarno 8 z przełącznikiem czyste dzięki wyjątkowi, świat 885 w CI — wpis na końcu pliku.)*
 - **E3-PR0f**: wersje przeniesione pod inną kartę (dziś wykluczone z odsyłania) i wizyta nieznana urządzeniu
   scalającemu; mutant „bez wyjątku przeniesienia” czerwieni dziś test wersji przeniesionej — po zmianie reguły
   przepisać.
@@ -44015,7 +44027,7 @@ danych; alternatywy w opisie PR). Rekomendacja przy każdym punkcie: przyjąć.
   A ≡ B do `tests/support/` i osobny plik przebiegów z przełącznikiem (równoległość plików w vitest).
 - **E3-PR0i**: znaczenie klucza odwrócone („brak klucza = włączone, `'0'` wyłącza”), literały A ≡ B, floty
   i `ZNANE_W1` przepisane na wynik z odsyłaniem, ziarno 8 profilu pełnego po E3-PR0e. *(2026-11-23: po wyjątku wyroczni
-  z E3-PR0e3.)*
+  z E3-PR0e3.)* *(2026-11-24: wyjątek wdrożony w E3-PR0e3 — ziarno 8 czyste.)*
 - Każdy PR: nowe miejsce zapisu wersji w scalaniu — sprawdzić, czy kandydat jest w ładunku (strażnik kandydatów
   w modelu haków i odsyłania); nowe pole zapisywane zawsze przez bieżącą wersję — dopisać do `Bev_ECHO_ZAWSZE`
   i `POLA_ZAWSZE.snap` licznika (test równości); zmiana `vilda_vault.js` poza fragmentem natywnym — przeliczenie
@@ -44796,7 +44808,8 @@ p. 6 przy wyłączonym przełączniku się nie zmienia; test w CI woła sprawdzi
   E3-PR0c („Usuń pacjenta” zwróconej starej karty po „Scal pacjentów”, naprawa w E3-PR0e; świat 885 ręcznego bloku
   znanych usterek). Odtworzenie tego samego ciągu operacji bez kopert odsyłania (te same 103 mutacje, dostawy krótsze
   tylko o koperty odsyłania) gubi te same dwie wizyty w tych samych punktach, z tymi samymi klasami wyroczni.
-  *(2026-11-23: decyzja 4 z 2026-11-23 — świadome usunięcie; wąski wyjątek wyroczni w E3-PR0e3.)*
+  *(2026-11-23: decyzja 4 z 2026-11-23 — świadome usunięcie; wąski wyjątek wyroczni w E3-PR0e3.)* *(2026-11-24, E3-PR0e3:
+  wyjątek wdrożony — te 16 naruszeń ma klasę wyjątku; wpis na końcu pliku.)*
 - Przybliżenie z pomiaru (uprząż dopisywała koperty wpisu z modelu) dawało nowe czerwone ziarno 14 i E4b w W4 ziaren 5
   i 14. Na prawdziwym kodzie ziarna 5 i 14 są zielone, a E4b w ziarnach 1–20 nie występuje — przybliżenie szło innym
   ciągiem operacji (w ziarnie 14 od kroku 14: 1 koperta w przybliżeniu, 2 w sejfie, model uprzęży zgodny z sejfem).
@@ -45090,6 +45103,8 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
   (czerwone przy obu stanach przełącznika: utrata po „Scal pacjentów”, E4b w W4, karta częściowa) jako wejście.
   *(2026-11-23, decyzje z 2026-11-23: ziarna 8 i 37 — wąski wyjątek wyroczni z decyzji 4 w E3-PR0e3; ziarno 38 —
   E3-PR0e2b; ziarno 39 — E3-PR0f, razem z kolejnością klas wyroczni.)*
+  *(2026-11-24, E3-PR0e3: ziarna 8 i 37 profilu pełnego czyste dzięki wyjątkowi — 16 oraz 12 i 12 naruszeń z klasą
+  wyjątku, nie naprawa; wpis na końcu pliku.)*
 - **E3-PR0h**: koszt dodatkowych odczytów metadanych (8 zamiast 6 transakcji na kopertę z kandydatami) i duplikatów
   wpisów (dwa urządzenia odsyłają ten sam wpis), rozmiar kopert `stomb` z treścią, stres drogi zdarzeń z odsyłaniem
   wpisów; klasyfikator testu A ≡ B: sam opis wpisu Kosza żywej karty jako D7, nie R4a; sprzeczność „karty częściowej”
@@ -46316,7 +46331,7 @@ Wszystkie warunki naraz, dla każdej wersji v z ładunku:
   Wersja nie późniejsza niż Kosz przegrywa — scalanie wchłania ją we wpis, a gdy wpis się przy tym zmienił, odsyła go
   E3-PR0d;
 - **karty żadnego elementu wpisu nie ma po scaleniu** — nowy odczyt istnienia rekordu karty, bez odszyfrowania. Wyklucza
-  wpis pod żywą kartą Q po „Scal pacjentów” (wpis widać w Koszu Q; rodzina E4b — E3-PR0e; *od 2026-11-23: E3-PR0e3*). Element bez poprawnego
+  wpis pod żywą kartą Q po „Scal pacjentów” (wpis widać w Koszu Q; rodzina E4b — E3-PR0e; *od 2026-11-23: E3-PR0e3*; *2026-11-24: od E3-PR0e3 późniejsza zmiana tej wizyty wraca do karty wpisu, a warunek bez zmian*). Element bez poprawnego
   `patientId` (buildery takiego nie tworzą) liczy się jak „karta jest”;
 - **karta P przegrała tu z nagrobkiem pacjenta** — rekordu karty P nie ma, a najpóźniejszy nagrobek P jest nie
   wcześniejszy niż `lastSavedAtISO` karty P z ładunku (pusty zapis — jak spełnione): ta sama reguła co w `Le` (nagrobek
@@ -46333,7 +46348,7 @@ wersji żywej karty nie dostaje żadnej nowej transakcji.
 | karta żywa (wersja weszła) | wersja jest pod kartą po scaleniu; wpis i tak zdejmuje scalanie (Kosz przegrywa z późniejszą wersją) |
 | wersja nie późniejsza niż Kosz | wpis wygrywa; zmieniony wpis odsyła E3-PR0d („(echo)”) |
 | karta P, która tu wraca (nagrobek wcześniejszy niż zapis karty z ładunku), albo karta bez nagrobka | karta nie przegrała z nagrobkiem |
-| wpis pod żywą kartą Q po „Scal pacjentów” | karta wpisu jest, wpis widać w Koszu Q; gwiazdka z innego urządzenia ginie tam tak samo jak dziś — E3-PR0e *(2026-11-23: E3-PR0e3)* |
+| wpis pod żywą kartą Q po „Scal pacjentów” | karta wpisu jest, wpis widać w Koszu Q; gwiazdka z innego urządzenia ginie tam tak samo jak dziś — E3-PR0e *(2026-11-23: E3-PR0e3)* *(2026-11-24, E3-PR0e3: zmiana po Koszu już nie ginie — wizyta wraca do karty wpisu i odsyła ją `Bev_echo` jako `snap` pod tą kartą; wpisu dalej się nie odsyła)* |
 | wpis wygasły (365 dni) | builder wpisu nie daje koperty („brak encji”), bez wiersza i bez pamięci braków |
 | pełna kopia, delta, stara delta (bez pola `event`), importy | jak w E3-PR0c i E3-PR0d: tylko po kopertach zdarzeń (decyzja z 2026-11-17); testy wszystkich trzech dróg z „Przywróć” po „Usuń pacjenta” |
 | przełącznik wyłączony, zamknięta bramka dziennika, „Komputer w pracy” | jak w E3-PR0c: przed całą drogą |
@@ -46550,7 +46565,8 @@ CPU dzielone z drugą parą). Z przełącznikiem (`E2_AB_ECHO=1`), baza → PR:
   i odbiorca z tym samym ukrytym wpisem — 0 wierszy; ta sama koperta drugi raz — drugi wiersz; `busy`, `busy`,
   `apply-error` (między nimi inny wiersz) — 0 po każdej próbie, jeden po udanym ponowieniu; bez odsyłania: karta żywa,
   wersja nie późniejsza niż Kosz, `busy` przy żywej karcie, wpis pod żywą kartą Q po „Scal pacjentów” (wynik świadomie
-  wpisany); wpis pod kartą Q po „Scal pacjentów” i „Usuń pacjenta” Q — jeden wiersz; nagrobek porządkowania przypiętej
+  wpisany; *2026-11-24, E3-PR0e3: przepisany na wynik nowej zasady — v wraca do Q z gwiazdką, wpis zdjęty, jedno
+  odesłanie `snap` pod Q, 0 wierszy `stomb`*); wpis pod kartą Q po „Scal pacjentów” i „Usuń pacjenta” Q — jeden wiersz; nagrobek porządkowania przypiętej
   wersji (oba rogi); drogi bez odsyłania (pełna kopia, delta, stara delta); „Usuń pacjenta” wstrzymane na zatwierdzeniu
   nagrobka i na usunięciu karty (`ptomb` P, potem `stomb` v; przypadek czeka na warunek do 5 s, nie na stałą liczbę
   obrotów — pod obciążeniem 4 pętlami CPU 12 z 12 zielonych); cudzy otwarty krok; błąd odczytu kart (odesłanie
@@ -46651,7 +46667,8 @@ zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/
 - **Wpis pod żywą kartą Q po „Scal pacjentów”:** reguła słusznie nie odsyła, ale gwiazdka z innego urządzenia ginie tam
   tak samo jak dziś — E3-PR0e (rodzina E4b). Ziarno 39 profilu pełnego 21–40 zostaje czerwone dla E3-PR0e, choć jego
   różnice R5 znikają. *(2026-11-23: wpis pod żywą kartą Q — E3-PR0e3; ziarno 39 — E3-PR0f, razem z kolejnością klas
-  wyroczni.)*
+  wyroczni.)* *(2026-11-24, E3-PR0e3: gwiazdka i poprawka po Koszu już tam nie giną — wracają do karty wpisu; wpis na
+  końcu pliku.)*
 - **Po 30 dniach od Kosza** wpis nie ma już treści: wizyta, która dziś po powrocie karty jest jeszcze w karcie na
   jednym urządzeniu, po E3-PR0d2 (i po pełnej synchronizacji) jest na wszystkich tylko wpisem bez treści. Po „Scal
   pacjentów” wizyta jest niewidoczna wszędzie, dopóki karta nie wróci (dziś też).
@@ -46701,7 +46718,7 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
 - **E3-PR0e:** wpis pod żywą kartą Q po „Scal pacjentów” (gwiazdka z innego urządzenia ginie tak samo jak dziś) i ziarno
   39 profilu pełnego 21–40 jako wejście, obok ziaren 8, 37 i 38 z wpisu E3-PR0d.
   *(2026-11-23, decyzje z 2026-11-23: wpis pod żywą kartą Q — E3-PR0e3; ziarno 39 — E3-PR0f; ziarna 8 i 37 — wąski
-  wyjątek wyroczni w E3-PR0e3; ziarno 38 — E3-PR0e2b.)*
+  wyjątek wyroczni w E3-PR0e3; ziarno 38 — E3-PR0e2b.)* *(2026-11-24: E3-PR0e3 przygotowany — wpis na końcu pliku.)*
 - **E3-PR0h:** krotność warstwy „odesłane” licznika przy jednym kluczu z dwóch reguł w jednej partii (literały
   `ZNANE_ODSYL`, `STRES_ODSYL`); koszt odesłań ukrytego wpisu w tabeli kosztów (rozmiar, duplikaty); „karta częściowa”
   w wariancie „R5-E1, C wysyła tylko zdarzenia”.
@@ -47125,6 +47142,9 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
 - **E3-PR0e3:** zmiana wizyty po Koszu na innym urządzeniu wraca do karty wpisu po „Scal pacjentów” (wpis pod żywą
   kartą; dziś gwiazdka albo poprawka ginie) oraz wąski wyjątek wyroczni z decyzji 4 z 2026-11-23 dla „Usuń pacjenta”
   zwróconej starej karty z nowymi wizytami (świat 885 do CI, ziarna 8 i 37 profilu pełnego) — test, nie zmiana sejfu.
+  *(2026-11-24: przygotowany — wpis „Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów”” na końcu pliku;
+  zasada działa także na urządzeniu, które zmieniło wizytę, przy pełnej synchronizacji „najpierw pobranie”; wyjątek
+  wyroczni tylko dla urządzenia usuwającego, które znało scalenie, i karty, która po usunięciu nie wróciła.)*
 - **E3-PR0e2b** (dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają E3-PR0e2a): „Scal pacjentów”
   zapisuje nową informację; poprawki i gwiazdki wizyt przeniesionych scaleniem zostają w karcie scalonej (D-4 A i PD-1
   dla nich zmienione decyzją 2 z 2026-11-23); wejścia: E4b, „Usuń pacjenta” duplikatu (światy 881–884), „tylko lista
@@ -47135,7 +47155,7 @@ danych). Rekomendacja przy każdym punkcie: przyjąć.
   z „Do akceptacji”, punkt 5), ziarno 39 profilu pełnego razem z kolejnością klas wyroczni, świat 885 poza wyjątkiem,
   „Usuń pacjenta” właściwej karty przed dotarciem poprawki ze starej karty, wpis Kosza pod kartą, której nie ma albo
   scaloną dalej; do rozważenia ostrzeżenie w oknie „Usuń pacjenta” zwróconej starej karty (gdy powstanie pamięć,
-  dokąd scalono kartę).
+  dokąd scalono kartę). *(2026-11-24: wejścia z E3-PR0e3 — wpis na końcu pliku, „Wejście do kolejnych PR”.)*
 - **E3-PR0h:** licznik kart opróżnionych w teście A ≡ B — karta, której nagrobek dochodzi w tej samej albo następnej
   dostawie, nie jest utratą bez nośnika (30 przypadków w 20 ziarnach profilu pełnego).
 - Osobne zadania: plan opieki dawnej karty pod kartą, której nie ma; błąd usunięcia pustej karty w fazie przeniesień.
@@ -48034,7 +48054,8 @@ danych; dziś żadne z nich nie zmienia działania, bo pola nikt nie zapisuje). 
    wizytami, a wizyta z 5 maja zostaje u niego w starej karcie, bez „8:23”. Dopisanie pola do kopii w starej karcie
    dałoby jej pierwszeństwo, które jej nie przysługuje. W sprawdzeniu kompletności: ziarno 13 profilu pełnego (jedna
    wizyta na trzech urządzeniach, oba stany przełącznika) i „dłuższa praca bez połączenia” z operacjami profilu
-   pełnego; do sprawdzenia przy E3-PR0e2b razem z E3-PR0e3 (decyzja 4 z 2026-11-23).
+   pełnego; do sprawdzenia przy E3-PR0e2b razem z E3-PR0e3 (decyzja 4 z 2026-11-23). *(2026-11-24, E3-PR0e3: bez zmian —
+   zasada E3-PR0e3 dotyczy wpisu Kosza pod kartą, która istnieje; sprawa zostaje przy E3-PR0e2b.)*
 10. **Wersja bez karty** (rzadki ślad po przerwanym zapisie, niewidoczny w żadnej karcie) — zastępowana wersją z
     synchronizacji razem z jej polem, jak dziś cała wersja.
 11. **Osobne zadanie, poza tym PR: import pliku pacjenta nad wizytą z innej karty.** Import przenosi taką wizytę do
@@ -48051,6 +48072,7 @@ danych; dziś żadne z nich nie zmienia działania, bo pola nikt nie zapisuje). 
 **Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
 - **E3-PR0e3** — bez zmian zakresu: zmiana wizyty po Koszu na innym urządzeniu wraca do karty wpisu po „Scal
   pacjentów” (wpis pod żywą kartą) oraz wąski wyjątek wyroczni z decyzji 4 z 2026-11-23 (tylko w testach).
+  *(2026-11-24: przygotowany — wpis na końcu pliku.)*
 - **E3-PR0e2b** — po E3-PR0e3 i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.586**
   (to wydanie) albo wyższy:
   - „Scal pacjentów” zapisuje pole w samej `Bsw_poScaleniu` (tekst haka trwałych wizyt bez zmian): chwila =
@@ -48070,6 +48092,7 @@ danych; dziś żadne z nich nie zmienia działania, bo pola nikt nie zapisuje). 
   - wejścia z E3-PR0e1: E4b, „Usuń pacjenta” duplikatu (światy 881–884), „tylko lista usuniętych pacjentów”, „miejsce
     wizyty po „Scal pacjentów”” po samych zdarzeniach, ziarno 38 profilu pełnego.
 - **E3-PR0f** — bez zmian zakresu (wizyta nieznana urządzeniu scalającemu i pozostałe wejścia z wpisu E3-PR0e1).
+  *(2026-11-24: wejścia z E3-PR0e3 — wpis na końcu pliku, „Wejście do kolejnych PR”.)*
 - Osobne zadanie: import pliku pacjenta nad wizytą z innej karty („Do akceptacji”, punkt 11).
 
 **Cofnięcie** = rewert PR, bez migracji: w tym wydaniu żadne urządzenie pola nie zapisuje, więc w danych go nie ma;
@@ -48539,3 +48562,543 @@ mieści się w polu); `tests/unit/baza-statystyki-grupy.test.mjs` i `tests/e2e/b
 dostosowane do pola `range` i nowego układu filtrów na telefonie.
 
 **Wersje.** `vilda_patients_list.js` 13 → 14, `vilda_patients_list.css` 11 → 12, wstrzykujące `vilda_chrome.js` 336 → 337 i `vilda_session_bridge.js` 252 → 253; SW 1.1.591 → 1.1.592 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
+
+## Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (P-SYNC-WLASCICIEL, E3-PR0e3, SW 1.1.593, `vilda_vault.js` 291, 2026-11-24)
+
+**Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, gdzie po
+synchronizacji jest wizyta, którą jedno urządzenie dało do Kosza po „Scal pacjentów”, a inne — bez wiedzy o scaleniu —
+później oznaczyło gwiazdką albo poprawiło w starej karcie. Dotąd ta zmiana ginęła na wszystkich urządzeniach, także po
+pełnej synchronizacji: wizyta zostawała w Koszu bez niej albo nie było jej nigdzie. Teraz wizyta z gwiazdką albo
+poprawką wraca z Kosza do karty, pod którą leży jej wpis w Koszu (karta wpisu — właściwa karta), a wpis znika. To ten
+sam wynik co dziś w jednej karcie: późniejsza zmiana z innego urządzenia wygrywa z Koszem. Działa od razu u wszystkich
+urządzeń z tym wydaniem, przy pojedynczych zmianach i przy pełnej synchronizacji, przy obu stanach przełącznika
+odsyłania (decyzja 1 z 2026-11-23). Bez nowych tekstów i bez zmian ekranów. Serwer, `vilda_sync.js`, schemat IndexedDB,
+format ładunku, wpisów Kosza i zdarzeń, API `window.VildaVault`, blok P-DZIENNIK-ZDARZEN, fragment natywny i teksty
+41 haków trwałych wizyt bez zmian. Tylko w testach: wąski wyjątek wyroczni „nie zginęła ostatnia zmiana” z decyzji 4
+z 2026-11-23 (niżej).
+
+Przykład (fikcyjny): komputer w gabinecie, telefon i laptop; „Pacjent Testowy 1” ma starą kartę P i właściwą kartę Q;
+wizyta z 3 marca (20 kg) leży w P.
+- 8:01 komputer robi „Scal pacjentów” P → Q (wizyta przechodzi do Q), 8:02 daje wizytę z 3 marca do Kosza (wpis
+  w Koszu pod Q).
+- 8:03 laptop bez sieci, bez wiedzy o scaleniu, stawia tej wizycie gwiazdkę w starej karcie P (albo poprawia ją
+  na 17,2 kg).
+- 8:04 telefon, też bez wiedzy o scaleniu, zapisuje w starej karcie P nową wizytę; po synchronizacji P wraca na
+  komputerze z tą wizytą (duplikat, D-4 A), a lekarz na komputerze scala ją drugi raz („Scal pacjentów” P → Q) albo
+  usuwa („Usuń pacjenta”).
+- Dopiero potem dochodzi zmiana z laptopa; jego stara karta P przegrywa na komputerze z nagrobkiem P.
+- **Dotąd:** gwiazdka laptopa ginęła — komputer i telefon miały wizytę z 3 marca w Koszu bez gwiazdki, laptop po
+  nagrobku P nie miał jej wcale; po pełnej synchronizacji wizyta była w Koszu bez gwiazdki na wszystkich trzech.
+- **Teraz:** wizyta z 3 marca wraca z gwiazdką (albo z 17,2 kg) do właściwej karty Q, a jej wpis w Koszu znika — na
+  komputerze i na telefonie po pojedynczych zmianach, na wszystkich trzech po pełnej synchronizacji, w obu kolejnościach
+  (laptop najpierw wysyła albo najpierw pobiera). Laptop po samych pojedynczych zmianach, bez przełącznika odsyłania,
+  dostaje ją z powrotem dopiero z pełną synchronizacją („Ograniczenia”).
+Gdy laptop zmienił wizytę wcześniej, niż komputer dał ją do Kosza, Kosz wygrywa jak dotąd — wizyta zostaje w Koszu.
+
+**Skąd.** Plan `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 5, „Etap 3”, tabela „Podział E3-PR0”, wiersz 5b (E3-PR0e3).
+Decyzje z 2026-11-23 (plan, rozdział 6, blok „Decyzje z 2026-11-23 (E3-PR0e, pytania 1–4 projektu)”): 1 — zmiany etapu
+działają od razu u wszystkich urządzeń, także przy pełnej synchronizacji, nie za przełącznikiem odsyłania; każdy PR
+przyjmowany osobno; 4 — „Usuń pacjenta” zwróconej starej karty z nowymi wizytami zapisanymi bez wiedzy o scaleniu to
+świadome usunięcie: aplikacja bez zmian, a w teście „nie zginęła ostatnia zmiana” wąski, opisany wyjątek tylko dla
+wizyt, które nigdy nie były we właściwej karcie, a które urządzenie usuwające widziało w starej karcie w chwili
+usunięcia (wdraża go ten PR, część tylko testowa). Zasada zmiany wizyty po Koszu nie wymagała osobnego pytania — daje
+wynik, który dziś daje jedna karta. Wejście: wpis E3-PR0d2 („Wpis pod żywą kartą Q po „Scal pacjentów”” — gwiazdka
+z innego urządzenia ginie) i „Wejście do kolejnych PR” wpisów E3-PR0e1 i E3-PR0e2a. Sprawy, których projekt i decyzje
+nie rozstrzygały, rozstrzygnięto wariantem najbezpieczniejszym dla danych — „Do akceptacji właściciela przy PR”.
+
+### E3-PR0e3
+
+**Co było** (`audyt` `d2f1eded`). W `Le` karta z ładunku, która przegrywa z nagrobkiem pacjenta (zbiór N — typowo stara
+karta P po „Scal pacjentów” P → Q), nie wchodzi, a jej wersje rozstrzygają dwie drogi: `Bsl_koszZLadunku`
+(P-KOSZ-USUWANEJ-KARTY) — wpis Kosza albo przycięcia tej wersji, który z nią wygrywa, wchłania ją; `Bsw_zKartyZNagrobkiem`
+(E2-PR3c2) — wersja, która leży tu pod żywą kartą spoza N, dostaje późniejszą treść albo gwiazdkę (decyzja „treść”).
+O wygranej wpisu decyduje `Bkz_wygrywa`: Kosz wygrywa z każdą wersją nie późniejszą niż on, przycięcie — z wersją nie
+późniejszą niż ono, której gwiazdka nie jest przypięta (`Bpk_przypieta`). Druga droga pomijała jednak każdą wersję
+z wpisem, także wtedy, gdy wpis z nią nie wygrywał. Gdy ten wpis leżał pod inną, żywą kartą Q (dom wizyty,
+`Bkz_obceKarty`), zmiana nie trafiała nigdzie: wpis zostawał bez niej, a karta P znikała z nagrobkiem. Urządzenie, które
+samo zmieniło wizytę w P i dostaje nagrobek P razem z wpisem Kosza w jednym ładunku (pełna kopia, zwykle najpierw
+pobranie), przenosiło pod inną kartę (`Bsw_przezyteRetencji`) tylko wersje z wpisem przycięcia; wersja z wpisem Kosza
+znikała u niego z kartą P, a jego późniejszy ładunek nie niósł jej już nigdzie. Skutek: zmiana z urządzenia bez wiedzy
+o scaleniu ginęła na wszystkich urządzeniach, także po pełnej wymianie (na bazie, dane fikcyjne: trzy urządzenia
+z kopert aplikacji, dziesięć wariantów — po samych zdarzeniach wizyta w Koszu pod Q bez zmiany na dwóch urządzeniach,
+na trzecim brak; przy samych pełnych kopiach w Koszu pod Q bez zmiany na trzech). Z kopert aplikacji ten układ
+powstaje przy trzech urządzeniach (drugie „Scal pacjentów” albo „Usuń pacjenta” zwróconej starej karty przed
+spóźnioną zmianą); przy dwóch stara karta wraca jako duplikat i nic nie ginie.
+
+**Zasada.** Gdy karta z ładunku przegrywa z nagrobkiem pacjenta, a jej wersja v ma tu wpis Kosza albo przycięcia, wpis
+pomija v tylko wtedy, gdy z nią wygrywa — tą samą regułą `Bkz_wygrywa` (`Bkz_wygrywa`, `Bkz_zmiana` i `Bgw_stan` bajt
+w bajt, strażnik źródła). Wersja, z którą wpis nie wygrywa (przy samym Koszu — zmieniona po nim; przy samym przycięciu —
+zmieniona po nim albo przypięta; przy Koszu i późniejszym przycięciu — zmieniona po obu albo zmieniona po Koszu
+i przypięta), nie przepada:
+- **leży tu pod żywą kartą spoza N** (np. jako ostatnia wersja karty Q zostawiona mimo Kosza — Q8): jej późniejsza
+  treść albo gwiazdka przechodzi do tutejszego rekordu decyzją „treść” (E2-PR3c2), jak dla wersji bez wpisu; wpis
+  rozstrzyga potem koniec scalania Kosza, jak dotąd;
+- **nie leży tu pod żadną kartą** (typowo dana do Kosza): wraca do **karty wpisu** Q — karty, pod którą leży jej wpis —
+  gdy Q jest inną kartą niż karta z ładunku, nie jest w zbiorze N i istnieje tutaj;
+- **po stronie urządzenia, które zmieniło wizytę** (wersja tutejszej karty X ze zbioru N, z którą wpis Kosza z ładunku
+  nie wygrywa): przechodzi pod kartę wpisu (inną niż X, spoza N, obecną tutaj), zanim X zniknie.
+Potem koniec scalania Kosza (`Bkz_scalKoniec`, bez zmian) rozstrzyga wpis tak samo jak dziś w jednej karcie: wersja pod
+Q późniejsza niż wpis przyjmuje jego rejestr gwiazdki i nowszą treść z cienia (`Bgw_zloz`, W3), a wpis znika
+(`Bkz_przegral`); wersja przypięta, która przeżyła przycięcie, zostaje z wpisem przycięcia, który ją zna (A3a, 365 dni).
+Bez zasady, jak dotąd: wpis, który z wersją wygrywa; karta wpisu, której tu nie ma, usunięta albo sama w zbiorze N (np.
+scalona dalej Q → R); wpis pod samą starą kartą; import pliku i „Scal kopię konta” („Ograniczenia”).
+
+**Strona ładunku: decyzja i zapis.**
+- Decyzja (`Bsw_doWpisu`, w pętli kart `Le`, z `Bsw_zKartyZNagrobkiem` po wyszukaniu wersji tutaj): wpis „do karty
+  wpisu” odkładany do fazy przeniesień, po sprawdzeniu sesji, bez zapisów i bez odczytu karty Q. Czy Q jest, rozstrzyga
+  świeży odczyt w fazie przeniesień — po zapisie wszystkich kart ładunku, więc wynik nie zależy od kolejności kart
+  w ładunku (karta Q, która wraca w tym samym ładunku dalej niż karta P, też przyjmuje wersję).
+- Zapis (`Bsw_doKartyWpisu`, w fazie przeniesień `Bsl_przeniesWersje`, jak odłożone decyzje „treść” i „nowa”, ale pod
+  jedną blokadą — karty Q): świeże odczyty i stan z chwili decyzji, jak w E3-PR0e2a — karta Q nadal jest;
+  wersji nadal nie ma tu pod żadną kartą (pojawiła się w międzyczasie, np. „Przywróć” w drugiej karcie przeglądarki —
+  bez zapisu, rozstrzygnie następne scalanie); wpis tej wersji, razem z wpisami zapisanymi tu po starcie scalania
+  (`Bkz_czytaj`, `Bkz_dolacz` — jak `Bsw_bezSladu`), nadal leży pod Q i nadal z nią nie wygrywa (ponowny Kosz w drugiej
+  karcie przeglądarki — bez zapisu; wpis przeniesiony w tym czasie pod inną kartę R — bez zapisu pod Q, następne
+  scalanie oddaje wersję do R).
+- Potem: tożsamość wizyty spięta z wpisem Kosza i przypisana do Q (`Bvisit_bindTombstone`, `Bvisit_read` — jak nowa
+  wersja w `Bsl_scalPacjenta`; tożsamość sprzeczna z wpisem — `VISIT_IDENTITY_CONFLICT`, jak tam), rekord z jednej
+  kopii (`Bsl_wersjaZLadunku`: treść, gwiazdka, chwila zmiany, `rev`, chwila zapisu i chwila przypisania wersji do karty
+  z ładunku), zapis wersji i przeliczenie licznika i nagłówka Q z najnowszej wersji (`Bkz_przebudujNaglowek`, D-3 A).
+- Bez zapisu wpis zostaje — nic nie znika. Udany zapis liczy się w wyniku scalania jako dodana wersja
+  (`addedSnapshotCount`; integracja odświeża listę pacjentów).
+
+**Strona urządzenia, które zmieniło wizytę** (`Bsw_przezyteRetencji`, przed `Bsl_usunPacjenta`). Dotąd obejmowała tylko
+wpisy przycięcia; teraz także wpisy Kosza, ale tylko z celem w karcie wpisu (`kartaWpisu` — wydzielony dotychczasowy
+odczyt celu, bez nowego odczytu): wersja przechodzi tym samym zapisem co wersja, która przeżyła przycięcie
+(`Bsw_przeniesPrzezyta`: blokady obu kart w rosnącym porządku, świeży odczyt, rekord bez zmian, sesja tuż przed każdym
+zapisem), a potem koniec scalania Kosza zdejmuje wpis. Wpis Kosza pod samą kartą X albo pod kartą z N — bez
+przeniesienia; dotychczasowy cel wersji, która przeżyła przycięcie, bez zmian. Typowo: laptop z przykładu przy pełnej
+synchronizacji najpierw pobiera — dostaje nagrobek P i wpis Kosza w jednym ładunku, przenosi swoją wizytę z gwiazdką do
+Q, a potem wysyła ją dalej.
+
+**Treść, gwiazdka, licznik i chwila zapisu karty wpisu.**
+
+| Zmiana na urządzeniu bez wiedzy o scaleniu (stara karta P), wpis pod żywą Q | Wynik po scaleniu |
+|---|---|
+| gwiazdka albo poprawka po Koszu | wizyta w Q z tą zmianą, wpis Kosza zdjęty |
+| poprawka z trzeciego urządzenia sprzed Kosza znana wpisowi, gwiazdka po Koszu | w Q treść z wpisu (nowsza), gwiazdka z ładunku — rekord złożony W3, wpis zdjęty |
+| przycięcie porządkowaniem pod Q, potem poprawka albo gwiazdka | wizyta w Q ze zmianą, wpis przycięcia zdjęty |
+| gwiazdka przed przycięciem na urządzeniu, które przycinało bez wiedzy o niej | przypięta wizyta w Q z gwiazdką, wpis przycięcia zostaje i zna gwiazdkę (A3a) |
+| zmiana wcześniejsza niż Kosz albo niż przycięcie (bez gwiazdki) | wpis wygrywa, jak dotąd — wizyta nie wraca, bez zapisu wersji |
+| wizyta leży w Q jako ostatnia wersja karty mimo Kosza (Q8), gwiazdka po Koszu | gwiazdka do tej wersji w Q (decyzja „treść”), wpis zdjęty |
+| Q miała dotąd tylko wersję innej wizyty, zostawioną mimo jej Kosza (Q8) | wracająca wizyta jest drugą wersją Q, więc tamta przechodzi do Kosza — jak w jednej karcie |
+
+- **Licznik i nagłówek Q** — z najnowszej wersji (`Bkz_przebudujNaglowek`). **Chwila ostatniego zapisu karty Q** —
+  późniejsza z dotychczasowej i chwili zapisu najnowszej wersji, więc chwila zmiany wracającej wizyty jej nie podnosi,
+  jak przy decyzji „treść” (E2-PR3c2). Dzięki temu wcześniejsze „Usuń pacjenta” karty Q na innym urządzeniu nadal usuwa
+  Q razem z wizytą, która wróciła — gwiazdka postawiona w innej, starej karcie nie wskrzesza karty usuniętej przez
+  lekarza.
+- **Chwila przypisania wersji do karty** (E3-PR0e2a) — z ładunku (`Bsw_przypisanie`, zapis z jednej kopii, jak decyzja
+  „nowa”; tutejszej kopii nie ma, a wpis Kosza jej nie przechowuje); bez niej na wejściu — rekord bez niej. Nowy kod nie
+  tworzy pola (strażnik drzewa składni „nikt nie ustawia” zielony). Strona urządzenia, które zmieniło wizytę — rekord bez
+  zmian.
+
+**Drogi.**
+
+| Droga | Zasada |
+|---|---|
+| koperta zdarzenia (`applyEncryptedEvent`), pełna kopia (`mergeSyncPayload`), delta karty, stara delta | tak — to samo `Le`; strona urządzenia, które zmieniło wizytę, wymaga wpisu Kosza i nagrobka starej karty w tym samym scalaniu (typowo pełna kopia) |
+| import karty z pliku, kopia i odtworzenie konta, „Scal kopię konta” | nie: wszystkie trzy wywołania `Le` z importu podają `patients: []`, `Bsw_zKartyZNagrobkiem` jest wołane tylko poza importem, a strona urządzenia, które zmieniło wizytę, działa tylko w scalaniu z magazynem nagrobków poza importem; sprawdzone na kopii (błąd przy każdej karcie w pętli kart `Le` podczas importu): 41 plików testów z importem karty, „Scal kopię konta” i odtworzeniem konta — ani jednego wejścia |
+| przełącznik odsyłania wyłączony albo włączony | tak samo (zasada poza blokiem P-DZIENNIK-ZDARZEN, nie czyta przełącznika); z włączonym odsyłanie niesie wizytę dalej |
+| starsza aplikacja 221, 276 | zasady nie zna (niżej) |
+
+**Odsyłanie i brak pętli** (E3-PR0c, za przełącznikiem odsyłania; blok P-DZIENNIK-ZDARZEN bez zmian). `Bev_echo`: przed
+scaleniem wersji tu nie było, po — leży pod Q, a ładunek niósł ją pod P, więc do kolejki trafia jedno odesłanie `snap`
+wersji pod Q. Zdjęty wpis Kosza nie jest odsyłany osobno: `Bev_echoKosza` odsyła tylko wpisy, które po scaleniu są;
+odbiorcy zdejmują swój wpis sami (koperta `snap` wersji pod Q jest późniejsza niż ich wpis — `Bkz_pomin`). Odsyłanie
+ukrytego wpisu (E3-PR0d2) nie zachodzi — wersja po scaleniu leży pod Q. Brak pętli: odbiorca bez wersji zapisuje ją
+pod Q jako nową wersję, a jego porównanie po scaleniu daje tę samą wersję pod tą samą kartą — bez odesłania; odbiorca,
+który już ma ją pod Q (własna zasada) — rekord bez zmiany, bez odesłania. Zmierzone: światy 887–894 z przełącznikiem —
+1 koperta odsyłania, 0 ponownych wysłań tej samej wartości (literał świata, także w przebiegu całego pliku
+z `E2_AB_ECHO=1`); katalog Kosza `npret-K K←C,P←K` z przełącznikiem — 13 zdarzeń zamiast 11 (dwa odesłania `snap`
+przypiętej wizyty pod kartę docelową), stan końcowy równy stanowi samych pełnych kopii; flota 276 i 221 z przełącznikiem
+— licznik odsyłania ziarno po ziarnie równy bazie (zasada nie zapisała tam ani razu).
+
+**Strażnik natywny** (`PatientPortablePreflightMerge`; fragment natywny bajt w bajt). Przewiduje przeniesienia wersji,
+które leżą tu pod inną kartą niż w ładunku (`Bsw_wersjaLokalna`, `Bsw_ladunekWygrywa`), i usunięcia kart, które
+przegrywają z nagrobkami; wpisów Kosza nie modeluje. Wersja wracająca z ładunku nie leży tu pod żadną kartą — dla
+strażnika to nowa wersja karty Q, jak każda nowa wersja z synchronizacji; po stronie urządzenia, które zmieniło wizytę,
+wersja przechodzi z karty X, którą strażnik i tak przewiduje jako usuwaną (X przegrywa z nagrobkiem z ładunku), tą samą
+drogą co wersja, która przeżyła przycięcie. Przewidywania i odmowy przy planie z etapami — jak dotąd.
+
+**Starsza aplikacja** (sejfy 221 i 276 z fikstur) zasady nie zna — znane ograniczenie starszej wersji (decyzja 2
+z 2026-11-16). Test floty (8 układów: 221 albo 276 × zmienia wizytę albo scala i daje do Kosza × przy pełnej wymianie
+najpierw wysyła albo najpierw pobiera, potem dwie pełne wymiany wszystkich): gwiazdka ginie na wszystkich urządzeniach
+tylko wtedy, gdy postawiła ją starsza aplikacja, która najpierw pobiera (dostaje nagrobek P z wpisem Kosza i usuwa P
+razem ze swoją zmianą — tak jak przed tym PR na każdym urządzeniu); w pozostałych sześciu układach bieżące urządzenie
+oddaje wizytę do Q, a starsza aplikacja przyjmuje ją pod Q z pełnej kopii (późniejsza niż jej wpis Kosza). W długich
+przebiegach floty 276 i 221 (profil podstawowy i pełny, oba stany przełącznika) zasada nie zapisała ani razu — wynik
+bajt w bajt jak na bazie.
+
+**Odczyty, zapisy, sesja, blokady, błędy, usuwanie konta.**
+- **Odczyty:** jeden nowy odczyt karty (`getPatientForUser`, w pliku 58 → 59) — świeży odczyt karty wpisu pod blokadą
+  w fazie przeniesień; decyzja bez odczytów magazynu; strona urządzenia, które zmieniło wizytę, używa dotychczasowego
+  odczytu celu. Odczyt wpisów Kosza (`Bkz_czytaj`) i wyszukanie wersji (`Bsw_wersjaLokalna`) jak w `Bsw_bezSladu`.
+- **Świeżość „wersji nadal nie ma tu”:** jak w `Bsw_bezSladu` — odczyt po kluczu w magazynach wbudowanych; konto bez
+  kart na starcie scalania — bez odczytu (karta Q powstała w tym scalaniu). W magazynie bez odczytu po kluczu „Przywróć”
+  w drugiej karcie przeglądarki w oknie między decyzją a fazą zostałby nadpisany rekordem z ładunku, czyli wersją
+  późniejszą niż wpis Kosza — wynikiem, który zasada i tak daje (nic nie ginie); dodatkowy odczyt listy wersji Q
+  odrzucony.
+- **Zapisy:** wersja pod Q i nagłówek Q — każdy tuż po `Bses_pilnuj(opcje)`, bez `await` pomiędzy, przez
+  `PatientClinicalWriteValue`, pod blokadą Q; strona urządzenia, które zmieniło wizytę — zapisy `Bsw_przeniesPrzezyta`
+  bez zmian.
+- **Sesja:** zmiana sesji przy świeżym odczycie karty wpisu albo przy szyfrowaniu rekordu kończy scalanie
+  `SESSION_CHANGED`, bez zapisu po przełączeniu; po ponownym zalogowaniu to samo scalanie oddaje wizytę do Q (test).
+- **Blokady:** blokada karty wpisu zajęta w drugiej karcie przeglądarki — scalanie czeka i po limicie przerywa jak każdy
+  zapis pod blokadą; wizyta nie wraca, wpis zostaje, następne scalanie ją oddaje (test). Jedna karta, jedna blokada (para
+  tych samych blokad zawiesiłaby fazę).
+- **Błędy:** jak w zapisach obok — nie są połykane. Przerwane scalanie między zapisem wersji a nagłówkiem Q (zmiana
+  sesji, błąd zapisu) zostawia wersję pod Q i wpis Kosza z licznikiem sprzed zapisu — naprawia je następne scalanie.
+- **Usuwanie konta:** `PatientClinicalGuard` i `PatientClinicalWriteValue` jak w sąsiednich funkcjach fazy przeniesień.
+
+**Kolejka zdarzeń.** Bez nowych wierszy z emisji: zmiana nie dodaje wywołań części emisji (`Bem_`/`Bob_`: w pliku
+579 = 579, poza blokiem 63 = 63), literał miejsc poza blokiem (`MIEJSCA_POZA_BLOKIEM`) bez zmian. Wiersze kolejki
+dochodzą tylko z odsyłania przy włączonym przełączniku (wyżej). Operacje kolejki i kwarantanny sprawdzają sesję tak jak
+zapis karty (P-SESJA-ZAPISU): zmiana sesji w trakcie kończy operację bez zapisu.
+
+**Przy wyłączonym przełączniku odsyłania.** Zasada stoi poza blokiem P-DZIENNIK-ZDARZEN i nie czyta przełącznika —
+działa tak samo przy obu jego stanach (decyzja 1 z 2026-11-23). Blok bez zmian (0 różnic), bez zmian kolejki, emiterów,
+haków scalania, przeglądu i bramki.
+
+**Wyjątek wyroczni „nie zginęła ostatnia zmiana” (decyzja 4 z 2026-11-23; tylko testy, aplikacja bez zmian).** Przykład
+z decyzji (fikcyjny): o 10:00 komputer scala starą kartę „Pacjenta Testowego 1” z właściwą, o 10:10 telefon bez sieci
+zapisuje w starej karcie nową wizytę z 20 kwietnia (38,8 kg); po synchronizacji stara karta wraca z tą wizytą, a lekarz
+na komputerze wybiera „Usuń pacjenta” na starej karcie — wizyta znika na wszystkich urządzeniach, bo lekarz usunął to,
+co widział w karcie. Model wyroczni (`tests/support/ostatnia-zmiana.mjs`) prowadzi zapis w starej karcie po scaleniu
+„za scaleniem” do karty scalonej, więc oczekiwał tej wizyty we właściwej karcie i zgłaszał „utratę” bez klasy (świat
+885 ręcznego bloku znanych usterek, ziarna 8 i 37 profilu pełnego). Nowa klasa samych bieżących urządzeń „„Usuń
+pacjenta” zwróconej starej karty (wizyta nigdy w karcie scalonej)” — dozwolona w W1, W4 i blobach, pole naprawy: bez
+naprawy, świadome usunięcie (ostrzeżenie w oknie „Usuń pacjenta” — do rozważenia z E3-PR0f) — tylko wtedy, gdy naraz:
+- rodzaj „utrata”, model oczekuje wizyty w karcie, a w punkcie nie ma jej na żadnym urządzeniu (to nie jest rozjazd
+  między urządzeniami);
+- „Usuń pacjenta” starej karty X na urządzeniu, którego eksport przed usunięciem miał tę wizytę w X z jej ostatnią
+  treścią i gwiazdką, później niż każda jej zmiana (treść, gwiazdka, położenie);
+- to urządzenie znało scalenie X: miało wcześniej nagrobek X albo wersję przeniesioną tym scaleniem pod kartą docelową
+  (urządzenie, które o scaleniu się nie dowiedziało, usuwa dla siebie zwykłą kartę — bez klasy);
+- X ma alias „Scal pacjentów” sprzed usunięcia i po usunięciu nie wróciła (zapis w X bez wiedzy o usunięciu — bez
+  klasy);
+- oczekiwana karta należy do łańcucha aliasów X, a wizyta nie leżała pod żadną kartą tego łańcucha w żadnym zapisanym
+  stanie żadnego urządzenia: stan bazowy, eksport przed i po każdej mutacji, stan po dostawie i po każdym zdarzeniu
+  partii (`WYR.obserwuj`) i każdy zapis rekordu wersji w magazynie urządzenia, także w stanach pośrednich scalania
+  i w sejfach starszej aplikacji (`WYR.obserwujZapis`); obie obserwacje woła uprząż testu A ≡ B.
+Klasa jest sprawdzana na końcu klasyfikacji, więc nie zmienia klasy żadnego wcześniej sklasyfikowanego naruszenia; model
+„Usuń pacjenta” i alias scalenia bez zmian. Wzór: R5-E1 (E3-PR0d2) — jawny wyjątek z decyzji właściciela. Liczba klas
+samych bieżących urządzeń w tabeli wyjątków 17 → 18.
+
+Kontrola, że wyjątek niczego innego nie zasłania (ta sama kopia z wyjątkiem i bez niego, wszystkie długie przebiegi
+niżej przy obu stanach przełącznika): lista naruszeń identyczna, zmienia się tylko klasa — zawsze z „bez klasy” na klasę
+wyjątku — dokładnie 130 naruszeń: świat 885 w CI po 18 na świat (wizyty b i w na A, B i C, w W1, W4 i blobach; dwa
+światy — przełącznik świata wyłączony i włączony — w przebiegu całego pliku bez zmiennych i z `E2_AB_ECHO=1`: 36 + 36),
+ziarno 8 profilu pełnego z przełącznikiem 16 (dwie wizyty na A i B, W1 i W4), ziarno 37 profilu pełnego 12 bez
+przełącznika i 12 z nim (dwie wizyty na A i B, W1 i W4), ziarno 8 floty 276 w profilu pełnym z przełącznikiem (ręcznie)
+18 (jedna wizyta na A, B i C, W1 i W4 floty). Każde z nich potwierdził niezależny ślad położenia wizyty na każdym
+urządzeniu po każdej mutacji, zdarzeniu i dostawie (zebrany przed ostatnią poprawką kodu; po niej dzienniki operacji
+i naruszenia tych przebiegów są bajt w bajt te same):
+
+| Przypadek | Gdzie wizyta leżała w jakimkolwiek stanie | „Scal pacjentów” starej karty | „Usuń pacjenta” i stan usuwającego | Po usunięciu |
+|---|---|---|---|---|
+| świat 885, wizyty b i w | tylko stara karta 5 (50 i 52 stany), karta 3 — nigdy | A: 5 → 3 | A usuwa 5; A ma b 21,4 kg i w 38,8 kg w karcie 5 | nigdzie na A, B, C |
+| ziarno 8 profilu pełnego, z przełącznikiem | tylko karta 1 (73 i 64 stany), karta 2 — nigdy | krok 44: 1 → 2 | krok 77: A usuwa 1, ma obie (21,4 kg, 38,8 kg) | B ma je jeszcze 2 stany (do dostawy nagrobka), potem nigdzie |
+| ziarno 37 profilu pełnego, oba stany | tylko karta 6 (245 i 150, z przełącznikiem 251 i 156 stanów), karty 2 i 1 — nigdy | krok 97, B: 6 → 2 | krok 191: B usuwa 6, ma obie (31,1 kg, 25,2 kg) | A ma je jeszcze 3 stany, potem nigdzie |
+| ziarno 8 floty 276 w profilu pełnym, z przełącznikiem | tylko karta 1 (288 stanów), karta 2 — nigdy | krok 113, B: 1 → 2 | krok 170: A usuwa 1, ma ją (33,3 kg) | B 3 i C (276) 4 stany, potem nigdzie |
+
+W ostatnim przypadku wizytę zapisała i oznaczyła gwiazdką starsza aplikacja, a usuwa inne urządzenie niż to, które
+scalało — decyzja 4 tego nie ogranicza, wyjątek też nie („Do akceptacji”, punkt 7). Blok znanych usterek (światy
+881–884: wizyta była we właściwej karcie) zostaje czerwony bez zmian — wyjątek go nie zasłania. Czystość ziaren 8 i 37
+profilu pełnego daje wyjątek, nie naprawa; świat 885 przeszedł z ręcznego bloku znanych usterek do CI.
+
+**Testy.** Dane wyłącznie fikcyjne („Testowy Jan…”, „Testowa Ola”, „Pacjent Testowy 1”), bez PESEL; prawdziwy
+`vilda_vault.js` w uprzęży (bliźniaki tego samego konta, magazyny w pamięci i atrapa IndexedDB, atrapa blokad Web Locks,
+starsza aplikacja z sejfów 221 i 276, sterowany zegar). Nowe przypadki: 73.
+- `tests/unit/sync-odsylanie.test.mjs` (143, było 129): przepisany przypadek „wpis pod żywą kartą Q po „Scal
+  pacjentów”” (niżej); poprawka po Koszu (koperta), gwiazdka po Koszu pełną kopią (wersja liczy się jak dodana),
+  poprawka z trzeciego urządzenia sprzed Kosza znana wpisowi i gwiazdka po Koszu (W3), koperta bez tożsamości wizyty
+  (tożsamość z wpisu) i z tożsamością (wizyta przypisana do Q, także w kopercie odsyłania), przycięcie porządkowaniem
+  i poprawka albo gwiazdka później (wpis przycięcia zdjęty), gwiazdka przed przycięciem na urządzeniu bez wiedzy o niej
+  (wpis przycięcia zostaje i zna gwiazdkę), ostatnia wersja karty Q z wpisem Kosza (gwiazdka do tutejszego rekordu);
+  kontrole z wynikiem jak dotąd: zmiana wcześniejsza niż Kosz i niż przycięcie, karta wpisu scalona dalej Q → R na tym
+  i na innym urządzeniu, import pliku karty P (2 wersje, licznik karty Q 3 — import nie przelicza karty, spod której
+  zabiera wersję, jak dotąd).
+- `tests/unit/kosz-po-kluczu-sesja.test.mjs` (66, było 45): trzy urządzenia z pełnych kopii — kontrola bez haka; karta
+  wpisu usunięta, „Przywróć” albo „Przywróć” i ponowny Kosz w drugiej karcie przeglądarki między decyzją a fazą
+  przeniesień, wpis przeniesiony w tym oknie pod inną kartę R (następne scalanie oddaje wizytę do R); przełączenie konta
+  przy świeżym odczycie karty wpisu i przy szyfrowaniu rekordu; pełna wymiana w obu kolejnościach (gwiazdka albo
+  poprawka × drugie „Scal pacjentów” albo „Usuń pacjenta” zwróconej P × najpierw wysyła albo najpierw pobiera — wizyta
+  w Q ze zmianą na A, B i C, Kosz bez niej); kolejność kart w jednym ładunku (Q przed P i za P); ostatnia wersja karty
+  wpisu z wpisem Kosza innej wizyty (tamta przechodzi do Kosza); trzy kontrole strony urządzenia, które zmieniło wizytę
+  (zmiana wcześniejsza niż Kosz, wpis pod samą starą kartą, karta wpisu scalona dalej); strażnik źródła (decyzja bez
+  odczytów magazynu, odczyty i zapisy po `Bses_pilnuj`, zapis pod blokadą karty wpisu, bez `Bem_`/`Bob_`, bez napisu
+  pola przypisania).
+- `tests/unit/sync-wlasciciel-wersji.test.mjs` (387, było 384): strażnik źródła — wpis pomija wersję z karty z N tylko
+  wtedy, gdy z nią wygrywa, a decyzja do karty wpisu idzie po wyszukaniu wersji tutaj; strażnik — `Bkz_wygrywa`,
+  `Bkz_zmiana` i `Bgw_stan` bajt w bajt (skrót SHA-256 tekstu); blokada karty wpisu zajęta w drugiej karcie przeglądarki.
+- `tests/unit/sync-chwila-przypisania.test.mjs` (81, było 71): wersja wracająca do karty wpisu z chwilą przypisania
+  z ładunku i bez niej (nowy zapis pola nie tworzy); starsza aplikacja 221 i 276 — 8 układów z literałem położenia
+  wizyty na każdym urządzeniu (wyżej).
+- `tests/unit/ostatnia-zmiana.test.mjs` (75, było 62): pozytyw wyjątku (świat 885 w miniaturze) i negatywy — każdy
+  zdejmuje jeden warunek: wizyta była w karcie scalonej (w eksporcie mutacji, w stanie po dostawie albo tylko w zapisie
+  magazynu), urządzenie usuwające nie miało wizyty w starej karcie albo miało jej starszą treść, wizyta widoczna na innym
+  urządzeniu, zapis wizyty po usunięciu, karta wróciła po usunięciu, usunięcie na urządzeniu, które scalenia nie znało
+  (z pozytywami: znało je z nagrobka albo z wersji przeniesionych), alias „Scal pacjentów” późniejszy niż usunięcie,
+  oczekiwana karta poza łańcuchem aliasów; liczba klas 17 → 18.
+- `tests/unit/sync-dziennik-wlasnosciowy.test.mjs` (A ≡ B; 273 zielone i 20 pominiętych, było 259 i 21): test wejściowy —
+  trzy urządzenia z kopert aplikacji, światy 887–896 (887–894: gwiazdka albo poprawka × drugie „Scal pacjentów” albo
+  „Usuń pacjenta” zwróconej P × przełącznik wyłączony albo włączony; 895 i 896: urządzenie, które zmieniło wizytę,
+  najpierw pobiera), oceniane po samych zdarzeniach (W1), po pełnej wymianie (W4) i przy samych pełnych kopiach:
+  wyrocznia bez naruszeń bez klasy w W4 i przy samych pełnych kopiach oraz w W1 z przełącznikiem; W1 bez przełącznika —
+  literał jednego naruszenia „utrata” wizyty na urządzeniu, które ją zmieniło („Ograniczenia”); literał faktów (położenie
+  wizyty i nowej wizyty z trzeciego urządzenia na A, B i C); z przełącznikiem 1 koperta odsyłania i 0 ponownych wysłań.
+  Świat 885 z ręcznego bloku znanych usterek w CI, przy obu stanach przełącznika: bez naruszeń bez klasy, literał
+  dokładnej listy 18 naruszeń z klasą wyjątku i literał faktów (b i w w starej karcie na A i B przed usunięciem, potem
+  nigdzie). Uprząż: obserwacja stanów urządzeń i zapisów rekordu wersji dla wyroczni, przełącznik odsyłania świata
+  przypadku.
+
+**Czerwone na bazie** (`d2f1eded` — sejf, manifesty i skróty z tej rewizji, testy i wsparcie testów tego PR): 47
+przypadków, wszystkie na asercji o stanie po scaleniu albo o tekście sejfu (strażniki źródła — brak nowych funkcji):
+plik A ≡ B 12 (światy 887–896 — wizyta w Koszu pod Q bez zmiany albo bez niej, 3 naruszenia bez klasy przy gwiazdce
+i 5–6 przy poprawce w każdym ze światów oceny; dwa przepisane literały `npret-K`), `kosz-po-kluczu-sesja` 15,
+`sync-odsylanie` 10 (w tym przepisany przypadek), `sync-chwila-przypisania` 8, `sync-wlasciciel-wersji` 2. Zielone
+z natury (29 nowych): kontrole z wynikiem jak dotąd (zmiana wcześniejsza niż Kosz i niż przycięcie, Q → R, karta wpisu
+usunięta, „Przywróć” w drugiej karcie przeglądarki, import, trzy kontrole strony urządzenia, które zmieniło wizytę,
+dwa układy floty, w których starsza aplikacja gubi gwiazdkę jak dotąd, strażnik `Bkz_wygrywa` bajt w bajt), świat 885
+w CI i przypadki wyroczni (wyjątek jest częścią testów — świat 885 jest zielony dzięki wyjątkowi, nie naprawie).
+
+**Mutanty** (kopia drzewa, jedna zmiana tekstu po kotwicy; zestaw: 49 plików testów synchronizacji, Kosza, kopii konta,
+importu i wyroczni, plik A ≡ B z filtrem i w całości przy obu stanach przełącznika, ręczny blok znanych usterek). Pierwsza
+seria — 37 mutantów (28 kodu, 9 wyroczni): 27 zabitych testami działania, 3 tylko strażnikami źródła (zapis bez blokady
+karty wpisu, pole przypisania ustawiane przy nowym zapisie i zasada w imporcie — ta ostatnia równoważna co do
+działania), 7 przeżyło (w tym jeden równoważny). Po dopisaniu testów i zmianach kodu druga seria — 20 mutantów (12 kodu,
+8 wyroczni: wszystkie dotąd przeżywające, dotąd zabijane tylko strażnikami albo plikiem A ≡ B, nowy kod strony
+urządzenia, które zmieniło wizytę, i nowe warunki wyjątku): 20 z 20 zabitych testami działania. Czerwienią co najmniej jeden test:
+- kod: bez zasady (dawny warunek „każdy wpis pomija wersję”); prosta chwila zamiast `Bkz_wygrywa`; bez `Bkz_wygrywa`
+  (każda wersja z wpisem wraca); zasada także przy karcie wpisu w zbiorze N; zapis od razu przy decyzji, bez fazy
+  i blokady; zapis w fazie bez blokady karty wpisu; bez każdego sprawdzenia stanu z chwili decyzji osobno (karta Q nadal
+  jest, wersji nadal nie ma tu, wpisy zapisane po starcie scalania, wpis nadal przegrywa, wpis nadal pod Q); wersja
+  wraca, a wpis zostaje; wpis zdjęty bez powrotu wersji (zamiast decyzji albo już przy decyzji); wpis zdjęty przed końcem
+  scalania Kosza (bez złożenia W3); rejestr gwiazdki z ładunku pominięty; wersja pod żywą kartą bez decyzji „treść”; bez
+  `Bvisit_bindTombstone`; bez `Bvisit_read` (wizyta przypisana do P — widać w kopercie odsyłania); bez `Bses_pilnuj`
+  przed zapisem; bez nagłówka i licznika Q; bez licznika wyniku scalania; chwila przypisania gubiona albo ustawiana
+  (także kluczem składanym tak, że strażnik drzewa składni go nie widzi); strona urządzenia, które zmieniło wizytę —
+  wyłączona, tylko przy wpisach przycięcia, cel także spoza karty wpisu (dotychczasowy cel), karta wpisu ze zbioru N,
+  wpis Kosza bez `Bkz_wygrywa`; decyzja znów z odczytem karty Q (wynik zależny od kolejności kart w ładunku);
+- wyrocznia: wyjątek wyłączony; bez każdego warunku osobno — nigdy we właściwej karcie (przy szerszym wyjątku zielenieje
+  też świat 881 ręcznego bloku znanych usterek — zasłoniłby prawdziwą utratę), widziana w starej karcie w chwili
+  usunięcia, nigdzie jej nie ma, usunięcie później niż zmiana, obserwacja stanów po dostawie, obserwacja zapisów
+  w magazynie, ostatnia treść i gwiazdka na urządzeniu usuwającym, alias sprzed usunięcia, oczekiwana karta w łańcuchu
+  aliasów, urządzenie usuwające znało scalenie (także: tylko z nagrobka, bez stanów po dostawie), karta po usunięciu nie
+  wróciła.
+Równoważne (bez testu działania, z dowodem): bez warunku „karta wpisu inna niż karta z ładunku” (karta z ładunku jest
+w zbiorze N, więc warunek zbioru N to obejmuje) i zasada w imporcie (import podaje `patients: []`; sprawdzenie na kopii wyżej).
+Mutant „bez odczytu karty Q przy decyzji” z pierwszej serii był równoważny co do wyniku — po zmianie kodu to jest kod,
+a mutant odwrotny jest zabity. Mutantów pierwszej serii, których kotwice i testy się nie zmieniły, nie powtarzano.
+
+**Długie przebiegi** (ręcznie, 2026-11-24, na kodzie końcowym; baza — te same testy i uprząż z `vilda_vault.js`,
+manifestami, narzędziami granicy i testem granicy z `d2f1eded`; trzecia kopia — kod bez wyjątku wyroczni; po dwa
+przebiegi naraz):
+
+| Przebieg | Przełącznik | Czerwone: baza / po zmianie / bez wyjątku | Wyrocznia ziarno po ziarnie (naruszenia baza = po zmianie, mutacje) | Czas baza / po zmianie |
+|---|---|---|---|---|
+| CI (cały plik) | nie | 12 / 0 / 2 | 20/20 (126 = 126, 1733 = 1733) | 172 / 170 s |
+| CI (cały plik) | tak | 51 / 44 / 46 | 20/20 (139 = 139, 1733 = 1733) | 184 / 185 s |
+| blok znanych usterek | nie / tak | 4 / 4 / 4 (światy 881–884, te same) | — | 5–6 s |
+| katalog Kosza, tryb ścisły | nie / tak | 14 / 12 / 12; 15 / 12 / 12 | zrzut katalogu 30/32 (różne tylko `npret-K`) | 21–25 s |
+| pełny 1–20 | nie | 0 / 0 / 0 | 20/20 (434 = 434, 1860 = 1860, P6 30 = 30) | 149 / 150 s |
+| pełny 1–20 | tak | 0 / 0 / ziarno 8 | 20/20 (462 = 462, 1860 = 1860, P6 30 = 30) | 157 / 156 s |
+| pełny 21–40 | nie | 21, 38, 39 / te same / i 37 | 20/20 (527 = 527, 1768 = 1768, P6 8 = 8) | 144 / 143 s |
+| pełny 21–40 | tak | 38, 39 / te same / i 37 | 20/20 (582 = 582, 1768 = 1768, P6 22 = 22) | 153 / 152 s |
+| „dłuższa praca bez połączenia” 101–120 | nie / tak | 104 / 104 / 104 | 20/20 (1 = 1, 0 = 0; 1858 = 1858) | 67–79 s |
+| podstawowy 1–40 | nie / tak | 0 / 0 / 0; 1, 4 / te same | 40/40 (4 = 4, 0 = 0; 3557 = 3557) | 232–247 s |
+| flota 276, 1–10 | nie / tak | 0; 2 / te same | 10/10 (0 = 0; 938 = 938) | 32–39 s |
+| flota 221, 1–10 | nie / tak | 0; 2, 3 / te same | 10/10 (390 = 390, 405 = 405; 831 = 831) | 26–27 s |
+| flota 276, 1–10, profil pełny (ręcznie) | nie / tak | 3, 6, 7, 9, 10; 5, 6, 7, 9, 10 / te same / z przełącznikiem i 8 | 10/10 (416 = 416, 428 = 428; 976 = 976) | 40–48 s |
+| flota 221, 1–10, profil pełny (ręcznie) | nie / tak | 4, 6, 7, 9, 10 / te same | 10/10 (536 = 536, 537 = 537; 895 = 895) | 31–36 s |
+| 91 plików z otoczenia zmiany (bez pliku A ≡ B, 2 wątki) | — | 37 / 2 (środowisko kopii) | — | — |
+
+- Każda różnica kodu wobec bazy to nowa zasada. CI bez przełącznika: 12 → 0 — światy 887–896 i `npret-K` ×2 (rekordy
+  wyroczni tylko na bazie 32, tylko po zmianie 6 — literał jednego naruszenia W1 w światach „przełącznik wyłączony”).
+  Z `E2_AB_ECHO=1` dla całego pliku: tylko na bazie 7 (cztery światy „przełącznik włączony”, `npret-K` ×2, „zmiany
+  zachowania wobec świata samych blobów”); wspólne 44 — 38 sprzed tego PR (literały spisane bez przełącznika) i sześć
+  światów „przełącznik wyłączony” (887, 889, 891, 893, 895, 896): zmienna włącza odsyłanie u wszystkich, więc urządzenie,
+  które zmieniło wizytę, dostaje ją z powrotem, a literał zakłada brak odsyłania; w CI bez zmiennej zielone.
+- Długie profile (pełny 1–40, „dłuższa praca bez połączenia” 101–120, podstawowy 1–40, flota 276 i 221 w profilu
+  podstawowym i pełnym, oba stany przełącznika): bajt w bajt jak na bazie — wyniki ziaren z dziennikiem operacji,
+  wyrocznia, klasy z liczbami, mutacje, bloki błędów, „utrata bez nośnika”, błędy W4 i licznik odsyłania floty z
+  przełącznikiem (276: koperty z echem 250, wiersze surowe 255, wykonalne 37, zdarzenia 1013; 221: 223 / 301 / 36 / 597;
+  276 w profilu pełnym: 326 / 346 / 107 / 1233; 221 w profilu pełnym: 247 / 332 / 49 / 718; nieodesłane 0, ponad model 0).
+  Czerwone ziarna są te same co na bazie; kolumna „bez wyjątku” różni się tylko światem 885 w CI, ziarnami 8 i 37
+  profilu pełnego i ziarnem 8 floty 276 w profilu pełnym (wyżej).
+- Licznik odpaleń zasady (kopia z zapisem licznika do pliku, wynik testów równy kodowi): strona ładunku — tylko CI (27
+  decyzji bez przełącznika, 20 z nim, każda zakończona zapisem), wyłącznie w światach 887–896 i `npret-K`; strona
+  urządzenia, które zmieniło wizytę — tylko w światach 895 i 896; w długich profilach 0 zapisów obu stron.
+- 91 plików z otoczenia zmiany: po zmianie 4950 zielonych, 1 pominięty, 2 czerwone (`sync-dziennik-uspienie` — strażnik
+  `git ls-files` w kopii bez repozytorium; w drzewie roboczym zielone); na bazie 37 = te same 2 i 35 przypadków
+  czerwonych na bazie z założenia.
+- Pełny `vitest run` raz, przed podbiciem wersji: 938 plików, 32 523 zielone, 21 pominiętych, 1 czerwony —
+  `wersje-zasobow.test.mjs` („zmiana treści pliku wymaga podbicia ?v=”), oczekiwany przed `npm run podbij-wersje`.
+
+**Czas pliku A ≡ B** (lokalnie, sam plik, bez zmiennych, po kolei, bez innego obciążenia): po zmianie 139,1 s i 141,0 s
+(273 zielone, 20 pominiętych), plik sprzed tego PR na `d2f1eded` 132,0 s i 133,7 s (259 zielonych) — ok. +7 s;
+nowy blok trzech urządzeń i świata 885 (14 przypadków) 5,2–5,4 s, świat po 0,4–0,6 s. Po scaleniu `audyt` `65955ed4`
+(na przemian): po zmianie 131,1 s i 126,3 s, plik na `65955ed4` 125,7 s i 120,1 s — ok. +6 s. Cel CI ok. 180 s
+nienaruszony.
+
+**Zmienione literały istniejących testów** (każdy — skutek nowej zasady albo wyjątku):
+- `sync-odsylanie`, przypadek „wpis pod żywą kartą Q po „Scal pacjentów” P → Q tutaj … koperta snap v z gwiazdką B
+  z kartą P z zapisem sprzed scalenia”: dotąd wpis 20 kg pod Q bez gwiazdki, v nie wraca pod Q (wynik świadomie wpisany,
+  ten sam przypadek opisuje wpis E3-PR0d2); teraz v pod Q z gwiazdką, wpis zdjęty, karta P nie wraca, jedno odesłanie
+  `snap` pod Q, 0 wierszy `stomb` — nowa zasada.
+- A ≡ B, katalog Kosza (blok deterministyczny p. 5: katalog kosza) `npret-K K←C,P←K` i `npret-K C←P,C←K` (`KAT_LITERALY`,
+  `KAT_WYR`): przypięta wizyta x, przycięta na K bez wiedzy o gwiazdce pod żywą kartą docelową Y, wygrywa z wpisem
+  przycięcia, a karta X z ładunku przegrywa z nagrobkiem scalenia — x wraca pod Y także na K po samych zdarzeniach: stan
+  po zdarzeniach `39e4b7ca1a8d` = stan po W4 = stan samych blobów, widok `Y[m2,x3,x:23*] Z[z] | nagr X` na trzech
+  urządzeniach (dotąd K bez x:23*, stany `ae685324abea` i `b7dd020320e6`); naruszenie „npret (przypięta wizyta przeżywa
+  przycięcie) | W1” znika. W trybie ścisłym katalogu: „widok po zdarzeniach ≠ widok po W4” 5 → 3, „npret | W1 poza W4
+  i blobami” 5 → 2 (z przełącznikiem 4 → 3 i 3 → 2); z przełącznikiem znika też „zmiany zachowania wobec świata samych
+  blobów” (x wraca zasadą z `rev` 1, a nie odesłaniem z `rev` 2) — nowa zasada.
+- A ≡ B, blok znanych usterek: świat 885 przeniesiony do CI, pole naprawy „bez naprawy: świadome usunięcie” — wyjątek.
+- `ostatnia-zmiana`: liczba klas samych bieżących urządzeń 17 → 18 — wyjątek.
+
+**Kontrola granicy obrazu sejfu.** Zmiany kodu poza blokiem P-DZIENNIK-ZDARZEN (na bazie 6812–10461, teraz 6916–10565) i
+poza fragmentem natywnym (teraz 13589–14963), wszystkie w wierszach 3045–6459: dwie nowe funkcje (`Bsw_doWpisu`,
+`Bsw_doKartyWpisu`), warunek w `Bsw_zKartyZNagrobkiem`, gałąź w fazie przeniesień, strona urządzenia, które zmieniło
+wizytę, w `Bsw_przezyteRetencji` i komentarze; kod `Bsl_koszZLadunku` bez zmian (tylko komentarz). Blok
+P-DZIENNIK-ZDARZEN, fragment natywny i teksty 41 haków trwałych wizyt bajt w bajt; zero nazw `Bem_`/`Bob_`/`Bev_` we
+fragmencie natywnym; bez nowych wywołań `Bem_`/`Bob_`; `Le`, `Bkz_wygrywa`, `Bkz_zmiana`, `Bgw_stan` i `Bkz_scalKoniec`
+bez zmian; nowy kod nie zawiera napisu pola przypisania (w pliku 8 = 8). Przeliczone skróty: baza trwałych wizyt
+`16f6d371…` i obraz `119b9413…` (`runtime/durable-visits-v1/manifest.json`, `tools/visits-vault-delta.mjs`,
+`tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `a693e447…`, `integratedVaultSHA256` `81671471…` i
+`BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0e3 w komentarzu); `fragmentSHA256` bez zmian. Po scaleniu
+`audyt` `65955ed4` nad tym obrazem leżą trzy zewnętrzne warstwy P-ROZPOZNANIA, więc mają nowe pary `baseVaultSHA256` →
+`integratedVaultSHA256` w manifestach (`runtime/patient-treatment-v1/`, `runtime/diagnosis-mutation-v1/`,
+`runtime/treatment-sync-hydration-v1/`) i `BASE` w narzędziach: warstwa leczenia `119b9413…` → `722d8ee0…`, usuwanie
+rozpoznania `722d8ee0…` → `81de091b…`, uzupełnianie kontekstu `81de091b…` → `7f863902…` (bieżący `vilda_vault.js`);
+teksty ich 18, 10 i 3 podmian, czytelne źródła i bloki w sejfie bajt w bajt jak w `audyt`.
+`node tools/visits-vault-delta.mjs`, `node tools/check_clinical_workspace_boundary.mjs`,
+`node tools/patient-treatment-vault-delta.mjs`, `node tools/diagnosis-mutation-vault-delta.mjs` i
+`node tools/treatment-sync-hydration-vault-delta.mjs` — zielone. `vilda_sync.js` bez zmian. Sejf się zmienił — przy
+następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
+
+**Ograniczenia.**
+- **Karta wpisu, której tu nie ma, usunięta albo dalej scalona (Q → R)** — bez zasady, wpis zostaje jak dotąd (sejf nie
+  pamięta celu scalenia Q); przy usuniętej Q i włączonym przełączniku odsyła go ukryty wpis (E3-PR0d2). Testy z wynikiem
+  literałem; E3-PR0f.
+- **Wpis Kosza pod samą starą kartą** (Kosz w P przed „Scal pacjentów”) — bez przeniesienia, jak dotąd (E3-PR0f).
+- **Urządzenie, które zmieniło wizytę, po samych pojedynczych zmianach, bez przełącznika odsyłania:** dostaje wpis
+  Kosza i późniejszy nagrobek starej karty osobnymi kopertami; wpisu nie trzyma (jego zmiana jest od wpisu późniejsza),
+  więc przy nagrobku usuwa starą kartę razem ze swoją zmianą. Wizyta z tą zmianą jest na pozostałych urządzeniach
+  i w kopii w chmurze; wraca do niego z pełną synchronizacją albo od razu z odsyłaniem (E3-PR0i — przełącznik
+  u wszystkich; E3-PR0f). Literał jednego naruszenia W1 w światach 887–896 bez przełącznika.
+- **Import karty z pliku, kopia i odtworzenie konta, „Scal kopię konta”** — bez zasady (karty z pliku idą własną drogą
+  importu, haki trwałych wizyt bez zmian).
+- **Starsza aplikacja** (221, 276) zasady nie zna: gwiazdka postawiona przez nią ginie wszędzie, gdy przy pełnej
+  synchronizacji najpierw pobiera (jak przed tym PR); po aktualizacji — jak bieżące urządzenie.
+- **Chwila zapisu karty wpisu bez zmiany** — wcześniejsze „Usuń pacjenta” karty Q na innym urządzeniu usuwa Q razem
+  z wizytą, która wróciła (świadomie, „Do akceptacji”, punkt 3).
+- **Przerwane scalanie** między zapisem wersji a nagłówkiem — licznik i nagłówek Q sprzed zapisu do następnego scalania.
+- **Licznik wizyt w nagłówku karty, spod której import pliku zabiera wersję** (istniejąca usterka importu, wpis
+  E3-PR0e2a, „Do akceptacji”, punkt 11) — bez zmian; test importu przypina dzisiejszy wynik (2 wersje, licznik 3).
+
+**Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla danych).
+Rekomendacja przy każdym punkcie: przyjąć.
+1. **Klasyfikacja „Zmiana kliniczna: TAK — synchronizacja”** (jak w projekcie): wizyta wraca z Kosza do karty, więc
+   zmienia się, co lekarz widzi w karcie i w Koszu po synchronizacji.
+2. **Zasada działa też na urządzeniu, które zmieniło wizytę, przy pełnej synchronizacji „najpierw pobranie”** (projekt
+   przewidywał ją tylko na urządzeniu, które ma wpis Kosza i dostaje zmianę z innego). Przykład (fikcyjny):
+   laptop z przykładu wyżej łączy się z chmurą i — jak zwykle przy pełnej synchronizacji — najpierw pobiera; dostaje
+   naraz „stara karta usunięta” i „wizyta z 3 marca w Koszu”. Dotąd usuwał starą kartę razem ze swoją gwiazdką i nie
+   miał już czego wysłać — gwiazdka ginęła wszędzie; teraz najpierw przenosi wizytę z gwiazdką do właściwej karty,
+   a potem ją wysyła. Bez tego typowa pełna synchronizacja nadal gubiłaby gwiazdkę, a decyzja 1 mówi „także przy pełnej
+   synchronizacji”. W długich przebiegach ta droga nie zapisała ani razu (wynik bajt w bajt jak na bazie).
+3. **Chwila ostatniego zapisu właściwej karty się nie zmienia, gdy wizyta wraca.** Przykład (fikcyjny): komputer daje
+   wizytę z 3 marca do Kosza we właściwej karcie, telefon wcześniej usuwa całą właściwą kartę („Usuń pacjenta”), laptop
+   jeszcze wcześniej stawia wizycie gwiazdkę w starej karcie. Usunięcie przez telefon nadal działa — karta znika razem
+   z wizytą; gdyby chwila zapisu rosła, ta sama gwiazdka przywróciłaby usuniętą kartę na wszystkich urządzeniach. Tak
+   samo działa zasada z 10 listopada (E2-PR3c2).
+4. **Laptop chwilowo bez wizyty po samych pojedynczych zmianach** („Ograniczenia”). Przykład (fikcyjny): po drugim
+   scaleniu starej karty laptop dostaje jej nagrobek i usuwa ją razem ze swoją wizytą z gwiazdką; komputer i telefon
+   mają wizytę z gwiazdką we właściwej karcie, laptop dostaje ją z pełną synchronizacją albo od razu przy włączonym
+   odsyłaniu. Nic nie ginie na stałe. Domknięcie — E3-PR0f albo włączenie odsyłania dla wszystkich (E3-PR0i); w teście
+   różnica zapisana dokładnie (jedno naruszenie, na urządzeniu, które zmieniło wizytę, tylko bez odsyłania).
+5. **Wizyta leżąca we właściwej karcie obok swojego wpisu w Koszu (Q8).** Przykład (fikcyjny): wizyta z 1 lutego jest
+   jedyną wizytą właściwej karty, więc po „Usuń do Kosza” na innym urządzeniu została w karcie i jest też w Koszu.
+   Gwiazdka postawiona później w starej karcie przechodzi do tej wizyty w karcie, a wpis w Koszu znika. Gdy wraca inna
+   wizyta (z 3 marca), karta ma już drugą wizytę, więc wizyta z 1 lutego przechodzi do Kosza — tak samo jak dziś
+   w jednej karcie; nic nie ginie (jest w Koszu i można ją przywrócić).
+6. **Przypięta wizyta i porządkowanie starych wizyt.** Przykład (fikcyjny): laptop przypina wizytę w starej karcie,
+   komputer scala karty i porządkuje stare wizyty, nie wiedząc o gwiazdce — dotąd po samych pojedynczych zmianach
+   komputer nie miał tej przypiętej wizyty do pełnej synchronizacji, teraz ma ją od razu we właściwej karcie z gwiazdką
+   (dwa literały katalogu Kosza zmieniają się na wynik równy pełnej synchronizacji). Gdy gwiazdkę postawiono po
+   porządkowaniu, ślad porządkowania znika; gdy przed — wizyta też wraca, a ślad zostaje i „wie” o gwiazdce (wersja
+   przypięta, A3a).
+7. **Wyjątek w teście „nie zginęła ostatnia zmiana” — dokładnie według słów decyzji 4** (wyżej: wszystkie warunki
+   naraz; urządzenie usuwające musi znać scalenie, a stara karta po usunięciu nie może wrócić). Przykład zawężenia
+   (fikcyjny): tablet, który nigdy nie dostał scalenia kart „Pacjenta Testowego 1”, zapisuje w starej karcie wizytę
+   z 9 marca i usuwa tę kartę — dla tabletu to zwykła karta, więc zniknięcie tej wizyty test nadal zgłasza jako błąd.
+   Wyjątek objął w przebiegach tylko 130 naruszeń tej klasy (wyżej), w tym układ floty, w którym wizytę zapisała
+   starsza aplikacja, a usuwa urządzenie inne niż scalające — decyzja tego nie ogranicza. Druga możliwość (wąska zmiana
+   w teście): wyjątek tylko dla urządzenia, które samo scalało, albo tylko dla wizyt bieżącej aplikacji; albo szerszy —
+   także dla urządzenia, które o scaleniu nie wiedziało.
+8. **Zdjęty wpis Kosza nie jest odsyłany osobno** — odsyłana jest sama wizyta we właściwej karcie, a pozostałe urządzenia
+   same zdejmują swój wpis (wizyta jest od niego późniejsza).
+9. **Kolejność kart w jednej przesyłce nie zmienia wyniku; karta wpisu czytana raz** — pod blokadą, w fazie przeniesień.
+   Przykład (fikcyjny): właściwa karta wraca na komputerze w tej samej przesyłce, w której jest stara karta z gwiazdką —
+   wizyta wraca do właściwej karty bez względu na to, która karta jest w przesyłce pierwsza.
+10. **Starsza aplikacja (221, 276)** — zasady nie zna; gwiazdka ginie wszędzie tylko wtedy, gdy postawiła ją starsza
+    aplikacja, która przy pełnej synchronizacji najpierw pobiera; w pozostałych układach bieżące urządzenie oddaje
+    wizytę do właściwej karty, a starsza aplikacja ją przyjmuje (osiem układów w teście).
+11. **Osobne zadanie, poza tym PR: licznik wizyt w nagłówku po imporcie pliku starej karty** (wpis E3-PR0e2a, „Do
+    akceptacji”, punkt 11) — test importu w tym PR przypina dzisiejszy wynik (2 wizyty, licznik 3), więc poprawka
+    będzie w nim widoczna.
+12. **Warunek E3-PR0e2b bez zmian:** potwierdzenie właściciela, że każde urządzenie (Ustawienia, linia „Wersja
+    aplikacji”) ma SW 1.1.586 albo wyższy. *(2026-11-24: spełniony — właściciel potwierdził, że wszystkie urządzenia
+    mają SW 1.1.586; plan, wiersz 5c.)*
+
+**Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
+- **E3-PR0e2b** — po scaleniu tego PR i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.586**
+  (wydanie E3-PR0e2a) albo wyższy *(2026-11-24: potwierdzenie jest — punkt 12)*; zakres bez zmian (wpis E3-PR0e2a,
+  „Wejście do kolejnych PR”). Do tego: z zapisem pola powtórzyć światy 887–896 i katalog Kosza `npret-K` (wizyta
+  wracająca do karty wpisu bierze chwilę przypisania z ładunku, bo wpis Kosza jej nie przechowuje); decyzja o polu we
+  wpisie Kosza (wpis E3-PR0e2a, „Do akceptacji”, punkt 2) dotyczy też tej drogi; karta scalona usunięta na urządzeniu
+  (wpis E3-PR0e2a, „Do akceptacji”, punkt 9) — ta zasada jej nie obejmuje (karta wpisu musi istnieć).
+- **E3-PR0f** — wejścia z tego PR: wpis Kosza pod kartą wpisu, której nie ma, usuniętą albo dalej scaloną (Q → R), i pod
+  samą starą kartą (testy z wynikiem jak dotąd do przepisania); urządzenie, które zmieniło wizytę w starej karcie, po
+  samych pojedynczych zmianach bez przełącznika (literał jednego naruszenia W1 w światach 887–896) — razem z wizytą
+  nieznaną urządzeniu scalającemu; ostrzeżenie w oknie „Usuń pacjenta” zwróconej starej karty (decyzja 4) — razem z nim
+  pole naprawy klasy wyjątku wyroczni; pozostałe wejścia z wpisu E3-PR0e1 bez zmian.
+- **E3-PR0i** — literały światów 887–896 „przełącznik wyłączony” do przepisania na wynik bez naruszenia, gdy odsyłanie
+  działa u wszystkich.
+- Osobne zadanie: import pliku pacjenta nad wizytą z innej karty (licznik i nagłówek karty, spod której import zabiera
+  wersję).
+
+**Cofnięcie** = rewert PR, bez migracji: wersje, które wróciły do karty wpisu, zostają zwykłymi wersjami tej karty;
+po cofnięciu nowe zmiany po Koszu w tym układzie znów giną. Rewert cofa też skróty kontroli granicy i wyjątek wyroczni
+(świat 885 wraca do ręcznego bloku znanych usterek, ziarna 8 i 37 profilu pełnego znów czerwone). Częściowo: dawny
+warunek w `Bsw_zKartyZNagrobkiem` (`if (ctx.mapa && ctx.mapa.get(S.snapshotId)) continue;`), bez gałęzi „do karty wpisu”
+w fazie przeniesień i obu nowych funkcji, dawne warunki wpisów przycięcia w `Bsw_przezyteRetencji` — z przeliczeniem
+skrótów kontroli granicy; wyjątek wyroczni osobno (tylko testy).
+
+**Gdzie w kodzie.** `vilda_vault.js`, poza blokiem P-DZIENNIK-ZDARZEN (6916–10565) i fragmentem natywnym (13589–14963):
+`Bsw_zKartyZNagrobkiem` (6426–6444: warunek z `Bkz_wygrywa` 6431–6432, decyzja 6435; komentarz 6409–6425), `Bsw_doWpisu`
+(6446–6458, nowa, z komentarzem), `Bsl_koszZLadunku` (komentarz 6386–6389, kod bez zmian), `Bsl_przeniesWersje`
+(komentarz 4275–4277, gałąź „do karty wpisu” 4286–4292), `Bsw_doKartyWpisu` (4426–4468, nowa, z komentarzem),
+`Bsw_przezyteRetencji` (komentarz 4353–4366; wpisy Kosza 4373 i 4412, `kartaWpisu` 4378–4384, cel 4416); komentarze —
+`Bkz_obceKarty` (dom wizyty, 3045–3046) i nagłówek P-SYNC-WLASCICIEL (zapisy z jednej kopii, 3693–3697). Bez zmian:
+`Le`, `Bkz_wygrywa` (1504), `Bkz_zmiana` (1482), `Bgw_stan` (1561), `Bkz_scalKoniec` (3232), `Bsl_wersjaZLadunku`
+(3643), `Bsw_przeniesPrzezyta` (4472), `Bkz_przebudujNaglowek` (2377), `Bsw_bezSladu` (4645), w bloku `Bev_echo`
+(7825) i `Bev_echoKosza` (7953), strażnik natywny (14655), `vilda_sync.js`, `vilda_sync_integration.js`. W testach:
+`tests/support/ostatnia-zmiana.mjs` (klasa w `WYJATKI`, warunek na końcu `klasaWizyty`, fakty `usunietaZeStarej`
+i `kartyWidziane`, `obserwuj`, `obserwujZapis`), uprząż pliku A ≡ B (`ustawStan`, `dostawa`, zapis rekordu wersji
+w magazynie urządzenia).
+
+**Wersje.** `vilda_vault.js` 290 → 291, `vilda_chrome.js` 337 → 338 i `vilda_session_bridge.js` 253 → 254 (wstrzykują
+sejf), SW 1.1.592 → 1.1.593 — `npm run podbij-wersje`; baza `origin/audyt` `65955ed4` (po vildaclinic/vilda-calc#1069;
+przygotowany na `d2f1eded`, po vildaclinic/vilda-calc#1053). Od `d2f1eded` sejf w `audyt` zmienił się tylko o trzy
+zewnętrzne warstwy P-ROZPOZNANIA (zapis rozpoznań, usuwanie rozpoznania, uzupełnianie kontekstu zapisu leczenia przy
+synchronizacji; poza kodem tej zmiany, blokiem P-DZIENNIK-ZDARZEN i fragmentem natywnym), a `vilda_sync.js`,
+`vilda_sync_integration.js`, testy `tests/unit/sync-*`, `kosz-*` i `ostatnia-zmiana*` oraz `tests/support/` poza
+`static-server.mjs` (paczka interfejsu wizyt z katalogiem ICD-10) i nowym `baza-pacjentow-statystyki.mjs` są bez zmian.
+Czerwone na bazie powtórzone na `65955ed4` (te same 47 co na `d2f1eded`); pliki testów tego PR po scaleniu zielone;
+długie przebiegi z tabeli wyżej liczone na `d2f1eded`, po scaleniu nie powtarzane. Zasada nie zmienia formatu danych,
+więc nie wymaga dwóch wydań: urządzenie bez tego wydania zachowuje się jak dotąd (jak starsza aplikacja wyżej). Bez
+nowego pliku w pamięci offline.
