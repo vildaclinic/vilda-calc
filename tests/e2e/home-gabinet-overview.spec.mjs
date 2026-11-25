@@ -536,10 +536,14 @@ test('patient Overview reminders keep their complete actions and native dates at
     await expect(add).toBeEnabled();
     await expect(add).toHaveText('Dodaj przypomnienie', { useInnerText: true });
     await expect(add.locator('svg')).toHaveCount(1);
-    await expect.poll(() => add.evaluate(button => {
-      const box = button.getBoundingClientRect(), card = button.closest('.vhome-reminders-card').getBoundingClientRect();
-      const icon = button.querySelector('svg').getBoundingClientRect();
-      const range = document.createRange(); range.selectNodeContents(button.querySelector('.vhome-reminders-add-text'));
+    await expect.poll(() => frame.evaluate(() => {
+      const button = document.querySelector('#vhomePatientRemindersSlot .vb22-primary-create');
+      const owner = button?.closest('.vhome-reminders-card'), svg = button?.querySelector('svg');
+      const label = button?.querySelector('.vhome-reminders-add-text');
+      if (!button?.isConnected || !owner || !svg || !label) return false;
+      const box = button.getBoundingClientRect(), card = owner.getBoundingClientRect();
+      const icon = svg.getBoundingClientRect();
+      const range = document.createRange(); range.selectNodeContents(label);
       const text = range.getBoundingClientRect();
       return box.left >= card.left && box.right <= card.right && box.left >= 0 && box.right <= innerWidth &&
         box.top >= 0 && box.bottom <= innerHeight && icon.width > 0 && icon.height > 0 &&
@@ -551,9 +555,9 @@ test('patient Overview reminders keep their complete actions and native dates at
     await expect(slot.locator(`[data-note-id="${notes[0].id}"] .vb22-row-date`)).toHaveText(notes[0].date + ' · 09:30');
     await expect(slot.locator(`[data-note-id="${notes[0].id}"] .vild-rem-when`)).toHaveText('2 dni po terminie');
     await expect(slot.locator(`[data-note-id="${notes[2].id}"] .vild-rem-when`)).toHaveText('Zaplanowane');
-    expect(await card.evaluate(node => {
+    await expect.poll(() => card.evaluate(node => {
       const box = node.getBoundingClientRect();
-      return document.documentElement.scrollWidth <= innerWidth && node.scrollWidth <= node.clientWidth &&
+      return node.isConnected && box.width > 0 && document.documentElement.scrollWidth <= innerWidth && node.scrollWidth <= node.clientWidth &&
         [...node.querySelectorAll('.vhome-reminders-entry, .vb22-foot, .vb22-tools')].every(child => {
           const rect = child.getBoundingClientRect(); return rect.left >= box.left && rect.right <= box.right;
         });
