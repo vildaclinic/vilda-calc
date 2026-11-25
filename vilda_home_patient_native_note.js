@@ -121,6 +121,7 @@
       if (view.root) wipeRoot(view.root);
       view.root = root; view.sheet = sheet; view.nativeCancel = cancel; view.awaiting = false;
       root.classList.add('vhome-b1-native-note'); sheet.classList.add('vhome-b1-native-note');
+      if (options.compactPresentation?.()) sheet.classList.add('vhome-b1-compact-note-editor');
       root.dataset.vhomeB1NoteKind = native.kind;
       sheet.dataset.vhomeB1NoteKind = native.kind;
       // tr() applies an inline !important max-height on coarse embedded views.

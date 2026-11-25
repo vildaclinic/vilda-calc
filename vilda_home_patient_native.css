@@ -1195,3 +1195,122 @@ body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contr
     width: 100%;
   }
 }
+
+/* Notes cards in the inline patient Overview. The native records and actions
+ * are rendered by AuthUI, with the add action in the first group heading. */
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-header {
+  justify-content: flex-end;
+  margin-block-end: var(--space-14px) !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-header > button {
+  min-height: 44px;
+  margin: 0 !important;
+  border-radius: var(--radius-9) !important;
+  background: var(--hc-accent, #006d75) !important;
+  box-shadow: none !important;
+  font-size: 16px !important;
+  font-weight: 650 !important;
+  white-space: nowrap;
+  transform: none !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-scroll {
+  min-height: 0 !important;
+  max-height: none !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  scrollbar-gutter: auto !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-general-section {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-general-section + .vilda-patient-notes-clinical-section {
+  margin-block-start: 22px;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-subheader {
+  gap: var(--space-6px) !important;
+  margin: 0 0 var(--space-8px) !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-subheader > span {
+  color: var(--hc-text, var(--vhome-b1-muted)) !important;
+  font-size: 15px !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-subheader > span:last-of-type {
+  flex-shrink: 0;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-subheader > .vilda-patient-notes-header {
+  flex: 0 0 auto;
+  margin: 0 !important;
+  margin-inline-start: auto !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-card {
+  min-width: 0;
+  padding: var(--space-14px) var(--space-16px) !important;
+  gap: 7px !important;
+  border: var(--border-hairline) solid var(--hc-border, #d5e4e7) !important;
+  border-radius: var(--radius-12) !important;
+  background: var(--hc-surface, #fff) !important;
+  box-shadow: var(--hc-shadow, 0 2px 8px #1d414e0f);
+  overflow-wrap: anywhere;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-title {
+  order: -1;
+  color: var(--hc-text, #213f49) !important;
+  font-size: 17px !important;
+  font-weight: 660 !important;
+  line-height: 1.4;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-body {
+  color: var(--hc-text, #213f49) !important;
+  font-size: 16px !important;
+  line-height: 1.55 !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-saved {
+  padding-block-start: 2px;
+  color: var(--hc-muted, #47636b) !important;
+  font-size: 14px !important;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-meta span {
+  font-size: 14px !important;
+  line-height: 1.45;
+}
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-meta button {
+  min-height: 36px;
+  padding: var(--space-6px) var(--space-10px) !important;
+  border-radius: 7px !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  transform: none !important;
+}
+@media (max-width: 520px) {
+  html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-header > button {
+    font-size: 15px !important;
+  }
+  html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-card {
+    padding: var(--space-12px) !important;
+  }
+  html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-note-meta button {
+    min-height: 44px;
+  }
+}
+
+/* Compact note editor: keep the native inputs, validation and save controls. */
+html.vilda-home-workspace .vilda-pne.vhome-b1-compact-note-editor label {
+  color: var(--hc-text, #213f49) !important;
+  font-size: 15px !important;
+}
+html.vilda-home-workspace .vilda-pne.vhome-b1-compact-note-editor :is(input:not([type="radio"]):not([type="checkbox"]), select, textarea) {
+  border-color: var(--hc-border, #c4d8dc) !important;
+  background: var(--hc-surface, #fff) !important;
+  color: var(--hc-text, #213f49) !important;
+}
+html.vilda-home-workspace .vilda-pne.vhome-b1-compact-note-editor textarea { resize: vertical; }
+html.vilda-home-workspace .vilda-pne.vhome-b1-compact-note-editor .b3-cat-hint { display: none; }
+html.vilda-home-workspace .vilda-pne.vhome-b1-compact-note-editor > div:has(> select) > p {
+  color: var(--hc-muted, #47636b) !important;
+  font-size: 14px !important;
+}

@@ -596,6 +596,7 @@
     w.addEventListener('vilda:user-state-cleared', view.ownerChanged);
     if (w.VildaHomePatientNativeNote?.create) view.note = w.VildaHomePatientNativeNote.create({
       patientId: view.patientId, isCurrent: function () { return current(view); }, openNative: native.openNote,
+      compactPresentation: function () { return view.workspaceHeader && view.selected === 'notes'; },
       openPlan: function (destination) { if (current(view)) native.openPlan(destination); }, onDisposed: function () { resumeRefresh(view); }
     });
     if (!boundVaults.has(vault)) { boundVaults.add(vault); vault.onLock(function () { if (active?.vault === vault) destroy(active); }); }
