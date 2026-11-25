@@ -3,7 +3,9 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 
 // P-BAZA-ZAKRES (decyzja właściciela 2026-11-24: „popracuj nad selektorem Zakres bo tam jest mały wybór”):
 // pozycje pola „Zakres” w Statystykach Bazy — okna ostatniego zapisu karty (3, 6, 12 mies. i ich dopełnienia:
-// bez zapisu od ponad 12 albo 24 mies.) oraz zakresy leczenia (hormon wzrostu, otyłość) z wyniku liczenia kart.
+// bez zapisu od ponad 12 albo 24 mies.) — oraz pola „Leczenie” (hormon wzrostu, otyłość) z wyniku liczenia kart.
+// Pole „Leczenie” jest osobne od „Zakresu” (P-BAZA-SEKCJE, decyzja właściciela 2026-11-24: „wydziel to pole
+// Leczenie”), więc oba łączą się spójnikiem „i”.
 // Model ładowany z PLIKU PRODUKCYJNEGO (vilda_patients_list.js); wszystkie osoby są fikcyjne.
 function modul() {
   const win = {};
@@ -28,38 +30,52 @@ const BAZA = [
 const WSZYSCY = BAZA.filter((p) => !p.__ext).map((p) => p.patientId);
 const opcje = (extra = {}) => ({ now: DZIS, ...extra });
 
-describe('Pozycje pola „Zakres” (scopeRanges, scopeFilters, scopeLabel, scopeKey)', () => {
-  it('siedem pozycji w dwóch rodzinach; tylko zakresy leczenia potrzebują wyniku kart', () => {
-    const { scopeRanges, scopeNeedsCards } = modul();
+describe('Pozycje pól „Zakres” i „Leczenie” (scopeRanges, scopeTreatments, scopeFilters, scopeLabel, scopeKey)', () => {
+  it('„Zakres” ma pięć okien ostatniego zapisu, „Leczenie” dwie pozycje; tylko „Leczenie” potrzebuje wyniku kart', () => {
+    const { scopeRanges, scopeTreatments, scopeNeedsCards } = modul();
     expect(scopeRanges()).toEqual([
-      { key: 'm3', group: 'Ostatni zapis karty', label: 'z zapisem w ostatnich 3 mies.', needsCards: false },
-      { key: 'm6', group: 'Ostatni zapis karty', label: 'z zapisem w ostatnich 6 mies.', needsCards: false },
-      { key: 'm12', group: 'Ostatni zapis karty', label: 'z zapisem w ostatnich 12 mies.', needsCards: false },
-      { key: 'o12', group: 'Ostatni zapis karty', label: 'bez zapisu od ponad 12 mies.', needsCards: false },
-      { key: 'o24', group: 'Ostatni zapis karty', label: 'bez zapisu od ponad 24 mies.', needsCards: false },
-      { key: 'gh', group: 'Leczenie', label: 'leczeni hormonem wzrostu', needsCards: true },
-      { key: 'ob', group: 'Leczenie', label: 'leczeni z powodu otyłości', needsCards: true },
+      { key: 'm3', label: 'z zapisem w ostatnich 3 mies.' },
+      { key: 'm6', label: 'z zapisem w ostatnich 6 mies.' },
+      { key: 'm12', label: 'z zapisem w ostatnich 12 mies.' },
+      { key: 'o12', label: 'bez zapisu od ponad 12 mies.' },
+      { key: 'o24', label: 'bez zapisu od ponad 24 mies.' },
     ]);
-    expect(scopeRanges().filter((pozycja) => scopeNeedsCards({ range: pozycja.key })).map((pozycja) => pozycja.key)).toEqual(['gh', 'ob']);
+    expect(scopeTreatments()).toEqual([
+      { key: 'gh', label: 'leczeni hormonem wzrostu', option: 'hormon wzrostu' },
+      { key: 'ob', label: 'leczeni z powodu otyłości', option: 'otyłość' },
+    ]);
+    scopeRanges().forEach((pozycja) => expect(scopeNeedsCards({ range: pozycja.key }), pozycja.key).toBe(false));
+    scopeTreatments().forEach((pozycja) => expect(scopeNeedsCards({ treatment: pozycja.key }), pozycja.key).toBe(true));
+    expect(scopeNeedsCards({ range: 'o12', treatment: 'gh' })).toBe(true);
     expect(scopeNeedsCards(null)).toBe(false);
-    expect(scopeNeedsCards({ range: 'nie-ma' })).toBe(false);
+    expect(scopeNeedsCards({ treatment: 'nie-ma' })).toBe(false);
     // Zmiana zwróconej listy nie zmienia modelu.
     scopeRanges()[0].label = 'zmienione';
     expect(scopeRanges()[0].label).toBe('z zapisem w ostatnich 3 mies.');
   });
 
-  it('nieznana pozycja to „cała baza”; opis i klucz niosą wybraną pozycję', () => {
-    const { scopeRanges, scopeFilters, scopeActive, scopeLabel, scopeKey } = modul();
+  it('nieznana pozycja to „bez filtra”; leczenie nie jest pozycją „Zakresu”; opis i klucz niosą oba pola', () => {
+    const { scopeRanges, scopeTreatments, scopeFilters, scopeActive, scopeLabel, scopeKey } = modul();
     expect(scopeFilters({ range: 'recent' }).range).toBeNull();
     expect(scopeFilters({ range: true }).range).toBeNull();
+    expect(scopeFilters({ treatment: 'gh' }).range).toBeNull();
+    expect(scopeFilters({ treatment: 'm12' }).treatment).toBeNull();
     scopeRanges().forEach((pozycja) => {
       expect(scopeFilters({ range: pozycja.key }).range).toBe(pozycja.key);
       expect(scopeActive(scopeFilters({ range: pozycja.key }))).toBe(true);
       expect(scopeLabel({ range: pozycja.key }, null)).toBe(pozycja.label);
     });
-    expect(scopeLabel({ range: 'o12', sex: 'F', band: '10-13' }, { key: 'c:E66', label: 'E66 — Otyłość' }))
-      .toBe('bez zapisu od ponad 12 mies. · dziewczęta · 10–13 lat · E66 — Otyłość');
-    const klucze = [null].concat(scopeRanges().map((pozycja) => ({ range: pozycja.key }))).map((filtry) => scopeKey(filtry, null));
+    scopeTreatments().forEach((pozycja) => {
+      expect(scopeFilters({ treatment: pozycja.key }).treatment).toBe(pozycja.key);
+      expect(scopeActive(scopeFilters({ treatment: pozycja.key }))).toBe(true);
+      expect(scopeLabel({ treatment: pozycja.key }, null)).toBe(pozycja.label);
+    });
+    // Kolejność pól na ekranie: Zakres, Leczenie, Lista pacjentów, Płeć, Wiek; rozpoznanie na końcu.
+    expect(scopeLabel({ range: 'o12', treatment: 'gh', listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '10-13' }, { key: 'c:E66', label: 'E66 — Otyłość' }))
+      .toBe('bez zapisu od ponad 12 mies. · leczeni hormonem wzrostu · lista „Fikcyjna lista” · dziewczęta · 10–13 lat · E66 — Otyłość');
+    const wybory = [null].concat(scopeRanges().map((pozycja) => ({ range: pozycja.key })), scopeTreatments().map((pozycja) => ({ treatment: pozycja.key })),
+      [{ range: 'o12', treatment: 'gh' }, { range: 'o12', treatment: 'ob' }, { range: 'm3', treatment: 'gh' }]);
+    const klucze = wybory.map((filtry) => scopeKey(filtry, null));
     expect(new Set(klucze).size).toBe(klucze.length);
   });
 });
@@ -108,7 +124,7 @@ describe('Ostatni zapis karty (scopeMembers)', () => {
   });
 });
 
-describe('Zakresy leczenia (scopeMembers z wynikiem kart)', () => {
+describe('Pole „Leczenie” (scopeMembers z wynikiem kart)', () => {
   // Wynik liczenia kart jak w widoku: cardsResult na wpisach pamięci kart (gh / ob — wynik ghPatient / obesityPatient).
   const wpis = (gh, ob, read = true) => ({ read, card: {}, gh: gh ? { program: 'SNP' } : null, ob: ob ? { drug: 'Fikcyjny lek' } : null });
   const LUDZIE = [osoba('a', chwila(2026, 6, 1)), osoba('b', chwila(2026, 6, 1), 'M'), osoba('c', chwila(2026, 6, 1), 'M'), osoba('d', chwila(2023, 6, 1)),
@@ -118,36 +134,49 @@ describe('Zakresy leczenia (scopeMembers z wynikiem kart)', () => {
   it('„leczeni hormonem wzrostu” i „leczeni z powodu otyłości” to dokładnie pacjenci, których liczą sekcje leczenia', () => {
     const { scopeMembers, cardsResult } = modul();
     const wynik = cardsResult(LUDZIE, WPISY);
-    expect(scopeMembers(LUDZIE, { range: 'gh' }, opcje({ cards: wynik.details }))).toEqual(wynik.treated.map((pozycja) => pozycja.id));
-    expect(scopeMembers(LUDZIE, { range: 'ob' }, opcje({ cards: wynik.details }))).toEqual(wynik.obese.map((pozycja) => pozycja.id));
-    expect(scopeMembers(LUDZIE, { range: 'gh' }, opcje({ cards: wynik.details }))).toEqual(['b', 'c', 'd']);
-    expect(scopeMembers(LUDZIE, { range: 'ob' }, opcje({ cards: wynik.details }))).toEqual(['c', 'e']);
+    expect(scopeMembers(LUDZIE, { treatment: 'gh' }, opcje({ cards: wynik.details }))).toEqual(wynik.treated.map((pozycja) => pozycja.id));
+    expect(scopeMembers(LUDZIE, { treatment: 'ob' }, opcje({ cards: wynik.details }))).toEqual(wynik.obese.map((pozycja) => pozycja.id));
+    expect(scopeMembers(LUDZIE, { treatment: 'gh' }, opcje({ cards: wynik.details }))).toEqual(['b', 'c', 'd']);
+    expect(scopeMembers(LUDZIE, { treatment: 'ob' }, opcje({ cards: wynik.details }))).toEqual(['c', 'e']);
   });
 
   it('karta, której nie udało się odczytać, nie wchodzi do zakresu leczenia', () => {
     const { scopeMembers, cardsResult } = modul();
     const wynik = cardsResult(LUDZIE, WPISY);
     expect(wynik.failed).toBe(1);
-    expect(scopeMembers(LUDZIE, { range: 'gh' }, opcje({ cards: wynik.details }))).not.toContain('nieodczytana');
-    expect(scopeMembers(LUDZIE, { range: 'ob' }, opcje({ cards: wynik.details }))).not.toContain('nieodczytana');
+    expect(scopeMembers(LUDZIE, { treatment: 'gh' }, opcje({ cards: wynik.details }))).not.toContain('nieodczytana');
+    expect(scopeMembers(LUDZIE, { treatment: 'ob' }, opcje({ cards: wynik.details }))).not.toContain('nieodczytana');
   });
 
   it('bez wyniku liczenia kart to „nie wiadomo” (null), a nie zero pacjentów; pozostałe pozycje wyniku nie potrzebują', () => {
     const { scopeMembers } = modul();
-    expect(scopeMembers(LUDZIE, { range: 'gh' }, opcje())).toBeNull();
-    expect(scopeMembers(LUDZIE, { range: 'ob', sex: 'M' }, opcje({ cards: null }))).toBeNull();
-    expect(scopeMembers(LUDZIE, { range: 'gh' }, opcje({ cards: [] }))).toEqual([]);
+    expect(scopeMembers(LUDZIE, { treatment: 'gh' }, opcje())).toBeNull();
+    expect(scopeMembers(LUDZIE, { treatment: 'ob', sex: 'M' }, opcje({ cards: null }))).toBeNull();
+    expect(scopeMembers(LUDZIE, { treatment: 'gh' }, opcje({ cards: [] }))).toEqual([]);
     expect(scopeMembers(LUDZIE, { range: 'm12' }, opcje())).toEqual(['a', 'b', 'c', 'e', 'nieodczytana']);
   });
 
   it('łączy się z płcią, wiekiem, listą i rozpoznaniem; pacjent spoza podanej bazy nie wchodzi', () => {
     const { scopeMembers, cardsResult } = modul();
     const cards = cardsResult(LUDZIE, WPISY).details.concat([{ id: 'nie-ma-w-bazie', gh: { program: 'SNP' }, ob: null }]);
-    expect(scopeMembers(LUDZIE, { range: 'gh', sex: 'M' }, opcje({ cards }))).toEqual(['b', 'c']);
-    expect(scopeMembers(LUDZIE, { range: 'gh', sex: 'F' }, opcje({ cards }))).toEqual(['d']);
-    expect(scopeMembers(LUDZIE, { range: 'ob', band: '10-13' }, opcje({ cards }))).toEqual(['c', 'e']);
-    expect(scopeMembers(LUDZIE, { range: 'gh', listId: 'l1' }, opcje({ cards, listIds: ['a', 'c', 'd'] }))).toEqual(['c', 'd']);
-    expect(scopeMembers(LUDZIE, { range: 'gh' }, opcje({ cards, ids: ['c', 'e'] }))).toEqual(['c']);
-    expect(scopeMembers(LUDZIE, { range: 'gh' }, opcje({ cards }))).not.toContain('nie-ma-w-bazie');
+    expect(scopeMembers(LUDZIE, { treatment: 'gh', sex: 'M' }, opcje({ cards }))).toEqual(['b', 'c']);
+    expect(scopeMembers(LUDZIE, { treatment: 'gh', sex: 'F' }, opcje({ cards }))).toEqual(['d']);
+    expect(scopeMembers(LUDZIE, { treatment: 'ob', band: '10-13' }, opcje({ cards }))).toEqual(['c', 'e']);
+    expect(scopeMembers(LUDZIE, { treatment: 'gh', listId: 'l1' }, opcje({ cards, listIds: ['a', 'c', 'd'] }))).toEqual(['c', 'd']);
+    expect(scopeMembers(LUDZIE, { treatment: 'gh' }, opcje({ cards, ids: ['c', 'e'] }))).toEqual(['c']);
+    expect(scopeMembers(LUDZIE, { treatment: 'gh' }, opcje({ cards }))).not.toContain('nie-ma-w-bazie');
+  });
+
+  it('„Zakres” i „Leczenie” naraz: leczeni bez zapisu od ponad 12 mies. — i leczeni z zapisem w ostatnich 12 mies.', () => {
+    const { scopeMembers, cardsResult } = modul();
+    const cards = cardsResult(LUDZIE, WPISY).details;
+    // d: leczona GH, ostatni zapis 1.06.2023; b i c: leczeni GH, zapis 1.06.2026.
+    expect(scopeMembers(LUDZIE, { range: 'o12', treatment: 'gh' }, opcje({ cards }))).toEqual(['d']);
+    expect(scopeMembers(LUDZIE, { range: 'o24', treatment: 'gh' }, opcje({ cards }))).toEqual(['d']);
+    expect(scopeMembers(LUDZIE, { range: 'm12', treatment: 'gh' }, opcje({ cards }))).toEqual(['b', 'c']);
+    expect(scopeMembers(LUDZIE, { range: 'o12', treatment: 'ob' }, opcje({ cards }))).toEqual([]);
+    expect(scopeMembers(LUDZIE, { range: 'm3', treatment: 'ob', sex: 'M' }, opcje({ cards }))).toEqual(['c']);
+    // Oba pola razem nadal czekają na wynik kart.
+    expect(scopeMembers(LUDZIE, { range: 'o12', treatment: 'gh' }, opcje())).toBeNull();
   });
 });

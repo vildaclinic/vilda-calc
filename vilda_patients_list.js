@@ -600,50 +600,67 @@
    * bez płci — do żadnej płci. Liczą się wyłącznie pacjenci z bazy.
    *
    * P-BAZA-ZAKRES (decyzja właściciela 2026-11-24: „popracuj nad selektorem Zakres bo tam jest mały wybór”).
-   * Pole „Zakres” ma jedną pozycję naraz, z dwóch rodzin:
-   *   - ostatni zapis karty: zapis w ostatnich 3, 6 albo 12 miesiącach oraz ich dopełnienie — bez zapisu od ponad
-   *     12 albo 24 miesięcy. Granicą jest ta sama data N miesięcy wstecz (arytmetyka kalendarzowa — dla 12 mies.
-   *     dokładnie reguła kafelka „z zapisem w ostatnich 12 mies.” z demographics). „Bez zapisu od ponad N mies.”
-   *     to każdy, kto nie ma zapisu w ostatnich N miesiącach — także pacjent bez daty zapisu;
-   *   - leczenie: „leczeni hormonem wzrostu” i „leczeni z powodu otyłości” — ci sami pacjenci, których liczą
-   *     sekcje leczenia („leczonych”): karta ma co najmniej jeden punkt leczenia (ghPatient / obesityPatient
-   *     dały wynik). Te pozycje potrzebują wyniku liczenia kart (options.cards); bez niego zakresu nie da się
+   * Dwa pola wyboru (P-BAZA-SEKCJE, decyzja właściciela 2026-11-24: „wydziel to pole Leczenie” — odtąd da się
+   * połączyć np. „bez zapisu od ponad 12 mies.” z „leczeni hormonem wzrostu”):
+   *   - „Zakres” — ostatni zapis karty: zapis w ostatnich 3, 6 albo 12 miesiącach oraz ich dopełnienie — bez zapisu
+   *     od ponad 12 albo 24 miesięcy. Granicą jest ta sama data N miesięcy wstecz (arytmetyka kalendarzowa — dla
+   *     12 mies. dokładnie reguła kafelka „z zapisem w ostatnich 12 mies.” z demographics). „Bez zapisu od ponad
+   *     N mies.” to każdy, kto nie ma zapisu w ostatnich N miesiącach — także pacjent bez daty zapisu;
+   *   - „Leczenie” — „leczeni hormonem wzrostu” albo „leczeni z powodu otyłości”: ci sami pacjenci, których liczą
+   *     sekcje leczenia („leczonych”) — karta ma co najmniej jeden punkt leczenia (ghPatient / obesityPatient
+   *     dały wynik). To pole potrzebuje wyniku liczenia kart (options.cards); bez niego zakresu nie da się
    *     jeszcze policzyć (null), tak jak przy niewczytanej liście. */
   const SCOPE_SEX = { M: 'chłopcy', F: 'dziewczęta' };
-  const SCOPE_SAVED = 'Ostatni zapis karty', SCOPE_TREATED = 'Leczenie';
   const SCOPE_RANGES = [
-    { key: 'm3', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 3 mies.', months: 3, within: true },
-    { key: 'm6', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 6 mies.', months: 6, within: true },
-    { key: 'm12', group: SCOPE_SAVED, label: 'z zapisem w ostatnich 12 mies.', months: 12, within: true },
-    { key: 'o12', group: SCOPE_SAVED, label: 'bez zapisu od ponad 12 mies.', months: 12, within: false },
-    { key: 'o24', group: SCOPE_SAVED, label: 'bez zapisu od ponad 24 mies.', months: 24, within: false },
-    { key: 'gh', group: SCOPE_TREATED, label: 'leczeni hormonem wzrostu', cards: 'gh' },
-    { key: 'ob', group: SCOPE_TREATED, label: 'leczeni z powodu otyłości', cards: 'ob' }
+    { key: 'm3', label: 'z zapisem w ostatnich 3 mies.', months: 3, within: true },
+    { key: 'm6', label: 'z zapisem w ostatnich 6 mies.', months: 6, within: true },
+    { key: 'm12', label: 'z zapisem w ostatnich 12 mies.', months: 12, within: true },
+    { key: 'o12', label: 'bez zapisu od ponad 12 mies.', months: 12, within: false },
+    { key: 'o24', label: 'bez zapisu od ponad 24 mies.', months: 24, within: false }
+  ];
+  // cards — pole wyniku karty (details z cardsResult), section — klucz sekcji raportu, option — napis w polu wyboru.
+  const SCOPE_TREATMENTS = [
+    { key: 'gh', label: 'leczeni hormonem wzrostu', option: 'hormon wzrostu', cards: 'gh', section: 'gh' },
+    { key: 'ob', label: 'leczeni z powodu otyłości', option: 'otyłość', cards: 'ob', section: 'obesity' }
   ];
   function scopeRange(key) { return SCOPE_RANGES.find((range) => range.key === key) || null; }
-  // Pozycje pola „Zakres” dla widoku i testów: klucz, rodzina, opis i to, czy pozycja potrzebuje wyniku kart.
-  function scopeRanges() { return SCOPE_RANGES.map((range) => ({ key: range.key, group: range.group, label: range.label, needsCards: Boolean(range.cards) })); }
-  function scopeNeedsCards(filters) { const range = scopeRange(filters && filters.range); return Boolean(range && range.cards); }
+  function scopeTreatment(key) { return SCOPE_TREATMENTS.find((treatment) => treatment.key === key) || null; }
+  // Pozycje pól „Zakres” i „Leczenie” dla widoku i testów.
+  function scopeRanges() { return SCOPE_RANGES.map((range) => ({ key: range.key, label: range.label })); }
+  function scopeTreatments() { return SCOPE_TREATMENTS.map((treatment) => ({ key: treatment.key, label: treatment.label, option: treatment.option })); }
+  function scopeNeedsCards(filters) { return Boolean(scopeTreatment(filters && filters.treatment)); }
+  /* P-BAZA-SEKCJE (uwaga właściciela 2026-11-24: leczenia hormonem wzrostu i leczenia otyłości nie prowadzi się
+   * jednocześnie). W zakresie jednego leczenia sekcja drugiego byłaby z definicji pusta, więc się jej nie pokazuje —
+   * ani na ekranie, ani w raporcie. Zwraca klucze takich sekcji raportu: 'gh' albo 'obesity'. cards — wynik kart
+   * policzony dla zakresu (gh.treated, obesity.treated). Gdy w zakresie jest choć jeden pacjent z punktami drugiego
+   * leczenia, sekcja zostaje: danych z kart się nie chowa. */
+  function scopeHiddenSections(filters, cards) {
+    const chosen = scopeTreatment(filters && filters.treatment);
+    if (!chosen || !cards) return [];
+    return SCOPE_TREATMENTS.filter((treatment) => treatment !== chosen && cards[treatment.section] && !cards[treatment.section].treated)
+      .map((treatment) => treatment.section);
+  }
   function scopeFilters(value) {
     const source = value && typeof value === 'object' ? value : {};
     return {
       range: scopeRange(source.range) ? source.range : null,
+      treatment: scopeTreatment(source.treatment) ? source.treatment : null,
       listId: typeof source.listId === 'string' && source.listId ? source.listId : null,
       listName: typeof source.listName === 'string' ? source.listName : '',
       sex: source.sex === 'M' || source.sex === 'F' ? source.sex : null,
       band: AGE_BANDS.some((band) => band.key === source.band) ? source.band : null
     };
   }
-  function scopeActive(filters) { return Boolean(filters && (filters.range || filters.listId || filters.sex || filters.band)); }
+  function scopeActive(filters) { return Boolean(filters && (filters.range || filters.treatment || filters.listId || filters.sex || filters.band)); }
   // Klucz pamięci wyniku dla zakresu; dx — grupa rozpoznania ({ key }) albo null.
   function scopeKey(filters, dx) {
     const f = scopeFilters(filters);
-    return [f.range ? 'z:' + f.range : '', f.listId ? 'l:' + f.listId : '', f.sex ? 's:' + f.sex : '', f.band ? 'b:' + f.band : '', dx && dx.key ? 'd:' + dx.key : ''].filter(Boolean).join('|');
+    return [f.range ? 'z:' + f.range : '', f.treatment ? 't:' + f.treatment : '', f.listId ? 'l:' + f.listId : '', f.sex ? 's:' + f.sex : '', f.band ? 'b:' + f.band : '', dx && dx.key ? 'd:' + dx.key : ''].filter(Boolean).join('|');
   }
   // Opis zakresu dla banera, nagłówka raportu i nazwy grupy — w kolejności filtrów na ekranie, rozpoznanie na końcu.
   function scopeLabel(filters, dx) {
-    const f = scopeFilters(filters), band = AGE_BANDS.find((item) => item.key === f.band), range = scopeRange(f.range);
-    return [range ? range.label : '', f.listId ? 'lista „' + (f.listName || 'bez nazwy') + '”' : '', f.sex ? SCOPE_SEX[f.sex] : '',
+    const f = scopeFilters(filters), band = AGE_BANDS.find((item) => item.key === f.band), range = scopeRange(f.range), treatment = scopeTreatment(f.treatment);
+    return [range ? range.label : '', treatment ? treatment.label : '', f.listId ? 'lista „' + (f.listName || 'bez nazwy') + '”' : '', f.sex ? SCOPE_SEX[f.sex] : '',
       band ? band.label : '', dx && dx.label ? String(dx.label) : ''].filter(Boolean).join(' · ');
   }
   /* Identyfikatory pacjentów z bazy, którzy spełniają wszystkie filtry. options: now, ageMonths (jak w demographics),
@@ -657,14 +674,13 @@
     const asSet = (value) => value instanceof Set ? value : Array.isArray(value) ? new Set(value) : null;
     const listIds = asSet(settings.listIds), groupIds = asSet(settings.ids);
     if (f.listId && !listIds) return null;
-    const range = scopeRange(f.range);
+    const range = scopeRange(f.range), treatment = scopeTreatment(f.treatment);
     let treated = null, edge = null;
-    if (range && range.cards) {
+    if (treatment) {
       if (!Array.isArray(settings.cards)) return null;
-      treated = new Set(settings.cards.filter((item) => item && item[range.cards]).map((item) => item.id));
-    } else if (range) {
-      edge = new Date(now.getTime()); edge.setMonth(edge.getMonth() - range.months);
+      treated = new Set(settings.cards.filter((item) => item && item[treatment.cards]).map((item) => item.id));
     }
+    if (range) { edge = new Date(now.getTime()); edge.setMonth(edge.getMonth() - range.months); }
     const band = AGE_BANDS.find((item) => item.key === f.band) || null;
     return (Array.isArray(patientRecords) ? patientRecords : []).filter((record) => {
       if (!record || record.__ext) return false;
@@ -736,6 +752,9 @@
     const model = source.model, cards = source.cards || null;
     const stamp = source.stamp instanceof Date && Number.isFinite(source.stamp.getTime()) ? source.stamp : null;
     const scope = typeof source.scope === 'string' ? source.scope.trim() : '';
+    // P-BAZA-SEKCJE: sekcje leczenia, których w tym zakresie się nie pokazuje (scopeHiddenSections) — jak na ekranie.
+    const omit = Array.isArray(source.omit) ? source.omit : [];
+    const nobody = (scope ? 'W tej grupie' : 'W bazie') + ' nie ma pacjentów z punktami leczenia ';
     const num = (value, digits) => finite(value) === null ? null : Number(value.toFixed(digits === undefined ? 2 : digits));
     const col = (title, kind, extra) => Object.assign({ title, kind: kind || 'text' }, extra || {});
     const rate = (title) => col(title, 'num', { digits: 1 });
@@ -795,7 +814,7 @@
     if (cards) {
       // 2. Leczenie hormonem wzrostu.
       const gh = cards.gh, ghSection = { key: 'gh', title: 'Leczenie hormonem wzrostu', hint: '', facts: [], tables: [], notes: [], chart: null };
-      if (!gh || !gh.treated) ghSection.notes.push('W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.');
+      if (!gh || !gh.treated) ghSection.notes.push(nobody + 'hormonem wzrostu.');
       else {
         ghSection.hint = 'leczonych: ' + gh.treated + ' · ' + gh.programs.map((item) => item.program + ' ' + item.treated).join(' · ');
         ghSection.facts.push({ label: 'Leczonych', value: gh.treated, unit: '', text: String(gh.treated), note: '', only: 'sheet' });
@@ -835,11 +854,11 @@
           ghSection.notes.push(ghNote());
         }
       }
-      sections.push(ghSection);
+      if (omit.indexOf('gh') === -1) sections.push(ghSection);
 
       // 3. Leczenie otyłości.
       const ob = cards.obesity, obSection = { key: 'obesity', title: 'Leczenie otyłości', hint: '', facts: [], tables: [], notes: [], chart: null };
-      if (!ob || !ob.treated) obSection.notes.push('W bazie nie ma pacjentów z punktami leczenia otyłości.');
+      if (!ob || !ob.treated) obSection.notes.push(nobody + 'otyłości.');
       else {
         obSection.hint = 'leczonych: ' + ob.treated + ' · ' + ob.drugs.map((item) => item.drug + ' ' + item.treated).join(' · ');
         obSection.facts.push({ label: 'Leczonych', value: ob.treated, unit: '', text: String(ob.treated), note: 'dzieci: ' + ob.children + ' · dorośli: ' + ob.adults, only: 'sheet' });
@@ -901,7 +920,7 @@
           obSection.notes.push(obesityNote(ob.journalFailed));
         }
       }
-      sections.push(obSection);
+      if (omit.indexOf('obesity') === -1) sections.push(obSection);
     }
 
     // 4. Kompletność danych.
@@ -1203,6 +1222,9 @@
       scope: initial.scope && Array.isArray(initial.scope.ids) ? { key: String(initial.scope.key || ''), label: String(initial.scope.label || ''), ids: initial.scope.ids.slice() } : null,
       // P-BAZA-GRUPY: filtry zakresu statystyk (lista pacjentów, płeć, wiek, zapis w ostatnich 12 mies.) — tylko pamięć widoku.
       filters: scopeFilters(initial.filters),
+      // P-BAZA-SEKCJE: sekcje „Rozpoznania” i „Kompletność danych” są domyślnie zwinięte do jednego wiersza;
+      // true — lekarz sekcję rozwinął (zostaje tak do końca pracy z Bazą w tej sesji).
+      sections: { dx: Boolean(initial.sections && initial.sections.dx === true), data: Boolean(initial.sections && initial.sections.data === true) },
       // P-BAZA-GRUPY: pasek grupy — formularz „Zapisz jako listę” albo komunikat po zapisie lub po pliku grupy.
       groupTask: initial.group && initial.groupTask && ['form', 'note'].includes(initial.groupTask.mode) ? {
         mode: initial.groupTask.mode, name: String(initial.groupTask.name || ''), note: String(initial.groupTask.note || ''),
@@ -1240,6 +1262,8 @@
     let statsCounted = false; // liczenie ruszyło samo przy tym wejściu w „Statystyki”
     let dxHost = null;        // sekcja „Rozpoznania”
     let dxHint = null;
+    let ghCard = null, obCard = null; // sekcje leczenia — chowane w zakresie drugiego leczenia (scopeHiddenSections)
+    let dataHint = null, dataModel = null; // podsumowanie zwiniętej „Kompletności danych” i model nagłówków, z którego powstaje
     const dxOpen = {};        // rozwinięte kategorie rozpoznań (klucz grupy)
     let scopeCache = null;    // wynik kart policzony dla bieżącego zakresu
     let scopeMemo = null;     // pacjenci bieżącego zakresu w obrębie jednego rysowania ({ ids } albo { pending })
@@ -1583,6 +1607,7 @@
       if (busy) return;
       const next = Object.assign({}, state.filters);
       if (key === 'range') next.range = value || null;
+      else if (key === 'treatment') next.treatment = value || null;
       else if (key === 'list') {
         const entry = value && listCache ? listCache.find(({ list }) => list.id === value) : null;
         next.listId = value || null; next.listName = entry ? entry.list.name || '' : '';
@@ -2161,7 +2186,8 @@
         const shown = own ? cardsFor(saved, base) : shownCards();
         const label = own ? String(own.label || '') : scopeLabelNow(), narrowed = own ? true : scopeOn();
         const report = statsReport({ model: demographics(own ? base : shownPatients(), { ageMonths: ageFromVault }), cards: shown, patients: base, ageMonths: ageFromVault, stamp,
-          scope: narrowed ? label : '', diagnoses: dx && !saved.dx.failed ? diagnosisCohort(base, dx, { lookup: catalogueLookup }) : null, diagnosesOf: dx ? dx.of : null });
+          scope: narrowed ? label : '', omit: own ? [] : scopeHiddenSections(state.filters, shown),
+          diagnoses: dx && !saved.dx.failed ? diagnosisCohort(base, dx, { lookup: catalogueLookup }) : null, diagnosesOf: dx ? dx.of : null });
         const name = reportFileName(stamp, kind, narrowed);
         const blob = kind === 'pdf' ? await pdfBlob(report) : await sheetBlob(report);
         const outcome = await saveFile(blob, name, kind === 'pdf' ? 'application/pdf' : XLSX_TYPE);
@@ -2220,12 +2246,23 @@
       fillBar();
       const saved = shownCards();
       fillDiagnoses(saved);
+      // P-BAZA-SEKCJE: w zakresie jednego leczenia nie ma sekcji drugiego, gdy nikt w zakresie nie ma jego punktów.
+      const hiddenSections = scopeHiddenSections(state.filters, saved);
+      if (ghCard) ghCard.hidden = hiddenSections.indexOf('gh') !== -1;
+      if (obCard) obCard.hidden = hiddenSections.indexOf('obesity') !== -1;
       if (cardsHost) {
         clear(cardsHost);
         if (saved) CARD_ITEMS.forEach(([key, label]) => {
           const missing = saved.missing[key] || [];
           cardsHost.appendChild(meterRow(label, saved.total - saved.failed - missing.length, saved.total - saved.failed, missing, label + ' — brak'));
         });
+      }
+      if (dataHint && dataModel) {
+        // Jedno zdanie zwiniętej sekcji: w ilu pozycjach (data urodzenia, płeć, pozycje z kart) komuś brakuje danych.
+        const gaps = [dataModel.missingDob.length, dataModel.missingSex.length].concat(saved ? CARD_ITEMS.map(([key]) => (saved.missing[key] || []).length) : []);
+        const lacking = gaps.filter((count) => count > 0).length;
+        dataHint.textContent = (lacking ? 'z brakami: ' + lacking + ' z ' + gaps.length + ' pozycji' : 'bez braków w ' + gaps.length + ' pozycjach')
+          + (saved ? '' : cardsBusy ? ' · karty: trwa liczenie' : ' · karty: nie policzono');
       }
       if (ghHost) { clear(ghHost); renderGh(ghHost, saved ? saved.gh : null); }
       if (ghHint) {
@@ -2249,18 +2286,22 @@
       if (dxHint) dxHint.textContent = '';
       const card = dxHost.parentNode;
       if (card) card.hidden = Boolean(saved && saved.dx === null);
+      // Podsumowanie (dxHint) jest jedynym, co widać w zwiniętej sekcji, więc mówi także o stanach bez listy.
       if (!saved) {
+        if (dxHint) dxHint.textContent = cardsBusy ? 'trwa liczenie' : 'nie policzono';
         dxHost.appendChild(el('p', 'pt-stat-note', cardsBusy ? 'Trwa liczenie z kart…' : 'Pojawią się po policzeniu z kart.'));
         return;
       }
       if (!saved.dx) return;
       if (saved.dx.failed) {
+        if (dxHint) dxHint.textContent = 'nie udało się odczytać';
         dxHost.appendChild(el('p', 'pt-stat-note', 'Nie udało się odczytać rozpoznań. Wybierz „Policz ponownie”.'));
         return;
       }
       const cohort = shownDiagnoses(saved);
       if (!cohort.groups.length) {
-        dxHost.appendChild(el('p', 'pt-stat-note', (state.scope ? 'W tej grupie' : 'W bazie') + ' nie ma jeszcze rozpoznań. Rozpoznanie wpisuje się w Karcie pacjenta, w zakładce „Leczenie”.'));
+        if (dxHint) dxHint.textContent = 'brak rozpoznań';
+        dxHost.appendChild(el('p', 'pt-stat-note', (scopeOn() ? 'W tej grupie' : 'W bazie') + ' nie ma jeszcze rozpoznań. Rozpoznanie wpisuje się w Karcie pacjenta, w zakładce „Leczenie”.'));
         return;
       }
       if (dxHint) dxHint.textContent = 'z aktywnym rozpoznaniem: ' + cohort.withActive + ' z ' + cohort.total + ' (' + percent(cohort.withActive, cohort.total) + '%)';
@@ -2493,7 +2534,7 @@
         return;
       }
       if (!cohort.treated) {
-        host.appendChild(el('p', 'pt-stat-note', 'W bazie nie ma pacjentów z punktami leczenia hormonem wzrostu.'));
+        host.appendChild(el('p', 'pt-stat-note', (scopeOn() ? 'W tej grupie' : 'W bazie') + ' nie ma pacjentów z punktami leczenia hormonem wzrostu.'));
         return;
       }
       if (!cohort.engineReady) {
@@ -2640,7 +2681,7 @@
         return;
       }
       if (!cohort.treated) {
-        host.appendChild(el('p', 'pt-stat-note', 'W bazie nie ma pacjentów z punktami leczenia otyłości.'));
+        host.appendChild(el('p', 'pt-stat-note', (scopeOn() ? 'W tej grupie' : 'W bazie') + ' nie ma pacjentów z punktami leczenia otyłości.'));
         return;
       }
       if (!cohort.engineReady) {
@@ -2764,12 +2805,12 @@
     }
     /* P-BAZA-GRUPY: pasek filtrów zakresu nad statystykami. Zwykłe pola wyboru (klawiatura, czytnik ekranu i telefon
      * obsługują je same). Lista pacjentów jest tylko przy dostępie do list; jej pozycje dochodzą po odczycie katalogu.
-     * P-BAZA-ZAKRES: pole „Zakres” ma pozycje w dwóch rodzinach (ostatni zapis karty, leczenie); każda pokazuje, ilu
-     * pacjentów całej bazy obejmuje. Liczniki zakresów leczenia dochodzą, gdy skończy się liczenie kart. */
+     * P-BAZA-ZAKRES, P-BAZA-SEKCJE: „Zakres” (ostatni zapis karty) i „Leczenie” to osobne pola; każda pozycja
+     * pokazuje, ilu pacjentów całej bazy obejmuje. Liczniki „Leczenia” dochodzą, gdy skończy się liczenie kart. */
     function filterBar(sequence) {
-      const bar = el('div', 'pt-filters'), base = basePatients();
+      const bar = el('div', 'pt-filters' + (mayUseLists() ? ' pt-filters--lists' : '')), base = basePatients();
       bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zakres statystyk');
-      // rows: [wartość, napis, rodzina]; kolejne pozycje tej samej rodziny trafiają do jednej grupy opcji.
+      // options: [wartość, napis]; wide — pole z długimi pozycjami (na telefonie cały wiersz).
       function field(key, labelText, options, value, wide) {
         const holder = el('label', 'pt-filter' + (wide ? ' pt-filter--wide' : ''));
         holder.appendChild(el('span', 'pt-filter-label', labelText));
@@ -2778,13 +2819,7 @@
         node.setAttribute('data-filter-key', key);
         const fill = (rows) => {
           clear(node);
-          let family = null, host = node;
-          rows.forEach(([id, text, group]) => {
-            if (!group) host = node;
-            else if (group !== family) { host = doc.createElement('optgroup'); host.label = group; node.appendChild(host); }
-            family = group || null;
-            const option = doc.createElement('option'); option.value = id; option.textContent = text; host.appendChild(option);
-          });
+          rows.forEach(([id, text]) => { const option = doc.createElement('option'); option.value = id; option.textContent = text; node.appendChild(option); });
           node.value = value;
         };
         fill(options);
@@ -2793,19 +2828,21 @@
         holder.appendChild(node); bar.appendChild(holder);
         return { node, fill };
       }
-      const rangeRows = () => {
+      field('range', 'Zakres', [['', 'cała baza (' + base.length + ')']].concat(SCOPE_RANGES.map((range) =>
+        [range.key, range.label + ' (' + scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault }).length + ')'])), state.filters.range || '', true);
+      const treatmentRows = () => {
         const saved = savedCards();
-        return [['', 'cała baza (' + base.length + ')']].concat(SCOPE_RANGES.map((range) => {
-          const members = scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault, cards: saved ? saved.details : null });
-          return [range.key, range.label + (members ? ' (' + members.length + ')' : ''), range.group];
+        return [['', 'wszyscy']].concat(SCOPE_TREATMENTS.map((treatment) => {
+          const members = scopeMembers(base, { treatment: treatment.key }, { ageMonths: ageFromVault, cards: saved ? saved.details : null });
+          return [treatment.key, treatment.option + (members ? ' (' + members.length + ')' : '')];
         }));
       };
-      const rangeField = field('range', 'Zakres', rangeRows(), state.filters.range || '', true);
+      const treatmentField = field('treatment', 'Leczenie', treatmentRows(), state.filters.treatment || '', true);
       // Po liczeniu kart zmieniają się tylko napisy pozycji — pole zostaje to samo (także otwarte albo z fokusem).
       filterRefresh = () => {
         if (!bar.isConnected) return;
-        const texts = new Map(rangeRows().map(([id, text]) => [id, text]));
-        Array.from(rangeField.node.options).forEach((option) => { if (texts.has(option.value)) option.textContent = texts.get(option.value); });
+        const texts = new Map(treatmentRows());
+        Array.from(treatmentField.node.options).forEach((option) => { if (texts.has(option.value)) option.textContent = texts.get(option.value); });
       };
       if (mayUseLists()) {
         const chosen = state.filters.listId || '';
@@ -2837,8 +2874,38 @@
         scopeCache = null; render();
       }).catch(() => { if (guardedRead(sequence) && state.filters.listId === id) { filterFailed = id; render(); } });
     }
+    /* P-BAZA-SEKCJE (decyzja właściciela 2026-11-24): sekcja zwijana do jednego wiersza — tytuł, jedno zdanie
+     * podsumowania i „Rozwiń”. Cały wiersz jest przyciskiem w nagłówku (aria-expanded, aria-controls); stan zostaje
+     * w pamięci widoku (state.sections), więc przerysowanie i powrót z listy go nie zmieniają. */
+    function foldCard(key, className, title, bodyClass) {
+      const card = el('section', 'pt-stat-card pt-stat-card--fold ' + className);
+      card.setAttribute('data-fold', key);
+      const heading = el('h3', 'pt-stat-fold-heading');
+      const toggle = button('pt-stat-fold', null, () => { state.sections[key] = state.sections[key] !== true; sync(); });
+      toggle.appendChild(el('span', 'pt-stat-fold-title', title));
+      const hint = el('span', 'pt-stat-card-hint');
+      toggle.appendChild(hint);
+      const mark = el('span', 'pt-stat-fold-mark');
+      mark.setAttribute('aria-hidden', 'true');
+      toggle.appendChild(mark);
+      heading.appendChild(toggle); card.appendChild(heading);
+      const body = el('div', 'pt-stat-fold-body ' + bodyClass);
+      body.id = 'pt-stat-fold-' + key;
+      toggle.setAttribute('aria-controls', body.id);
+      card.appendChild(body);
+      function sync() {
+        const open = state.sections[key] === true;
+        toggle.setAttribute('aria-expanded', String(open));
+        mark.textContent = open ? 'Zwiń' : 'Rozwiń';
+        body.hidden = !open;
+        card.classList.toggle('is-open', open);
+      }
+      sync();
+      return { card, hint, body };
+    }
     function renderStats(sequence) {
       cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; cardsProgress = null; dxHost = null; dxHint = null;
+      ghCard = null; obCard = null; dataHint = null; dataModel = null;
       filterRefresh = null;
       const base = basePatients();
       if (!base.length) {
@@ -2881,7 +2948,7 @@
         // Karta, której nie udało się odczytać, nie mówi nic o leczeniu — ekran mówi wprost, że jej pacjenta tu nie ma.
         const unread = savedCards().failed;
         if (unread) {
-          const note = el('p', 'pt-stat-note pt-filters-note', 'Nie udało się odczytać kart: ' + unread + '. Ci pacjenci nie są liczeni w zakresie „' + scopeRange(state.filters.range).label + '”.');
+          const note = el('p', 'pt-stat-note pt-filters-note', 'Nie udało się odczytać kart: ' + unread + '. Ci pacjenci nie są liczeni w zakresie „' + scopeTreatment(state.filters.treatment).label + '”.');
           note.setAttribute('role', 'status'); wrap.appendChild(note);
         }
       }
@@ -2908,14 +2975,20 @@
         wrap.appendChild(banner);
       }
 
-      const tiles = el('div', 'pt-stat-tiles');
-      tiles.appendChild(statTile(scopeOn() ? 'Pacjenci w grupie' : 'Pacjenci w bazie', String(model.total), '', model.recent + ' z zapisem w ostatnich 12 mies.'));
+      /* P-BAZA-SEKCJE: elementy, które wybrany filtr czyni z definicji pustymi albo oczywistymi, nie są rysowane.
+       * Przy wybranej płci nie ma kafelków płci (jeden miałby zawsze 100% i powtarzał liczbę oraz średni wiek grupy,
+       * drugi zawsze 0); przy wybranym „Zakresie” (ostatni zapis karty) nie ma dopisku „z zapisem w ostatnich
+       * 12 mies.” (w oknach 3, 6 i 12 mies. to zawsze wszyscy, w „bez zapisu od ponad 12 / 24 mies.” — nikt). */
+      const sexChosen = Boolean(state.filters.sex);
+      const tiles = el('div', 'pt-stat-tiles' + (sexChosen ? ' pt-stat-tiles--two' : ''));
+      tiles.appendChild(statTile(scopeOn() ? 'Pacjenci w grupie' : 'Pacjenci w bazie', String(model.total), '',
+        state.filters.range ? '' : model.recent + ' z zapisem w ostatnich 12 mies.'));
       if (model.withAge) {
         const meanAge = ageParts(model.meanMonths);
         tiles.appendChild(statTile('Średni wiek', meanAge[0], meanAge[1],
           'mediana ' + formatAge(model.medianMonths) + ' · od ' + formatAge(model.minMonths) + ' do ' + formatAge(model.maxMonths)));
       } else tiles.appendChild(statTile('Średni wiek', '—', '', 'brak dat urodzenia'));
-      [['M', 'Chłopcy'], ['F', 'Dziewczęta']].forEach(([key, label]) => {
+      (sexChosen ? [] : [['M', 'Chłopcy'], ['F', 'Dziewczęta']]).forEach(([key, label]) => {
         const average = model.meanMonthsBySex[key];
         const sub = percent(model.sex[key], model.total) + '%' + (average === null ? '' : ' · średni wiek ' + formatAge(average));
         const tile = statTile(label, String(model.sex[key]), '', sub, model.sex[key] ? () => showGroup(label, model.sexIds[key]) : null);
@@ -2960,17 +3033,11 @@
       cardsBar = el('div', 'pt-stat-cards-foot pt-stat-cardsbar');
       wrap.appendChild(cardsBar);
 
-      const dxCard = el('section', 'pt-stat-card pt-dx');
-      const dxHead = el('div', 'pt-stat-card-head');
-      dxHead.appendChild(el('h3', null, 'Rozpoznania'));
-      dxHint = el('span', 'pt-stat-card-hint');
-      dxHead.appendChild(dxHint);
-      dxCard.appendChild(dxHead);
-      dxHost = el('div', 'pt-dx-body');
-      dxCard.appendChild(dxHost);
-      wrap.appendChild(dxCard);
+      const dxFold = foldCard('dx', 'pt-dx', 'Rozpoznania', 'pt-dx-body');
+      dxHint = dxFold.hint; dxHost = dxFold.body;
+      wrap.appendChild(dxFold.card);
 
-      const ghCard = el('section', 'pt-stat-card pt-gh');
+      ghCard = el('section', 'pt-stat-card pt-gh');
       const ghHead = el('div', 'pt-stat-card-head');
       ghHead.appendChild(el('h3', null, 'Leczenie hormonem wzrostu'));
       ghHint = el('span', 'pt-stat-card-hint');
@@ -2980,7 +3047,7 @@
       ghCard.appendChild(ghHost);
       wrap.appendChild(ghCard);
 
-      const obCard = el('section', 'pt-stat-card pt-ob');
+      obCard = el('section', 'pt-stat-card pt-ob');
       const obHead = el('div', 'pt-stat-card-head');
       obHead.appendChild(el('h3', null, 'Leczenie otyłości'));
       obHint = el('span', 'pt-stat-card-hint');
@@ -2990,19 +3057,17 @@
       obCard.appendChild(obHost);
       wrap.appendChild(obCard);
 
-      const dataCard = el('section', 'pt-stat-card');
-      const dataHead = el('div', 'pt-stat-card-head');
-      dataHead.appendChild(el('h3', null, 'Kompletność danych'));
-      dataHead.appendChild(el('span', 'pt-stat-card-hint', 'im pełniejsze karty, tym więcej pacjentów wejdzie do kolejnych statystyk'));
-      dataCard.appendChild(dataHead);
+      const dataFold = foldCard('data', 'pt-data', 'Kompletność danych', 'pt-data-body');
+      dataHint = dataFold.hint; dataModel = model;
+      dataFold.body.appendChild(el('p', 'pt-stat-note', 'Im pełniejsze karty, tym więcej pacjentów wejdzie do kolejnych statystyk.'));
       const headerRows = el('div', 'pt-stat-meters');
       headerRows.appendChild(meterRow('Data urodzenia', model.total - model.missingDob.length, model.total, model.missingDob, 'Data urodzenia — brak'));
       headerRows.appendChild(meterRow('Płeć', model.total - model.missingSex.length, model.total, model.missingSex, 'Płeć — brak'));
-      dataCard.appendChild(headerRows);
+      dataFold.body.appendChild(headerRows);
       cardsHost = el('div', 'pt-stat-meters pt-stat-cards');
-      dataCard.appendChild(cardsHost);
+      dataFold.body.appendChild(cardsHost);
       fillCards();
-      wrap.appendChild(dataCard);
+      wrap.appendChild(dataFold.card);
 
       wrap.appendChild(el('p', 'pt-stat-note pt-stat-note--foot', footNote(model.total)));
       scroll.appendChild(wrap);
@@ -3269,6 +3334,7 @@
       clear(scroll);
       if (opts.loading) { count.textContent = ''; scroll.appendChild(el('div', 'pt-loading', 'Wczytywanie Bazy pacjentów…')); return; }
       if (state.view === 'stats') { count.textContent = ''; renderStats(sequence); restorePosition(); return; }
+      ghCard = null; obCard = null; dataHint = null; dataModel = null;
       ++cardsRun; cardsBusy = null; statsCounted = false; cardsHost = null; cardsBar = null; ghHost = null; ghHint = null; obHost = null; obHint = null; dxHost = null; dxHint = null; // liczenie z kart trwa tylko, dopóki widać statystyki
       if (state.filter === 'dup') {
         count.textContent = 'Podobne nazwiska';
@@ -3441,5 +3507,5 @@
   win.VildaPatientsList = Object.freeze({ create, createLoading, demographics, cardCompleteness, formatAge, ghPatient, ghCohort, obesityPatient, obesityCohort, obesityThresholds,
     statsReport, statsWorkbook, statsDocument, xlsxParts, reportFileName,
     journalIndex, cardsPlan, cardsResult, diagnosisIndex, diagnosisCohort,
-    scopeFilters, scopeActive, scopeKey, scopeLabel, scopeMembers, scopeRanges, scopeNeedsCards });
+    scopeFilters, scopeActive, scopeKey, scopeLabel, scopeMembers, scopeRanges, scopeTreatments, scopeNeedsCards, scopeHiddenSections });
 })(typeof window !== 'undefined' ? window : null);

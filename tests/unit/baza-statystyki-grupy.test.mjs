@@ -27,10 +27,10 @@ const opcje = (extra = {}) => ({ now: DZIS, ...extra });
 describe('Filtry zakresu (scopeFilters, scopeActive, scopeKey, scopeLabel)', () => {
   it('przyjmuje tylko znane wartości; reszta to „bez filtra”', () => {
     const { scopeFilters, scopeActive } = modul();
-    expect(scopeFilters(null)).toEqual({ range: null, listId: null, listName: '', sex: null, band: null });
-    expect(scopeFilters({ range: 'zawsze', listId: 7, sex: 'K', band: '5-7', listName: 3 })).toEqual({ range: null, listId: null, listName: '', sex: null, band: null });
-    expect(scopeFilters({ range: 'm12', listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' }))
-      .toEqual({ range: 'm12', listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' });
+    expect(scopeFilters(null)).toEqual({ range: null, treatment: null, listId: null, listName: '', sex: null, band: null });
+    expect(scopeFilters({ range: 'zawsze', treatment: 'wszystko', listId: 7, sex: 'K', band: '5-7', listName: 3 })).toEqual({ range: null, treatment: null, listId: null, listName: '', sex: null, band: null });
+    expect(scopeFilters({ range: 'm12', treatment: 'ob', listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' }))
+      .toEqual({ range: 'm12', treatment: 'ob', listId: 'l1', listName: 'Fikcyjna lista', sex: 'F', band: '6-9' });
     expect(scopeActive(scopeFilters(null))).toBe(false);
     for (const jeden of [{ range: 'm12' }, { listId: 'l1' }, { sex: 'M' }, { band: '18+' }]) expect(scopeActive(scopeFilters(jeden))).toBe(true);
   });
