@@ -11,15 +11,14 @@ async function expectNoTrashAction(header) {
   await expect(options).toBeVisible();
   await options.click();
   await expect(header.locator('[data-trash-visit]')).toBeHidden();
-  await expect(header.getByRole('button', { name: 'Historia wizyt', exact: true })).toBeVisible();
+  await expect(header.getByRole('tab', { name: 'Historia wizyt', exact: true })).toBeVisible();
   await options.click();
   await expect(options).toHaveAttribute('aria-expanded', 'false');
 }
 
 async function editVisit(frame, visitId) {
   const header = headerOf(frame);
-  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
-  await header.getByRole('button', { name: 'Historia wizyt', exact: true }).click();
+  await header.getByRole('tab', { name: 'Historia wizyt', exact: true }).click();
   const history = frame.locator('#vhomeVisitHistory');
   await history.getByRole('button', { name: 'Lista', exact: true }).click();
   await history.locator(`.vhs-list button[data-visit-id="${visitId}"]`).click();
@@ -38,8 +37,7 @@ async function openTrashConfirmation(frame) {
 
 async function restoreVisit(frame, expectedDate) {
   const header = headerOf(frame);
-  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
-  await header.getByRole('button', { name: 'Historia wizyt', exact: true }).click();
+  await header.getByRole('tab', { name: 'Historia wizyt', exact: true }).click();
   await frame.locator('#vhomeVisitHistory').getByRole('button', { name: 'Kosz wizyt', exact: true }).click();
   const trash = frame.getByRole('dialog', { name: 'Kosz wizyt' });
   await expect(trash).toContainText(expectedDate);

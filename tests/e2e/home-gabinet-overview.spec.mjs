@@ -7,8 +7,19 @@ test.use({ serviceWorkers: 'block', contextOptions: { reducedMotion: 'reduce' } 
 test.setTimeout(180_000);
 
 async function openHistoryFromHeader(header) {
-  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
-  await header.getByRole('button', { name: 'Historia wizyt', exact: true }).click();
+  await header.getByRole('tab', { name: 'Historia wizyt', exact: true }).click();
+}
+
+async function returnFromHistory(frame, header, name) {
+  const tokens = await frame.evaluate(() => window.history.state?.vildaHomeDialogStack?.tokens || []);
+  const tab = header.getByRole('tab', { name, exact: true });
+  await tab.click();
+  await expect(frame.locator('#vhomeVisitHistory')).toBeHidden();
+  await expect.poll(() => frame.evaluate(previous => {
+    const current = window.history.state?.vildaHomeDialogStack?.tokens || [];
+    return previous.every(token => !current.includes(token));
+  }, tokens)).toBe(true);
+  await expect(tab).toBeFocused();
 }
 
 async function headerGeometry(frame) {
@@ -23,17 +34,19 @@ async function headerGeometry(frame) {
 async function expectHeaderAppearance(frame) {
   const header = frame.locator('#vhomeGabinetHeader');
   const active = header.getByRole('tab', { selected: true });
-  const inactive = header.getByRole('tab', { selected: false });
+  const inactive = await header.getByRole('tab', { selected: false }).all();
   const breadcrumb = header.locator('[data-start]');
-  for (const button of [breadcrumb, active, inactive]) {
+  for (const button of [breadcrumb, active, ...inactive]) {
     await expect(button).toHaveCSS('box-shadow', 'none');
     await expect(button).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   }
   await expect(breadcrumb).toHaveCSS('color', 'rgb(0, 110, 117)');
   await expect(active).toHaveCSS('color', 'rgb(0, 107, 114)');
   await expect(active).toHaveCSS('border-bottom', '3px solid rgb(0, 131, 139)');
-  await expect(inactive).toHaveCSS('color', 'rgb(86, 111, 117)');
-  await expect(inactive).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)');
+  for (const button of inactive) {
+    await expect(button).toHaveCSS('color', 'rgb(86, 111, 117)');
+    await expect(button).toHaveCSS('border-bottom-color', 'rgba(0, 0, 0, 0)');
+  }
   const options = header.getByRole('button', { name: 'Opcje', exact: true });
   const primary = header.locator('[data-home-encounter]');
   await expect(options).toHaveCSS('background-color', 'rgb(255, 255, 255)');
@@ -515,10 +528,12 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     expect(await header.evaluate(node => document.documentElement.scrollWidth <= innerWidth && node.scrollWidth <= node.clientWidth)).toBe(true);
     const options = header.getByRole('button', { name: 'Opcje', exact: true });
     await options.click();
-    for (const name of ['Edytuj pacjenta', 'Historia wersji', 'Historia wizyt']) {
+    for (const name of ['Edytuj pacjenta', 'Historia wersji']) {
       await expect(header.locator('#gbVisitActions').getByRole('button', { name, exact: true })).toBeVisible();
       await expect(frame.getByRole('button', { name, exact: true })).toHaveCount(1);
     }
+    await expect(header.locator('#gbVisitActions').getByRole('button', { name: 'Historia wizyt', exact: true })).toHaveCount(0);
+    await expect(header.getByRole('tablist', { name: 'Karta pacjenta', exact: true }).getByRole('tab')).toHaveText(['Historia wizyt', 'Przegląd', 'Analiza']);
     if (mode === 'browse') {
       await expect(header.locator('[data-edit-visit]')).toBeVisible();
     } else await expect(header.locator('[data-edit-visit]')).toBeHidden();
@@ -590,6 +605,135 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
   await expect(slot).toContainText('Fikcyjne przypomnienie gabinetowe a');
   await expect(slot).not.toContainText('Fikcyjne przypomnienie gabinetowe b');
   await expect(frame.locator('#remindersInline')).toHaveCount(1);
+});
+
+test('the shared History tab keeps the active visit and one pinned patient header while browsing', async ({ page }) => {
+  const { frame, ids } = await prepare(page);
+  const archivedVisitId = await frame.evaluate(async patientId => {
+    const saved = (await window.VildaVault.getPatient(patientId)).snapshots[0].payload;
+    const older = structuredClone(saved);
+    older.visit = window.VildaVisitContext.create({ patientId, clinicalDateISO: '2025-06-17' });
+    older.user = { ...older.user, measuredAtISO: '2025-06-17', age: 12, ageMonths: 0, height: 145, weight: 35 };
+    await window.VildaVault.savePatient(older, { patientId, dedup: false });
+    return older.visit.visitId;
+  }, ids.a);
+  await choosePatient(frame, 'Antoni');
+  const header = frame.locator('#vhomeGabinetHeader');
+  const tabs = header.getByRole('tablist', { name: 'Karta pacjenta', exact: true });
+  const history = frame.getByRole('tabpanel', { name: 'Historia wizyt', exact: true });
+  await header.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
+  await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await frame.locator('#height').fill('159');
+  await frame.locator('#weight').fill('49');
+  const patientState = () => frame.evaluate(async patientId => ({
+    selected: sessionStorage.getItem('vildaCurrentPatientId'),
+    encounter: window.VildaHomeEncounter.state(patientId),
+    user: window.VildaDataImportExport.captureCurrentUserDataReadOnly().user,
+    snapshots: (await window.VildaVault.getPatient(patientId)).snapshots,
+    notes: await window.VildaVault.listPatientNotesForPatient(patientId),
+  }), ids.a);
+  const before = await patientState();
+  expect(before.encounter.mode).toBe('new');
+  expect(before.user).toMatchObject({ height: 159, weight: 49 });
+  const token = () => frame.evaluate(() => window.history.state?.vildaHomeDialog || null);
+  async function show(name) {
+    if (name !== 'Historia wizyt' && await history.isVisible()) await returnFromHistory(frame, header, name);
+    else await tabs.getByRole('tab', { name, exact: true }).click();
+    const tab = tabs.getByRole('tab', { name, exact: true });
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(tab).toHaveAttribute('tabindex', '0');
+    await expect(tabs.getByRole('tab', { selected: true })).toHaveCount(1);
+    await expect(tabs.locator('[tabindex="-1"]')).toHaveCount(2);
+    await expect(frame.locator('#' + await tab.getAttribute('aria-controls'))).toBeVisible();
+    if (name === 'Historia wizyt') {
+      await expect.poll(token).toBeTruthy();
+      await expect(history.locator('.vhs-paper')).toHaveCount(2);
+    }
+    await expect.poll(() => frame.locator('#gbWorkspaceHeader').evaluate(node => {
+      const height = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gb-workspace-header-height'));
+      return Math.round(height * 100) === Math.round(node.getBoundingClientRect().height * 100);
+    })).toBe(true);
+  }
+  const geometry = () => frame.evaluate(() => {
+    const selectors = ['#gbWorkspaceHeader', '#vhomeGabinetHeader .gb-header-top', '#vhomeGabinetHeader .gb-person-line',
+      '#vhomeGabinetHeader .gb-breadcrumb', '#vhomeGabinetHeader [data-visit-actions]', '#vhomeGabinetHeader [data-home-encounter]',
+      '#vhomeGabinetHistoryTab', '#vhomeGabinetOverviewTab', '#vhomeGabinetAnalysisTab'];
+    return selectors.map(selector => {
+      const { x, y, width, height } = document.querySelector(selector).getBoundingClientRect();
+      return { x, y, width, height };
+    });
+  });
+  const contentTop = selector => frame.locator(selector).evaluate(node => node.getBoundingClientRect().top + scrollY);
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    if (width >= 992) await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
+    else await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
+    await show('Przegląd');
+    await expect(tabs.getByRole('tab')).toHaveText(['Historia wizyt', 'Przegląd', 'Analiza']);
+    const fixed = await geometry();
+    const top = await contentTop('#vhomePatientOverview > .vilda-auth-card');
+    expect(await header.evaluate(node => {
+      const toolbar = node.querySelector('.gb-header-top').getBoundingClientRect();
+      const identity = node.querySelector('.gb-identity').getBoundingClientRect();
+      const nav = node.querySelector('.gb-patient-tabs').getBoundingClientRect();
+      return identity.top >= toolbar.bottom - 0.5 && (nav.top >= identity.bottom - 0.5 || nav.left >= identity.right - 0.5) &&
+        document.documentElement.scrollWidth <= innerWidth;
+    })).toBe(true);
+    for (const name of ['Analiza', 'Przegląd']) {
+      await show(name);
+      const origin = await frame.evaluate(() => {
+        window.scrollTo({ top: Math.min(120, document.scrollingElement.scrollHeight - innerHeight), behavior: 'instant' });
+        return scrollY;
+      });
+      await show('Historia wizyt');
+      await expect(history.locator('.vhs-heading')).toBeHidden();
+      await expect(history.getByRole('button', { name: /^Wróć/ })).toHaveCount(0);
+      await expect(history.locator('.vhs-toolbar').getByRole('button', { name: 'Kosz wizyt', exact: true })).toBeVisible();
+      await expect(frame.locator('#gbEntryHeader')).toBeHidden();
+      expect(await contentTop('#vhomeVisitHistory .vhs-surface')).toBeCloseTo(top, 0);
+      expect(await geometry()).toEqual(fixed);
+      await show(name === 'Analiza' ? 'Przegląd' : 'Analiza');
+      expect(await geometry()).toEqual(fixed);
+      await show(name);
+      await frame.evaluate(value => window.scrollTo({ top: value, behavior: 'instant' }), origin);
+      await show('Historia wizyt');
+      await show(name);
+      await expect.poll(() => frame.evaluate(() => scrollY)).toBe(origin);
+      expect(await geometry()).toEqual(fixed);
+    }
+  }
+  await show('Historia wizyt');
+  await header.getByRole('button', { name: 'Opcje', exact: true }).click();
+  await expect(header.locator('#gbVisitActions').getByRole('button', { name: 'Historia wizyt', exact: true })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  const historyTab = tabs.getByRole('tab', { name: 'Historia wizyt', exact: true });
+  const keyboardOwner = await token();
+  await historyTab.press('ArrowRight');
+  await expect(tabs.getByRole('tab', { name: 'Przegląd', exact: true })).toBeFocused();
+  await expect(history).toBeHidden();
+  await expect.poll(token).not.toBe(keyboardOwner);
+  await show('Analiza');
+  await tabs.getByRole('tab', { name: 'Analiza', exact: true }).press('Home');
+  await expect(historyTab).toBeFocused();
+  await expect(history).toBeVisible();
+  await expect.poll(token).toBeTruthy();
+  const owner = await token();
+  await history.getByRole('button', { name: 'Lista', exact: true }).click();
+  await history.locator(`.vhs-list button[data-visit-id="${archivedVisitId}"]`).click();
+  const detail = frame.locator('#vhomeVisitDetail');
+  await expect(detail.getByRole('tabpanel', { name: 'Wyniki', exact: true })).toContainText('35 kg');
+  await detail.getByRole('button', { name: 'Zamknij podgląd wizyty', exact: true }).click();
+  await expect.poll(token).toBe(owner);
+  await history.getByRole('button', { name: 'Kartki', exact: true }).click();
+  const trash = history.locator('.vhs-toolbar').getByRole('button', { name: 'Kosz wizyt', exact: true });
+  await trash.click();
+  const bin = frame.locator('#vhomeVisitTrash');
+  await expect(bin).toBeVisible();
+  await bin.locator('.vhome-dialog-cancel').click();
+  await expect.poll(token).toBe(owner);
+  await expect(trash).toBeFocused();
+  await returnFromHistory(frame, header, 'Analiza');
+  expect(await patientState()).toEqual(before);
 });
 
 async function saveReminderOnly(page) {
@@ -817,18 +961,18 @@ test('Edytuj wizytę corrects only the chosen historical record and returns to t
   const trigger = header.getByRole('button', { name: 'Opcje', exact: true });
   await openHistoryFromHeader(header);
   const history = frame.locator('#vhomeVisitHistory');
-  const title = history.getByRole('heading', { name: 'Wizyty pacjenta' });
-  await expect(title).toBeVisible();
+  const historyPanel = frame.getByRole('tabpanel', { name: 'Historia wizyt', exact: true });
+  await expect(historyPanel).toBeVisible();
   await expect(patientCard).toBeHidden();
-  await history.getByRole('button', { name: 'Wróć do przeglądu' }).click();
+  await returnFromHistory(frame, header, 'Przegląd');
   await expect(notesTab).toHaveAttribute('aria-selected', 'true');
   await expect(addNote).toBeVisible();
-  await expect(trigger).toBeFocused();
+  await expect(header.getByRole('tab', { name: 'Przegląd', exact: true })).toBeFocused();
   await openHistoryFromHeader(header);
   const detail = frame.locator('dialog.vhome-history-detail');
   const rail = history.getByRole('tablist');
   const selected = rail.getByRole('tab', { selected: true });
-  await expect(title).toBeVisible();
+  await expect(historyPanel).toBeVisible();
   await expect(rail.getByRole('tab')).toHaveCount(3);
   await expect(selected).toHaveAttribute('data-visit-id', seed.latestId);
   const raisedPaper = history.locator('.vhs-paper[data-active]');
@@ -882,7 +1026,7 @@ test('Edytuj wizytę corrects only the chosen historical record and returns to t
   const directEdit = await frame.evaluate(id => window.VildaHomeEncounter.state(id), ids.a);
   expect(directEdit).toMatchObject({mode:'edit', visitId:seed.latestId, snapshotId:seed.latestSnapshot, revision:seed.latestRevision});
   await trigger.click();
-  for (const name of ['Edytuj pacjenta', 'Historia wersji', 'Historia wizyt', 'Przenieś wizytę do kosza']) {
+  for (const name of ['Edytuj pacjenta', 'Historia wersji', 'Przenieś wizytę do kosza']) {
     await expect(header.locator('#gbVisitActions').getByRole('button', { name, exact: true })).toBeVisible();
   }
   await page.keyboard.press('Escape');
@@ -914,7 +1058,6 @@ test('comparison follows clinical visit dates, offers an explicit measured basel
   const card = frame.locator('#vhomeVisitComparison');
   const weight = frame.locator('#weight'), metric = card.locator('[data-comparison-metric="weight"]');
   const date = header.locator('.gb-visit-context time');
-  const options = header.getByRole('button', { name: 'Opcje', exact: true });
   const visitIds = () => frame.evaluate(async patientId =>
     (await window.VildaVault.getPatientVisits(patientId)).map(row => row.visitId), seed.patientId);
   await expect(date).toHaveText('15.11.2025');
@@ -950,9 +1093,9 @@ test('comparison follows clinical visit dates, offers an explicit measured basel
   await expect(novemberHeading).toBeVisible();
   await sheet.getByRole('button', { name: 'Zamknij podgląd wizyty', exact: true }).click();
   await expect(openSaved).toBeFocused();
-  await history.getByRole('button', { name: 'Wróć do analizy', exact: true }).click();
+  await returnFromHistory(frame, header, 'Analiza');
   await expect(analysis).toHaveAttribute('aria-selected', 'true');
-  await expect(options).toBeFocused();
+  await expect(analysis).toBeFocused();
   await openHistoryFromHeader(header);
   await openSaved.click();
   await expect(novemberHeading).toBeVisible();
@@ -1055,7 +1198,6 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   }), ids.a);
   const before = await patientState();
   expect(before.encounter.mode).toBe('new');
-  const trigger = header.getByRole('button', { name: 'Opcje', exact: true });
   await openHistoryFromHeader(header);
   const history = frame.locator('#vhomeVisitHistory');
   await expect(history.getByRole('tab')).toHaveCount(1);
@@ -1126,10 +1268,10 @@ test('browsing visit history from Analysis on a phone preserves the open visit a
   await expect(general.getByRole('button', {name:'Leczenie pacjenta', exact:true})).toBeVisible();
   await expectAccessStable();
   await detail.getByRole('button', { name: 'Zamknij podgląd wizyty' }).click();
-  await history.getByRole('button', { name: /^Wróć/ }).click();
+  await returnFromHistory(frame, header, 'Analiza');
   await expect(history).toBeHidden();
   await expect(analysis).toHaveAttribute('aria-selected', 'true');
-  await expect(trigger).toBeFocused();
+  await expect(analysis).toBeFocused();
   await expect(frame.locator('#height')).toHaveValue('159');
   await expect(frame.locator('#weight')).toHaveValue('49');
   expect(await patientState()).toEqual(before);
@@ -1282,9 +1424,11 @@ test('the native patient card starts a full visit and the embedded card keeps on
   const header = frame.locator('#vhomeGabinetHeader');
   await header.getByRole('button', { name: 'Opcje', exact: true }).click();
   const sharedMenu = header.locator('#gbVisitActions');
-  for (const name of ['Edytuj pacjenta', 'Historia wersji', 'Historia wizyt']) {
+  for (const name of ['Edytuj pacjenta', 'Historia wersji']) {
     await expect(sharedMenu.getByRole('button', { name, exact: true })).toBeVisible();
   }
+  await expect(sharedMenu.getByRole('button', { name: 'Historia wizyt', exact: true })).toHaveCount(0);
+  await expect(header.getByRole('tab', { name: 'Historia wizyt', exact: true })).toBeVisible();
   await expect(sharedMenu.getByRole('button', { name: /Nowy pomiar|Rozpocznij nową wizytę/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await header.getByRole('tab', { name: 'Analiza' }).click();

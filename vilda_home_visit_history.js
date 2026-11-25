@@ -265,10 +265,13 @@
       host.replaceChildren();
       const notice = doc.createElement('p');
       notice.setAttribute('role', 'status'); notice.textContent = label;
-      const leave = doc.createElement('button');
-      leave.type = 'button'; leave.textContent = options.backLabel;
-      leave.addEventListener('click', () => onBack());
-      host.append(notice, leave);
+      host.append(notice);
+      if (!options.sharedHeader) {
+        const leave = doc.createElement('button');
+        leave.type = 'button'; leave.textContent = options.backLabel;
+        leave.addEventListener('click', () => onBack());
+        host.append(leave);
+      }
       if (retry) {
         const button = doc.createElement('button');
         button.type = 'button'; button.textContent = 'Spróbuj ponownie';
@@ -298,7 +301,8 @@
           if (!result.description) result.description = excerpts.get(row.visitId) || '';
           return result;
         });
-        scene = w.VildaHomeVisitScene.mount(host, {rows, patientName, onOpen: open, onBack, backLabel: options.backLabel, onTrash: openBin});
+        scene = w.VildaHomeVisitScene.mount(host, {rows, patientName, onOpen: open, onBack,
+          backLabel: options.backLabel, sharedHeader: options.sharedHeader, onTrash: openBin});
         if (options.initialVisitId) {
           const index = rows.findIndex(row => row.visitId === options.initialVisitId);
           if (index >= 0) {

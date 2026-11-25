@@ -13,7 +13,7 @@ html:not(.vilda-embedded):has(.main-content[data-vhome-screen]) > body > header 
   inset-inline: var(--vilda-safe-left) var(--vilda-safe-right);
 }
 /* A solid masthead masks the scrolling patient record on standalone pages. */
-html:not(.vilda-embedded):has(.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"])) > body > header {
+html:not(.vilda-embedded):has(.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"])) > body > header {
   background: #fff !important;
 }
 @media (min-width: 992px) {
@@ -114,7 +114,7 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 }
 :is(#vhomeGabinetHeader,#gbEntryHeader) button svg { flex: 0 0 18px; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) button:is(:hover,:active,._pressed) { transform: none !important; }
-#vhomeGabinetHeader :is(.gb-primary,[data-visit-actions]):focus-visible { transform: none !important; }
+#vhomeGabinetHeader button { transform: none !important; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) :is(.gb-breadcrumb,.gb-patient-tabs) button {
   background: transparent !important; border: 0 !important; border-radius: 0 !important;
   box-shadow: none !important;
@@ -196,7 +196,7 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 #vhomeGabinetHeader #gbVisitActions .gb-action-group-label { padding: .2rem .72rem; color: #4a666e; font-size: .875rem; font-weight: 650; }
 #vhomeGabinetHeader #gbVisitActions [data-trash-visit] { color: var(--danger-strong) !important; }
 #vhomeGabinetHeader #gbVisitActions [data-trash-visit]:hover:not(:disabled) { background: var(--danger-bg) !important; }
-#vhomeGabinetHeader .gb-patient-tabs button { min-height: 44px; justify-content: center; color: #566f75 !important; border-bottom: var(--border-pro) solid transparent !important; }
+#vhomeGabinetHeader .gb-patient-tabs button { min-height: 44px; justify-content: center; color: #566f75 !important; border-bottom: var(--border-pro) solid transparent !important; white-space: nowrap; }
 #vhomeGabinetHeader .gb-patient-tabs button[aria-selected="true"] { color: #006b72 !important; border-bottom-color: #00838b !important; }
 :is(#vhomeGabinetHeader,#gbEntryHeader) button:focus-visible { outline: var(--border-pro) solid #00727b; outline-offset: 2px; }
 #vhomeGabinet .vhome-gabinet-message:empty { display: none; }
@@ -253,42 +253,18 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 }
 @media (max-width: 640px) {
   #gbEntryHeader { margin-bottom: var(--space-0-35); }
-  #vhomeGabinetHeader .gb-patient-tabs { gap: 0; }
-  #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; padding-inline: var(--space-0-35); }
 }
 @media (max-width: 420px) {
   #vhomeGabinetHeader .gb-card-actions button { gap: var(--space-0-3); padding-inline: .36rem; }
 }
-/* Only the top row stays pinned on compact screens; identity and tabs scroll
- * together in their native second row. */
+/* The same complete patient header stays pinned in all three patient views. */
 @media (max-width: 640px), (max-height: 500px) {
   [data-vhome-screen]:has(> #gbWorkspaceHeader > #vhomeGabinetHeader:not([hidden])) {
-    --gb-compact-trail-gap: var(--space-0-55);
+    --gb-compact-trail-gap: 0px;
   }
-  [data-vhome-screen] #gbWorkspaceHeader:has(> #vhomeGabinetHeader:not([hidden])),
-  [data-vhome-screen] #vhomeGabinetHeader:not([hidden]) { display: contents; }
-  [data-vhome-screen] #vhomeGabinetHeader > .gb-header-top {
-    box-sizing: border-box;
-    padding-inline: var(--gb-inset-start) var(--gb-inset-end);
-  }
-  html.vilda-fixed-gabinet-header [data-vhome-screen] #vhomeGabinetHeader > .gb-header-top {
-    position: fixed;
-    top: var(--gb-workspace-top);
-    left: var(--gb-workspace-left);
-    width: var(--gb-workspace-width);
-    z-index: var(--z-dropdown);
-    background: var(--gb-patient-header-surface);
-    box-shadow: 0 calc(-1 * var(--chrome-form-gap,12px)) var(--vhome-workspace-background,var(--bg));
-  }
-  [data-vhome-screen] #vhomeGabinetHeader > .gb-person-line {
-    margin-inline: var(--gb-inset-start) var(--gb-inset-end);
-    margin-bottom: var(--gb-patient-header-end);
-  }
-}
-@media (max-width: 640px) {
-  [data-vhome-screen]:has(> #gbWorkspaceHeader > #vhomeGabinetHeader:not([hidden])) {
-    --gb-compact-trail-gap: var(--space-0-35);
-  }
+  #vhomeGabinetHeader .gb-patient-tabs { gap: 0; }
+  #vhomeGabinetHeader .gb-patient-tabs button { flex: 1; padding-inline: var(--space-0-25); }
+  #vhomeGabinetHeader .gb-patient-tabs button svg { display: none; }
 }
 @media (max-width: 380px) {
   :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { gap: var(--space-0-25); }

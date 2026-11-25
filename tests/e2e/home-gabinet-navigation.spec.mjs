@@ -225,8 +225,7 @@ for (const visitKind of ['new', 'edit']) {
     if (visitKind === 'new') {
       await header.getByRole('button', { name: 'Nowa wizyta', exact: true }).click();
     } else {
-      await header.getByRole('button', { name: 'Opcje', exact: true }).click();
-      await header.getByRole('button', { name: 'Historia wizyt' }).click();
+      await header.getByRole('tab', { name: 'Historia wizyt', exact: true }).click();
       await start.locator('#vhomeVisitHistory').getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
       await start.locator('#vhomeVisitDetail').getByRole('button', { name: 'Edytuj wizytę' }).click();
     }
@@ -241,9 +240,8 @@ for (const visitKind of ['new', 'edit']) {
     if (visitKind === 'edit') {
       await openDocPro(page);
     } else {
-      await header.getByRole('button', { name: 'Opcje', exact: true }).click();
-      await header.getByRole('button', { name: 'Historia wizyt' }).click();
-      const history = start.locator('#vhomeVisitHistory');
+      await header.getByRole('tab', { name: 'Historia wizyt', exact: true }).click();
+      const history = start.getByRole('tabpanel', { name: 'Historia wizyt', exact: true });
       await history.getByRole('button', { name: 'Otwórz podgląd wizyty' }).click();
       await start.locator('#vhomeVisitDetail').getByRole('button', { name: 'Edytuj wizytę' }).click();
       const editGuard = start.getByRole('dialog', { name: 'Zapisać zmiany w otwartej wizycie?', exact: true });
@@ -254,10 +252,11 @@ for (const visitKind of ['new', 'edit']) {
       const detail = start.locator('#vhomeVisitDetail');
       await expect(detail).toBeVisible();
       await detail.getByRole('button', { name: 'Zamknij podgląd wizyty', exact: true }).click();
-      await expect(history.getByRole('heading', { name: 'Wizyty pacjenta' })).toBeVisible();
-      await history.getByRole('button', { name: /^Wróć/ }).click();
-      await expect(header.getByRole('button', { name: 'Opcje', exact: true })).toBeFocused();
-      await expect(header.getByRole('tab', { name: 'Analiza', exact: true })).toHaveAttribute('aria-selected', 'true');
+      await expect(history).toBeVisible();
+      const analysis = header.getByRole('tab', { name: 'Analiza', exact: true });
+      await analysis.click();
+      await expect(analysis).toBeFocused();
+      await expect(analysis).toHaveAttribute('aria-selected', 'true');
       expect(await current()).toEqual(working);
       await expect(start.locator('#height')).toHaveValue('159');
       await expect(start.locator('#weight')).toHaveValue('47');

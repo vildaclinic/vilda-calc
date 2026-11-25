@@ -10,11 +10,10 @@
   let rapid = null, rapidHeader, entryView = 'launch';
   let registration = null, registrationHost;
   let displayedVisit = null, measurementAge = null, pendingPatientAction = null;
-  const labels = {overview: 'Przegląd', analysis: 'Analiza'};
+  const labels = {history: 'Historia wizyt', overview: 'Przegląd', analysis: 'Analiza'};
   const entryTrails = {
     start: [null,'Ekran startowy'], office: ['Ekran startowy'],
-    registration: ['Ekran startowy','Dodaj pacjenta'], rapid: ['Ekran startowy','Szybka ścieżka'],
-    history: ['Karta pacjenta','Historia wizyt']
+    registration: ['Ekran startowy','Dodaj pacjenta'], rapid: ['Ekran startowy','Szybka ścieżka']
   };
   const paths = {
     home: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
@@ -151,8 +150,9 @@
     header.querySelector('[data-trash-visit]').hidden = status.mode !== 'edit' || !status.snapshotId;
     header.querySelector('[data-visit-actions]').disabled = busy;
     if (busy) setVisitMenu(false);
+    const visibleTab = historyView ? 'history' : screen;
     header.querySelectorAll('[role="tab"]').forEach(tab => {
-      const active = screen === tab.dataset.screen;
+      const active = visibleTab === tab.dataset.screen;
       tab.setAttribute('aria-selected', String(active));
       tab.tabIndex = active ? 0 : -1;
     });
@@ -174,13 +174,13 @@
   function openVisitHistory(id, options) {
     if (!root || !owns(id) || target !== id || screen === 'start' || !options.isCurrent()) return false;
     if (historyView) return true;
-    const focus = header.querySelector('[data-visit-actions]');
+    const focus = header.querySelector('[role="tab"][aria-selected="true"]');
     const scroll = w.scrollY;
     function back(restore = true) {
       dismissHistory();
       render();
       if (restore && owns(id)) {
-        w.scrollTo(0, scroll);
+        w.scrollTo({top: scroll, behavior: 'instant'});
         focus?.focus({preventScroll: true});
       }
       return true;
@@ -188,7 +188,8 @@
     historyHost.hidden = false;
     const inPatientScreen = capturePatientScreen(id);
     const view = w.VildaHomeVisitHistory.mount(historyHost, {
-      ...options, patientId: id, isCurrent: () => inPatientScreen() && owns(id) && options.isCurrent(),
+      ...options, patientId: id, sharedHeader: true,
+      isCurrent: () => inPatientScreen() && owns(id) && options.isCurrent(),
       backLabel: screen === 'analysis' ? 'Wróć do analizy' : 'Wróć do przeglądu',
       onBack: back,
       onEdit(row, isActionCurrent, modalOwner) {
@@ -209,7 +210,7 @@
     });
     historyView = {destroy: view.destroy, back};
     render();
-    w.scrollTo(0, 0);
+    w.scrollTo({top: 0, behavior: 'instant'});
     return true;
   }
   function renderEntryTrail(view) {
@@ -237,7 +238,7 @@
     const pane = w.frameElement;
     if (pane?.classList.contains('app-pane')) {
       pane.toggleAttribute('data-vhome-workspace', Boolean(value));
-      pane.toggleAttribute('data-vhome-patient', view === 'overview' || view === 'analysis');
+      pane.toggleAttribute('data-vhome-patient', Object.hasOwn(labels, view));
       const directory = view === 'registration' ? 'registration' : view === 'start' ? '' : null;
       if (directory === null) pane.removeAttribute('data-vhome-directory');
       else if (pane.getAttribute('data-vhome-directory') !== directory) pane.setAttribute('data-vhome-directory', directory);
@@ -302,7 +303,8 @@
     if (historyView) {
       // The native chart uses host.hidden to invalidate its owner during a
       // read. Cover the overview visually while retaining its live editor.
-      setScreen('history'); header.hidden = landing.hidden = true;
+      setScreen('history'); header.hidden = false; landing.hidden = true;
+      headerState();
       return;
     }
     setScreen(screen);
@@ -400,6 +402,14 @@
     pendingNote = pendingOfficeRecord = null; dismissHistory(); screen = 'analysis'; showMessage(''); render(); w.VildaHomeWorkspace.refresh();
     return true;
   }
+  function selectPatientTab(next) {
+    if (next === 'history') {
+      if (!historyView && owns(target)) return w.VildaHomeEncounter.history(target, patientName());
+      return;
+    }
+    if (historyView && next === screen) return historyView.back();
+    return next === 'analysis' ? showAnalysis() : showOverview();
+  }
   let labEntry = null;
   function prepareLabEntry() {
     if (screen === 'start' || !owns(target)) return null;
@@ -434,6 +444,7 @@
   function openPatientAction(key) {
     const id = target;
     setVisitMenu(false, true);
+    historyView?.back();
     pendingPatientAction = null;
     if (!owns(id) || (screen !== 'overview' && !showOverview())) return;
     if (w.VildaHomePatientNative?.runInlineAction?.(key) === null) {
@@ -677,7 +688,6 @@
       '<button type="button">' + icon('home') + '<span></span></button>' +
       '<span data-entry-separator>' + icon('chevron') + '</span><span aria-current="page"></span></nav>';
     entryHeader.querySelector('button').onclick = () => {
-      if (main.dataset.vhomeScreen === 'history') return historyView?.back();
       if (registration) return closeRegistration(true);
       return showStart();
     };
@@ -688,7 +698,6 @@
       '<button type="button" data-visit-actions aria-expanded="false" aria-controls="gbVisitActions">Opcje ' + icon('down') + '</button>' +
       '<div id="gbVisitActions" role="group" aria-label="Opcje karty pacjenta" hidden>' +
       '<button type="button" data-edit-visit hidden>' + icon('edit') + '<span>Edytuj wizytę</span></button>' +
-      '<button type="button" data-history>' + icon('history') + '<span>Historia wizyt</span></button>' +
       '<button type="button" data-trash-visit hidden>' + icon('trash') + '<span>Przenieś wizytę do kosza</span></button>' +
       '<div class="gb-patient-actions" role="group" aria-label="Kartoteka"><span class="gb-action-group-label" aria-hidden="true">Kartoteka</span>' +
       '<button type="button" data-patient-action="edit">Edytuj pacjenta</button>' +
@@ -702,7 +711,7 @@
       '<div id="gbRapidHeader" hidden><h1 id="gbRapidTitle">Analiza</h1></div>' +
       '<section id="vhomeGabinetRegistration" hidden aria-labelledby="gbRegistrationTitle"><div class="gb-registration-heading">' +
       '<h1 id="gbRegistrationTitle">Dodaj pacjenta</h1></div><div data-registration-form></div></section>' +
-      '<dialog id="gbRapidMatches" aria-labelledby="gbRapidMatchTitle"></dialog><div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden aria-label="Historia wizyt"></section>';
+      '<dialog id="gbRapidMatches" aria-labelledby="gbRapidMatchTitle"></dialog><div class="vhome-gabinet-message" role="status"></div><div id="vhomePatientOverview" hidden></div><section id="vhomeVisitHistory" hidden></section>';
     header = root.querySelector('#vhomeGabinetHeader');
     workspaceHeader.append(entryHeader, header);
     analysis.before(workspaceHeader, root);
@@ -742,10 +751,6 @@
       });
     }
     header.querySelector('[data-start]').onclick = closePatientCard;
-    header.querySelector('[data-history]').onclick = () => {
-      setVisitMenu(false, true);
-      if (owns(target)) w.VildaHomeEncounter.history(target, patientName());
-    };
     for (const action of header.querySelectorAll('[data-patient-action]')) {
       action.onclick = () => openPatientAction(action.dataset.patientAction);
     }
@@ -753,6 +758,7 @@
       const expected = displayedVisit, id = target;
       setVisitMenu(false, true);
       if (!expected || expected.patientId !== id) return;
+      historyView?.back();
       const inPatientScreen = capturePatientScreen(id);
       const current = () => inPatientScreen() && !historyView && !selecting;
       let cancelled = false;
@@ -777,6 +783,7 @@
       const id = target, capture = owns(id) && w.VildaHomeEncounter.captureVisitTrash(id);
       setVisitMenu(false, true);
       if (!capture) return;
+      historyView?.back();
       const current = () => target === id && !header.hidden && owns(id) && capture.isCurrent();
       const confirmed = await w.VildaHomeVisitHistory.confirmRemoval(capture, current, toggle);
       if (!confirmed || !current()) return;
@@ -788,27 +795,34 @@
     header.querySelector('[data-home-encounter]').onclick = async event => {
       if (!owns(target)) return;
       const id = target, button = event.currentTarget;
+      historyView?.back();
       button.disabled = true;
       try { await w.VildaHomeEncounter[button.dataset.homeEncounter](id); }
       catch (_) { if (owns(id)) showMessage('Nie udało się zatwierdzić operacji wizyty.'); }
       finally { schedule(); }
     };
-    for (const [key, label] of Object.entries(labels)) {
-      const panel = key === 'overview' ? overview : analysis;
+    const tablist = header.querySelector('[role="tablist"]');
+    const panels = { history: historyHost, overview, analysis };
+    const tabs = Object.entries(labels).map(([key, label]) => {
+      const panel = panels[key];
       const tab = d.createElement('button'); tab.type = 'button'; tab.setAttribute('role','tab');
-      tab.id = key === 'overview' ? 'vhomeGabinetOverviewTab' : 'vhomeGabinetAnalysisTab';
+      tab.id = 'vhomeGabinet' + key[0].toUpperCase() + key.slice(1) + 'Tab';
       tab.dataset.screen = key; tab.innerHTML = icon(key) + label;
       tab.setAttribute('aria-controls', panel.id);
       panel.setAttribute('role','tabpanel'); panel.setAttribute('aria-labelledby', tab.id);
-      tab.onclick = () => key === 'analysis' ? showAnalysis() : showOverview();
-      header.querySelector('[role="tablist"]').appendChild(tab);
-    }
-    header.querySelector('[role="tablist"]').onkeydown = event => {
+      tab.onclick = () => selectPatientTab(key);
+      return tab;
+    });
+    tablist.append(...tabs);
+    tablist.onkeydown = event => {
       if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      const index = tabs.indexOf(event.target);
+      if (index < 0) return;
       event.preventDefault();
-      const next = event.key === 'Home' ? 'overview' : event.key === 'End' ? 'analysis' : screen === 'analysis' ? 'overview' : 'analysis';
-      const button = header.querySelector('[data-screen="' + next + '"]');
-      button.click(); header.querySelector('[aria-selected="true"]')?.focus({preventScroll:true});
+      const step = event.key === 'ArrowRight' ? 1 : -1;
+      const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs.at(-1) : tabs[(index + step + tabs.length) % tabs.length];
+      next.click();
+      tablist.querySelector('[aria-selected="true"]')?.focus({preventScroll:true});
     };
     render();
   }
