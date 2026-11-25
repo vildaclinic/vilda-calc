@@ -11,6 +11,7 @@
   let registration = null, registrationHost;
   let displayedVisit = null, measurementAge = null, pendingPatientAction = null;
   const labels = {history: 'Historia wizyt', overview: 'Przegląd', analysis: 'Analiza'};
+  const defaultScrollRestoration = w.history.scrollRestoration;
   const entryTrails = {
     start: [null,'Ekran startowy'], office: ['Ekran startowy'],
     registration: ['Ekran startowy','Dodaj pacjenta'], rapid: ['Ekran startowy','Szybka ścieżka']
@@ -232,13 +233,16 @@
     if (fields) fields.disabled = visitMeasurementsReadOnly();
     analysis.setAttribute('aria-labelledby', value === 'rapid' ? 'gbRapidTitle' : 'vhomeGabinetAnalysisTab');
     const view = value === 'start' && entryView === 'office' ? 'office' : value;
+    const patientView = Object.hasOwn(labels, view);
+    // The patient workspace owns restoration when its History entry is released.
+    if (defaultScrollRestoration) w.history.scrollRestoration = patientView ? 'manual' : defaultScrollRestoration;
     if (view) main.dataset.vhomeScreen = view;
     else delete main.dataset.vhomeScreen;
     renderEntryTrail(view);
     const pane = w.frameElement;
     if (pane?.classList.contains('app-pane')) {
       pane.toggleAttribute('data-vhome-workspace', Boolean(value));
-      pane.toggleAttribute('data-vhome-patient', Object.hasOwn(labels, view));
+      pane.toggleAttribute('data-vhome-patient', patientView);
       const directory = view === 'registration' ? 'registration' : view === 'start' ? '' : null;
       if (directory === null) pane.removeAttribute('data-vhome-directory');
       else if (pane.getAttribute('data-vhome-directory') !== directory) pane.setAttribute('data-vhome-directory', directory);
@@ -408,7 +412,9 @@
       return;
     }
     if (historyView && next === screen) return historyView.back();
-    return next === 'analysis' ? showAnalysis() : showOverview();
+    const opened = next === 'analysis' ? showAnalysis() : showOverview();
+    if (opened) header.querySelector('[role="tab"][aria-selected="true"]')?.focus({preventScroll: true});
+    return opened;
   }
   let labEntry = null;
   function prepareLabEntry() {
