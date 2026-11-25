@@ -1730,20 +1730,28 @@ function Bpk_dl(a, c) {
   if (a.t !== c.t) return a.t > c.t ? a : c;
   return Bpk_nowszy(c.d, a.d) ? c : a;
 }
+// Karta wpisu z najpozniejszego nagrobka (t), przy remisie chwil — wiekszy id. Od E3-PR0e2b (decyzja wlasciciela
+// z 2026-11-24) skladnik niesie tez chwile przypisania wersji do tej karty (assignedAtISO, tylko gdy jest) — zawsze
+// razem z karta, ktora wygrala, nigdy chwila jednej karty przy innej; przy tej samej karcie i chwili — pozniejsza
+// z obu (brak = najwczesniej). Porzadek leksykograficzny (t, id, chwila): przemiennie, lacznie, idempotentnie.
 function Bpk_karta(a, c) {
   if (!a) return c;
   if (!c) return a;
   if (a.t !== c.t) return a.t > c.t ? a : c;
-  return c.id > a.id ? c : a;
+  if (a.id !== c.id) return c.id > a.id ? c : a;
+  return Bsw_chwilaPrzypisania(c) > Bsw_chwilaPrzypisania(a) ? c : a;
 }
 // Skladniki nagrobka e: z lokalnego stanu (e.Bpk) albo — ladunek, dawna lista — z jego pol.
 // Odcisk pol wpisu, z ktorych Bpk_wpis zbudowal wpis (K1, decyzja wlasciciela D10 = a). Starszy kod (cofniecie wydania,
 // stara karta przegladarki na tym samym magazynie) zmienia pola wpisu przez Object.assign i przenosi Bpk bez zmian — przy
 // niezgodnym odcisku skladniki liczone sa z pol, jak dla dawnej listy (inaczej spadala rev i ginela pozniejsza poprawka).
+// Chwila przypisania wersji do karty wpisu (E3-PR0e2b) — w odcisku tylko, gdy jest: odcisk wpisu bez niej jest bajt
+// w bajt jak dotad (skladniki zapisane wczesniej nie licza sie od nowa).
 function Bpk_odcisk(e) {
   const c = e.payloadCipher;
   return JSON.stringify([e.patientId, e.deletedAtISO, e.przycietoISO || null, e.powod || null, mt(e), e.updatedAtISO || null,
-    e.savedAtISO || null, e.seq == null ? null : e.seq, e.zmianaISO || null, e.koszISO || null, e.revPary || null, c ? c.iv : null]);
+    e.savedAtISO || null, e.seq == null ? null : e.seq, e.zmianaISO || null, e.koszISO || null, e.revPary || null, c ? c.iv : null]
+    .concat(Bsw_chwilaPrzypisania(e) ? [Bsw_chwilaPrzypisania(e)] : []));
 }
 // Z4: chwila tresci wpisu kosza bez skladnikow i bez trescISO — z tresci (Bgw_stan), jak dla tresci z ladunku
 // (Bkz_scalStart). Dotad z opisu: wpis kosza starszej aplikacji z gwiazdka zmieniona na tym urzadzeniu (opis = chwila
@@ -1788,7 +1796,8 @@ function Bpk_zWpisu(e) {
     wr: -1,
     dm: opis,
     dl: { t: ost, d: opis },
-    p: { t: ost, id: e.patientId },
+    // Karta wpisu i (E3-PR0e2b) chwila przypisania wersji do niej, tylko gdy jest (Bpk_karta).
+    p: Object.assign({ t: ost, id: e.patientId }, Bsw_przypisanie(e)),
     g: Bgw_zWpisu(e),
   };
 }
@@ -1885,6 +1894,8 @@ function Bpk_wpis(baza, pk) {
   // W3: rejestr gwiazdki (bez rejestru „nigdy jawnie” — nic nie mowi) i chwila tresci kosza.
   if (pk.g && (pk.g.pin || pk.g.at)) e.gwiazdka = { pin: !!pk.g.pin, at: pk.g.at || null };
   if (wazny && pk.t && pk.t.c) e.trescISO = Bpk_cz(pk.t);
+  // E3-PR0e2b: chwila przypisania wersji do karty wpisu — ze skladnika karty, razem z nia (bez niej wpis jak dotad).
+  Object.assign(e, Bsw_przypisanie(pk.p));
   e.Bpk = wazny && pk.t && pk.t.c ? Object.assign({}, pk, { t: { wE: true, o: pk.t.o, od: pk.t.od, cz: Bpk_cz(pk.t) } }) : Object.assign({}, pk);
   e.Bpk.f = Bpk_odcisk(e);
   return e;
@@ -2478,6 +2489,9 @@ async function Bkz_doKosza(patientId, snapshotId, opcje) {
       visitCipher: Bvisit_cipher,
       trescISO: Bgw_st.cz,
     }, Bm1(zapis), Bgw_st.pin || Bgw_st.at ? { gwiazdka: { pin: Bgw_st.pin, at: Bgw_st.at } } : null);
+    // E3-PR0e2b (decyzja wlasciciela z 2026-11-24): wpis pamieta chwile przypisania usuwanej wersji do karty (kopia,
+    // tylko gdy jest; bez nowej chwili) — bez niej wpis bajt w bajt jak dotad.
+    Object.assign(wpis, Bsw_przypisanie(zapis));
     // Najpierw kosz, potem usuniecie: bez potwierdzonego wpisu w koszu wersja zostaje.
     // F-F (panel 2026-10-22): odpiecie jest juz zapisane — przy bledzie kosza (np. brak miejsca w IndexedDB) wersja wraca
     // przypieta (Bkz_przypnijPoBledzie), inaczej zostawala odpieta mimo komunikatu „karta bez zmian” i retencja mogla ja
@@ -2668,9 +2682,12 @@ async function Bkz_przywroc(patientId, snapshotId) {const PatientClinicalOperati
       Bgw_szyfr = await V(Bgw_ustaw(zrodlo, zmiana, g || rej));
     } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); /* tresc bez zmian */ }
     const zapisano = zKarty ? (obecna.savedAtISO || e.savedAtISO || teraz) : (e.savedAtISO || teraz);
-    // Chwila przypisania wersji do karty (E3-PR0e2a, P-SYNC-WLASCICIEL) — z wersji w karcie (obecna), gdy jest. Wpis
-    // kosza jej nie przechowuje (polkrata kosza odbudowuje wpis ze swoich skladnikow), wiec zapis tylko z kosza wraca
-    // bez niej, a wlasciciela takiej wersji wspolnej dwom kartom rozstrzyga regula dla danych bez tej chwili (rev).
+    // Chwila przypisania wersji do karty (E3-PR0e2a, P-SYNC-WLASCICIEL) — pozniejsza z wersji w karcie (obecna), gdy
+    // jest, i z wpisu kosza, gdy wersja wraca pod karte wpisu. Od E3-PR0e2b wpis kosza ja pamieta (skladnik karty
+    // polkraty, razem z karta wpisu; decyzja wlasciciela z 2026-11-24), wiec zapis tylko z kosza wraca z nia: poprawka
+    // albo gwiazdka tej wersji w starej karcie na urzadzeniu bez wiedzy o „Scal pacjentow” dalej trafia do karty
+    // scalonej. Pod inna karta niz karta wpisu (F-R5) — tylko chwila wersji, ktora tam lezy; wpis bez tej chwili (sprzed
+    // E3-PR0e2b) — jak dotad.
     pilnuj();
     await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(zKarty ? Bm1(obecna, e) : Bm1(e), {
       snapshotId: snapshotId,
@@ -2679,7 +2696,7 @@ async function Bkz_przywroc(patientId, snapshotId) {const PatientClinicalOperati
       rev: Math.max(revUsuniecia, obecna ? mt(obecna) : 0) + 1,
       updatedAtISO: zmiana,
       payloadCipher: Bgw_szyfr,
-    }, Bsw_przypisanie(obecna))));
+    }, Bsw_przypisanie(karta === patientId ? e : null, obecna))));
     // Kolejnosc: wersja, naglowek, wpis kosza. Przerwane przed zdjeciem wpisu zostawia go w koszu, a nastepne „Przywroc”
     // konczy przywrocenie („juz w karcie” z naglowkiem); wersja ze stemplem i tak wygrywa z nagrobkiem przy
     // synchronizacji (gdy ta przyjdzie pierwsza, zdejmuje wpis, a chwila zapisu karty zostaje w tyle — ograniczenie).
@@ -2720,6 +2737,7 @@ async function Bkz_eksport() {
         if (typeof e.przycietoISO === 'string' && e.przycietoISO) w.przycietoISO = e.przycietoISO;
         if (Array.isArray(e.revPary) && e.revPary.length) w.revPary = e.revPary; // P-KOSZ-POLKRATA: pary rev tresci
       }
+      Object.assign(w, Bsw_przypisanie(e)); // E3-PR0e2b: chwila przypisania wersji do karty wpisu, tylko gdy jest
       if (typeof e.zmianaISO === 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;
       const gwiazdka = Bgw_zWpisu(e);
       if (gwiazdka) w.gwiazdka = gwiazdka; // P-PRZYPIETA-POLKRATA (W3): rejestr gwiazdki; brak — „nieznany”
@@ -2769,6 +2787,8 @@ async function Bkz_scalStart(t) {
         e.przycietoISO = z.przycietoISO;
       }
       if (typeof z.zmianaISO === 'string' && z.zmianaISO > Bkz_zmiana(e)) e.zmianaISO = z.zmianaISO;
+      // E3-PR0e2b: chwila przypisania wersji do karty wpisu z ladunku — tylko w postaci kanonicznej (Bsw_przypisanie).
+      Object.assign(e, Bsw_przypisanie(z));
       // W3: rejestr gwiazdki nagrobka z ladunku — tylko z pola gwiazdka (brak pola: „nieznany”, decyduje gwiazdka wersji,
       // jak we flocie starszych aplikacji); z tresci kosza — tylko chwila tresci. Nowa aplikacja wysyla w polu rejestr,
       // ktory zna jej nagrobek (takze rejestr tresci kosza). Starsza aplikacja pola nie zna, a jej „Odepnij i usun” wklada
@@ -2916,8 +2936,9 @@ async function Bgw_zloz(ctx, patientId, lokalna, tresc, e, opcje) {const Patient
 // pozniejsza zmiane), nagrobek nie jest waznym koszem, a jego rejestr gwiazdki jest przypiety — „przypieta → karta”:
 // wersja wraca do karty z cienia (najnowsza tresc, jaka zna to urzadzenie) z ta gwiazdka. Gdy tresc i rejestr sa te
 // same co w cieniu — dawny rekord bez zmian (rev, chwile); inaczej rekord zlozony. Bez cienia — nic (wersja przyjdzie
-// z urzadzenia, ktore ja ma). Zwraca { rekord, st } albo false. Chwili przypisania wersji do karty (E3-PR0e2a) wpis
-// kosza nie przechowuje, wiec wersja z cienia wraca bez niej (jak „Przywroc” zapisu tylko z kosza).
+// z urzadzenia, ktore ja ma). Zwraca { rekord, st } albo false. Chwila przypisania wersji do karty (E3-PR0e2a) — od
+// E3-PR0e2b z wpisu kosza (pamieta ja dla karty wpisu, pod ktora wersja wraca; jak „Przywroc” zapisu tylko z kosza),
+// tylko gdy jest.
 // P-KOSZ-PO-KLUCZU (F-R4, przeglad 3): w delcie (bez listy kosza, ctx.pelny falsz) Bkz_gdzieIndziej nie szuka, wiec
 // wersje lezaca tu pod inna karta zapis z cienia pod karta wpisu przenosil (ten sam snapshotId) bez licznika i naglowka
 // tamtej karty — po stanie M01 (x 74* pod stara X, wpis retencji x pod Z z cieniem) delta na zywo zostawilaby X z 1 wizyta
@@ -2950,6 +2971,7 @@ async function Bgw_wskrzes(ctx, patientId, e, opcje) {const PatientClinicalOpera
     updatedAtISO: zlozony ? Bkz_pozniejsza(st.cz, pk.g.at) : (o.updatedAtISO || null),
     payloadCipher: zlozony ? await V(nowa) : Bpc_c,
   });
+  Object.assign(rekord, Bsw_przypisanie(e)); // E3-PR0e2b: chwila przypisania z wpisu kosza (karta wpisu), gdy jest
   Bses_pilnuj(opcje); // P-CHMURA-OPIS w S4: zapis tylko w sesji scalania, bez await przed nim
   await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(Bm1(rekord), rekord)));
   ctx.dotknieci.add(patientId);
@@ -3691,10 +3713,10 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     ta chwila — wtedy osobny zapis), wersja wspolna dwom kartom (decyzje 'zabierz', 'przenies', 'tresc', rekord W3,
  *     nastepca) i „Przywroc” wersji lezacej tez w karcie. Zapisy z jednej kopii biora chwile z tej kopii: decyzja
  *     'nowa' (takze nad rekordem wersji bez karty), od E3-PR0e3 wersja wracajaca do karty wpisu kosza
- *     (Bsw_doKartyWpisu; tutejszej kopii nie ma, a wpis kosza jej nie przechowuje), import karty, „Scal kopie konta”
- *     i odtworzenie konta (z pliku — import karty takze nad wersja, ktora lezy tu pod inna karta: przenosi ja do
- *     importowanej karty jak dotad, z chwila z pliku), a „Przywroc” zapisu tylko z kosza i wskrzeszenie z cienia
- *     kosza — bez niej (wpis kosza jej nie przechowuje).
+ *     (Bsw_doKartyWpisu; tutejszej kopii nie ma — od E3-PR0e2b pozniejsza z ladunku i z wpisu kosza), import karty,
+ *     „Scal kopie konta” i odtworzenie konta (z pliku — import karty takze nad wersja, ktora lezy tu pod inna karta:
+ *     przenosi ja do importowanej karty jak dotad, z chwila z pliku), a „Przywroc” zapisu tylko z kosza i wskrzeszenie
+ *     z cienia kosza — do E3-PR0e2b bez niej, od E3-PR0e2b z chwila z wpisu kosza (nizej).
  *     Faza przeniesien przenosi tylko rekord, ktorego chwila przypisania nie zmienila sie od decyzji (Bsw_przenies).
  *     Eksport pelny, delta karty, plik karty, kopia konta i koperta zdarzenia niosa ja za payload;
  *     bez niej rekord i element sa bajt w bajt jak dotad. O wlascicielu wersji wspolnej dwom kartom decyduje najpierw
@@ -3712,6 +3734,15 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     wraca z jej powodu; nowa wizyta w starej karcie dalej ja zwraca (notatki — jak dotad). Inne drogi nowej chwili
  *     nie tworza (decyzje fazy przeniesien, import karty, „Scal kopie konta”, odtworzenie konta, „Przywroc”, wersja
  *     przezywajaca retencje, wersja wracajaca do karty wpisu kosza) — tylko kopia albo pozniejsza z istniejacych.
+ *     Od E3-PR0e2b takze wpis kosza pamieta chwile przypisania wersji do karty wpisu (decyzja wlasciciela
+ *     z 2026-11-24: to samo wydanie, osobna, osobno sprawdzana czesc): „Do Kosza” kopiuje ja z usuwanej wersji, polkrata
+ *     kosza niesie ja w skladniku karty wpisu (zawsze razem z ta karta; przy tej samej karcie i chwili usuniecia —
+ *     pozniejsza z obu; Bpk_karta), eksport, koperta wpisu kosza i przyjecie z ladunku — tylko w postaci kanonicznej,
+ *     a „Przywroc” pod karta wpisu, wskrzeszenie z cienia, wersja wracajaca do karty wpisu (takze wersja przezywajaca
+ *     retencje pod karta wpisu) lacza ja z chwila wersji (Bsw_przypisanie). Bez nowej chwili i bez zegara; odcisk,
+ *     eksport i koperta wpisu bez tego pola — bajt w bajt jak dotad. Sama ta chwila nie wywoluje odeslania wpisu kosza
+ *     (kanon odsylania kosza w bloku P-DZIENNIK-ZDARZEN). Kosz z „Przywroc” w karcie scalonej i poprawka tej wizyty
+ *     w starej karcie na urzadzeniu bez wiedzy o scaleniu konczy wiec w karcie scalonej, a stara karta nie wraca.
  * Format ladunku, delt i nagrobkow bez zmian (delta nagrobka wypelnia istniejace pole patients); od E3-PR0e2a wersja
  * moze niesc jedno pole wiecej (wyzej).
  */
@@ -4392,6 +4423,9 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
  * zmiana ginela tu z karta X, a ladunek stad nie niosl juz tej wizyty — ginela na wszystkich urzadzeniach. Teraz
  * wersja przechodzi pod Q, a koniec scalania kosza zdejmuje wpis (Bkz_scalKoniec: wersja pozniejsza niz wpis bierze
  * jego rejestr gwiazdki i nowsza tresc z cienia, W3) — tak samo jak dzis w jednej karcie.
+ * E3-PR0e2b: pod karta wpisu (karta docelowa = karta wpisu kosza albo przyciecia) rekord dostaje tez chwile
+ * przypisania wersji do karty z wpisu — pozniejsza z wersji i z wpisu (Bsw_przypisanie); pod inna karta — rekord
+ * bez zmian, jak dotad.
  */
 async function Bsw_przezyteRetencji(ctx, lista, opcje) {
   const wynik = { przeniesione: 0, usuniete: 0, odlozone: [] };
@@ -4442,7 +4476,7 @@ async function Bsw_przezyteRetencji(ctx, lista, opcje) {
       try { tresc = await G(s.payloadCipher.iv, s.payloadCipher.data); } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); tresc = null; }
       if (!tresc || typeof tresc !== 'object' || Bkz_wygrywa(e, Bkz_zmiana(s), Bgw_stan(s, tresc))) continue;
       const H = Bkz_chwilaKosza(e) ? await kartaWpisu(X, e) : await cel(X, e, wersje);
-      if (H) kand.push({ X: X, s: s, H: H, m: m[X] });
+      if (H) kand.push({ X: X, s: s, H: H, m: m[X], e: e });
     }
     for (let i = 0; i < kand.length; i += 1) {
       if (await Bsw_przeniesPrzezyta(kand[i], wynik, opcje) === 'bezH') wynik.odlozone.push(kand[i]);
@@ -4458,8 +4492,9 @@ async function Bsw_przezyteRetencji(ctx, lista, opcje) {
 // lezy pod Q i nadal z nia nie wygrywa (np. ponowny kosz w innej karcie przegladarki wygrywa — bez zapisu). Wtedy
 // wersja z ladunku zostaje zapisana pod Q jako nowa wersja tej karty: rekord z jednej kopii (Bsl_wersjaZLadunku —
 // tresc, gwiazdka, chwila zmiany, rev, chwila zapisu i chwila przypisania wersji do karty z ladunku, Bsw_przypisanie;
-// tutejszej kopii nie ma, a wpis kosza tej chwili nie przechowuje), tozsamosc wizyty spieta z wpisem i przypisana do Q
-// (Bvisit_bindTombstone, Bvisit_read — jak nowa wersja w Bsl_scalPacjenta), licznik i naglowek Q z najnowszej wersji
+// tutejszej kopii nie ma; od E3-PR0e2b — pozniejsza z ladunku i z wpisu kosza, ktory ja pamieta dla Q), tozsamosc
+// wizyty spieta z wpisem i przypisana do Q (Bvisit_bindTombstone, Bvisit_read — jak nowa wersja w Bsl_scalPacjenta),
+// licznik i naglowek Q z najnowszej wersji
 // (Bkz_przebudujNaglowek, D-3 A; chwila zapisu karty — pozniejsza z dotychczasowej i chwili zapisu najnowszej wersji,
 // wiec chwila zmiany tej wersji jej nie podnosi, jak przy decyzji 'tresc'). Wpis rozstrzyga potem koniec scalania
 // kosza (Bkz_scalKoniec), tak samo jak dzis w jednej karcie: wersja pozniejsza niz wpis bierze jego rejestr gwiazdki
@@ -4489,14 +4524,15 @@ async function Bsw_doKartyWpisu(p, teraz, ctx, opcje) {const PatientClinicalOper
   const szyfr = await V(Bvisit_payload);
   const rek = Bsl_wersjaZLadunku({ patientId: Q }, S, szyfr, teraz);
   Bses_pilnuj(opcje);
-  await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(rek, Bm1(S))));
+  await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(rek, Bsw_przypisanie(rek, e), Bm1(S))));
   Bses_pilnuj(opcje);
   await Bkz_przebudujNaglowek(Q, undefined, opcje);
   return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ dodana: 0, usunieta: 0 });
 }
 
 // Przeniesienie wersji k.s spod karty k.X pod k.H (Bsw_przezyteRetencji) pod blokadami obu kart (rosnace id), na
-// swiezym odczycie. 'bezH' — karty docelowej tu jeszcze nie ma (zalozy ja 'zabierz' tej fazy).
+// swiezym odczycie. 'bezH' — karty docelowej tu jeszcze nie ma (zalozy ja 'zabierz' tej fazy). Od E3-PR0e2b pod karta
+// wpisu k.e — z chwila przypisania z wpisu (pozniejsza z obu), pod inna — bez niej.
 async function Bsw_przeniesPrzezyta(k, wynik, opcje) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   const X = k.X, H = k.H, para = X < H ? [X, H] : [H, X];
   const r = await Bsl_podBlokada(para[0], function () {
@@ -4514,7 +4550,7 @@ async function Bsw_przeniesPrzezyta(k, wynik, opcje) {const PatientClinicalOpera
       const g = wX.find(function (q) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,q && q.snapshotId === k.s.snapshotId); });
       if (!g || mt(g) !== mt(k.s) || (g.updatedAtISO || null) !== (k.s.updatedAtISO || null)) return PatientClinicalWriteValue(PatientClinicalOperationAccount,null);
       Bses_pilnuj(opcje); // P-CHMURA-OPIS: zapis tylko w sesji scalania, bez await przed nim
-      await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(Bm1(g), g, { patientId: H })));
+      await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(Bm1(g), g, { patientId: H }, Bsw_przypisanie(g, k.e && k.e.patientId === H ? k.e : null))));
       Bses_pilnuj(opcje);
       await Bkz_przebudujNaglowek(H, undefined, opcje);
       const pozostale = wX.filter(function (q) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,q && q.snapshotId !== g.snapshotId); });
@@ -7000,7 +7036,8 @@ const Bev_POLA_KARTY = Object.freeze(['patientId', 'header', 'snapshots', 'creat
 // assignedAtISO — chwila przypisania wersji do karty, tylko gdy jest (E3-PR0e2a, Bev_wersja); obce pola wersji i seq
 // dalej odrzucane.
 const Bev_POLA_WERSJI = Object.freeze(['snapshotId', 'savedAtISO', 'rev', 'updatedAtISO', 'payload', 'assignedAtISO']);
-const Bev_POLA_KOSZA = Object.freeze(['patientId', 'snapshotId', 'deletedAtISO', 'savedAtISO', 'rev', 'updatedAtISO', 'seq',
+// assignedAtISO — chwila przypisania wersji do karty wpisu, tylko gdy jest (E3-PR0e2b, Bev_wpisKosza).
+const Bev_POLA_KOSZA = Object.freeze(['assignedAtISO', 'patientId', 'snapshotId', 'deletedAtISO', 'savedAtISO', 'rev', 'updatedAtISO', 'seq',
   'powod', 'koszISO', 'przycietoISO', 'revPary', 'zmianaISO', 'gwiazdka', 'payload', 'visitIdentity']);
 // Identyfikator urzadzenia w kopercie: 8 znakow bez mylacych (l, o, 0, 1) albo null.
 const Bev_DEV = /^[a-km-np-z2-9]{8}$/;
@@ -7354,6 +7391,7 @@ async function Bev_wpisKosza(c, e) {
     if (typeof e.przycietoISO === 'string' && e.przycietoISO) w.przycietoISO = e.przycietoISO;
     if (Array.isArray(e.revPary) && e.revPary.length) w.revPary = e.revPary;
   }
+  Object.assign(w, Bsw_przypisanie(e)); // E3-PR0e2b: chwila przypisania wersji do karty wpisu, tylko gdy jest
   if (typeof e.zmianaISO === 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;
   const gwiazdka = Bgw_zWpisu(e);
   if (gwiazdka) w.gwiazdka = gwiazdka;
@@ -7911,7 +7949,9 @@ async function Bev_echo(k, przed, po) {
 // osobna regula ze stanu po scaleniu nizej, ta sama lista kol.kosz.
 const Bev_ECHO_ZAWSZE_KOSZA = Object.freeze(['visitIdentity', 'payload.visit']);
 // Sciezki zdejmowane w kanonie wpisu: opis zalezny od kolejnosci scalen (D7), seq i postac gwiazdki w tresci (R4n).
-const Bev_KANON_KOSZA = Object.freeze(['rev', 'updatedAtISO', 'zmianaISO', 'koszISO', 'revPary', 'seq',
+// Od E3-PR0e2b takze chwila przypisania wersji do karty wpisu (jak Bev_ECHO_POMIJANE wersji): sama nie wywoluje
+// odeslania wpisu — zbieznosc daje laczenie „pozniejsza z obu” przy tej samej karcie wpisu (Bpk_karta).
+const Bev_KANON_KOSZA = Object.freeze(['assignedAtISO', 'rev', 'updatedAtISO', 'zmianaISO', 'koszISO', 'revPary', 'seq',
   'payload._pinned', 'payload._pinnedState']);
 // Wpisy Kosza z ladunku: snapshotId -> kopie elementow snapshotTombstones[] w kolejnosci ladunku (funkcja czysta).
 function Bev_kandydaciKosza(t) {

@@ -206,6 +206,12 @@
 //   „Scal pacjentów” przy otwartej bramce z chwilą przypisania przeniesionej wersji — w kolejce te same wiersze co bez niej
 //        (przeniesione wersje, nowa głowa, nagrobek karty źródłowej z kartą docelową), koperty wersji i nagrobka niosą tę
 //        chwilę (czerwony na bazie — builder koperty gubi pole).
+// PRZYPADKI E3-PR0e2b, część Kosza (KOSZ_PAMIETA_PRZYPISANIE, tests/support/czesci-wydania.mjs; decyzja właściciela
+// z 2026-11-24): wpis Kosza pamięta chwilę przypisania wersji do karty wpisu, a kanon odsyłania Kosza ją pomija — sama
+// chwila nie wywołuje odesłania wpisu. Wymiana kopert wpisu Kosza w obie strony, trzy obiegi, oba okna z odsyłaniem:
+// pole tylko po jednej stronie, różne pola (późniejsze i wcześniejsze u drugiego), a u drugiego bez pola i z późniejszą
+// gwiazdką wpisu — 0 wierszy odsyłania na obu, wpisy zbieżne (późniejsza chwila; zielone z natury — mutant: kanon bez
+// pola daje w ostatnim układzie zbędne odesłanie wpisu stomb, bez pętli).
 // Kopia sejfu tylko w tym pliku (busy, apply-error i błąd odczytu stanu): wstawka na początku Bkz_scalKoniec (faza Kosza,
 // po zapisie wersji w Le), na początku Le albo na początku Bev_stanEcha (odczyt stanu kandydatów) rzuca raz fikcyjny błąd
 // z pola okna — prawdziwą drogą zajęta blokada karty w fazie Kosza wymaga limitu blokady; strażnik osiągalności: Le
@@ -219,6 +225,7 @@ import { SKRYPTY_PUNKTU, oknoMagazynu, przechwycZadaniaWTle } from '../support/o
 import { naglowek, wytnijFunkcje } from './sesja-zapisu-uprzaz.mjs';
 import { ZRODLO_SEJFU, bezOdsylania, licznikEmisji } from '../support/sejf-bez-wstawek.mjs';
 import { POLA_D7, POLA_POMIJANE, POLA_ZAWSZE, POSTAC_GWIAZDKI, STALE_WYGRYWA, WYGRYWA_Z_SEJFU, odcisk, stalaZKodu } from '../support/licznik-odsylania.mjs';
+import { KOSZ_PAMIETA_PRZYPISANIE } from '../support/czesci-wydania.mjs';
 
 const START = Date.parse('2026-03-02T08:00:00.000Z');
 const MIN = 60_000;
@@ -3669,4 +3676,45 @@ describe('wpis Kosza pod żywą kartą po „Scal pacjentów”: wersja wracają
       zWpisu: !!vid && !!x && !!x.payload.visit && x.payload.visit.visitId === vid, koperty,
     }).toEqual({ podQ: true, karta: 'Q', zWpisu: true, koperty: [{ karta: 'Q', wizyta: 'Q', zWpisu: true }] });
   }, CZAS);
+});
+
+// ── wpis Kosza z chwilą przypisania (E3-PR0e2b, część Kosza) — sama chwila nie wywołuje odesłania wpisu ─────────────────
+// A: karta P [v 20 kg, w 21 kg], v z chwilą przypisania (jak po „Scal pacjentów”), v do Kosza; bliźniak B (z odsyłaniem)
+// dostaje wpis v w postaci zmienionej (jak od innej wersji aplikacji albo z innym przypisaniem), potem trzy obiegi kopert
+// wpisu v w obie strony.
+describe.skipIf(!KOSZ_PAMIETA_PRZYPISANIE)('wpis Kosza z chwilą przypisania (część Kosza E3-PR0e2b) — sama chwila nie wywołuje odesłania wpisu', () => {
+  const T0 = '2026-03-02T09:20:00.000Z';
+  const UKLADY = [
+    ['chwila tylko u A (B dostaje wpis bez niej)', (e) => { delete e.assignedAtISO; return e; }, PRZYPISANIE_WCZESNIEJ],
+    ['różne chwile, u B późniejsza', (e) => ({ ...e, assignedAtISO: PRZYPISANIE_POZNIEJ }), PRZYPISANIE_POZNIEJ],
+    ['różne chwile, u B wcześniejsza', (e) => ({ ...e, assignedAtISO: T0 }), PRZYPISANIE_WCZESNIEJ],
+    ['u B bez chwili i z późniejszą gwiazdką wpisu', (e) => { delete e.assignedAtISO; return { ...e, gwiazdka: { pin: true, at: pozniej(e.deletedAtISO, 1000) } }; }, PRZYPISANIE_WCZESNIEJ],
+  ];
+  for (const [nazwa, zmienB, oczekiwana] of UKLADY) {
+    it(`${nazwa}: trzy obiegi kopert wpisu w obie strony — 0 wierszy odsyłania na obu, wpisy zbieżne z późniejszą chwilą`, async () => {
+      const o = await okno({ bramka: true, echo: true });
+      await o.zaloguj('A');
+      const k = await karta(o, 1, [20, 21]);
+      const v = k.w[0];
+      await wstawPrzypisanie(o, v, PRZYPISANIE_WCZESNIEJ);
+      await o.gotowe();
+      const B = await blizniak(o, { emisja: true, echo: true });
+      tik(MIN);
+      await o.v.moveSnapshotToTrash(k.P, v);
+      tik();
+      await o.gotowe();
+      expect((await zastosuj(B, (await kopertaKoszaZ(o, v, zmienB)).env)).status, 'kontrola: B przyjmuje wpis v').toBe('applied');
+      await B.gotowe();
+      const a0 = ostatni(o), b0 = ostatni(B);
+      for (let i = 0; i < 3; i += 1) {
+        expect((await zastosuj(o, (await koperta(B, await B.ev.buildSnapshotTombstoneEvent(v, null))).env)).status).toBe('applied');
+        expect((await zastosuj(B, (await koperta(o, await o.ev.buildSnapshotTombstoneEvent(v, null))).env)).status).toBe('applied');
+      }
+      const wA = JSON.parse(surowyKosz(o, v)), wB = JSON.parse(surowyKosz(B, v));
+      const chwila = (l) => l.map((e) => e.assignedAtISO || null);
+      expect({ A: wierszeOd(o, a0).map(opis), B: wierszeOd(B, b0).map(opis) }, 'wiersze odsyłania').toEqual({ A: [], B: [] });
+      expect({ A: chwila(wA), B: chwila(wB) }, 'wpisy zbieżne: późniejsza chwila').toEqual({ A: [oczekiwana], B: [oczekiwana] });
+      expect([await wersja(o, k.P, v), await wersja(B, k.P, v)], 'kontrola: v w Koszu na obu').toEqual([null, null]);
+    }, 2 * CZAS);
+  }
 });
