@@ -1543,6 +1543,7 @@ test('a visit diagnosis shows its destination and can be removed only from its o
         Math.min(field.bottom, other.bottom) - Math.max(field.top, other.top) <= 0.5));
       return box.width > 0 && dialog.scrollWidth <= dialog.clientWidth + 1 &&
         [...fields, ...actions].every(field => field.width > 0 && field.left >= box.left && field.right <= box.right + 0.5) &&
+        actions.length === 2 && Math.abs(actions[0].width - actions[1].width) <= 0.5 &&
         separate(fields) && separate(actions);
     }), { message: 'Compact diagnosis fields and actions remain separate at ' + width }).toBe(true);
   }
@@ -1564,7 +1565,9 @@ test('a visit diagnosis shows its destination and can be removed only from its o
       return [first.id, second.id];
     } finally { scope.dispose(); }
   }, ids.a);
-  await treatment.click();
+  const section = card.locator('.vhome-b1-mobile-select');
+  if (await section.isVisible()) await section.selectOption('treatment');
+  else await treatment.click();
   const compact = card.locator('.vhome-treatment.vpt-compact');
   await expect(compact).toBeVisible();
   for (const title of ['Rozpoznania', 'Przebieg leczenia', 'Wpisy']) {
@@ -1594,6 +1597,17 @@ test('a visit diagnosis shows its destination and can be removed only from its o
   await expect(editor.getByLabel('Nazwa leczenia')).toHaveValue('Fikcyjne leczenie A');
   await expect(editor.locator('[data-treatment-medication-fields]')).toBeVisible();
   await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  const secondEpisode = compact.locator(`[data-treatment-therapy-id="${episodeIds[1]}"]`);
+  await secondEpisode.getByRole('button', { name: 'Przebieg', exact: true }).click();
+  const editedDetail = compact.locator(`[data-treatment-detail-id="${episodeIds[1]}"]`);
+  await editedDetail.getByRole('button', { name: 'Edytuj leczenie', exact: true }).click();
+  const previousPanel = await compact.elementHandle();
+  await editor.getByLabel('Uwagi i ustalenia').fill('Fikcyjny zapis kontroli drugiej terapii');
+  await editor.getByRole('button', { name: 'Zapisz', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await expect.poll(() => previousPanel.evaluate(node => !node.isConnected)).toBe(true);
+  await previousPanel.dispose();
+  await expect(editedDetail.getByText('Fikcyjny zapis kontroli drugiej terapii', { exact: true })).toBeVisible();
   expect(await visits()).toEqual(beforeRemoval);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const edit = card.locator(`[data-treatment-diagnosis-id="${note.id}"]`).getByRole('button', { name: 'Edytuj', exact: true });

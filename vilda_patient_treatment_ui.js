@@ -255,8 +255,11 @@
     var episodes = view.data.episodes.slice().sort(function (a, b) { return (a.context.status === 'closed') - (b.context.status === 'closed') || a.context.title.localeCompare(b.context.title, 'pl'); });
     if (view.focusId && episodes.some(function (entry) { return entry.id === view.focusId; })) view.selected = view.focusId;
     if (view.selected && !episodes.some(function (entry) { return entry.id === view.selected; })) view.selected = null;
+    if (view.options.compact) {
+      if (!view.selected) view.selected = episodes[0]?.id || null;
+      view.options.onSelection?.(view.selected);
+    }
     if (episodes.length) {
-      if (view.options.compact && !view.selected) view.selected = episodes[0].id;
       var grid = node('div', 'vpt-episode-grid'); episodes.forEach(function (entry) { grid.appendChild(renderEpisode(view, entry)); }); view.content.appendChild(grid);
       var chosen = episodes.find(function (entry) { return entry.id === view.selected; }); if (chosen) view.content.appendChild(renderDetail(view, chosen));
     } else if (!view.legacyNodes.length) view.content.appendChild(blank('Nie zapisano jeszcze leczenia.'));
@@ -577,7 +580,7 @@
     var root = node('div', 'vhome-treatment'); root.dataset.treatmentRoot = '';
     if (options.compact) root.classList.add('vpt-compact');
     var view = { host: host, root: root, options: options, vault: vault, userId: user.userId, token: token, loadedSequence: loadedSequence(), patientId: options.patientId,
-      disposed: false, phase: 'loading', data: null, readGeneration: 0, pendingRefresh: true, refreshQueued: false, selected: null, restoreHint: null, cancelFocus: null, restoringFocus: false,
+      disposed: false, phase: 'loading', data: null, readGeneration: 0, pendingRefresh: true, refreshQueued: false, selected: options.selectedEpisodeId || null, restoreHint: null, cancelFocus: null, restoringFocus: false,
       focusId: typeof options.focusNoteId === 'string' ? options.focusNoteId : null,
       legacyNodes: Array.isArray(options.legacyPanels) ? options.legacyPanels.filter(function (entry) { return entry && entry.nodeType === 1; }) : [], renderAbort: new w.AbortController(), ownerAbort: new w.AbortController(), wasConnected: false, scope: null };
     if (options.compact) options.titleNode?.remove();

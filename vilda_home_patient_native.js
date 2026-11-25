@@ -197,6 +197,10 @@
       }, isCurrent: function () { return current(view); },
       titleNode: view.treatmentTitle,
       focusNoteId: view.treatmentFocus || null,
+      selectedEpisodeId: view.workspaceHeader ? view.inline.selectedTreatmentId : null,
+      onSelection: function (id) {
+        if (view.workspaceHeader && current(view)) view.inline.selectedTreatmentId = id;
+      },
       legacyPanels: view.legacy, registerBack: view.registerBack,
       onDialog: function (dialog, metadata) { return nativeDialog(view, dialog, Object.assign({}, metadata, {historyHandled: true})); },
       onSummary: function (summary) { if (current(view)) { treatmentSummary(view, summary); resumeRefresh(view); if (summary.status === 'ready' || summary.status === 'error') restoreFocus(view, true); } },
