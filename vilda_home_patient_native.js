@@ -175,8 +175,9 @@
     if (!view.summary) return;
     var generic = summary?.status === 'ready' && summary.activeCount > 0
       ? summary.activeCount === 1 ? summary.activeLabels[0] : 'Aktywne leczenie: ' + summary.activeCount : '';
-    var label = [view.legacySummary, generic].filter(Boolean).join(' · ') || 'Dokumentacja leczenia pacjenta';
-    view.summary.querySelector('strong').textContent = label;
+    var label = [view.legacySummary, generic].filter(Boolean).join(' · ');
+    view.summary.hidden = view.workspaceHeader && !label;
+    view.summary.querySelector('strong').textContent = label || 'Dokumentacja leczenia pacjenta';
   }
   function mountTreatment(view) {
     if (!current(view) || view.treatment) return;
@@ -262,9 +263,12 @@
     var host = native.panels.antro;
     if (!host) return;
     var original = Array.from(host.children), grids = original.filter(function (item) { return item.classList.contains('vilda-patient-stats-grid'); });
-    var title = node('div', 'vhome-b1-section-heading'); title.appendChild(node('h3', '', 'Status'));
-    if (!view.workspaceHeader) title.appendChild(node('p', '', 'Zapisane wyniki i kontekst pacjenta.'));
-    var groups = [title];
+    var groups = [];
+    if (!view.workspaceHeader) {
+      var title = node('div', 'vhome-b1-section-heading');
+      title.append(node('h3', '', 'Status'), node('p', '', 'Zapisane wyniki i kontekst pacjenta.'));
+      groups.push(title);
+    }
     var missingSex = native.referenceSex === '';
     if (missingSex) {
       // Native legacy cards contain classifications even for an empty sex.
@@ -295,11 +299,15 @@
       var sameVisitDate = !!(view.workspaceHeader && encounter?.mode === 'browse' && visitDate && measurementDate === visitDate);
       view.measurementContext = Object.freeze({ patientId: view.patientId, ageLabel: ageLabel,
         measurementDateISO: date ? measurementDate : null, visitDateISO: visitDate, sameVisitDate: sameVisitDate });
-      var label = encounter?.mode === 'new' ? 'Ostatni pomiar' : 'Pomiar';
-      var context = node('div', 'vhome-b1-status-context');
-      context.appendChild(node('strong', '', date ? label + ' · ' + date : 'Zapisany pomiar'));
-      if (ageLabel) context.appendChild(node('span', '', ageLabel));
-      if (!sameVisitDate) measure.appendChild(context);
+      if (sameVisitDate) {
+        measure.appendChild(node('h3', 'vhome-b1-status-measure-title', 'Pomiar'));
+      } else {
+        var label = encounter?.mode === 'new' ? 'Ostatni pomiar' : 'Pomiar';
+        var context = node('div', 'vhome-b1-status-context');
+        context.appendChild(node('strong', '', date ? label + ' · ' + date : 'Zapisany pomiar'));
+        if (ageLabel) context.appendChild(node('span', '', ageLabel));
+        measure.appendChild(context);
+      }
       var ageNote = original.find(function (item) { return item.classList.contains('vilda-patient-age-note'); });
       if (ageNote && !(view.workspaceHeader && visitDate && date && ageLabel)) measure.appendChild(ageNote);
       measure.appendChild(grids[0]); groups.push(measure);
@@ -350,8 +358,11 @@
       if (item.classList.contains('vilda-patient-empty-msg') || !missingSex && item.classList.contains('vilda-copy-summary-row')) groups.push(item);
     });
     view.summary = node('div', 'vhome-b1-treatment-summary');
-    view.summary.appendChild(node('strong', '', view.legacySummary || 'Dokumentacja leczenia pacjenta'));
-    view.summary.appendChild(button('Otwórz leczenie →', function () { choose(view, 'treatment'); }, 'vhome-b1-text-button'));
+    view.summary.appendChild(node('strong', ''));
+    treatmentSummary(view, null);
+    if (!view.workspaceHeader) {
+      view.summary.appendChild(button('Otwórz leczenie →', function () { choose(view, 'treatment'); }, 'vhome-b1-text-button'));
+    }
     groups.push(view.summary); host.replaceChildren.apply(host, groups);
   }
   function decorate(native) {

@@ -896,3 +896,134 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-nav > [data-tab="remin
     padding-inline: 3px 0;
   }
 }
+
+/* Accepted Status A, inline Overview only. Reuse the native metric nodes and
+ * their result classes; other tabs and modal Patient cards keep their layout. */
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels > [data-tab="antro"] {
+  gap: 20px;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-measure-title {
+  margin: 0 0 12px;
+  color: var(--vhome-b1-ink);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-context {
+  margin-bottom: 12px;
+  color: var(--vhome-b1-ink);
+  line-height: 1.5;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-context strong {
+  font-size: 16px;
+  font-weight: 650;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-growth .vhome-b1-section-heading {
+  margin-bottom: 12px;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) > .vilda-patient-stats-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 12px;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) .vilda-patient-stat {
+  display: flex;
+  min-height: 0;
+  gap: 5px;
+  padding: 12px 13px;
+  border-top-width: 1px;
+  border-radius: 10px;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-measure .vilda-patient-stat-label {
+  min-height: 0;
+  font-weight: 550;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-measure .vilda-patient-stat-value {
+  font-size: clamp(22px, 2.1vw, 28px);
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-growth .vilda-patient-stat {
+  padding-block: 10px;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-growth .vilda-patient-stat-value {
+  font-size: 20px;
+  text-align: start;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-treatment-summary {
+  padding: 10px 0 0;
+  border: 0;
+  border-top: 1px solid var(--vhome-b1-line);
+  border-radius: 0;
+  background: transparent;
+  font-size: 15px;
+}
+html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-treatment-summary[hidden] {
+  display: none;
+}
+@media (max-width: 940px) {
+  html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) > .vilda-patient-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+@media (max-width: 650px) {
+  html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels > [data-tab="antro"] {
+    gap: 16px;
+  }
+  html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) .vilda-patient-stat {
+    padding: 10px;
+  }
+}
+
+/* The accepted artwork uses the current audyt palette. Existing dark and high
+ * contrast palettes retain ownership of their colors and legibility. */
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] .vilda-patient-stat {
+  --status-surface: #f5fafb;
+  --status-border: #e0eef0;
+  --status-label: #2e4a54;
+  --status-context: #4a6168;
+  --status-extra: var(--notice-orange);
+  --vhome-b1-result: #08202c;
+  background: var(--status-surface);
+  border-color: var(--status-border);
+}
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) .vilda-patient-stat {
+  box-shadow: 0 2px 5px #18383f0a;
+}
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] .vilda-patient-stat--ok {
+  --status-surface: linear-gradient(135deg, #00838d1a, #00b4a60a);
+  --status-border: #00838d4d;
+  --status-label: #1a3a42;
+  --status-context: #2e6a72;
+  --vhome-b1-result: #00636b;
+}
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] .vilda-patient-stat--improve {
+  --status-surface: linear-gradient(135deg, #c75d001c, #c75d000a);
+  --status-border: #c75d0059;
+  --status-label: #5a2a00;
+  --status-context: #a04700;
+  --status-extra: #a04700;
+  --vhome-b1-result: #a04700;
+}
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] .vilda-patient-stat--alert {
+  --status-surface: linear-gradient(135deg, #c628281a, #c628280a);
+  --status-border: #c6282852;
+  --status-label: #5a0a0a;
+  --status-context: #b71c1c;
+  --status-extra: #b71c1c;
+  --vhome-b1-result: #b71c1c;
+}
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] .vilda-patient-stat-label {
+  color: var(--status-label, var(--vhome-b1-ink));
+}
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] .vilda-patient-stat-sub {
+  color: var(--status-context, var(--vhome-b1-muted)) !important;
+}
+html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview [data-tab="antro"] .vilda-patient-stat-extra {
+  color: var(--status-extra, var(--vhome-b1-result));
+}

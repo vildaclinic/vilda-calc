@@ -646,7 +646,10 @@ test('Gabinet uses one patient header for overview and analysis and displays rem
     await expect(header.locator('h1')).toHaveText(firstName + ' ' + lastName);
     await expect(patientCard.locator('.vhome-b1-heading, .vhome-b1-menu-wrap, .vhome-b1-close, .vhome-b1-footer')).toHaveCount(0);
     const mode = await frame.evaluate(id => window.VildaHomeEncounter.state(id).mode, ids.a);
+    const status = overviewPanels.locator(':scope > [data-tab="antro"]');
+    await expect(status.getByRole('heading', { name: 'Status', exact: true })).toHaveCount(0);
     if (mode === 'browse') {
+      await expect(status.getByRole('heading', { name: 'Pomiar', exact: true })).toBeVisible();
       await expect(patientCard.locator('.vhome-b1-status-context, .vilda-patient-age-note')).toHaveCount(0);
     } else {
       await expect(patientCard.locator('.vhome-b1-status-context')).toContainText('Ostatni pomiar · 17.06.2026');
