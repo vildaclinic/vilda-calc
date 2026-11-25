@@ -2,8 +2,8 @@
   "namespace": "vilda-patient-treatment-vault",
   "version": 1,
   "sourceRef": "992bf3c5fbc056b348dcfd4bcd83d4a48b961efd",
-  "baseVaultSHA256": "3bebcc8ed48cd321ef5b2d2d5058fddebc40211d756f4978583a0f5d18cb9928",
-  "integratedVaultSHA256": "4f625ec47639daac9527b320416853d264d9e1969b9e92db35ac7d0fff7d7caf",
+  "baseVaultSHA256": "119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf",
+  "integratedVaultSHA256": "722d8ee00fbc7ff5d916ad40744a3760bcf90e5cb431ccfe85f5062dd195206b",
   "fragmentSHA256": "83656ce16801fa2d042926a6126a08a9d6045f42d99fe721506c0378740cf699",
   "sources": [
     {

@@ -37,13 +37,18 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // move phase of the synchronization merge disappears together with the patient tombstone known to that merge, from
 // the payload or local, written only when no local tombstone or an earlier one exists; in effect at once),
 // P-BAZA-SZYBKIE (two read-only helpers: getNewestSnapshot decrypts only the newest version of a patient card and
-// listPatientNotesByCategory decrypts only the notes of one category; docs/clinical/ALGORITHMS.md) and
+// listPatientNotesByCategory decrypts only the notes of one category; docs/clinical/ALGORITHMS.md),
 // E3-PR0e2a (an optional field of a visit version record, the moment "Merge patients" assigned the version to its
 // card, is kept as the later of both copies on every write that joins two copies of the record, while imports and
 // other single-copy writes take it from that copy; it is carried by exports, imports and the event envelope, decides
 // the owner card first when present, is checked again by the move phase and alone does not queue the version again;
-// no device writes it yet).
-const BASE = '989fec00e7cbcb8478c972b666cb2a97479e5eb0decf9364bb2cae58b03143c6';
+// no device writes it yet) and E3-PR0e3 (when an old card loses to a patient tombstone in the synchronization merge,
+// a visit version of that card that wins over its trash or retention entry under another live card, as in a single
+// card, returns to the entry's card in the move phase under that card's lock, after a fresh check of the state from
+// the moment of the decision, both for the incoming payload and for the local copy; the end of the trash merge then
+// removes the entry or, for a version pinned before a later pruning, keeps the pruning entry that knows it; in effect
+// at once).
+const BASE = 'a693e447bddeb0e021ee8b8187026956b9fddf87e477c9141f613e1152af0f11';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

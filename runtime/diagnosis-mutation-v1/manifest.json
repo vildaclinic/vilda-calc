@@ -1,10 +1,10 @@
 {
   "namespace": "vilda-diagnosis-mutation-vault",
   "version": 1,
-  "baseVaultSHA256": "4f625ec47639daac9527b320416853d264d9e1969b9e92db35ac7d0fff7d7caf",
+  "baseVaultSHA256": "722d8ee00fbc7ff5d916ad40744a3760bcf90e5cb431ccfe85f5062dd195206b",
   "source": "runtime/diagnosis-mutation-v1/vault-fragment.js",
   "sourceSHA256": "04b6a5209a39d6a5b0aa9420cfa498d8711dbcf34fac8eee06cba8d951067cbc",
-  "integratedVaultSHA256": "46535d453ea21d342c7593830c4619584fe60298101271ffa8fb6ed52562db12",
+  "integratedVaultSHA256": "81de091bece15acf7d632bb44ba5411c5165d13efd90ea527594d01c577c9ee1",
   "hooks": [
     {
       "name": "diagnosis-remove-scope",

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadBrowserScript } from '../support/load-browser-script.mjs';
@@ -53,6 +54,11 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Od E3-PR0e2a (decyzja 3 właściciela z 2026-11-23) liczba testów bez zmian: strażnik źródła „zabierz” przepisany razem
 // z kodem — w Bsl_scalPacjenta 6 zapisów wersji (szósty: sama późniejsza chwila przypisania wersji tej samej karty).
 // Przypadki chwili przypisania wersji do karty — tests/unit/sync-chwila-przypisania.test.mjs.
+// Od E3-PR0e3 (decyzja 1 właściciela z 2026-11-23) 387 testów: +3 — strażnik źródła: wpis Kosza pomija wersję z karty
+// z N tylko wtedy, gdy z nią wygrywa (decyzja do karty wpisu po wyszukaniu wersji tutaj; na d2f1eded czerwony); strażnik
+// Bkz_wygrywa, Bkz_zmiana i Bgw_stan bajt w bajt (zielony z natury); blokada karty wpisu zajęta w drugiej karcie
+// przeglądarki — wizyta nie wraca, wpis zostaje, następne scalanie ją oddaje (na d2f1eded czerwony). Pozostałe przypadki
+// zmiany wizyty po Koszu — tests/unit/sync-odsylanie.test.mjs i tests/unit/kosz-po-kluczu-sesja.test.mjs.
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na
@@ -2523,6 +2529,32 @@ describe('P-SYNC-WLASCICIEL — poprawka albo gwiazdka wizyty starej karty na ur
     expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeLessThan(fn.indexOf('Bsw_odloz('));
     expect(fn.lastIndexOf('Bses_pilnuj(opcje)')).toBeGreaterThan(fn.indexOf('await V(S.payload)'));
   });
+
+  it('KS10 strażnik źródła (E3-PR0e3): wpis Kosza pomija wersję z karty z N tylko wtedy, gdy z nią wygrywa (Bkz_wygrywa, bez zmiany reguły); wersja, której tu nie ma pod żadną kartą — decyzja do karty wpisu (Bsw_doWpisu) po wyszukaniu w sesji scalania', () => {
+    const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
+    const a = src.indexOf('async function Bsw_zKartyZNagrobkiem(');
+    expect(a).toBeGreaterThan(0);
+    const fn = src.slice(a, src.indexOf('\n}\n', a));
+    expect(fn, 'dawny warunek „każdy wpis pomija wersję” zniknął').not.toContain('if (ctx.mapa && ctx.mapa.get(S.snapshotId)) continue;');
+    expect(fn, 'wpis pomija wersję, z którą wygrywa').toContain('if (e && Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload))) continue;');
+    const iDecyzji = fn.indexOf('Bsw_doWpisu(ctx, F, S, e, opcje)');
+    expect(iDecyzji, 'decyzja do karty wpisu').toBeGreaterThan(0);
+    expect(fn.indexOf('Bsw_wersjaLokalna(ctx, S.snapshotId)'), 'najpierw wyszukanie wersji tutaj (wersja pod żywą kartą — decyzja „treść”)').toBeLessThan(iDecyzji);
+    expect(fn.indexOf('Bses_pilnuj(opcje)'), 'sprawdzenie sesji przed wyszukaniem').toBeLessThan(fn.indexOf('Bsw_wersjaLokalna('));
+  });
+
+  it('KS11 strażnik źródła (E3-PR0e3, zielony z natury): reguła wygranej Kosza, chwila zmiany wersji i stan W3 bez zmian — Bkz_wygrywa, Bkz_zmiana i Bgw_stan bajt w bajt (skrót SHA-256 tekstu funkcji; ta sama reguła w Bsl_koszZLadunku, Bkz_scalKoniec i w wyroczni testów)', () => {
+    const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
+    const tekst = (f, jednaLinia) => { const i = src.indexOf(f); return i < 0 ? null : src.slice(i, jednaLinia ? src.indexOf('\n', i) : src.indexOf('\n}\n', i) + 2); };
+    const skrot = (x) => (x == null ? null : createHash('sha256').update(x).digest('hex'));
+    expect({
+      Bkz_wygrywa: skrot(tekst('function Bkz_wygrywa(')), Bkz_zmiana: skrot(tekst('function Bkz_zmiana(', true)), Bgw_stan: skrot(tekst('function Bgw_stan(')),
+    }).toEqual({
+      Bkz_wygrywa: '02cab63cf1092f0e0884e262bb623b0a986599cf155f4dd6b8a97932c30026bd',
+      Bkz_zmiana: '4f49535d70585224777da722daf61d2a3ff6bd1f66c04e50f6a0fd05ffc715e0',
+      Bgw_stan: 'f1d5bdba2e1b2e341c856f78263f0acd7d0a5bb588ea2ff7eb637b96c33826aa',
+    });
+  });
 });
 
 describe('P-SYNC-WLASCICIEL — rev wyniku bez nadmuchania i pętla scaleń', () => {
@@ -3315,4 +3347,44 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(src).toContain('async getSnapshotForUser(o,a){const i=(await r(o)).transaction(It,"readonly").objectStore(It);return await t(i.get(a))||null}');
     expect(src).toContain('getSnapshotForUser:function(n,r){return e.getSnapshotForUser(n,r)}');
   });
+});
+
+// ── E3-PR0e3: zapis wersji wracającej do karty wpisu tylko pod blokadą tej karty ─────────────────────────────────────
+// A: karta P „Testowy Jan” [x1, x2] i karta Q [q]; B (osobne konto, kopia A). A scala P → Q i daje x1 do Kosza pod Q;
+// B stawia x1 gwiazdkę w starej P. Ładunek B z samą kartą P z zapisem sprzed scalenia: P przegrywa z nagrobkiem
+// scalenia, wpis Kosza x1 pod żywą Q przegrywa z gwiazdką B — x1 wraca do Q, zapis w fazie przeniesień pod blokadą Q.
+// Druga karta przeglądarki trzyma blokadę Q (atrapa Web Locks): scalanie czeka, po limicie przerywa — x1 nie leży pod
+// Q, wpis Kosza zostaje; po zwolnieniu blokady następne scalanie oddaje x1 do Q z gwiazdką, wpis zdjęty.
+describe('E3-PR0e3: wersja wracająca do karty wpisu — zapis tylko pod blokadą karty wpisu', () => {
+  it('blokada karty wpisu zajęta w drugiej karcie przeglądarki: x1 nie wraca pod Q, wpis Kosza zostaje; po zwolnieniu następne scalanie oddaje x1 do Q z gwiazdką', async () => {
+    const locks = atrapaLocks();
+    const A = await urzadzenie('A', { locks });
+    const B = await urzadzenie('B');
+    const P = await karta(A.v);
+    await chwila(4);
+    const Q = (await A.v.savePatient(zapis([70]), { dedup: false })).patientId;
+    await B.v.mergeSyncPayload(kopia(await A.v.exportSyncPayload()));
+    const zapisP = (await A.v.exportSyncPayload()).patients.find((p) => p.patientId === P).lastSavedAtISO;
+    const x1 = (await A.baza.listSnapshotsForUser(A.uid, P)).sort((a, b) => (a.savedAtISO < b.savedAtISO ? -1 : 1))[0].snapshotId;
+    await chwila(5); await A.v.mergePatients(P, Q);
+    await chwila(5); await A.v.moveSnapshotToTrash(Q, x1);
+    await chwila(5); await B.v.setSnapshotPinned(P, x1, true);
+    const lad = kopia(await B.v.exportSyncPayload());
+    lad.patients = lad.patients.filter((p) => p.patientId === P);
+    lad.patients[0].lastSavedAtISO = zapisP;
+    const wynik = async () => {
+      const w = (await A.baza.listSnapshotsForUser(A.uid, Q)).find((s) => s.snapshotId === x1) || null;
+      const s = w ? (await A.v.getPatient(Q)).snapshots.find((y) => y.snapshotId === x1) : null;
+      return { podQ: !!w, gwiazdka: !!(s && s.payload._pinned), kosz: (await A.v.listTrashedSnapshots()).some((e) => e.snapshotId === x1) };
+    };
+    const zwolnij = odroczone();
+    locks.request(`vilda-save-pat:${Q}`, () => zwolnij.obietnica);
+    let blad = null;
+    try { await A.v.mergeSyncPayload(kopia(lad), { lockTimeoutMs: 150 }); } catch (e) { blad = e; }
+    expect(await wynik(), `blokada Q zajęta (błąd scalania: ${blad && (blad.code || blad.message)})`).toEqual({ podQ: false, gwiazdka: false, kosz: true });
+    zwolnij.rozwiaz();
+    await chwila(5);
+    await A.v.mergeSyncPayload(kopia(lad));
+    expect(await wynik(), 'po zwolnieniu blokady').toEqual({ podQ: true, gwiazdka: true, kosz: false });
+  }, 30_000);
 });

@@ -163,8 +163,10 @@
 //        wpis ukryty, 0 wierszy; ta sama koperta drugi raz — odesłanie jeszcze raz; busy, busy i apply-error na wejściu
 //        scalania — 0 wierszy, udane ponowienie — jeden; nagrobek porządkowania przypiętej wersji pod usuniętą kartą —
 //        odesłany; wpis pod kartą Q po „Scal pacjentów” P → Q i „Usuń pacjenta” Q — odesłany (czerwony na bazie);
-//   karta żywa, wersja nie późniejsza niż Kosz, busy przy żywej karcie, wpis pod żywą kartą Q po „Scal pacjentów” —
-//        0 wierszy stomb; „Przywróć” po „Usuń pacjenta” pełną kopią, deltą i starą deltą — 0 (zielony z natury);
+//   karta żywa, wersja nie późniejsza niż Kosz, busy przy żywej karcie — 0 wierszy stomb; „Przywróć” po „Usuń
+//        pacjenta” pełną kopią, deltą i starą deltą — 0 (zielony z natury); wpis pod żywą kartą Q po „Scal pacjentów”
+//        (gwiazdka B po Koszu) — 0 wierszy stomb, od E3-PR0e3 v wraca do karty wpisu Q z gwiazdką, wpis zdjęty, jedno
+//        odesłanie snap Q/v (dotąd: wpis 20 kg pod Q, gwiazdka ginęła — wynik świadomie wpisany; czerwony na bazie);
 //   „Usuń pacjenta” wstrzymane na zatwierdzeniu nagrobka i na usunięciu karty — ptomb P, potem stomb v, odbiorca z żywą
 //        v: wpis ukryty; cudzy otwarty krok — stomb v, stomb q, ptomb P (ranga), odbiorca z żywą v bez wpisu (znane
 //        ograniczenie) (czerwony na bazie);
@@ -176,6 +178,20 @@
 //        odczytu kart (czerwony na bazie);
 //   przełącznik wyłączony przy kopertach ukrytego wpisu — jak sejf bez odsyłania; zamknięta bramka i „Komputer
 //        w pracy” (zielony z natury).
+// PRZYPADKI E3-PR0e3 (P-SYNC-WLASCICIEL, zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów”; działa od
+// razu, także w pełnej kopii — decyzja właściciela 1a z 2026-11-23; blok na końcu pliku, wpisPodQ): karta P z ładunku
+// przegrywa z nagrobkiem scalenia P → Q, a wersja v ma tu wpis Kosza (albo przycięcia) pod żywą kartą Q:
+//   poprawka B po Koszu (koperta), gwiazdka B po Koszu pełną kopią (wersja liczy się jak dodana), poprawka z trzeciego
+//        urządzenia sprzed Kosza znana wpisowi i gwiazdka B po Koszu (treść z wpisu, gwiazdka z ładunku — W3), koperta
+//        bez tożsamości wizyty (tożsamość z wpisu, karta wizyty Q) i z tożsamością (wizyta przypisana do Q z tożsamością
+//        wpisu, także w kopercie odsyłania), przycięcie porządkowaniem i poprawka albo gwiazdka B
+//        później (wpis przycięcia zdjęty), gwiazdka B przed przycięciem na A bez wiedzy o niej (przypięta wraca, wpis
+//        przycięcia zostaje i zna gwiazdkę), v ostatnią wersją karty Q z wpisem Kosza (Q8; gwiazdka do tutejszego rekordu)
+//        — v pod Q ze zmianą B, odesłanie snap Q/v (czerwony na bazie: zmiana ginie, wpis zostaje);
+//   kontrole (wynik jak na bazie, zielony z natury): poprawka B przed Koszem A i przed przycięciem (wpis wygrywa), karta
+//        wpisu Q scalona dalej Q → R na A albo na B (pełna kopia z nagrobkiem Q — Q w zbiorze N; ograniczenie, E3-PR0f),
+//        import pliku karty P (import reguły nie zna; literał 2 wersji i licznika karty Q 3 — import nie przelicza
+//        karty, spod której zabiera wersję, jak dotąd).
 // PRZYPADKI E3-PR0e2a (P-SYNC-WLASCICIEL, chwila przypisania wersji do karty — pole rekordu wersji assignedAtISO,
 // w tym wydaniu nikt go nie zapisuje; tu wstawione wprost do rekordu w bazie atrapy IndexedDB, jak od urządzenia, które je
 // zapisuje): pole pomijane we wszystkich porównaniach odsyłania wersji, jak rev — sama chwila przypisania nie wywołuje
@@ -2753,7 +2769,7 @@ describe('odsyłanie ukrytego wpisu Kosza karty usuniętej: późniejsza wersja 
     expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
   }, CZAS);
 
-  it('wpis pod żywą kartą Q po „Scal pacjentów” P → Q tutaj (A daje v do Kosza pod Q), koperta snap v z gwiazdką B z kartą P z zapisem sprzed scalenia (spoza buildera) — 0 wierszy stomb; wpis widoczny pod Q, karta P nie wraca (rodzina E4b, E3-PR0e — wynik świadomie wpisany)', async () => {
+  it('wpis pod żywą kartą Q po „Scal pacjentów” P → Q tutaj (A daje v do Kosza pod Q), koperta snap v z gwiazdką B z kartą P z zapisem sprzed scalenia (spoza buildera) — 0 wierszy stomb; v wraca do karty wpisu Q z gwiazdką, wpis zdjęty, karta P nie wraca; jedno odesłanie snap v pod Q (E3-PR0e3: zmiana wizyty po Koszu wraca do karty wpisu)', async () => {
     const o = await okno({ bramka: true, echo: true });
     await o.zaloguj('A');
     const k = await karta(o, 1, [20, 21]);
@@ -2774,9 +2790,11 @@ describe('odsyłanie ukrytego wpisu Kosza karty usuniętej: późniejsza wersja 
     const s = { P: k.P, v: k.w[0], Q: kq.P };
     const s0 = ostatni(o);
     expect((await zastosuj(o, (await zTresci(B, jaw)).env)).status, 'wynik').toBe('applied');
-    expect(await stanUkrytego(o, s), 'karta P nie wraca, wpis 20 kg pod Q').toEqual({ kartaP: false, vWKarcie: false, kosz: [{ karta: 'Q', masa: 20, gwiazdka: false, tresc: true }] });
-    expect(await wersja(o, s.Q, s.v), 'v nie wraca pod Q').toBe(null);
+    expect(await stanUkrytego(o, s), 'karta P nie wraca, v nie w karcie P, wpis Kosza zdjęty').toEqual({ kartaP: false, vWKarcie: false, kosz: [] });
+    const vq = await stanWersji(o, s.Q, s.v);
+    expect(vq && { masa: vq.masa, gwiazdka: vq.gwiazdka }, 'v wraca do karty wpisu Q z gwiazdką B').toEqual({ masa: 20, gwiazdka: true });
     expect(wierszeKosza(o, s0).map(opis), 'wiersze stomb').toEqual([]);
+    expect(wierszeOd(o, s0).map((w) => [w.kind, String(w.entityKey).split('/').map((x) => (x === s.Q ? 'Q' : x === s.v ? 'v' : x === s.P ? 'P' : '?')).join('/'), w.state]), 'odesłanie wersji, która wróciła pod Q').toEqual([['snap', 'Q/v', 'pending']]);
   }, CZAS);
 
   it('wpis pod kartą Q po „Scal pacjentów” P → Q tutaj i „Usuń pacjenta” Q, koperta snap v z gwiazdką B z kartą P z zapisem sprzed scalenia (spoza buildera) — karty wpisu Q nie ma, karta P z ładunku przegrywa z nagrobkiem scalenia: jeden wiersz stomb v (wpis 20 kg pod Q)', async () => {
@@ -3380,4 +3398,269 @@ describe('chwila przypisania wersji do karty (E3-PR0e2a) — kolejka po „Scal 
     });
     expect(bez.pola, 'kontrola: bez chwili przypisania koperty bez niej').toEqual([['ptomb', null], ['snap', null]]);
   }, 2 * CZAS);
+});
+
+// ── wpis Kosza pod żywą kartą po „Scal pacjentów”: zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3) ────────────
+// P-SYNC-WLASCICIEL (E3-PR0e3, decyzja właściciela 1a z 2026-11-23 — działa od razu, także przy pełnej synchronizacji):
+// karta P z ładunku przegrywa z nagrobkiem pacjenta (tu: nagrobek „Scal pacjentów” P → Q), a jej wersja v ma tu wpis
+// Kosza pod inną, żywą kartą Q (karta wpisu — dom wizyty). Gdy v jest zmieniona później, niż ten wpis z nią wygrywa (Kosz
+// wygrywa z każdą wersją nie późniejszą niż on, przycięcie porządkowaniem — z nieprzypiętą nie późniejszą niż ono),
+// a tu nie leży pod żadną kartą, wraca do karty wpisu Q: rekord z ładunku, potem koniec scalania Kosza (treść i gwiazdka
+// według W3, wpis zdjęty; przy przycięciu późniejszym niż zmiana i wersji przypiętej wpis przycięcia zostaje i zna
+// gwiazdkę). Dotąd zmiana ginęła
+// na wszystkich urządzeniach, także po pełnej wymianie. Wersja, która leży tu pod żywą kartą (ostatnia wersja karty
+// z wpisem Kosza), dostaje późniejszą treść albo gwiazdkę jak każda wersja wspólna dwóm kartom (decyzja 'tresc').
+// Bez zmian: wpis, który z wersją wygrywa (decyduje Kosz), karta wpisu Q usunięta albo dalej scalona (Q → R), import pliku.
+// Scenariusz (wpisPodQ): A — karta P „Testowy Jan1” [v 20 kg, w 21 kg] i karta Q „Testowy Jan2” [q 30 kg]; bliźniak B
+// (bez wiedzy o scaleniu). A scala P → Q i daje v do Kosza pod Q; B zmienia v w starej karcie P. Koperta snap v z B spoza
+// buildera: karta P z zapisem sprzed scalenia — tak dochodzi do A zmiana urządzenia, którego kartę P A scaliło albo
+// usunęło drugi raz po jej powrocie z nową wizytą z trzeciego urządzenia (z samych kopert aplikacji: A ≡ B, światy
+// 887–894). Wynik stanu: karta P jest, v pod Q (masa, gwiazdka), wpisy Kosza v (karta, masa, gwiazdka rejestru, treść),
+// liczba wersji karty Q i licznik nagłówka Q; przy przełączniku odsyłania — wiersze kolejki od znacznika.
+async function bazaPQ(o, { R = false, C = false } = {}) {
+  const k = await karta(o, 1, [20, 21]);
+  const kq = await karta(o, 2, [30]);
+  const kr = R ? await karta(o, 3, [40]) : null;
+  await o.gotowe();
+  const B = await blizniak(o);
+  const Cb = C ? await blizniak(o) : null;
+  const zapisP = ((await o.v.exportSyncPayload()).patients || []).find((p) => p.patientId === k.P).lastSavedAtISO;
+  return { P: k.P, v: k.w[0], w: k.w[1], Q: kq.P, q: kq.w[0], R: kr ? kr.P : null, B, C: Cb, zapisP, przyciete: null };
+}
+// Kroki na A: „Scal pacjentów” P → Q, Kosz v pod Q, przycięcie porządkowaniem karty Q (recentHours: 0).
+async function scalPQ(o, s) { tik(MIN); await o.v.mergePatients(s.P, s.Q); tik(); await o.gotowe(); }
+async function koszVPodQ(o, s) { tik(MIN); await o.v.moveSnapshotToTrash(s.Q, s.v); tik(); await o.gotowe(); }
+async function przytnijQ(o, s) {
+  tik(MIN);
+  s.przyciete = (await o.v.pruneSnapshotsForPatient(s.Q, { recentHours: 0 })).prunedIds.map(nazwaId(s)).sort();
+  tik(); await o.gotowe();
+}
+// Wspólny początek: baza, scalenie i Kosz v pod Q na A.
+async function wpisPodQ(o, opcje = {}) { const s = await bazaPQ(o, opcje); await scalPQ(o, s); await koszVPodQ(o, s); return s; }
+// Zmiana v w starej karcie P na urządzeniu X bez wiedzy o scaleniu: gwiazdka albo poprawka masy (17,2 kg).
+async function zmienWStarej(X, s, zmiana, masa = 17.2) {
+  tik(MIN);
+  if (zmiana === 'gwiazdka') await gwiazdka(X, s.P, s.v);
+  else await popraw(X, s.P, s.v, masa);
+}
+// Koperta snap v z X spoza buildera: karta P z zapisem sprzed scalenia; opcjonalna zmiana jawnej treści.
+async function kopertaStarejP(X, s, zmien = null) {
+  const jaw = JSON.parse(JSON.stringify((await kopertaSnap(X, s.P, s.v)).k));
+  jaw.patients[0].lastSavedAtISO = s.zapisP;
+  if (zmien) zmien(jaw);
+  return zTresci(X, jaw);
+}
+// Pełna kopia z X z kartą P z zapisem sprzed scalenia.
+async function eksportStarejP(X, s) {
+  const e = JSON.parse(JSON.stringify(await X.v.exportSyncPayload()));
+  for (const p of e.patients || []) if (p.patientId === s.P) p.lastSavedAtISO = s.zapisP;
+  return e;
+}
+const nazwaId = (s) => (x) => (x === s.v ? 'v' : x === s.w ? 'w' : x === s.P ? 'P' : x === s.Q ? 'Q' : x === s.q ? 'q' : x === s.R ? 'R' : '?');
+async function stanKartyWpisu(o, s) {
+  const q = await o.v.getPatient(s.Q);
+  const vq = q ? q.snapshots.find((x) => x.snapshotId === s.v) : null;
+  const naglowek = ((await o.v.listPatients()) || []).find((p) => p.patientId === s.Q);
+  const kartaV = vq ? null : await (async () => { for (const p of await o.v.listPatients()) { const x = await wersja(o, p.patientId, s.v); if (x) return nazwaId(s)(p.patientId); } return null; })();
+  return {
+    kartaP: !!(await o.v.getPatient(s.P)), kartaQ: !!q,
+    vPodQ: vq ? { masa: vq.payload.user.weight, gwiazdka: !!vq.payload._pinned } : null,
+    vGdzieIndziej: kartaV,
+    kosz: (await wpisyEksportu(o, s.v)).map((e) => ({ karta: nazwaId(s)(e.patientId), powod: e.powod || 'kosz', ...faktWpisu(e) })),
+    wersjeQ: q ? q.snapshots.length : null, licznikQ: naglowek ? naglowek.snapshotCount : null,
+  };
+}
+const wierszeWpisu = (o, s, od) => wierszeOd(o, od).map((w) => [w.kind, String(w.entityKey).split('/').map(nazwaId(s)).join('/'), w.state]);
+// Przypadki (przebieg: od pustego okna A z przełącznikiem odsyłania do zastosowania zmiany B; wynik — stan karty wpisu
+// i wiersze kolejki od znacznika przed zastosowaniem). Literały zmierzone na kodzie reguły; na bazie (bez niej) — przy
+// przypadku.
+const WPIS_POD_Q_PRZYPADKI = {
+  // Na bazie: poprawka ginie (wpis 20 kg zostaje).
+  'poprawka B (17,2 kg) po Koszu, koperta snap v — v wraca do Q z poprawką, wpis zdjęty': async (o) => {
+    const s = await wpisPodQ(o);
+    await zmienWStarej(s.B, s, 'poprawka');
+    return { s, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s)).env) };
+  },
+  // Na bazie: gwiazdka ginie także po pełnej wymianie.
+  'gwiazdka B po Koszu, pełna kopia B z kartą P z zapisem sprzed scalenia — v wraca do Q z gwiazdką, wpis zdjęty, bez wierszy odsyłania': async (o) => {
+    const s = await wpisPodQ(o);
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    return { s, zastosuj: async () => { const e = await eksportStarejP(s.B, s); const r = await o.v.mergeSyncPayload(e); await o.gotowe(); return { status: 'pełna kopia', dodane: r.addedSnapshotCount }; } };
+  },
+  // Treść W3: poprawka C (19 kg) bez wiedzy o scaleniu, wcześniejsza niż Kosz A, dochodzi po Koszu — Kosz z nią wygrywa
+  // i wpis bierze nowszą treść; potem gwiazdka B (bez wiedzy o poprawce) po Koszu. Na bazie: v nie wraca, wpis 19 kg.
+  'poprawka C sprzed Kosza dochodzi po Koszu (wpis bierze nowszą treść), potem gwiazdka B po Koszu — v wraca do Q z treścią wpisu i gwiazdką B': async (o) => {
+    const s = await bazaPQ(o, { C: true });
+    await scalPQ(o, s);
+    await zmienWStarej(s.C, s, 'poprawka', 19);
+    const kC = await kopertaStarejP(s.C, s);
+    await koszVPodQ(o, s);
+    expect((await zastosuj(o, kC.env)).status, 'kontrola: poprawka C u A').toBe('applied');
+    await o.gotowe();
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    return { s, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s)).env) };
+  },
+  // Rekord z ładunku bez tożsamości wizyty (jak ze starszej aplikacji). Na bazie: v nie wraca.
+  'gwiazdka B po Koszu, koperta bez tożsamości wizyty — v wraca do Q z tożsamością wizyty wpisu Kosza': async (o) => {
+    const s = await wpisPodQ(o);
+    s.vid = ((await wpisyEksportu(o, s.v))[0].payload.visit || {}).visitId || null;
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    return { s, tozsamosc: true, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s, (k) => { delete k.patients[0].snapshots[0].payload.visit; })).env) };
+  },
+  // Kontrola (wynik jak na bazie): B poprawia v przed Koszem A (A bez wiedzy o poprawce) — Kosz jest późniejszy i z nią
+  // wygrywa: v nie wraca, wpis zostaje.
+  '[kontrola] poprawka B przed Koszem A — wpis wygrywa, v nie wraca': async (o) => {
+    const s = await bazaPQ(o);
+    await scalPQ(o, s);
+    await zmienWStarej(s.B, s, 'poprawka');
+    const k = await kopertaStarejP(s.B, s);
+    await koszVPodQ(o, s);
+    return { s, zastosuj: async () => zastosuj(o, k.env) };
+  },
+  // Przycięcie porządkowaniem karty Q na A zamiast Kosza. Na bazie: v nie wraca, wpis przycięcia zostaje.
+  'przycięcie porządkowaniem pod Q, poprawka B później — v wraca do Q z poprawką, wpis przycięcia zdjęty': async (o) => {
+    const s = await bazaPQ(o);
+    await scalPQ(o, s); await przytnijQ(o, s);
+    await zmienWStarej(s.B, s, 'poprawka');
+    return { s, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s)).env) };
+  },
+  'przycięcie porządkowaniem pod Q, gwiazdka B później — v wraca do Q z gwiazdką, wpis przycięcia zdjęty (zmiana późniejsza niż przycięcie)': async (o) => {
+    const s = await bazaPQ(o);
+    await scalPQ(o, s); await przytnijQ(o, s);
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    return { s, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s)).env) };
+  },
+  // Gwiazdka B wcześniejsza niż przycięcie na A (A przycinało bez wiedzy o niej): przycięcie nie wygrywa z przypiętą
+  // wersją, więc v wraca — samo porównanie chwil (zmiana wcześniejsza niż przycięcie) by jej nie oddało.
+  'gwiazdka B przed przycięciem porządkowaniem pod Q na A (bez wiedzy o gwiazdce) — przypięta v wraca do Q z gwiazdką, wpis przycięcia zostaje i zna gwiazdkę (odesłanie snap v i stomb v)': async (o) => {
+    const s = await bazaPQ(o);
+    await scalPQ(o, s);
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    const k = await kopertaStarejP(s.B, s);
+    await przytnijQ(o, s);
+    return { s, zastosuj: async () => zastosuj(o, k.env) };
+  },
+  // [kontrola] poprawka B przed przycięciem (wersja nieprzypięta): przycięcie wygrywa, v nie wraca (wynik jak na bazie).
+  '[kontrola] poprawka B przed przycięciem porządkowaniem pod Q — przycięcie wygrywa, v nie wraca': async (o) => {
+    const s = await bazaPQ(o);
+    await scalPQ(o, s);
+    await zmienWStarej(s.B, s, 'poprawka');
+    const k = await kopertaStarejP(s.B, s);
+    await przytnijQ(o, s);
+    return { s, zastosuj: async () => zastosuj(o, k.env) };
+  },
+  // Ograniczenie (wynik jak na bazie, E3-PR0f): karta wpisu Q scalona dalej Q → R na A — Q nie istnieje i jest w zbiorze
+  // N: v nie wraca, wpis zostaje pod Q (ukryty); odsyłanie ukrytego wpisu (E3-PR0d2) odsyła go.
+  'karta wpisu Q scalona dalej Q → R na A — bez powrotu: wpis zostaje pod Q, karty P i Q usunięte (ograniczenie)': async (o) => {
+    const s = await wpisPodQ(o, { R: true });
+    tik(MIN); await o.v.mergePatients(s.Q, s.R); tik(); await o.gotowe();
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    return { s, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s)).env) };
+  },
+  // Ograniczenie (wynik jak na bazie): Q → R scalił B (bez wiedzy o scaleniu P → Q na A), a pełna kopia B niesie nagrobek
+  // Q — tu Q jeszcze jest, ale w tym scalaniu jest w zbiorze N (przegra z nagrobkiem): v nie wraca do Q.
+  'karta wpisu Q scalona dalej Q → R na B, pełna kopia B z nagrobkiem Q — bez powrotu do Q (Q w zbiorze N; ograniczenie)': async (o) => {
+    const s = await wpisPodQ(o, { R: true });
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    tik(MIN); await s.B.v.mergePatients(s.Q, s.R); tik();
+    return { s, zastosuj: async () => { const e = await eksportStarejP(s.B, s); const r = await o.v.mergeSyncPayload(e); await o.gotowe(); return { status: 'pełna kopia', dodane: r.addedSnapshotCount }; } };
+  },
+  // Wersja leży tu pod żywą kartą wpisu Q jako ostatnia wersja karty z wpisem Kosza (Q8: Kosz z drugiego urządzenia,
+  // które znało scalenie, a A dało do Kosza pozostałe wersje Q) — późniejsza gwiazdka B przechodzi do tutejszego rekordu
+  // jak dla wersji bez wpisu (decyzja „treść”), wpis zdjęty. Na bazie: gwiazdka ginie (wpis zostaje, v bez gwiazdki).
+  'v ostatnią wersją karty wpisu Q z wpisem Kosza (Q8), gwiazdka B po Koszu — gwiazdka przechodzi do tutejszego rekordu v pod Q, wpis zdjęty': async (o) => {
+    const s = await bazaPQ(o);
+    await scalPQ(o, s);
+    const D = await blizniak(o);
+    tik(MIN);
+    await D.v.moveSnapshotToTrash(s.Q, s.v);
+    const kD = await koperta(D, await D.ev.buildSnapshotTombstoneEvent(s.v, null));
+    for (const x of (await o.v.getPatient(s.Q)).snapshots.map((y) => y.snapshotId).filter((id) => id !== s.v)) { tik(); await o.v.moveSnapshotToTrash(s.Q, x); }
+    tik(); await o.gotowe();
+    expect((await zastosuj(o, kD.env)).status, 'kontrola: Kosz v z D u A').toBe('applied');
+    expect((await o.v.getPatient(s.Q)).snapshots.map((y) => y.snapshotId), 'kontrola: v ostatnią wersją karty Q').toEqual([s.v]);
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    return { s, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s)).env) };
+  },
+  // Import pliku karty P z gwiazdką B (karta P tu scalona do Q, wpis Kosza v pod Q) — import idzie własną drogą i reguły
+  // nie zna (wynik jak na bazie): karta P wraca z pliku z v i w jak dotąd, v nie wraca do karty wpisu Q. Liczba wersji
+  // i licznik nagłówka karty Q — jak przed tą zmianą: import zabiera w spod Q do P, ale nie przelicza licznika karty,
+  // spod której ją zabiera (licznik o jedną wersję za wysoki; nic nie ginie, poza zakresem — osobne zgłoszenie).
+  '[kontrola] import pliku karty P z gwiazdką B po Koszu — bez powrotu do karty wpisu (import przywraca kartę z pliku jak dotąd)': async (o) => {
+    const s = await wpisPodQ(o);
+    await zmienWStarej(s.B, s, 'gwiazdka');
+    const plik = await s.B.v.exportPatientEnvelope(s.P);
+    return { s, zastosuj: async () => { const r = await o.v.importPatientFromEnvelope(plik, o.A.haslo); await o.gotowe(); return { status: r && r.patientId === s.P ? 'import karty P' : 'import' }; } };
+  },
+};
+async function przebiegPQ(nazwa) {
+  const o = await okno({ bramka: true, echo: true });
+  await o.zaloguj('A');
+  const { s, zastosuj: z, tozsamosc } = await WPIS_POD_Q_PRZYPADKI[nazwa](o);
+  const s0 = ostatni(o);
+  const z0 = { log: o.idb.__atrapa.log.length };
+  const r = await z();
+  const wynik = { przyciete: s.przyciete, wynik: r.status, ...(r.dodane !== undefined ? { dodane: r.dodane } : {}), stan: await stanKartyWpisu(o, s), wiersze: wierszeWpisu(o, s, s0) };
+  // kontrole wygranej wpisu: scalanie nie zapisuje sklepu wersji (bez zapisu wersji, która i tak nie zostaje pod Q)
+  if (nazwa.startsWith('[kontrola] poprawka B przed')) wynik.zapisyWersji = zapisyWersji(o, z0).length;
+  if (tozsamosc) {
+    const x = await wersja(o, s.Q, s.v);
+    wynik.tozsamosc = x ? { zWpisu: !!s.vid && !!x.payload.visit && x.payload.visit.visitId === s.vid, karta: x.payload.visit ? nazwaId(s)(x.payload.visit.patientId) : null } : null;
+  }
+  return wynik;
+}
+describe('wpis Kosza pod żywą kartą po „Scal pacjentów”: zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3)', () => {
+  for (const nazwa of Object.keys(WPIS_POD_Q_PRZYPADKI)) {
+    it(nazwa, async () => {
+      const w = await przebiegPQ(nazwa);
+      console.log(`E3-PR0e3 ODS „${nazwa}”`, JSON.stringify(w));
+      expect(w).toEqual(WPIS_POD_Q_OCZEKIWANE[nazwa]);
+    }, CZAS);
+  }
+});
+// Oczekiwane (zmierzone na kodzie reguły): przyciete — wersje przycięte porządkowaniem karty Q na A; wynik — status
+// zastosowania koperty albo droga; dodane — wersje dodane w wyniku pełnej kopii (addedSnapshotCount: wersja, która
+// wróciła pod Q, liczy się jak wersja dodana, więc integracja odświeża listę pacjentów); stan — karta P, karta Q, v pod
+// Q, karta v gdzie indziej, wpisy Kosza v, liczba wersji i licznik nagłówka karty Q; wiersze — kolejka od znacznika
+// (snap Q/v — odesłanie wersji, która wróciła pod Q; stomb v — odsyłanie wpisów Kosza E3-PR0d).
+const WPIS_POD_Q_OCZEKIWANE = {
+  "poprawka B (17,2 kg) po Koszu, koperta snap v — v wraca do Q z poprawką, wpis zdjęty": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 17.2, "gwiazdka": false}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 4, "licznikQ": 4}, "wiersze": [["snap", "Q/v", "pending"]]},
+  "gwiazdka B po Koszu, pełna kopia B z kartą P z zapisem sprzed scalenia — v wraca do Q z gwiazdką, wpis zdjęty, bez wierszy odsyłania": {"przyciete": null, "wynik": "pełna kopia", "dodane": 1, "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 20, "gwiazdka": true}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 4, "licznikQ": 4}, "wiersze": []},
+  "poprawka C sprzed Kosza dochodzi po Koszu (wpis bierze nowszą treść), potem gwiazdka B po Koszu — v wraca do Q z treścią wpisu i gwiazdką B": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 19, "gwiazdka": true}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 4, "licznikQ": 4}, "wiersze": [["snap", "Q/v", "pending"]]},
+  "gwiazdka B po Koszu, koperta bez tożsamości wizyty — v wraca do Q z tożsamością wizyty wpisu Kosza": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 20, "gwiazdka": true}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 4, "licznikQ": 4}, "wiersze": [["snap", "Q/v", "pending"]], "tozsamosc": {"zWpisu": true, "karta": "Q"}},
+  "[kontrola] poprawka B przed Koszem A — wpis wygrywa, v nie wraca": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": null, "vGdzieIndziej": null, "kosz": [{"karta": "Q", "powod": "kosz", "masa": 17.2, "gwiazdka": false, "tresc": true}], "wersjeQ": 3, "licznikQ": 3}, "wiersze": [["stomb", "v", "pending"]], "zapisyWersji": 0},
+  "przycięcie porządkowaniem pod Q, poprawka B później — v wraca do Q z poprawką, wpis przycięcia zdjęty": {"przyciete": ["q", "v"], "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 17.2, "gwiazdka": false}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 3, "licznikQ": 3}, "wiersze": [["snap", "Q/v", "pending"]]},
+  "przycięcie porządkowaniem pod Q, gwiazdka B później — v wraca do Q z gwiazdką, wpis przycięcia zdjęty (zmiana późniejsza niż przycięcie)": {"przyciete": ["q", "v"], "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 20, "gwiazdka": true}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 3, "licznikQ": 3}, "wiersze": [["snap", "Q/v", "pending"]]},
+  "gwiazdka B przed przycięciem porządkowaniem pod Q na A (bez wiedzy o gwiazdce) — przypięta v wraca do Q z gwiazdką, wpis przycięcia zostaje i zna gwiazdkę (odesłanie snap v i stomb v)": {"przyciete": ["q", "v"], "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 20, "gwiazdka": true}, "vGdzieIndziej": null, "kosz": [{"karta": "Q", "powod": "retencja", "masa": null, "gwiazdka": true, "tresc": false}], "wersjeQ": 3, "licznikQ": 3}, "wiersze": [["snap", "Q/v", "pending"], ["stomb", "v", "pending"]]},
+  "[kontrola] poprawka B przed przycięciem porządkowaniem pod Q — przycięcie wygrywa, v nie wraca": {"przyciete": ["q", "v"], "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": null, "vGdzieIndziej": null, "kosz": [{"karta": "Q", "powod": "retencja", "masa": null, "gwiazdka": false, "tresc": false}], "wersjeQ": 2, "licznikQ": 2}, "wiersze": [], "zapisyWersji": 0},
+  "karta wpisu Q scalona dalej Q → R na A — bez powrotu: wpis zostaje pod Q, karty P i Q usunięte (ograniczenie)": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": false, "vPodQ": null, "vGdzieIndziej": null, "kosz": [{"karta": "Q", "powod": "kosz", "masa": 20, "gwiazdka": false, "tresc": true}], "wersjeQ": null, "licznikQ": null}, "wiersze": [["stomb", "v", "pending"]]},
+  "karta wpisu Q scalona dalej Q → R na B, pełna kopia B z nagrobkiem Q — bez powrotu do Q (Q w zbiorze N; ograniczenie)": {"przyciete": null, "wynik": "pełna kopia", "dodane": 2, "stan": {"kartaP": false, "kartaQ": false, "vPodQ": null, "vGdzieIndziej": null, "kosz": [{"karta": "Q", "powod": "kosz", "masa": 20, "gwiazdka": false, "tresc": true}], "wersjeQ": null, "licznikQ": null}, "wiersze": []},
+  "v ostatnią wersją karty wpisu Q z wpisem Kosza (Q8), gwiazdka B po Koszu — gwiazdka przechodzi do tutejszego rekordu v pod Q, wpis zdjęty": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 20, "gwiazdka": true}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 1, "licznikQ": 1}, "wiersze": [["snap", "Q/v", "pending"]]},
+  "[kontrola] import pliku karty P z gwiazdką B po Koszu — bez powrotu do karty wpisu (import przywraca kartę z pliku jak dotąd)": {"przyciete": null, "wynik": "import karty P", "stan": {"kartaP": true, "kartaQ": true, "vPodQ": null, "vGdzieIndziej": "P", "kosz": [], "wersjeQ": 2, "licznikQ": 3}, "wiersze": [["snap", "P/v", "pending"], ["snap", "P/w", "pending"]]},
+};
+
+// ── E3-PR0e3: tożsamość wizyty wracającej do karty wpisu (koperta z tożsamością) ─────────────────────────────────────
+// Wersja wracająca do karty wpisu Q niesie tożsamość wizyty wpisu Kosza przypisaną do Q — także w kopercie odsyłania
+// (snap Q/v), nie tylko przy odczycie karty (odczyt i eksport przypisują wizytę do karty, w której leży).
+describe('wpis Kosza pod żywą kartą po „Scal pacjentów”: wersja wracająca do karty wpisu — wizyta przypisana do karty wpisu (E3-PR0e3)', () => {
+  it('poprawka B po Koszu, koperta snap v z tożsamością wizyty — v wraca do Q, wizyta przypisana do Q z tożsamością wpisu Kosza, także w kopercie odsyłania', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await wpisPodQ(o);
+    const vid = ((await wpisyEksportu(o, s.v))[0].payload.visit || {}).visitId || null;
+    await zmienWStarej(s.B, s, 'poprawka');
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, (await kopertaStarejP(s.B, s)).env)).status).toBe('applied');
+    await o.gotowe();
+    const x = await wersja(o, s.Q, s.v);
+    const koperty = [];
+    for (const w of wierszeOd(o, s0)) {
+      const k = await odszyfruj(o, w.env);
+      for (const p of k.patients || []) for (const y of p.snapshots || []) if (y.snapshotId === s.v) koperty.push({ karta: nazwaId(s)(p.patientId), wizyta: y.payload.visit ? nazwaId(s)(y.payload.visit.patientId) : null, zWpisu: !!vid && !!y.payload.visit && y.payload.visit.visitId === vid });
+    }
+    expect({
+      podQ: !!x, karta: x && x.payload.visit ? nazwaId(s)(x.payload.visit.patientId) : null,
+      zWpisu: !!vid && !!x && !!x.payload.visit && x.payload.visit.visitId === vid, koperty,
+    }).toEqual({ podQ: true, karta: 'Q', zWpisu: true, koperty: [{ karta: 'Q', wizyta: 'Q', zWpisu: true }] });
+  }, CZAS);
 });
