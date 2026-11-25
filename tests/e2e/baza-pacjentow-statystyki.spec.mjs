@@ -125,20 +125,19 @@ test('Gabinet: grupa ze Statystyk otwiera Przegląd, Analizę i Historię bez zm
   await expect(frame.locator('#weight')).toHaveValue(String(visit.payload.user.weight));
   await expect(frame.locator('#height')).not.toBeEditable();
   await expect(frame.locator('#weight')).not.toBeEditable();
-  const options = header.getByRole('button', { name: 'Opcje', exact: true });
-  await options.click();
-  await header.getByRole('button', { name: 'Historia wizyt', exact: true }).click();
-  const history = frame.locator('#vhomeVisitHistory');
-  await expect(history.getByRole('heading', { name: 'Wizyty pacjenta', exact: true })).toBeVisible();
+  await header.getByRole('tab', { name: 'Historia wizyt', exact: true }).click();
+  const history = frame.getByRole('tabpanel', { name: 'Historia wizyt', exact: true });
+  await expect(history).toBeVisible();
   await history.getByRole('button', { name: 'Lista', exact: true }).click();
   await history.locator(`.vhs-list button[data-visit-id="${visit.visitId}"]`).click();
   const detail = frame.locator('#vhomeVisitDetail');
   await expect(detail.locator('.vd-subtitle')).toContainText('Cezary');
   await expect(detail.locator('.vd-access')).toContainText('Tylko odczyt');
   await detail.locator('.vhome-dialog-close').click();
-  await history.getByRole('button', { name: /^Wróć/ }).click();
-  await expect(options).toBeFocused();
-  await expect(header.getByRole('tab', { name: 'Analiza', exact: true })).toHaveAttribute('aria-selected', 'true');
+  const analysis = header.getByRole('tab', { name: 'Analiza', exact: true });
+  await analysis.click();
+  await expect(analysis).toBeFocused();
+  await expect(analysis).toHaveAttribute('aria-selected', 'true');
   expect(await records()).toEqual(before);
 
   await header.getByRole('button', { name: 'Wróć do: Gabinet', exact: true }).click();

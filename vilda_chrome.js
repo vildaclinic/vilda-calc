@@ -1454,7 +1454,7 @@ function Mt(){try{o.addEventListener("click",Pt,!0)}catch{}}function jt(){try{le
     // Read its origin only after those writes, also on synchronous navigation.
     if(frame){var frameBox=frame.getBoundingClientRect();offset=frameBox.left;verticalOffset=frameBox.top}
     var workspaceHeader=authTarget?null:firstVisible(owner,[
-      '.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"]) #vhomeGabinetHeader',
+      '.main-content:is([data-vhome-screen="overview"],[data-vhome-screen="analysis"],[data-vhome-screen="history"]) #vhomeGabinetHeader',
       '.main-content[data-vhome-screen="office"] #gbEntryHeader .gb-breadcrumb'
     ]);
     // The viewport owns the navigation; reserve its measured height in the

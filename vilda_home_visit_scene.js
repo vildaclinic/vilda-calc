@@ -57,6 +57,7 @@
 
   function mount(host, options) {
     const { rows, patientName, onBack, onOpen, backLabel } = options;
+    const sharedHeader = options.sharedHeader === true;
     const doc = host.ownerDocument;
     const id = 'vhs-' + (++sequence);
     const panel = make(doc, 'section', 'vhs-scene');
@@ -119,6 +120,14 @@
     find('.vhs-patient').textContent = patientName || '';
     find('.vhs-back span:last-child').textContent = backLabel || 'Wróć do karty pacjenta';
     find('.vhs-trash').hidden = !options.onTrash;
+    if (sharedHeader) {
+      panel.setAttribute('data-shared-header', '');
+      panel.removeAttribute('aria-labelledby');
+      panel.setAttribute('aria-label', 'Historia wizyt');
+      find('.vhs-heading').hidden = true;
+      // Keep the original control inside the scene's delegated event owner.
+      find('.vhs-toolbar').append(find('.vhs-trash'));
+    }
     find('.vhs-total strong').textContent = countLabel(length);
     find('.vhs-empty').hidden = !!length;
     modes.hidden = help.hidden = papers.hidden = find('.vhs-controls').hidden = !length;
@@ -328,7 +337,8 @@
     stage.addEventListener('pointercancel', cancelTouch, listen);
     stage.addEventListener('lostpointercapture', cancelTouch, listen);
     select(0);
-    title.focus({ preventScroll: true });
+    if (!sharedHeader) title.focus({ preventScroll: true });
+    else if (doc.activeElement === doc.body) doc.getElementById('vhomeGabinetHistoryTab')?.focus({ preventScroll: true });
 
     return {
       select,
