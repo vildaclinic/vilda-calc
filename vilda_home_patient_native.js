@@ -281,8 +281,9 @@
     var reference = node('p', 'vhome-b1-centile-reference');
     var range = panel.querySelector('.vilda-siatka-range');
     var rangeLabel = range?.querySelector(':scope > span');
+    var rangeButtons = Array.from(range?.querySelectorAll('.vilda-siatka-range-btn') || []);
     if (rangeLabel) rangeLabel.textContent = 'Zakres';
-    range?.querySelectorAll('.vilda-siatka-range-btn').forEach(function (item) {
+    rangeButtons.forEach(function (item) {
       var label = presets.get(item.textContent);
       if (label) item.textContent = label;
     });
@@ -323,14 +324,23 @@
       compare.setAttribute('aria-pressed', String(pressed));
       if (compare.textContent !== label) compare.textContent = label;
     }
-    refreshTitles(); refreshComparison();
+    function refreshRange() {
+      // The native range renderer paints its selected preset inline. A
+      // custom zoom window leaves all presets unselected.
+      rangeButtons.forEach(function (item) {
+        item.setAttribute('aria-pressed', String(item.style.backgroundColor === 'rgb(14, 133, 127)'));
+      });
+    }
+    refreshTitles(); refreshComparison(); refreshRange();
     // Native range changes replace the charts and comparison toolbar. Leave
     // pointer readouts, overlays and the chart engine on their original nodes.
     view.centileObserver = new w.MutationObserver(function (changes) {
       if (changes.some(function (change) { return change.target === charts; })) refreshTitles();
       if (changes.some(function (change) { return change.target === panel || change.target.classList?.contains('vilda-cmp-btn'); })) refreshComparison();
+      if (changes.some(function (change) { return change.type === 'attributes'; })) refreshRange();
     });
     view.centileObserver.observe(panel, { childList: true, subtree: true });
+    if (range) view.centileObserver.observe(range, { attributes: true, attributeFilter: ['style'], subtree: true });
   }
   function statusGroups(view, native) {
     var host = native.panels.antro;
