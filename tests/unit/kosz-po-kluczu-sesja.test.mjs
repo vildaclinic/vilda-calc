@@ -115,10 +115,15 @@
 //        pozostaje w Z, więc retencja przycina tylko dawną wersję x, zachowując całą wizytę.
 //   F-S2c E4b, przełączenie na B zaraz po liście kart w wyszukaniu po pętli (Bkz_gdzieIndziejRazem, F-C1) — żadnego
 //        dalszego odczytu w koncie B; po zalogowaniu A zbieżnie.
-//   Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (E3-PR0e3; blok na końcu pliku): karta wpisu
+//   Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (E3-PR0e3; bloki na końcu pliku): karta wpisu
 //        usunięta, „Przywróć” albo „Przywróć” i ponowny Kosz w drugiej karcie przeglądarki między decyzją a fazą
-//        przeniesień — bez zapisu (zielone z natury); przełączenie na konto B w decyzji i w szyfrowaniu rekordu — żadnego
-//        zapisu po przełączeniu; kontrola bez haka i strażnik źródła decyzji i zapisu (czerwone na bazie: reguły nie ma).
+//        przeniesień — bez zapisu (zielone z natury); wpis przeniesiony w tym oknie pod inną kartę R — bez zapisu pod Q,
+//        następne scalanie oddaje wizytę do R; przełączenie na konto B przy świeżym odczycie karty wpisu w fazie
+//        przeniesień i w szyfrowaniu rekordu — żadnego zapisu po przełączeniu; kontrola bez haka; pełna wymiana w obu
+//        kolejnościach (gwiazdka albo poprawka × drugie „Scal pacjentów” albo „Usuń pacjenta” zwróconej P × urządzenie,
+//        które zmieniło wizytę, najpierw wysyła albo najpierw pobiera); kolejność kart w jednym ładunku; ostatnia wersja
+//        karty wpisu z wpisem Kosza innej wizyty (Q8); strażnik źródła decyzji (bez odczytów magazynu) i zapisu
+//        (czerwone na bazie: zasady nie ma); trzy kontrole strony urządzenia, które zmieniło wizytę (wynik jak dotąd).
 //   Strażniki źródła: Bkz_obceKarty — pierwszy odczyt pod blokadą to listSnapshotsForUser (przed getPatientForUser),
 //        każda decyzja do ctx i zapis podniesionej rev tuż po Bses_pilnuj; Bkz_usunZObcych — Bses_pilnuj tuż przed
 //        removePatientForUser, Bpc_usunieta, nagrobkiem karty (F-R2) i removeSnapshotForUser; Bsl_przeniesWersje —

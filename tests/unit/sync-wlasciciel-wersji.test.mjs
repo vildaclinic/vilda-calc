@@ -54,6 +54,11 @@ import { loadBrowserScript } from '../support/load-browser-script.mjs';
 // Od E3-PR0e2a (decyzja 3 właściciela z 2026-11-23) liczba testów bez zmian: strażnik źródła „zabierz” przepisany razem
 // z kodem — w Bsl_scalPacjenta 6 zapisów wersji (szósty: sama późniejsza chwila przypisania wersji tej samej karty).
 // Przypadki chwili przypisania wersji do karty — tests/unit/sync-chwila-przypisania.test.mjs.
+// Od E3-PR0e3 (decyzja 1 właściciela z 2026-11-23) 387 testów: +3 — strażnik źródła: wpis Kosza pomija wersję z karty
+// z N tylko wtedy, gdy z nią wygrywa (decyzja do karty wpisu po wyszukaniu wersji tutaj; na d2f1eded czerwony); strażnik
+// Bkz_wygrywa, Bkz_zmiana i Bgw_stan bajt w bajt (zielony z natury); blokada karty wpisu zajęta w drugiej karcie
+// przeglądarki — wizyta nie wraca, wpis zostaje, następne scalanie ją oddaje (na d2f1eded czerwony). Pozostałe przypadki
+// zmiany wizyty po Koszu — tests/unit/sync-odsylanie.test.mjs i tests/unit/kosz-po-kluczu-sesja.test.mjs.
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na

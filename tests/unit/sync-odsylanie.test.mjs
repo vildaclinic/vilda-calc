@@ -183,13 +183,15 @@
 // przegrywa z nagrobkiem scalenia P → Q, a wersja v ma tu wpis Kosza (albo przycięcia) pod żywą kartą Q:
 //   poprawka B po Koszu (koperta), gwiazdka B po Koszu pełną kopią (wersja liczy się jak dodana), poprawka z trzeciego
 //        urządzenia sprzed Kosza znana wpisowi i gwiazdka B po Koszu (treść z wpisu, gwiazdka z ładunku — W3), koperta
-//        bez tożsamości wizyty (tożsamość z wpisu, karta wizyty Q), przycięcie porządkowaniem i poprawka albo gwiazdka B
+//        bez tożsamości wizyty (tożsamość z wpisu, karta wizyty Q) i z tożsamością (wizyta przypisana do Q z tożsamością
+//        wpisu, także w kopercie odsyłania), przycięcie porządkowaniem i poprawka albo gwiazdka B
 //        później (wpis przycięcia zdjęty), gwiazdka B przed przycięciem na A bez wiedzy o niej (przypięta wraca, wpis
 //        przycięcia zostaje i zna gwiazdkę), v ostatnią wersją karty Q z wpisem Kosza (Q8; gwiazdka do tutejszego rekordu)
 //        — v pod Q ze zmianą B, odesłanie snap Q/v (czerwony na bazie: zmiana ginie, wpis zostaje);
 //   kontrole (wynik jak na bazie, zielony z natury): poprawka B przed Koszem A i przed przycięciem (wpis wygrywa), karta
 //        wpisu Q scalona dalej Q → R na A albo na B (pełna kopia z nagrobkiem Q — Q w zbiorze N; ograniczenie, E3-PR0f),
-//        import pliku karty P (import reguły nie zna).
+//        import pliku karty P (import reguły nie zna; literał 2 wersji i licznika karty Q 3 — import nie przelicza
+//        karty, spod której zabiera wersję, jak dotąd).
 // PRZYPADKI E3-PR0e2a (P-SYNC-WLASCICIEL, chwila przypisania wersji do karty — pole rekordu wersji assignedAtISO,
 // w tym wydaniu nikt go nie zapisuje; tu wstawione wprost do rekordu w bazie atrapy IndexedDB, jak od urządzenia, które je
 // zapisuje): pole pomijane we wszystkich porównaniach odsyłania wersji, jak rev — sama chwila przypisania nie wywołuje

@@ -51,6 +51,10 @@
 //        i odtworzenie konta z kopii z polem (czerwone — bieżący eksport pola nie niesie).
 // Strażniki zielone z natury mają mutanta kodu, przy którym czerwienieją (poza kontrolami bez zapisu rekordu i zgodnością
 // wstecz, która charakteryzuje niezmienne sejfy z fikstur).
+// E3-PR0e3 (zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów”; 81 przypadków, +10; na d2f1eded czerwone
+// 8): wersja wracająca do karty wpisu z chwilą przypisania z ładunku i bez niej (nowy zapis pola nie tworzy); starsza
+// aplikacja (221, 276) tej zasady nie zna — 8 układów z literałem położenia wizyty (zielone z natury 2: starsza
+// aplikacja zmienia wizytę i najpierw pobiera — gwiazdka ginie jak dotąd).
 //
 // Prawdziwy vilda_vault.js (i vilda_crypto.js, vilda_retention.js) w oknie uprzęży tests/support/urzadzenie-sync.mjs:
 // bliźniaki tego samego konta (klon stanu magazynu w pamięci), starsza aplikacja przez zrodlaStarszej('S221' | 'S276'),
