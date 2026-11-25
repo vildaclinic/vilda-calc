@@ -133,6 +133,7 @@
     if (view.observer) view.observer.disconnect();
     view.notesObserver?.disconnect();
     view.timelineObserver?.disconnect();
+    view.labObserver?.disconnect();
     if (view.centileObserver) view.centileObserver.disconnect();
     if (view.fit) { w.removeEventListener('resize', view.fit); w.visualViewport?.removeEventListener('resize', view.fit); }
     // Invalidate the exact owner before disposing native async editors. Their
@@ -245,6 +246,8 @@
     target.classList.add('vhome-patient-native-dialog', 'vhome-b1-child-dialog');
     var compactDiary = view.workspaceHeader && target.classList.contains('vdo-dialog');
     if (compactDiary) target.classList.add('vpt-compact');
+    var compactLab = view.workspaceHeader && (target.id === 'labResultDetailsDialog' || target.id === 'labPendingDescribeDialog');
+    if (compactLab) target.classList.add('vhome-b1-lab-dialog');
     var closed = false, observer = null, release = null;
     function isOpen() { return target.isConnected && (typeof metadata?.isOpen === 'function' ? metadata.isOpen() : target.open); }
     function fit() { w.VildaHomeWorkspace?.fitDialog?.(target); }
@@ -252,6 +255,7 @@
       if (closed) return; closed = true;
       target.classList.remove('vhome-b1-child-dialog');
       if (compactDiary) target.classList.remove('vpt-compact');
+      if (compactLab) target.classList.remove('vhome-b1-lab-dialog');
       if (observer) observer.disconnect(); if (release) release();
       target.removeEventListener('close', sync); w.removeEventListener('resize', fit);
       w.visualViewport?.removeEventListener('resize', fit); view.dialogCleanups.delete(cleanup);
@@ -346,6 +350,32 @@
     // The same native list rebuilds its children each time a filter changes.
     view.timelineObserver = new w.MutationObserver(refresh);
     view.timelineObserver.observe(panel, { childList: true, subtree: true });
+    refresh();
+  }
+  function presentLab(view, panel) {
+    if (!view.workspaceHeader || !panel) return;
+    panel.classList.add('vhome-b1-lab');
+    function refresh() {
+      if (!current(view)) return;
+      var lab = panel.querySelector('.vilda-lab-hist');
+      var actions = lab?.querySelector('.vilda-lab-hist-actions');
+      if (!actions) return;
+      // Native reads can replace the complete view. Keep the same actions and
+      // their listeners, including on views with no toolbar yet.
+      var toolbar = lab.querySelector('.vilda-lab-hist-toolbar');
+      if (toolbar && actions.parentElement !== toolbar) {
+        var focused = d.hasFocus() && d.activeElement;
+        toolbar.appendChild(actions);
+        if (focused && actions.contains(focused)) focused.focus({ preventScroll: true });
+      }
+      var add = actions.querySelector('.vilda-lab-hist-check');
+      if (add?.textContent === 'Dodaj wyniki →') add.textContent = 'Dodaj wyniki';
+      lab.querySelectorAll('.vilda-lab-hist-pending-enter').forEach(function (entry) {
+        if (entry.textContent === 'Wpisz wynik →') entry.textContent = 'Wpisz wynik';
+      });
+    }
+    view.labObserver = new w.MutationObserver(refresh);
+    view.labObserver.observe(panel, { childList: true, subtree: true });
     refresh();
   }
   function presentCentileCharts(view, panel) {
@@ -697,6 +727,7 @@
         view.mounted = true;
         presentNotes(view, panels.notes);
         presentTimeline(view, panels.timeline);
+        presentLab(view, panels.lab);
         armFocus(view); select(view, view.selected);
         // The connected hidden treatment host may perform its guarded read.
         // Status must include persisted generic therapies on first opening.

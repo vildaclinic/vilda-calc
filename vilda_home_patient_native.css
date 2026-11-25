@@ -1484,3 +1484,311 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vhome-timeli
     width: 17px;
   }
 }
+
+/* Laboratory results in the inline patient Overview. */
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist {
+  --lab-ink: #213f49;
+  --lab-muted: #49636d;
+  --lab-accent: #006d75;
+  --lab-line: #d5e4e7;
+  --lab-surface: #fff;
+  --lab-radius: var(--radius-12);
+  --lab-shadow: 0 2px 8px rgb(31 63 73 / 5%);
+  container: vilda-b1-lab / inline-size;
+  gap: var(--space-12px);
+  color: var(--lab-ink);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-head {
+  min-height: 44px;
+  gap: var(--space-4px) var(--space-12px);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-head .vilda-lab-hist-heading {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-actions {
+  margin-inline-start: auto;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(.vilda-lab-hist-actions, .vilda-lab-hist-pending-actions) > .vilda-auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-8px) var(--space-14px);
+  border: var(--border-hairline) solid var(--lab-line) !important;
+  border-radius: var(--radius-8) !important;
+  background: var(--lab-surface) !important;
+  box-shadow: none !important;
+  color: var(--lab-accent) !important;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  text-decoration: none;
+  transform: none !important;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-actions > .vilda-lab-hist-check {
+  border-color: var(--lab-accent) !important;
+  background: var(--lab-accent) !important;
+  color: white !important;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(.vilda-lab-hist-toolbar, .vilda-lab-hist-result-controls) {
+  gap: var(--space-8px) var(--space-12px);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(input.vilda-lab-hist-search-input, select.vilda-lab-hist-panel-select) {
+  border-color: var(--lab-line);
+  border-radius: var(--radius-8);
+  color: var(--lab-ink);
+  font-size: 16px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-segment {
+  border-color: var(--lab-line);
+  border-radius: var(--radius-8);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-segment-btn {
+  font-size: 15px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(.vilda-lab-hist-muted, .vilda-lab-hist-date, .vilda-lab-hist-result-norm, .vilda-lab-hist-result-unit, .vilda-lab-hist-table-head) {
+  color: var(--lab-muted);
+  font-size: 14px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-result-controls {
+  min-height: 0;
+  padding-inline: 2px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-pending {
+  min-width: 0;
+  padding: var(--space-10px) var(--space-14px);
+  border: var(--border-hairline) solid #ecdbc0;
+  border-radius: var(--lab-radius);
+  background: #fffefa;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(.vilda-lab-hist-tag, .vilda-lab-hist-pending-help) {
+  display: none !important;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-top > .vilda-patient-section-h {
+  color: #744c1b;
+  font-size: 15px;
+  font-weight: 700;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-top > button.vilda-lab-hist-link {
+  min-height: 32px;
+  padding: 3px 0;
+  color: var(--lab-accent) !important;
+  font-size: 14px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-row {
+  padding-block: var(--space-8px) 0;
+  gap: var(--space-6px) var(--space-12px);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-row + .vilda-lab-hist-pending-row {
+  margin-top: var(--space-8px);
+  border-top: var(--border-hairline) solid #ebdfcd;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-title {
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-title .vilda-lab-hist-muted {
+  font-weight: 400;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist button.vilda-lab-hist-result-row {
+  min-height: 58px;
+  padding: 9px var(--space-14px);
+  line-height: 1.35;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist button.vilda-lab-hist-result-row:focus-visible {
+  outline: var(--border-emphasis) solid var(--lab-accent);
+  outline-offset: -3px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(.vilda-lab-hist-date-group, .vilda-lab-hist-card, .vilda-lab-hist-state) {
+  border-color: var(--lab-line);
+  border-radius: var(--lab-radius);
+  background: var(--lab-surface);
+  box-shadow: var(--lab-shadow);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-card-name {
+  font-size: 17px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-footer > summary {
+  color: var(--lab-muted);
+  font-size: 14px;
+  min-height: 44px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-result-numbers {
+  gap: 2px;
+}
+
+/* Keep each date and its source together in the results grid. */
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-package {
+  display: none !important;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-head:not(:has(.vilda-lab-hist-actions, .vilda-lab-hist-titles > p)) {
+  position: absolute;
+  min-height: 0;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-toolbar {
+  grid-template-columns: minmax(0, 1fr) minmax(168px, 200px) 176px max-content;
+  align-items: center;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-toolbar .vilda-lab-hist-actions {
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-actions .vilda-lab-hist-check {
+  grid-column: 1 / -1;
+  width: 100% !important;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-select-wrap select {
+  padding-inline: var(--space-10px) 27px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-select-arrow {
+  right: 8px;
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-search:has(.vilda-lab-hist-search-clear[hidden]) input {
+  padding-inline-end: var(--space-12px);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-date-heading {
+  padding: var(--space-8px) var(--space-14px);
+  background: #edf5f6;
+  color: var(--lab-ink);
+}
+#vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-results {
+  gap: var(--space-10px);
+}
+
+@container vilda-b1-lab (min-width: 800px) {
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-table-head {
+    display: none;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-date-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-date-heading {
+    grid-column: 1 / -1;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist button.vilda-lab-hist-result-row:nth-of-type(even) {
+    border-inline-start: 1px solid var(--lab-line) !important;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-result-row:only-of-type {
+    grid-column: 1 / -1;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-date-group:has(> button:last-child:nth-of-type(odd):not(:only-of-type))::after {
+    content: "";
+    border-block-start: var(--border-hairline) solid #dce7eb;
+    border-inline-start: 1px solid var(--lab-line);
+  }
+}
+
+:is(#labResultDetailsDialog, #labPendingDescribeDialog).vhome-b1-lab-dialog .vilda-result-details-body {
+  font-size: 16px;
+  line-height: 1.5;
+}
+:is(#labResultDetailsDialog, #labPendingDescribeDialog).vhome-b1-lab-dialog .vilda-result-details-heading p {
+  color: #49636d;
+}
+#labResultDetailsDialog.vhome-b1-lab-dialog:not(:has(.vilda-lab-result-chart-chooser)) .vilda-result-details-titles > p {
+  display: none;
+}
+:is(#labResultDetailsDialog, #labPendingDescribeDialog).vhome-b1-lab-dialog .vilda-result-details-actions {
+  gap: var(--space-8px);
+}
+:is(#labResultDetailsDialog, #labPendingDescribeDialog).vhome-b1-lab-dialog .vilda-result-details-actions button {
+  border-radius: var(--radius-8) !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 600px) {
+  :is(#labResultDetailsDialog, #labPendingDescribeDialog).vhome-b1-lab-dialog .vilda-result-details-actions:not([hidden]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  :is(#labResultDetailsDialog, #labPendingDescribeDialog).vhome-b1-lab-dialog .vilda-result-details-actions > button {
+    width: 100% !important;
+    min-width: 0;
+    margin: 0;
+    padding-inline: var(--space-6px);
+    white-space: normal;
+  }
+  #labResultDetailsDialog.vhome-b1-lab-dialog .vilda-result-details-actions > button:is(:only-child, :nth-child(3)) {
+    grid-column: 1 / -1;
+  }
+}
+
+@container vilda-b1-lab (max-width: 620px) {
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container vilda-b1-lab (max-width: 400px) {
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-actions,
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(.vilda-lab-hist-actions, .vilda-lab-hist-pending-actions) > :only-child {
+    grid-column: 1 / -1;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist :is(.vilda-lab-hist-actions, .vilda-lab-hist-pending-actions) > .vilda-auth-btn {
+    width: 100% !important;
+    padding-inline: var(--space-6px);
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-title {
+    flex-basis: 100%;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-pending-top > button.vilda-lab-hist-link {
+    min-height: 44px;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-toolbar {
+    gap: var(--space-8px);
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist select.vilda-lab-hist-panel-select {
+    padding-inline: var(--space-8px) 25px;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-select-arrow {
+    right: 7px;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist button.vilda-lab-hist-segment-btn {
+    padding-inline: 1px;
+    font-size: 14px;
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist button.vilda-lab-hist-result-row {
+    grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr) 10px;
+    gap: 7px;
+    padding-inline: var(--space-10px);
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-table-head {
+    padding-inline: var(--space-10px) 28px;
+  }
+}
+@container vilda-b1-lab (max-width: 700px) {
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-search {
+    grid-column: auto;
+  }
+}
+@container vilda-b1-lab (max-width: 305px) {
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-search,
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist-select-wrap {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 720px) {
+  #vhomePatientOverview .vhome-b1-lab .vilda-lab-hist .vilda-lab-hist-toolbar .vilda-lab-hist-check {
+    min-height: 48px;
+  }
+}
