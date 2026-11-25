@@ -250,12 +250,18 @@ describe('production header geometry', () => {
     expect(child.documentElement.style.getPropertyValue('--chrome-form-footer-height')).toBe('180px');
   });
 
-  it('measures a stable scrollbar gutter before overflow and keeps the same offset after overflow', () => {
-    const child = document('/index.html', 928); child.documentElement.width = 918; form(child, 0, 453, 918);
-    const frame = element(248, 928); frame.contentDocument = child;
+  it.each([928, 927.6, 928.4])('keeps a stable scrollbar gutter before and after overflow at width %s', width => {
+    const clientWidth = Math.round(width);
+    const child = document('/index.html', clientWidth);
+    child.documentElement.width = width - 10;
+    form(child, 0, 453, width - 10);
+    const frame = element(248, width);
+    frame.clientWidth = clientWidth;
+    frame.contentDocument = child;
     const e = setup('/app.html', 1440, ({ doc }) => doc.frames.push(frame));
     expect(e.value('--chrome-pane-scrollbar-width')).toBe('10px');
-    child.documentElement.clientWidth = 918; e.refresh();
+    child.documentElement.clientWidth = clientWidth - 10;
+    e.refresh();
     expect(e.value('--chrome-pane-scrollbar-width')).toBe('10px');
   });
 
