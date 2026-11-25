@@ -1064,7 +1064,7 @@ tabela „Podział E3-PR0”, wiersze 5c, 6 (E3-PR0f) i 10 (E3-PR0i), decyzja D-
    jest we właściwej karcie, duplikat nie wraca, notatka nie jest skasowana, ale nie ma karty, w której byłaby
    widoczna. Wzrost liczby takich notatek w długim teście (profil pełny 1–20: 30 → 40) jest skutkiem tej decyzji, nie
    nową utratą. *(2026-11-25, E3-PR0e2b: to samo przy „Przywróć” wizyty przeniesionej w starej karcie z notatką —
-   do potwierdzenia właściciela przed PR, polecany wariant „ta sama sytuacja, wydać bez zmian”; ALGORITHMS,
+   do potwierdzenia właściciela przed scaleniem, polecany wariant „ta sama sytuacja, wydać bez zmian”; ALGORITHMS,
    P-SYNC-WLASCICIEL, E3-PR0e2b, „Do akceptacji właściciela przy PR”, punkt 1.)*
 2. 2026-11-25 — **przyjęte** („2b”): w części Kosza tego wydania — gdy wizyta przeniesiona „Scal pacjentów” leży w Koszu
    pod kartą scaloną (wpis Kosza zna scalenie), a urządzenie bez wiedzy o scaleniu poprawia ją albo oznacza gwiazdką

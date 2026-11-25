@@ -49807,8 +49807,8 @@ pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifes
 
 **Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla danych).
 Rekomendacja przy każdym punkcie: przyjąć.
-1. **DO POTWIERDZENIA PRZED PR: „Przywróć” wizyty przeniesionej w starej karcie i notatka w tej samej karcie.**
-   Przykład (fikcyjny, sprawa 16): „Pacjent Testowy 5”; o 7:55 telefon bez sieci daje do Kosza wizytę z 3 marca
+1. **DO POTWIERDZENIA PRZED SCALENIEM: „Przywróć” wizyty przeniesionej w starej karcie i notatka w tej samej karcie.**
+   Przykład (fikcyjny): „Pacjent Testowy 5”; o 7:55 telefon bez sieci daje do Kosza wizytę z 3 marca
    w duplikacie, o 8:01 komputer (bez wiedzy o tym Koszu) scala karty — wizyta przechodzi do właściwej karty, o 8:10
    telefon w duplikacie robi „Przywróć” tej wizyty i dopisuje notatkę. Dotąd duplikat wracał z wizytą i widoczną
    notatką (a jego usunięcie kasowało wizytę); teraz wizyta zostaje we właściwej karcie, duplikat nie wraca, notatka

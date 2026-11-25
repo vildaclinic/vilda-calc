@@ -1616,7 +1616,7 @@ describe('notatka zapisana w starej karcie na urządzeniu bez wiedzy o „Scal p
   // „Przywróć” wizyty przeniesionej w starej karcie to także późniejsza zmiana tej wersji (jak poprawka): wizyta zostaje
   // w karcie scalonej Y (zachowanie z projektu tego wydania — „Przywróć” w starej karcie kończy w karcie scalonej),
   // X nie wraca, a notatka dopisana w X zostaje zapisana bez widocznej karty — ta sama sytuacja co w decyzji właściciela
-  // z 2026-11-25 (do potwierdzenia przez właściciela przed PR). Dawniej X wracała z v i z widoczną notatką.
+  // z 2026-11-25 (do potwierdzenia przez właściciela przed scaleniem). Dawniej X wracała z v i z widoczną notatką.
   it('notatka i „Przywróć” wizyty przeniesionej (T dał ją do Kosza w X przed scaleniem): wizyta w karcie scalonej Y, stara karta X nie wraca, notatka zapisana bez widocznej karty', async () => {
     expect(await przebieg({ przywroc: true })).toEqual(obaj({ karty: { Y: ['20', '21', '30', '30'] }, notatki: ['bez karty, zapisana pod X'] }));
   }, 2 * CZAS);
