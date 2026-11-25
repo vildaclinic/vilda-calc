@@ -131,6 +131,7 @@
     d.removeEventListener('vilda:patient-profile-changed', view.profileChanged);
     clearFocus(view);
     if (view.observer) view.observer.disconnect();
+    view.notesObserver?.disconnect();
     if (view.centileObserver) view.centileObserver.disconnect();
     if (view.fit) { w.removeEventListener('resize', view.fit); w.visualViewport?.removeEventListener('resize', view.fit); }
     // Invalidate the exact owner before disposing native async editors. Their
@@ -266,6 +267,37 @@
     observer = new w.MutationObserver(function () { if (!isOpen() || !current(view)) cleanup(); });
     observer.observe(d.documentElement, {childList: true, subtree: true});
     view.dialogCleanups.add(cleanup); fit(); cleanup.actorLifetimeVersion = 1; return cleanup;
+  }
+  function presentNotes(view, panel) {
+    if (!view.workspaceHeader || !panel) return;
+    panel.classList.add('vhome-b1-notes-compact');
+    function refresh() {
+      if (!current(view)) return;
+      // AuthUI replaces this list after its asynchronous read and on save.
+      // Keep its original controls and callbacks when grouping the header.
+      var header = panel.querySelector(':scope > .vilda-patient-notes-header');
+      var firstGroup = panel.querySelector('.vilda-patient-notes-subheader');
+      if (header && firstGroup) {
+        var focused = d.hasFocus() && d.activeElement;
+        firstGroup.appendChild(header);
+        if (focused && header.contains(focused)) focused.focus({ preventScroll: true });
+      }
+      panel.querySelectorAll('.vilda-patient-note-card').forEach(function (card) {
+        var meta = card.firstElementChild;
+        if (!meta || meta.classList.contains('vilda-patient-note-meta')) return;
+        meta.classList.add('vilda-patient-note-meta');
+        Array.from(card.children).slice(1).forEach(function (part) {
+          // AuthUI assigns fixed styles to the title, body and timestamp.
+          var style = part.style;
+          if (style.fontWeight === '600' && style.fontSize === '0.95rem') part.classList.add('vilda-patient-note-title');
+          else if (style.whiteSpace === 'pre-wrap') part.classList.add('vilda-patient-note-body');
+          else if (part === card.lastElementChild && style.fontSize === '0.74rem') part.classList.add('vilda-patient-note-saved');
+        });
+      });
+    }
+    view.notesObserver = new w.MutationObserver(refresh);
+    view.notesObserver.observe(panel, { childList: true, subtree: true });
+    refresh();
   }
   function presentCentileCharts(view, panel) {
     if (!view.workspaceHeader || !panel) return;
@@ -596,6 +628,7 @@
     w.addEventListener('vilda:user-state-cleared', view.ownerChanged);
     if (w.VildaHomePatientNativeNote?.create) view.note = w.VildaHomePatientNativeNote.create({
       patientId: view.patientId, isCurrent: function () { return current(view); }, openNative: native.openNote,
+      compactPresentation: function () { return view.workspaceHeader && view.selected === 'notes'; },
       openPlan: function (destination) { if (current(view)) native.openPlan(destination); }, onDisposed: function () { resumeRefresh(view); }
     });
     if (!boundVaults.has(vault)) { boundVaults.add(vault); vault.onLock(function () { if (active?.vault === vault) destroy(active); }); }
@@ -612,7 +645,9 @@
       },
       mounted: function () {
         if (view.disposed || !root.isConnected) return;
-        view.mounted = true; armFocus(view); select(view, view.selected);
+        view.mounted = true;
+        presentNotes(view, panels.notes);
+        armFocus(view); select(view, view.selected);
         // The connected hidden treatment host may perform its guarded read.
         // Status must include persisted generic therapies on first opening.
         mountTreatment(view);
