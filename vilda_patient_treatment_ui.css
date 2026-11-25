@@ -562,7 +562,7 @@ html.vilda-home-workspace .vdo-dialog.vhome-b1-child-dialog.vpt-compact .vdo-inp
 html.vilda-home-workspace .vdo-dialog.vhome-b1-child-dialog.vpt-compact .vdo-actions {
   position: sticky;
   bottom: 0;
-  z-index: 1;
+  z-index: var(--z-raised);
   margin: auto calc(-1 * var(--vpt-window-inset)) 0;
   padding: var(--space-12px) var(--vpt-window-inset);
   border-top: var(--border-hairline) solid var(--vpt-compact-line);

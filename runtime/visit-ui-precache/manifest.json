@@ -128,7 +128,7 @@
     },
     {
       "path": "vilda_patient_treatment_ui.css?v=3",
-      "sha256": "46c09fa0944ebb0ffe74878040c70d6e7f02da3d389ccb4150373d777c847078"
+      "sha256": "5475e76ae00688d6375f629778f34cdab1678e89c3e9259c15f83a10dbcf7f04"
     },
     {
       "path": "vilda_home_patient_native_note.js?v=1",
@@ -228,9 +228,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-4d4d6fdaf4dc.json",
-    "sha256": "4d4d6fdaf4dc81eef20e55b4919d91627ae55057cda2a1150641403943c8c039",
-    "byteLength": 2118379
+    "path": "runtime/visit-ui-precache/precache-fb5fdb96a10b.json",
+    "sha256": "fb5fdb96a10b4ac8528cc90d61f549b0610152403f1e5cce9e4724901a4ebfe5",
+    "byteLength": 2118393
   },
   "historicalPacks": [
     {
