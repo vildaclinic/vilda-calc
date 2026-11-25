@@ -54,10 +54,19 @@
       var title = svgNode('title'); title.textContent = point.getAttribute('aria-label'); point.appendChild(title); svg.appendChild(point);
     }); host.appendChild(svg);
   }
-  function compactMetricCard(options, source) {
-    // Rearrange native presentation only. The complete card, including SDS
-    // endpoints, treatment phases and segment warnings, remains in the native
-    // details below. Never choose or shorten the clinical verdict here.
+  function earlierWarning(card, metric) {
+    var worst = metric?.worst, verdict = worst?.verdict;
+    if (!verdict || (verdict.t !== 'bad' && verdict.t !== 'warn') || metric.segments.length < 2 ||
+        !(worst.b.ageMonths < metric.last.ageMonths)) return null;
+    // patientMetricCardHtml appends its most serious segment after all phase
+    // and treatment lines. Reuse its age range, signed ΔSDS and full verdict.
+    var line = card.querySelector(':scope > .vtap-seg:last-child');
+    if (line) line.classList.add(verdict.t === 'bad' ? 'vt-b' : 'vt-w');
+    return line;
+  }
+  function compactMetricCard(options, source, metric) {
+    // Keep the native headline and a warning from an earlier interval.
+    // Full phase, treatment and segment details remain in the native card.
     var card = options.copy(source), top = card.querySelector('.top'), value = card.querySelector('.big');
     if (!top || !value) return card;
     var delta = value.querySelector('.d'), raw = card.querySelector('.sub'), verdict = card.querySelector('.vdt');
@@ -75,7 +84,9 @@
     }
     var bottom = el('div', 'vhome-a2-metric-bottom');
     if (delta) { delta.classList.add('vhome-a2-metric-delta'); bottom.appendChild(delta); }
+    var warning = earlierWarning(card, metric);
     if (verdict) bottom.appendChild(verdict);
+    if (warning) bottom.appendChild(warning);
     card.classList.add('vhome-a2-metric-card'); card.replaceChildren(top, value);
     if (raw) card.appendChild(raw);
     if (bottom.children.length) card.appendChild(bottom);
@@ -108,7 +119,9 @@
     }); plotHeader.appendChild(switches); plot.append(plotHeader, host, el('p', 'vhome-a2-caption', 'Wyróżniony punkt: bieżąca wizyta. Wykres wartości nie jest siatką centylową.'));
     var cards = el('div', 'vhome-a2-metrics');
     var nativeCards = Array.from(source.querySelectorAll('.vtap-cards > .vtap-card'));
-    nativeCards.filter(function (node) { return !node.classList.contains('vtap-hvc'); }).forEach(function (node) { cards.appendChild(compactMetricCard(options, node)); });
+    nativeCards.filter(function (node) { return !node.classList.contains('vtap-hvc'); }).forEach(function (node, index) {
+      cards.appendChild(compactMetricCard(options, node, model.metrics[index]));
+    });
     dashboard.append(plot, cards); root.appendChild(dashboard);
     var context = el('section', 'vhome-a2-panel vhome-a2-context'); context.appendChild(el('h4', '', 'Tempo i potencjał rodzinny'));
     var slots = el('div', 'vhome-a2-context-slots');

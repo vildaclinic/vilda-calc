@@ -165,7 +165,10 @@
     if (old) w.clearInterval(old.timer);
     dialog.close(); dialog.removeAttribute('aria-modal'); dialog.querySelector('.vhome-dialog-body').replaceChildren();
     if (!fromHistory && old && w.history.state?.vildaHomeDialog === old.historyToken) w.history.back();
-    if (focus || !force) byId('vhomeGrowthExpand').focus({ preventScroll: true });
+    if (focus || !force) {
+      var opener = old?.opener?.isConnected ? old.opener : byId('vhomeGrowthExpand');
+      opener.focus({ preventScroll: true });
+    }
     return true;
   }
   // Cloning already-rendered native result nodes avoids a second calculation
@@ -222,17 +225,35 @@
     }
     panel.appendChild(section);
   }
+  function sameTrajectory(saved, native) {
+    if (!native) return false;
+    // Compare the shared renderer's results and context before substituting the
+    // form's trajectory. The opening state of the details is a UI preference.
+    return ['.vtap-meta', '.vtap-cards', '.vtap-tempo', '.vtap-row', '.vtap-det'].every(function (selector) {
+      return saved.querySelector(selector)?.innerHTML === native.querySelector(selector)?.innerHTML;
+    });
+  }
   function renderResults(tab) {
     var panel = byId('vhomeGrowthPanel-' + tab); if (!panel) return;
     disposeResultView(); panel.replaceChildren();
-    if (dirty() || !fresh()) {
-      panel.appendChild(el('p', 'vhome-growth-empty', dirty()
-        ? 'Masz niezastosowane dane. Zastosuj je, aby zobaczyć aktualną analizę i prognozy.'
-        : 'Uzupełnij bieżący pomiar i dane w zakładce „Dane i pomiary”, aby zobaczyć aktualne wyniki.'));
-      if (tab === 'analysis' && !dirty()) appendDownSyndromeAnalysis(panel);
+    var hasChanges = dirty(), isFresh = fresh(), native = byId('advResults');
+    var saved = tab === 'analysis' && draft.trajectory;
+    draft.showingSavedTrajectory = !!(!hasChanges && saved &&
+      (!isFresh || !sameTrajectory(saved, native?.querySelector('.adv-growth-result-block--trajectory .vtap'))));
+    if (draft.showingSavedTrajectory) {
+      var report = resultCopy(saved);
+      report.hidden = false;
+      report.querySelector('.vtap-main').open = true;
+      panel.append(el('p', 'vhome-dialog-context', 'Trajektoria z zapisanych pomiarów w Karcie pacjenta'), report);
       return;
     }
-    var native = byId('advResults');
+    if (hasChanges || !isFresh) {
+      panel.appendChild(el('p', 'vhome-growth-empty', hasChanges
+        ? 'Masz niezastosowane dane. Zastosuj je, aby zobaczyć aktualną analizę i prognozy.'
+        : 'Uzupełnij bieżący pomiar i dane w zakładce „Dane i pomiary”, aby zobaczyć aktualne wyniki.'));
+      if (tab === 'analysis' && !hasChanges) appendDownSyndromeAnalysis(panel);
+      return;
+    }
     if (w.VildaHomeGrowthViews) {
       resultView = w.VildaHomeGrowthViews.render({ panel: panel, native: native, data: w.advancedGrowthData, tab: tab,
         copy: resultCopy, metric: selectedMetric, onMetric: function (name) { selectedMetric = name; }, onData: function () { selectTab('data', true); } });
@@ -271,7 +292,10 @@
     if (!draft || !tabs[tab]) return;
     if (ghView) return;
     if (!stillOwned()) { close(true); return; }
-    if (tab === 'data') disposeResultView();
+    if (tab === 'data') {
+      disposeResultView();
+      draft.showingSavedTrajectory = false;
+    }
     draft.tab = tab;
     Object.keys(tabs).forEach(function (name) {
       var button = byId('vhomeGrowthTab-' + name);
@@ -287,7 +311,8 @@
   function refreshFooter() {
     if (!draft) return;
     var applyButton = dialog.querySelector('.vhome-dialog-apply'), cancelButton = dialog.querySelector('.vhome-dialog-cancel');
-    applyButton.hidden = measurementsReadOnly() && !ghView;
+    var savedResult = draft.showingSavedTrajectory && draft.tab === 'analysis';
+    applyButton.hidden = (measurementsReadOnly() || savedResult) && !ghView;
     if (ghView) {
       setText(applyButton, ghView.phase === 'point' ? 'Przejdź do DocPro' : 'Zapisz punkt leczenia');
       setText(cancelButton, ghView.phase === 'point' ? 'Wróć do pomiarów' : 'Anuluj punkt');
@@ -297,11 +322,13 @@
       return;
     }
     cancelButton.disabled = false;
-    setText(applyButton, 'Zastosuj dane'); setText(cancelButton, measurementsReadOnly() ? 'Zamknij' : 'Anuluj');
+    setText(applyButton, 'Zastosuj dane'); setText(cancelButton, measurementsReadOnly() || savedResult ? 'Zamknij' : 'Anuluj');
     var changed = dirty();
     dialog.querySelector('.vhome-dialog-apply').disabled = !changed;
-    setText(byId('vhomeGrowthDraftStatus'), measurementsReadOnly() ? 'Odczyt zapisanych pomiarów.' : changed ? 'Masz niezastosowane dane.' : 'Wspólne pomiary · zmiany pozostają szkicem do zatwierdzenia.');
-    dialog.querySelectorAll('[data-growth-document]').forEach(function (button) { button.disabled = changed || !fresh(); });
+    setText(byId('vhomeGrowthDraftStatus'), savedResult ? '' : measurementsReadOnly() ? 'Odczyt zapisanych pomiarów.' : changed ? 'Masz niezastosowane dane.' : 'Wspólne pomiary · zmiany pozostają szkicem do zatwierdzenia.');
+    dialog.querySelectorAll('[data-growth-document]').forEach(function (button) {
+      button.hidden = savedResult; button.disabled = savedResult || changed || !fresh();
+    });
     dialog.querySelectorAll('[data-growth-gh]').forEach(function (button) {
       var row = draft.rows.find(function (r) { return r.key === button.dataset.growthGh; });
       var nativeButton = row?.node?.querySelector('.gh-z-wiersza-btn');
@@ -632,9 +659,12 @@
     if (valid()) w.VildaDataImportExport.saveMainSessionNow();
     schedule();
   }
-  function open(tab) {
-    if (!started || !canEdit() || card.hidden) return false;
-    if (dialog?.open) { selectTab(tabs[tab] ? tab : 'analysis', true); return true; }
+  function open(tab, trajectory, opener) {
+    if (!started || !canEdit() || card.hidden && !trajectory) return false;
+    if (dialog?.open) {
+      if (trajectory) return false;
+      selectTab(tabs[tab] ? tab : 'analysis', true); return true;
+    }
     if (d.querySelector('dialog[open]')) return false;
     var base = snapshot(); if (!base) return false;
     var decision = base.owner.visit === null ? openingDecision() : null;
@@ -652,6 +682,7 @@
     var values = {}; fields.forEach(function (entry) { values[entry[0]] = value(entry[0]); });
     var history = rows().map(function (node) { return { key: key(node), node: node, values: rowValues(node), protected: protectedRow(node) }; });
     draft = { values: values, rows: history, template: rows()[0] || historyTemplate, tab: 'data', vault: vault, token: token,
+      trajectory: trajectory ? resultCopy(trajectory) : null, opener: opener || null,
       fingerprint: JSON.stringify(base), ownerKey: JSON.stringify(base.owner),
       decision: decision, visitContext: w.VildaVisitContext || null, visitContinued: false, boundary: ownerBoundary,
       historyToken: 'growth-' + Date.now(), initial: JSON.stringify([values, history.map(function (r) { return [r.key, r.values]; })]) };
@@ -678,7 +709,7 @@
     [['Generuj siatki', 'charts'], ['Raport wzrastania', 'report']].forEach(function (entry) {
       var button = el('button', 'vhome-growth-secondary', entry[0]); button.type = 'button'; button.dataset.growthDocument = entry[1];
       button.addEventListener('click', function () {
-        if (!stillOwned() || dirty() || !fresh()) return;
+        if (!stillOwned() || draft.showingSavedTrajectory || dirty() || !fresh()) return;
         if (entry[1] === 'charts') openCharts();
         else { close(true, true); w.generateAdvancedGrowthPdfReport(); }
       }); documents.appendChild(button);
@@ -805,7 +836,7 @@
     renderCard();
   }
   function canOpenCharts() {
-    return !!(canEdit() && w.VildaHomeGrowthCharts && (!dialog?.open || stillOwned() && !dirty() && !ghView));
+    return !!(canEdit() && w.VildaHomeGrowthCharts && (!dialog?.open || stillOwned() && !dirty() && !ghView && !draft.showingSavedTrajectory));
   }
   function openCharts(options) {
     if (!canOpenCharts()) return false;
@@ -815,6 +846,11 @@
     return w.VildaHomeGrowthCharts.open({ valid: function () { return tokenValid(item); }, snapshot: snapshot,
       mode: options?.mode, onBack: options?.onBack, opener: options?.opener || byId('vhomeGrowthExpand'), replaceHistory: handoff });
   }
-  w.VildaHomeGrowth = Object.freeze({ open: open, openCharts: openCharts, canOpenCharts: canOpenCharts, refresh: schedule });
+  function openTrajectory(source, opener) {
+    if (!source?.isConnected || !source.matches('#vhomePatientOverview .vhome-b1-centile .vtap')) return false;
+    return open('analysis', source, opener);
+  }
+  w.VildaHomeGrowth = Object.freeze({ open: function (tab) { return open(tab); }, openTrajectory: openTrajectory,
+    openCharts: openCharts, canOpenCharts: canOpenCharts, refresh: schedule });
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', start, { once: true }); else start();
 })(typeof window !== 'undefined' ? window : globalThis);
