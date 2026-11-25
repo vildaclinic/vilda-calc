@@ -1435,6 +1435,23 @@ describe('„Scal pacjentów” zapisuje chwilę przypisania (E3-PR0e2b) — prz
     expect(await pole(c.A, c.v)).toBe(tW);
   }, CZAS);
 
+  // Jak wyżej, ale wersja-siostra pod Y ma już chwilę przypisania T1, późniejszą niż „teraz”: scalenie Y → W w drugiej
+  // karcie przeglądarki daje jej T1 + 1 ms, a nagrobkowi Y — „teraz”. Wersja pod W dostaje chwilę siostry (to samo
+  // przypisanie co pozostałe wersje przeniesione tamtym scaleniem); chwila nagrobka karty z bieżącego skoku — tylko
+  // wtedy, gdy siostra jej nie ma.
+  it('następca: chwila wersji-siostry ma pierwszeństwo przed chwilą nagrobka karty z bieżącego skoku (siostra z chwilą T1 dostaje T1 + 1 ms, nagrobek Y — „teraz” scalenia Y → W)', async () => {
+    const c = await dwieKarty({ czwarta: true });
+    const siostry = (await c.A.adapter.listSnapshotsForUser(uid(c.A), c.Y)).map((s) => s.snapshotId);
+    expect(siostry.length, 'kontrola: jedna wersja pod Y na A').toBe(1);
+    krok(); await c.B.vault.mergePatients(c.X, c.Y);
+    await wstaw(c.A, siostry[0], T1);
+    krok();
+    let tW = null;
+    await zOknem(c, async (q) => { tW = isoTeraz(); await q.A.vault.mergePatients(q.Y, q.W); krok(); });
+    expect([(await stan(c.A, c.v, c.et)).karta, await pole(c.A, siostry[0]), tW < T1], 'kontrola: v pod W, siostra pod W z T1 + 1 ms, „teraz” scalenia Y → W wcześniejsze niż T1').toEqual(['W', T1P, true]);
+    expect(await pole(c.A, c.v)).toBe(T1P);
+  }, CZAS);
+
   // Dwa skoki gałęzi następcy: w kroku karty Q druga karta przeglądarki scala Y → W; w fazie przeniesień, gdy faza
   // przechodzi już do W (drugi odczyt karty W — pierwszy to sprawdzenie następcy), scala W → V. Chwila z bieżącego
   // skoku (siostra pod V), nie z pierwszego (pod W) i nie z karty z ładunku.

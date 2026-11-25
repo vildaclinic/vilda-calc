@@ -3700,19 +3700,43 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     bez niej rekord i element sa bajt w bajt jak dotad. O wlascicielu wersji wspolnej dwom kartom decyduje najpierw
  *     pozniejsza chwila przypisania (brak = najwczesniej), potem jak wyzej (Bsw_ladunekWygrywa; straznik natywny wola
  *     te sama funkcje). Sama ta chwila nie wywoluje odeslania (lista pol pomijanych w odsylaniu w bloku
- *     P-DZIENNIK-ZDARZEN). W tym wydaniu zadna droga jej nie tworzy („Scal pacjentow” zachowuje chwile przenoszonej
- *     wersji, nowej nie ustawia), wiec dzialanie jest bez zmian; ustawiac zacznie „Scal pacjentow” w E3-PR0e2b, gdy
- *     wszystkie urzadzenia beda mialy to wydanie (starsze gubia pole przy wlasnym zapisie i eksporcie).
+ *     P-DZIENNIK-ZDARZEN). Od E3-PR0e2b (drugie wydanie pola; decyzje wlasciciela z 2026-11-23, potwierdzenie
+ *     z 2026-11-24, ze wszystkie urzadzenia maja E3-PR0e2a — starsze gubily pole przy wlasnym zapisie i eksporcie)
+ *     chwile ustawia „Scal pacjentow” w kazdej wersji przeniesionej do karty docelowej (Bsw_poScaleniu,
+ *     Bsw_przypisanieScalenia): pozniejsza z „teraz” i z poprzedniej chwili tej wersji + dokladnie 1 ms (monotonicznie,
+ *     takze przy cofnietym zegarze; gdy wynik nie ma postaci kanonicznej — rok 9999 — zostaje poprzednia). Nowa glowa
+ *     scalenia i wersje karty docelowej — bez niej. Galaz nastepcy fazy przeniesien (wersja 'zabierz' idzie za
+ *     wersjami F pod H, Bsw_doF) odtwarza tamto scalenie z chwila wersji-siostry pod H, a bez niej z chwila nagrobka
+ *     karty z biezacego skoku. Poprawka albo gwiazdka wersji przeniesionej, zrobiona potem w starej karcie na
+ *     urzadzeniu bez wiedzy o scaleniu, przegrywa wiec przypisaniem z karta scalona i trafia do niej, a stara karta nie
+ *     wraca z jej powodu; nowa wizyta w starej karcie dalej ja zwraca (notatki — jak dotad). Inne drogi nowej chwili
+ *     nie tworza (decyzje fazy przeniesien, import karty, „Scal kopie konta”, odtworzenie konta, „Przywroc”, wersja
+ *     przezywajaca retencje, wersja wracajaca do karty wpisu kosza) — tylko kopia albo pozniejsza z istniejacych.
  * Format ladunku, delt i nagrobkow bez zmian (delta nagrobka wypelnia istniejace pole patients); od E3-PR0e2a wersja
  * moze niesc jedno pole wiecej (wyzej).
  */
 
 // „Scal pacjentow” (Bsc_podBlokada): wersja przechodzi pod karte docelowa jako nowa rewizja rekordu — synchronizacja
 // wie wtedy, ktore przypisanie jest nowsze. Tresc, chwila zmiany i chwila zapisu bez zmian (regula kosza ta sama).
-// Chwila przypisania wersji do karty (E3-PR0e2a) przechodzi z rozpietym rekordem bez zmian; nowej scalenie w tym
-// wydaniu nie ustawia (zacznie E3-PR0e2b, po potwierdzeniu wlasciciela, ze wszystkie urzadzenia maja E3-PR0e2a).
-function Bsw_poScaleniu(wersja, celId) {
-  return { patientId: celId, rev: mt(wersja) + 1 };
+// Od E3-PR0e2b (decyzje wlasciciela z 2026-11-23; potwierdzenie z 2026-11-24, ze wszystkie urzadzenia maja
+// E3-PR0e2a) wersja dostaje tez chwile przypisania do karty docelowej (Bsw_przypisanieScalenia): poprawka albo
+// gwiazdka tej wersji zrobiona potem w starej karcie na urzadzeniu bez wiedzy o scaleniu trafia do karty scalonej,
+// a stara karta nie wraca z jej powodu. Bez trzeciego argumentu — „teraz” (wywolanie w „Scal pacjentow”); w galezi
+// nastepcy fazy przeniesien (Bsw_doF) — chwila przypisania z tamtego scalenia (zrodloChwili, Bsw_nastepca).
+function Bsw_poScaleniu(wersja, celId, zrodloChwili) {
+  return Object.assign({ patientId: celId, rev: mt(wersja) + 1 }, Bsw_przypisanieScalenia(wersja, zrodloChwili));
+}
+// Chwila przypisania wersji do karty przy „Scal pacjentow” (E3-PR0e2b) — jedyne miejsce z zegarem i z kluczem pola
+// poza Bsw_przypisanie. Wartosc: pozniejsza z dwoch — zrodlo (gdy w postaci kanonicznej, Bnp_iso), a bez niego
+// „teraz” (new Date(), osobno dla kazdej wersji; rozni sie ulamkami ms przy jednym zegarze), oraz poprzednia chwila
+// tej wersji + dokladnie 1 ms. Monotonicznie takze przy zegarze cofnietym wzgledem poprzedniego scalenia, bez
+// losowego dodatku chwili zmiany (Bpp_chwilaZmiany) — remis rozstrzyga dalej rev + 1, chwila zmiany i mniejszy
+// patientId (Bsw_ladunekWygrywa). Gdy „poprzednia + 1 ms” nie ma postaci kanonicznej (rok 9999) — zostaje poprzednia.
+function Bsw_przypisanieScalenia(wersja, zrodlo) {
+  const p = Bsw_chwilaPrzypisania(wersja);
+  let t = Bnp_iso(zrodlo) ? zrodlo : new Date().toISOString();
+  if (p && p >= t) { const n = new Date(Date.parse(p) + 1).toISOString(); t = Bnp_iso(n) ? n : p; }
+  return { assignedAtISO: t };
 }
 
 // Cele „Scal pacjentow” wykonanych w tej sesji (konto|karta zrodlowa -> karta docelowa), dla delty nagrobka karty
@@ -3757,20 +3781,22 @@ function Bsw_zmiana(x) { return x && typeof x.updatedAtISO === 'string' ? x.upda
 
 // Chwila przypisania wersji do karty (pole rekordu wersji assignedAtISO; E3-PR0e2a, P-SYNC-WLASCICIEL): jawna chwila
 // (postac toISOString), w ktorej „Scal pacjentow” przypisalo wersje do karty — bez tresci klinicznej, jak savedAtISO.
-// Pierwsze wydanie nowego pola w dwoch wydaniach (decyzja wlasciciela z 2026-11-23, wzor decyzji z 2026-11-17): to
-// wydanie pole przechowuje, przesyla i porownuje, ale zadna droga go nie tworzy — zapisywac zacznie „Scal pacjentow”
-// w E3-PR0e2b, gdy wszystkie urzadzenia beda mialy to wydanie (starsze gubia pole przy wlasnym zapisie i eksporcie).
+// Nowe pole w dwoch wydaniach (decyzja wlasciciela z 2026-11-23, wzor decyzji z 2026-11-17): E3-PR0e2a pole
+// przechowuje, przesyla i porownuje; od E3-PR0e2b zapisuje je „Scal pacjentow” (Bsw_przypisanieScalenia), gdy
+// wszystkie urzadzenia maja E3-PR0e2a (potwierdzenie wlasciciela z 2026-11-24; starsze gubily pole przy wlasnym
+// zapisie i eksporcie).
 // Bsw_chwilaPrzypisania — jedyny odczyt pola: chwila w postaci kanonicznej (Bnp_iso) albo '' (brak); kazda inna
 // wartosc (bez milisekund, liczba, pusty napis) liczy sie jak brak: nie decyduje o wlascicielu wersji i nie przechodzi
 // do eksportu, koperty ani rekordu budowanego z listy pol. Drogi, ktore przepisuja caly rekord (np. „Scal pacjentow”,
 // kosz), zostawilyby ja w rekordzie bez skutku — kazdy odczyt idzie przez te funkcje; sama aplikacja zlej postaci nie
-// zapisuje (do rekordu trafia tylko wynik Bsw_przypisanie).
+// zapisuje (do rekordu trafia tylko wynik Bsw_przypisanie albo Bsw_przypisanieScalenia).
 function Bsw_chwilaPrzypisania(x) { const a = x && x.assignedAtISO; return Bnp_iso(a) ? a : ''; }
 // Pole do zapisu rekordu wersji i elementu eksportu albo koperty: { assignedAtISO } z pozniejsza chwila dwoch kopii
 // (S — z ladunku albo pliku, g — tutejsza; kazda moze byc pusta) albo {} — bez pola rekord i element sa bajt w bajt jak
 // dotad. Przemienne i laczne (pozniejsza z chwil), wiec wynik nie zalezy od tego, ktora kopia wygrala tresc ani
-// przypisanie karty. Jedyne miejsce, w ktorym powstaje obiekt z tym polem — tylko kopia albo pozniejsza z istniejacych
-// wartosci, bez zegara.
+// przypisanie karty. Jedno z dwoch miejsc, w ktorych powstaje obiekt z tym polem — tylko kopia albo pozniejsza
+// z istniejacych wartosci, bez zegara; nowa chwile (z jednym zegarem) daje tylko Bsw_przypisanieScalenia przy
+// „Scal pacjentow” (E3-PR0e2b).
 function Bsw_przypisanie(S, g) {
   const a = Bsw_chwilaPrzypisania(S), c = Bsw_chwilaPrzypisania(g), m = a > c ? a : c;
   return m ? { assignedAtISO: m } : {};
@@ -4297,8 +4323,10 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
     }, opcje);
     if (r && r.dalej) {
       // 'zabierz': F zniknela po decyzji („Scal pacjentow” F -> H w innej karcie przegladarki) — wersja idzie za
-      // wersjami F pod H: kolejny wpis tej samej fazy, pod blokadami H i G (rosnace id), na swiezym odczycie.
-      if ((p.skok || 0) < 8) lista.push(Object.assign({}, p, { F: { patientId: r.dalej }, nastepca: true, skok: (p.skok || 0) + 1, zrodlo: p.zrodlo || F }));
+      // wersjami F pod H: kolejny wpis tej samej fazy, pod blokadami H i G (rosnace id), na swiezym odczycie. Od
+      // E3-PR0e2b wpis niesie chwile przypisania tamtego scalenia z biezacego skoku (r.chwila, Bsw_doF) — zapis pod H
+      // odtwarza ja jak „Scal pacjentow” (Bsw_poScaleniu).
+      if ((p.skok || 0) < 8) lista.push(Object.assign({}, p, { F: { patientId: r.dalej }, nastepca: true, skok: (p.skok || 0) + 1, zrodlo: p.zrodlo || F, chwilaNastepcy: r.chwila || null }));
       continue;
     }
     if (!r) continue;
@@ -4571,8 +4599,8 @@ async function Bsw_poprawTresc(p, teraz, opcje) {const PatientClinicalOperationA
 //   - F zniknela z nagrobkiem zapisanym po decyzji: „Scal pacjentow” F -> H — wersja idzie pod H, za pozostalymi
 //     wersjami F (Bsw_nastepca; kolejny wpis tej samej fazy, pod blokadami H i G); „Usun pacjenta” F (wersji F nie ma
 //     nigdzie) — wersja zostaje pod G i znika razem z nia, jak razem z F.
-// Zwraca null (bez zmian), { dalej: H } albo { dodana, usunieta }: 1, gdy karta F tu powstala, i 1, gdy pusta karta G
-// zniknela.
+// Zwraca null (bez zmian), { dalej: H, chwila } albo { dodana, usunieta }: 1, gdy karta F tu powstala, i 1, gdy pusta
+// karta G zniknela.
 async function Bsw_przenies(p, teraz, ctx, opcje) {
   const G = p.G;
   const wersjeG = await I().listSnapshotsForUser(b, G);
@@ -4594,8 +4622,11 @@ async function Bsw_przenies(p, teraz, ctx, opcje) {
 // Zapis wersji pod F w fazie przeniesien (Bsw_przenies, pod blokadami F i G); g — tutejszy rekord wersji (wersja znikla
 // razem z G — rekord z chwili decyzji 'zabierz', p.gDecyzji). Karty F nie ma: nagrobek F zapisany po decyzji (usuniecie albo scalenie F
 // w innej karcie przegladarki przed wzieciem blokad tej fazy) i nie wczesniejszy niz zapis z ladunku — F nie powstaje od
-// nowa; dla 'zabierz' { dalej: H } (Bsw_nastepca), inaczej null — wersja zostaje pod G. Karta-nastepca H (p.nastepca)
-// nie powstaje nigdy, a wersja dostaje pod nia rev + 1, jak przy „Scal pacjentow” F -> H (Bsw_poScaleniu).
+// nowa; dla 'zabierz' { dalej: H, chwila } (Bsw_nastepca), inaczej null — wersja zostaje pod G. Karta-nastepca H
+// (p.nastepca) nie powstaje nigdy, a wersja dostaje pod nia rev + 1 i od E3-PR0e2b chwile przypisania, jak przy
+// „Scal pacjentow” F -> H (Bsw_poScaleniu): chwila to przypisanie z tamtego scalenia — chwila wersji-siostry pod H,
+// a bez niej (np. siostre przeniosla starsza aplikacja) chwila nagrobka F z tego skoku; bez obu — „teraz”. W lancuchu
+// skokow (H tez juz scalona dalej) — z biezacego skoku, nie z pierwotnej karty p.zrodlo.
 // Naglowek F (i nastepcy H) z najnowszej wersji po zapisie (D-3 A); karta, ktora tu powstaje, bez czytelnej najnowszej
 // wersji — naglowek z ladunku. Chwila zapisu karty H — bez zmian.
 async function Bsw_doF(p, teraz, ctx, g, opcje) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
@@ -4605,8 +4636,8 @@ async function Bsw_doF(p, teraz, ctx, g, opcje) {const PatientClinicalOperationA
   if (!rekF) {
     const nagrobek = await Bpu_nagrobek(F);
     if (p.nastepca || nagrobek && (!p.F.lastSavedAtISO || nagrobek.deletedAtISO >= p.F.lastSavedAtISO)) {
-      const H = p.zabierz ? await Bsw_nastepca(ctx, p) : null;
-      return PatientClinicalWriteValue(PatientClinicalOperationAccount,H ? { dalej: H } : null);
+      const n = p.zabierz ? await Bsw_nastepca(ctx, p) : null;
+      return PatientClinicalWriteValue(PatientClinicalOperationAccount,n ? { dalej: n.H, chwila: n.chwila || (nagrobek && nagrobek.deletedAtISO) || null } : null);
     }
     rekF = {
       patientId: F, headerCipher: p.naglowek, createdAtISO: p.F.createdAtISO || teraz,
@@ -4618,7 +4649,7 @@ async function Bsw_doF(p, teraz, ctx, g, opcje) {const PatientClinicalOperationA
     }
   }
   const rek = await Bsw_rekordW3(p.F, p.S, p.szyfr, teraz, g);
-  if (p.nastepca) Object.assign(rek, Bsw_poScaleniu(rek, F));
+  if (p.nastepca) Object.assign(rek, Bsw_poScaleniu(rek, F, p.chwilaNastepcy));
   Bses_pilnuj(opcje); // P-CHMURA-OPIS: rekord W3 (odczyt i szyfr) w sesji scalania — zapis bez await przed nim
   await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(rek, Bm1(p.S))));
   if (p.zabierz) Bsw_wersjeF(ctx, p.zrodlo || F).push(p.S.snapshotId);
@@ -4653,14 +4684,16 @@ async function Bsw_bezSladu(ctx, p) {
 // 'zabierz', karty F nie ma, a jej nagrobek zapisano po decyzji: karta, pod ktora leza teraz wersje F (Bsw_wersjeF) —
 // swiezy odczyt, pierwsza istniejaca karta inna niz F i G. „Scal pacjentow” F -> H w innej karcie przegladarki przenioslo
 // je pod H; dotad wersja 'zabierz' lezala juz pod F i szla razem z nimi, a bez tego zostawala pod G i znikala z nia na
-// wszystkich urzadzeniach. Bez takiej karty (F usunieta, jej wersje znikly) — null.
+// wszystkich urzadzeniach. Bez takiej karty (F usunieta, jej wersje znikly) — null. Od E3-PR0e2b zwraca { H, chwila }:
+// chwila przypisania znalezionej wersji-siostry (Bsw_chwilaPrzypisania, z tego samego odczytu; '' — bez pola), czyli
+// to samo przypisanie co pozostalych wersji przeniesionych tamtym scaleniem.
 async function Bsw_nastepca(ctx, p) {
   const ids = Bsw_wersjeF(ctx, p.zrodlo || p.F.patientId);
   for (let k = 0; k < ids.length; k += 1) {
     const w = await Bsw_wersjaLokalna(ctx, ids[k]);
     const H = w && w.patientId;
     if (!H || H === p.F.patientId || H === p.G) continue;
-    if (await I().getPatientForUser(b, H)) return H;
+    if (await I().getPatientForUser(b, H)) return { H: H, chwila: Bsw_chwilaPrzypisania(w) };
   }
   return null;
 }

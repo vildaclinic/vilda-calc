@@ -1,10 +1,10 @@
 {
   "namespace": "vilda-treatment-sync-hydration-vault",
   "version": 1,
-  "baseVaultSHA256": "81de091bece15acf7d632bb44ba5411c5165d13efd90ea527594d01c577c9ee1",
+  "baseVaultSHA256": "411c878ae79d981569b7eaed18649d389760a3e1144cfa7ac11c83208c4ab64f",
   "source": "runtime/treatment-sync-hydration-v1/vault-fragment.js",
   "sourceSHA256": "f00ea28e9ed2309080f9ea940df34cb4827251b70063b3253dccf1fd289edc82",
-  "integratedVaultSHA256": "7f863902e113d80d585e07d18a5e591a6e61f2120fddbf96dfc02baeddcebc29",
+  "integratedVaultSHA256": "a335e774e1cb3c8a26553b5f7be54e063e8ab776ced170b996ef5b62f6781dc0",
   "hooks": [
     {
       "name": "hydration-admit-pair",

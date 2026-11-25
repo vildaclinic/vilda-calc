@@ -42,13 +42,19 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // card, is kept as the later of both copies on every write that joins two copies of the record, while imports and
 // other single-copy writes take it from that copy; it is carried by exports, imports and the event envelope, decides
 // the owner card first when present, is checked again by the move phase and alone does not queue the version again;
-// no device writes it yet) and E3-PR0e3 (when an old card loses to a patient tombstone in the synchronization merge,
+// no device writes it yet), E3-PR0e3 (when an old card loses to a patient tombstone in the synchronization merge,
 // a visit version of that card that wins over its trash or retention entry under another live card, as in a single
 // card, returns to the entry's card in the move phase under that card's lock, after a fresh check of the state from
 // the moment of the decision, both for the incoming payload and for the local copy; the end of the trash merge then
 // removes the entry or, for a version pinned before a later pruning, keeps the pruning entry that knows it; in effect
-// at once).
-const BASE = 'a693e447bddeb0e021ee8b8187026956b9fddf87e477c9141f613e1152af0f11';
+// at once) and E3-PR0e2b ("Merge patients" writes the moment it assigned each moved visit version to the target card,
+// the later of now and the previous moment of that version plus exactly 1 ms, keeping the previous one when the result
+// has no canonical form; the new head of the merge and the target card's own versions stay without it; the successor
+// branch of the move phase repeats that merge with the moment of a sibling version under the successor card or else
+// of the tombstone of the card from the current step; a later correction or star of a moved version made in the old
+// card on a device that did not know about the merge therefore lands in the merged card and does not bring the old
+// card back; in effect at once).
+const BASE = '5049cd3c03300f60a83eeb335189be4a51f13515cc11f23096324b3a29aba42f';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');
