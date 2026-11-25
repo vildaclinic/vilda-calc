@@ -132,6 +132,7 @@
     clearFocus(view);
     if (view.observer) view.observer.disconnect();
     view.notesObserver?.disconnect();
+    view.timelineObserver?.disconnect();
     if (view.centileObserver) view.centileObserver.disconnect();
     if (view.fit) { w.removeEventListener('resize', view.fit); w.visualViewport?.removeEventListener('resize', view.fit); }
     // Invalidate the exact owner before disposing native async editors. Their
@@ -297,6 +298,54 @@
     }
     view.notesObserver = new w.MutationObserver(refresh);
     view.notesObserver.observe(panel, { childList: true, subtree: true });
+    refresh();
+  }
+  function presentTimeline(view, panel) {
+    if (!view.workspaceHeader || !panel) return;
+    panel.classList.add('vhome-b1-timeline');
+    function refresh() {
+      if (!current(view)) return;
+      panel.querySelectorAll('.vilda-patient-timeline-filters > button').forEach(function (filter) {
+        // The native filter paints its pressed state white on a colored
+        // background. Keep its listener and expose the same state to AT.
+        filter.setAttribute('aria-pressed', String(filter.style.color === 'rgb(255, 255, 255)'));
+        filter.style.removeProperty('border-radius');
+      });
+      var list = panel.querySelector('.vilda-patient-timeline-list');
+      if (!list) return;
+      Array.from(list.children).forEach(function (row) {
+        if (row.dataset.timelinePart || row.tagName !== 'DIV') return;
+        if (row === list.firstElementChild) return; // Native axis.
+        var children = Array.from(row.children);
+        if (!children.length) {
+          row.dataset.timelinePart = 'group';
+          return;
+        }
+        // AuthUI registers these handlers as listeners, not onclick
+        // properties. Only native event cards use the pointer treatment.
+        var card = children.find(function (child) { return child.style.cursor === 'pointer'; });
+        row.dataset.timelinePart = card ? 'event' : 'anchor';
+        var date = children[1];
+        if (date && date !== card && (card || children.length > 2)) date.dataset.timelinePart = 'date';
+        if (!card) return;
+        var linked = children[0]?.tagName.toLowerCase() === 'svg';
+        if (linked) row.classList.add('vhome-timeline-linked');
+        card.dataset.timelinePart = 'card';
+        var badge = card.firstElementChild;
+        if (badge) badge.dataset.timelinePart = linked ? 'meta' : 'badge';
+        if (card.children[1]) card.children[1].dataset.timelinePart = 'body';
+        card.tabIndex = 0;
+        if (!card.querySelector('button, a')) card.setAttribute('role', 'link');
+        card.addEventListener('keydown', function (event) {
+          if (!current(view) || event.target !== card || (event.key !== 'Enter' && event.key !== ' ')) return;
+          event.preventDefault();
+          card.click();
+        });
+      });
+    }
+    // The same native list rebuilds its children each time a filter changes.
+    view.timelineObserver = new w.MutationObserver(refresh);
+    view.timelineObserver.observe(panel, { childList: true, subtree: true });
     refresh();
   }
   function presentCentileCharts(view, panel) {
@@ -647,6 +696,7 @@
         if (view.disposed || !root.isConnected) return;
         view.mounted = true;
         presentNotes(view, panels.notes);
+        presentTimeline(view, panels.timeline);
         armFocus(view); select(view, view.selected);
         // The connected hidden treatment host may perform its guarded read.
         // Status must include persisted generic therapies on first opening.
