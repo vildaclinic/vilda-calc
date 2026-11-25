@@ -1198,6 +1198,13 @@ body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contr
 
 /* Notes cards in the inline patient Overview. The native records and actions
  * are rendered by AuthUI, with the add action in the first group heading. */
+html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact :is(
+  .vilda-wb-notes-link,
+  .vilda-patient-notes-header > div:has(> .vilda-patient-section-h),
+  .vilda-patient-notes-subheader > span:has(svg)
+) {
+  display: none !important;
+}
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-notes-compact .vilda-patient-notes-header {
   justify-content: flex-end !important;
   margin-block-end: var(--space-14px) !important;
