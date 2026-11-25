@@ -493,6 +493,102 @@ test('Gabinet A keeps its navigation fixed and opens the chosen patient record',
   expect(await frame.evaluate(id => window.VildaVault.getPatient(id).then(record => record.snapshots), ids.a)).toEqual(archived);
 });
 
+test('patient Overview reminders keep their complete actions and native dates at desktop and phone widths', async ({ page }) => {
+  const { frame, ids } = await prepare(page);
+  const notes = await frame.evaluate(async ids => {
+    const rows = [];
+    for (const [offset, title] of [[-2, 'Fikcyjna zaległa kontrola'], [0, 'Fikcyjny kontakt dzisiaj'], [7, 'Fikcyjna przyszła kontrola']]) {
+      const date = new Date(); date.setDate(date.getDate() + offset);
+      const day = date.toLocaleDateString('sv-SE');
+      const result = await window.VildaVault.savePatientNote({ patientId: ids.a, title,
+        category: 'reminder-contact', dueDateISO: day, dueTime: '09:30', body: 'Fikcyjne ustalenia kontroli.' });
+      rows.push({ id: result.id, title, date: day.split('-').reverse().join('.') });
+    }
+    await window.VildaVault.savePatientNote({ patientId: ids.b, title: 'Fikcyjne przypomnienie innego pacjenta',
+      category: 'reminder-contact', dueDateISO: new Date().toLocaleDateString('sv-SE') });
+    return rows;
+  }, ids);
+  await choosePatient(frame, 'Antoni');
+  const slot = frame.locator('#vhomePatientRemindersSlot');
+  const card = slot.locator('.vhome-reminders-card');
+  const add = slot.getByRole('button', { name: 'Dodaj przypomnienie', exact: true });
+  const all = slot.getByRole('button', { name: 'Wszystkie przypomnienia', exact: true });
+  const dialog = page.locator('dialog.vhome-reminders-dialog');
+  const stored = () => frame.evaluate(async patientId => ({
+    patient: await window.VildaVault.getPatient(patientId),
+    notes: await window.VildaVault.listPatientNotesForPatient(patientId),
+    encounter: window.VildaHomeEncounter.state(patientId),
+    user: window.VildaDataImportExport.captureCurrentUserDataReadOnly().user,
+  }), ids.a);
+  async function selectReminders(width) {
+    if (width >= 992) await frame.locator('#vhomePatientOverview').getByRole('tab', { name: 'Przypomnienia', exact: true }).click();
+    else await frame.locator('#vhomePatientOverview select.vhome-b1-mobile-select').selectOption('reminders');
+    await expect(card).toHaveAttribute('data-home-reminders-phase', 'ready');
+  }
+  const before = await stored();
+  expect(before.encounter.mode).toBe('browse');
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 1000 });
+    if (width >= 992) await expect(frame.locator('html')).toHaveClass(/vilda-form-host-desktop/);
+    else await expect(frame.locator('html')).not.toHaveClass(/vilda-form-host-desktop/);
+    await selectReminders(width);
+    await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await expect(add).toBeEnabled();
+    await expect(add).toHaveText('Dodaj przypomnienie', { useInnerText: true });
+    await expect(add.locator('svg')).toHaveCount(1);
+    await expect.poll(() => frame.evaluate(() => {
+      const button = document.querySelector('#vhomePatientRemindersSlot .vb22-primary-create');
+      const owner = button?.closest('.vhome-reminders-card'), svg = button?.querySelector('svg');
+      const label = button?.querySelector('.vhome-reminders-add-text');
+      if (!button?.isConnected || !owner || !svg || !label) return false;
+      const box = button.getBoundingClientRect(), card = owner.getBoundingClientRect();
+      const icon = svg.getBoundingClientRect();
+      const range = document.createRange(); range.selectNodeContents(label);
+      const text = range.getBoundingClientRect();
+      return box.left >= card.left && box.right <= card.right && box.left >= 0 && box.right <= innerWidth &&
+        box.top >= 0 && box.bottom <= innerHeight && icon.width > 0 && icon.height > 0 &&
+        [icon, text].every(rect => rect.left >= box.left && rect.right <= box.right && rect.top >= box.top && rect.bottom <= box.bottom);
+    })).toBe(true);
+    await expect(slot.locator('.vhome-reminders-date')).toHaveCount(0);
+    await expect(slot.locator('.vhome-reminders-entry')).toHaveCount(3);
+    for (const note of notes) await expect(slot.locator(`[data-note-id="${note.id}"]`)).toHaveAccessibleName(new RegExp(note.date));
+    await expect(slot.locator(`[data-note-id="${notes[0].id}"] .vb22-row-date`)).toHaveText(notes[0].date + ' · 09:30');
+    await expect(slot.locator(`[data-note-id="${notes[0].id}"] .vild-rem-when`)).toHaveText('2 dni po terminie');
+    await expect(slot.locator(`[data-note-id="${notes[2].id}"] .vild-rem-when`)).toHaveText('Zaplanowane');
+    await expect.poll(() => card.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      return node.isConnected && box.width > 0 && document.documentElement.scrollWidth <= innerWidth && node.scrollWidth <= node.clientWidth &&
+        [...node.querySelectorAll('.vhome-reminders-entry, .vb22-foot, .vb22-tools')].every(child => {
+          const rect = child.getBoundingClientRect(); return rect.left >= box.left && rect.right <= box.right;
+        });
+    })).toBe(true);
+    if (width !== 320) await card.screenshot({ path: test.info().outputPath(`patient-reminders-${width}.png`) });
+    await all.click();
+    await expect(dialog).toBeVisible();
+    await expect(frame.locator('dialog.vhome-reminders-dialog')).toHaveCount(0);
+    await expect(dialog.locator('.vhome-reminders-full-entry')).toHaveCount(3);
+    await expect(dialog).not.toContainText('Fikcyjne przypomnienie innego pacjenta');
+    await dialog.getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
+    await expect(dialog).toBeHidden();
+  }
+  await slot.locator(`[data-note-id="${notes[2].id}"]`).click();
+  await expect(dialog.locator(`[data-note-id="${notes[2].id}"]`)).toHaveAttribute('aria-current', 'true');
+  await expect(dialog.locator(`[data-note-id="${notes[2].id}"]`)).toHaveAccessibleName(new RegExp(notes[2].date + '.*Zaplanowane'));
+  await dialog.getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
+  async function cancelNewReminder() {
+    await add.click({ timeout: 10_000 });
+    const title = dialog.getByLabel('Treść przypomnienia', { exact: true });
+    await expect(title).toBeEditable();
+    await title.fill('Fikcyjny anulowany szkic przypomnienia');
+    await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+    await expect(title).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
+    await expect(dialog).toBeHidden();
+  }
+  await cancelNewReminder();
+  expect(await stored()).toEqual(before);
+});
+
 test('Gabinet uses one patient header for overview and analysis and displays reminders only in the overview', async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const today = new Date().toISOString().slice(0, 10);

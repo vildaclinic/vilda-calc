@@ -93,9 +93,14 @@
     function previewRow(entry, showPatientName) {
       if (!entry || !entry.node) return null;
       var button = entry.node, article = make('article', 'vhome-reminders-entry');
-      var date = make('span', 'vhome-reminders-date'), parts = entry.dateParts || {};
-      date.setAttribute('aria-hidden', 'true'); if (entry.dateLabel) date.title = entry.dateLabel;
-      date.append(make('strong', '', parts.day == null ? '' : String(parts.day)), make('span', '', parts.month == null ? '' : String(parts.month)));
+      var date = null;
+      if (!overview) {
+        var parts = entry.dateParts || {};
+        date = make('span', 'vhome-reminders-date');
+        date.setAttribute('aria-hidden', 'true'); if (entry.dateLabel) date.title = entry.dateLabel;
+        date.append(make('strong', '', parts.day == null ? '' : String(parts.day)), make('span', '', parts.month == null ? '' : String(parts.month)));
+        article.appendChild(date);
+      }
       var patient = button.querySelector('.vb22-row-patient'), title = button.querySelector('.vb22-row-title');
       var context = make('span', 'vhome-reminders-entry-context'), source = make('span', 'vhome-reminders-source', entry.sourceLabel || '');
       var patientOrigin = patient && { parent: patient.parentNode, next: patient.nextSibling };
@@ -104,14 +109,15 @@
       if (entry.sourceLabel) context.appendChild(source);
       if (context.childNodes.length) button.appendChild(context);
       if (title) { button.insertBefore(title, button.firstChild); button.insertBefore(context, title.nextSibling); }
-      button.classList.add('vhome-reminders-entry-open'); article.append(date, button);
+      button.classList.add('vhome-reminders-entry-open'); article.appendChild(button);
       restoreRows.push(function () {
         if (patient && patientOrigin.parent) {
           patientOrigin.parent.insertBefore(patient, patientOrigin.next && patientOrigin.next.parentNode === patientOrigin.parent ? patientOrigin.next : null);
           patient.classList.remove('vhome-reminders-patient-omitted');
         }
         if (title && titleOrigin.parent) titleOrigin.parent.insertBefore(title, titleOrigin.next && titleOrigin.next.parentNode === titleOrigin.parent ? titleOrigin.next : null);
-        source.textContent = ''; context.remove(); date.textContent = ''; date.removeAttribute('title');
+        source.textContent = ''; context.remove();
+        if (date) { date.textContent = ''; date.removeAttribute('title'); }
         button.classList.remove('vhome-reminders-entry-open');
         if (article.parentNode === nodes.list) nodes.list.insertBefore(button, article);
         article.remove();
@@ -230,7 +236,8 @@
       // This decorative counter is guarded from its very first paint by the
       // native privacy class. It adds no accessible-name reference to data.
       count = make('span', 'vhome-reminders-count vb22-private-content'); count.setAttribute('aria-hidden', 'true'); created.push(count);
-      if (nodes.tools) nodes.tools.insertBefore(count, nodes.tools.firstChild);
+      if (overview && nodes.heading) nodes.heading.appendChild(count);
+      else if (nodes.tools) nodes.tools.insertBefore(count, nodes.tools.firstChild);
       var all = nodes.allButton || nodes.footer && nodes.footer.querySelector('.vild-rem-all');
       if (all) {
         footerLabel = { node: all, children: Array.from(all.childNodes), label: d.createTextNode('Wszystkie przypomnienia') };

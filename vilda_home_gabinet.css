@@ -127,11 +127,6 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 :is(#vhomeGabinetHeader,#gbEntryHeader) .gb-breadcrumb > svg, #gbEntryHeader [data-entry-separator] svg { width: 14px; height: 20px; flex-shrink: 0; }
 #gbEntryHeader [data-entry-separator] { display: inline-flex; align-items: center; }
 #gbEntryHeader .gb-breadcrumb [hidden] { display: none !important; }
-#vhomePatientOverview #remindersInline button[data-note-id][aria-current="true"] {
-  outline: var(--border-pro) solid var(--primary);
-  outline-offset: -2px;
-}
-
 #vhomeGabinetHeader .gb-person-line {
   display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center;
   gap: var(--space-0-65) var(--space-1); border-bottom: var(--border-hairline) solid #cbdcde;
