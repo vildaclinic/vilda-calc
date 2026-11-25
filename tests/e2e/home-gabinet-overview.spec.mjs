@@ -1597,17 +1597,6 @@ test('a visit diagnosis shows its destination and can be removed only from its o
   await expect(editor.getByLabel('Nazwa leczenia')).toHaveValue('Fikcyjne leczenie A');
   await expect(editor.locator('[data-treatment-medication-fields]')).toBeVisible();
   await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
-  const secondEpisode = compact.locator(`[data-treatment-therapy-id="${episodeIds[1]}"]`);
-  await secondEpisode.getByRole('button', { name: 'Przebieg', exact: true }).click();
-  const editedDetail = compact.locator(`[data-treatment-detail-id="${episodeIds[1]}"]`);
-  await editedDetail.getByRole('button', { name: 'Edytuj leczenie', exact: true }).click();
-  const previousPanel = await compact.elementHandle();
-  await editor.getByLabel('Uwagi i ustalenia').fill('Fikcyjny zapis kontroli drugiej terapii');
-  await editor.getByRole('button', { name: 'Zapisz', exact: true }).click();
-  await expect(editor).toBeHidden();
-  await expect.poll(() => previousPanel.evaluate(node => !node.isConnected)).toBe(true);
-  await previousPanel.dispose();
-  await expect(editedDetail.getByText('Fikcyjny zapis kontroli drugiej terapii', { exact: true })).toBeVisible();
   expect(await visits()).toEqual(beforeRemoval);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const edit = card.locator(`[data-treatment-diagnosis-id="${note.id}"]`).getByRole('button', { name: 'Edytuj', exact: true });
@@ -1632,6 +1621,22 @@ test('a visit diagnosis shows its destination and can be removed only from its o
   await remove.click();
   await expect(editor).toBeHidden();
   await expect.poll(diagnosis).toBeNull();
+  expect(await visits()).toEqual(beforeRemoval);
+
+  await header.getByRole('tab', { name: 'Przegląd', exact: true }).click();
+  await treatment.click();
+  await page.setViewportSize({ width: 320, height: 720 });
+  const secondEpisode = compact.locator(`[data-treatment-therapy-id="${episodeIds[1]}"]`);
+  await secondEpisode.getByRole('button', { name: 'Przebieg', exact: true }).click();
+  const editedDetail = compact.locator(`[data-treatment-detail-id="${episodeIds[1]}"]`);
+  await editedDetail.getByRole('button', { name: 'Edytuj leczenie', exact: true }).click();
+  const previousPanel = await compact.elementHandle();
+  await editor.getByLabel('Uwagi i ustalenia').fill('Fikcyjny zapis kontroli drugiej terapii');
+  await editor.getByRole('button', { name: 'Zapisz', exact: true }).click();
+  await expect(editor).toBeHidden();
+  await expect.poll(() => previousPanel.evaluate(node => !node.isConnected)).toBe(true);
+  await previousPanel.dispose();
+  await expect(editedDetail.getByText('Fikcyjny zapis kontroli drugiej terapii', { exact: true })).toBeVisible();
   expect(await visits()).toEqual(beforeRemoval);
 });
 

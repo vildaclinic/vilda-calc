@@ -545,11 +545,6 @@ html.vilda-home-workspace .vdo-dialog.vhome-b1-child-dialog.vpt-compact .vdo-x {
   width: 44px;
   margin: 0;
   padding: 0;
-  border: var(--border-hairline) solid var(--vpt-compact-line);
-  border-radius: var(--radius-8);
-  background: #fff;
-  color: var(--vpt-compact-ink);
-  box-shadow: none;
 }
 html.vilda-home-workspace .vdo-dialog.vhome-b1-child-dialog.vpt-compact > :not(.vdo-dialog-head) {
   flex: 1;
