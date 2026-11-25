@@ -93,6 +93,23 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
   const entryBack = frame.locator('#gbEntryHeader').getByRole('button', { name: 'Ekran startowy' });
   const patientBack = frame.locator('#vhomeGabinetHeader [data-start]');
   const analysis = frame.locator('#vhomeGabinetAnalysisTab');
+  async function expectReclaimedStartWidth(owner) {
+    if (page.viewportSize().width < 1400) return;
+    const embedded = owner !== page;
+    await expect(page.locator(embedded ? '#vildaShellDecor' : 'body > .desktop-layout > .decor-sidebar')).toBeHidden();
+    await expect(page.locator('#miniSummary:visible')).toHaveCount(0);
+    await expect(owner.locator('body > footer.site-footer')).toHaveCSS('margin-right', '0px');
+    await expect.poll(() => page.evaluate(embedded => {
+      const pane = embedded ? document.querySelector('iframe.app-pane[title="Start"]') : null;
+      const doc = pane ? pane.contentDocument : document;
+      const grid = document.querySelector('body > .desktop-layout'), style = getComputedStyle(grid);
+      const main = grid.querySelector(':scope > .main-content').getBoundingClientRect();
+      const rootWidth = Math.min(document.documentElement.clientWidth, document.documentElement.getBoundingClientRect().width);
+      const scrollbar = pane ? pane.clientWidth - Math.min(doc.documentElement.clientWidth, doc.documentElement.getBoundingClientRect().width) : 0;
+      return { columns: style.gridTemplateColumns.split(/\s+/).length,
+        padding: parseFloat(style.paddingInlineEnd), gutter: Math.round(rootWidth - main.right + scrollbar) };
+    }, embedded)).toEqual({ columns: 2, padding: 12, gutter: 12 });
+  }
 
   for (const { width, height } of [{ width: 1600, height: 800 }, { width: 390, height: 480 }]) {
     await page.setViewportSize({ width, height });
@@ -143,9 +160,11 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     await checkScroll('Gabinet', width < 500);
     await choosePatient(frame, 'Antoni');
     await expect(frame.locator('#vhomePatientOverview .vhome-native-patient-card')).toBeVisible();
+    await expectReclaimedStartWidth(frame);
     await checkScroll('Przegląd', false, patientBack);
     await analysis.click();
     await expect(analysis).toHaveAttribute('aria-selected', 'true');
+    await expectReclaimedStartWidth(frame);
     await checkScroll('Analiza', true, patientBack.or(analysis));
     if (width < 500) {
       const pinned = await frame.locator('#gbWorkspaceHeader').evaluate(node => {
@@ -178,6 +197,7 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     else await expect(header).toContainText('Antoni');
     for (const name of ['Przegląd', 'Analiza']) {
       await header.getByRole('tab', { name, exact: true }).click();
+      await expectReclaimedStartWidth(page);
       await expect(page.locator('body > header')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
       await expect(page.locator('body > header')).toHaveCSS('backdrop-filter', 'none');
     }

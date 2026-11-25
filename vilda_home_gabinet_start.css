@@ -9,10 +9,6 @@ body > .desktop-layout:has(> :is([data-vhome-screen="start"],[data-vhome-screen=
 html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"] #vhomeGabinetStart {
   --vgs-shell-width: calc(100vw + var(--chrome-sidebar-width));
 }
-html.vilda-embedded.vilda-form-host-desktop [data-vhome-screen="office"]:has(#vhomeGabinetHeader[data-decor-rail]) #vhomeGabinetStart {
-  --vgs-shell-width: calc(100vw + var(--chrome-sidebar-width) + var(--decor-sidebar-width));
-}
-
 /* The landing and calculator share a shadow root. Avoid styling the unrelated
    global patient search, which also uses short vgs-prefixed class names. */
 .vhome-gabinet-start { min-width: 0; }

@@ -21,6 +21,18 @@ html:not(.vilda-embedded):has(.main-content:is([data-vhome-screen="overview"],[d
     right: var(--space-16px);
   }
 }
+@media (min-width: 1400px) {
+  html.vilda-form-layout:not(.vilda-embedded,.vilda-shell-embedded,.vilda-phone):has(.main-content[data-vhome-screen]) body.has-sidebar > .desktop-layout {
+    grid-template-columns: var(--chrome-sidebar-width) minmax(0, 1fr);
+    padding-inline-end: var(--chrome-form-gap);
+  }
+  html:not(.vilda-embedded,.vilda-shell-embedded):has(.main-content[data-vhome-screen]) body > .desktop-layout > .decor-sidebar {
+    display: none;
+  }
+  html.vilda-form-layout:not(.vilda-embedded,.vilda-shell-embedded):has(.main-content[data-vhome-screen]) body.has-sidebar > footer.site-footer {
+    margin-inline-end: 0;
+  }
+}
 [data-vhome-screen="history"] #vhomePatientOverview,
 [data-vhome-screen] #vhomeGabinet[hidden],
 #vhomeGabinet [hidden],
@@ -135,7 +147,6 @@ html.vilda-form-host-desktop .main-content[data-vhome-screen] > #vhomeGabinetAna
 /* In an app pane, vw excludes the shell's rails. The title scales with the
  * full window, just as it does on the standalone patient workspace. */
 html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader { --gb-shell-width: calc(100vw + var(--chrome-sidebar-width)); }
-html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail] { --gb-shell-width: calc(100vw + var(--chrome-sidebar-width) + var(--decor-sidebar-width)); }
 #vhomeGabinetHeader h1 { margin: 0; color: #183f47; font-size: clamp(1.4rem,calc(var(--gb-shell-width,100vw) * .019),1.9rem); font-weight: 690; line-height: 1.15; letter-spacing: -.035em; text-align: start; }
 #vhomeGabinetHeader .gb-visit-summary {
   display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-0-65); row-gap: .24rem;
