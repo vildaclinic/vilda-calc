@@ -69,10 +69,11 @@ test('pola „Zakres” i „Leczenie”: pozycje z licznikami; okna ostatniego 
 
   // Dwa osobne pola; każda pozycja mówi, ilu pacjentów bazy obejmuje (liczniki leczenia — po policzeniu kart).
   await expect(database.locator('.pt-filters .pt-filter-label')).toHaveText(['Zakres', 'Leczenie', 'Lista pacjentów', 'Płeć', 'Wiek']);
+  // Napisy pozycji są krótkie, żeby mieściły się w polu równej szerokości (P-BAZA-FILTRY); pełny opis pokazuje baner.
   await expect(zakres(database).locator('option')).toHaveText([
     'cała baza (10)',
-    'z zapisem w ostatnich 3 mies. (8)', 'z zapisem w ostatnich 6 mies. (8)', 'z zapisem w ostatnich 12 mies. (8)',
-    'bez zapisu od ponad 12 mies. (2)', 'bez zapisu od ponad 24 mies. (1)',
+    'zapis ≤ 3 mies. (8)', 'zapis ≤ 6 mies. (8)', 'zapis ≤ 12 mies. (8)',
+    'zapis > 12 mies. (2)', 'zapis > 24 mies. (1)',
   ]);
   await expect(leczenie(database).locator('option')).toHaveText(['wszyscy', 'hormon wzrostu (5)', 'otyłość (5)']);
   await expect(kafel(frame, database, 'Pacjenci w bazie').locator('.pt-stat-value')).toHaveText('10');
@@ -196,28 +197,79 @@ test('wybrane „Leczenie” po zmianie w bazie: statystyki czekają na policzen
   expect(await pacjenci(database)).toEqual(posortowane(ids.b, ids.c, ids.d, ids.e, ids.i, nowi.k));
 });
 
+// P-BAZA-FILTRY (decyzja właściciela 2026-11-25): pola filtrów mają tę samą szerokość, a znaczek rozwijania stoi
+// w stałym odstępie od prawej krawędzi pola.
+const wymiaryPol = (database) => database.locator('.pt-filters').evaluate((pasek) => {
+  const miarka = document.createElement('span');
+  document.body.appendChild(miarka);
+  const pola = Array.from(pasek.querySelectorAll('.pt-filter-select')).map((pole) => {
+    const styl = getComputedStyle(pole), ramka = pole.getBoundingClientRect(), znaczek = getComputedStyle(pole.parentElement, '::after');
+    Object.assign(miarka.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', font: styl.font });
+    miarka.textContent = pole.options[pole.selectedIndex].textContent;
+    return {
+      klucz: pole.getAttribute('data-filter-key'), szerokosc: ramka.width, lewa: ramka.left, gora: ramka.top, wysokosc: ramka.height,
+      napis: miarka.getBoundingClientRect().width, wnetrze: ramka.width - parseFloat(styl.paddingLeft) - parseFloat(styl.paddingRight),
+      wyglad: styl.appearance, odstepPrawy: parseFloat(styl.paddingRight), ramka: pole.parentElement.className,
+      znaczekOdKrawedzi: parseFloat(znaczek.right), znaczekSzerokosc: parseFloat(znaczek.width), znaczekTresc: znaczek.content,
+    };
+  });
+  miarka.remove();
+  return { pola, pasek: pasek.getBoundingClientRect().width, przewijanie: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+});
+
+test('pola filtrów mają tę samą szerokość; znaczek rozwijania jest odsunięty od prawej krawędzi, a wybrana pozycja mieści się w polu', async ({ page }) => {
+  // Konto testowe ma dostęp do list pacjentów, więc pól jest pięć.
+  const { database } = await start(page);
+  await zakres(database).selectOption('m12');
+  await leczenie(database).selectOption('gh');
+  await expect(database.locator('.pt-scope-name')).toHaveText('z zapisem w ostatnich 12 mies. · leczeni hormonem wzrostu');
+
+  // [szerokość okna, ile pól w pierwszym wierszu]
+  for (const [okno, wPierwszymWierszu] of [[1440, 5], [1280, 5], [1024, 4], [900, 3]]) {
+    await page.setViewportSize({ width: okno, height: 900 });
+    await expect.poll(async () => (await wymiaryPol(database)).pola.filter((pole, _, wszystkie) => Math.abs(pole.gora - wszystkie[0].gora) < 1).length, { message: `okno ${okno} px` }).toBe(wPierwszymWierszu);
+    const { pola, przewijanie } = await wymiaryPol(database);
+    expect(pola.map((pole) => pole.klucz), `okno ${okno} px`).toEqual(['range', 'treatment', 'list', 'sex', 'band']);
+    const szerokosci = pola.map((pole) => pole.szerokosc);
+    expect(Math.max(...szerokosci) - Math.min(...szerokosci), `okno ${okno} px: pola równej szerokości`).toBeLessThan(1);
+    expect(przewijanie, `okno ${okno} px`).toBeLessThanOrEqual(0);
+    for (const pole of pola) {
+      // Strzałka systemowa jest wyłączona; znaczek rysuje ramka pola, co najmniej 12 px od prawej krawędzi,
+      // a napis kończy się przed znaczkiem.
+      expect(pole.wyglad, pole.klucz).toBe('none');
+      expect(pole.ramka, pole.klucz).toBe('pt-filter-box');
+      expect(pole.znaczekTresc, pole.klucz).not.toBe('none');
+      expect(pole.znaczekOdKrawedzi, pole.klucz).toBeGreaterThanOrEqual(12);
+      expect(pole.odstepPrawy, pole.klucz).toBeGreaterThanOrEqual(pole.znaczekOdKrawedzi + pole.znaczekSzerokosc + 4);
+      expect(pole.wysokosc, pole.klucz).toBeGreaterThanOrEqual(44);
+      expect(pole.napis, `okno ${okno} px, ${pole.klucz}: wybrana pozycja mieści się w polu`).toBeLessThanOrEqual(pole.wnetrze);
+    }
+  }
+});
+
 test.describe('telefon', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
-  test('wybrana pozycja „Zakresu” mieści się w polu: pole ma całą szerokość paska filtrów', async ({ page }) => {
+  test('pola filtrów stoją w dwóch równych kolumnach; pełny opis zakresu pokazuje baner', async ({ page }) => {
     const { database } = await start(page);
     await zakres(database).selectOption('m12');
     await expect(database.locator('.pt-scope-name')).toHaveText('z zapisem w ostatnich 12 mies.');
-    const wymiary = await database.locator('.pt-filters').evaluate((pasek) => {
-      const pole = pasek.querySelector('.pt-filter-select[data-filter-key="range"]');
-      // Szerokość napisu wybranej pozycji tym samym pismem co pole.
-      const miarka = document.createElement('span');
-      miarka.textContent = pole.options[pole.selectedIndex].textContent;
-      const styl = getComputedStyle(pole);
-      Object.assign(miarka.style, { position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap', font: styl.font });
-      document.body.appendChild(miarka);
-      const napis = miarka.getBoundingClientRect().width;
-      miarka.remove();
-      const ramka = pole.getBoundingClientRect(), calosc = pasek.getBoundingClientRect();
-      return { napis, pole: ramka.width, pasek: calosc.width, wnetrze: ramka.width - parseFloat(styl.paddingLeft) - parseFloat(styl.paddingRight), przewijanie: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-    });
-    expect(Math.round(wymiary.pole)).toBe(Math.round(wymiary.pasek));
-    expect(wymiary.napis, 'napis wybranej pozycji mieści się w polu obok strzałki').toBeLessThan(wymiary.wnetrze - 24);
-    expect(wymiary.przewijanie).toBeLessThanOrEqual(0);
+    const { pola, pasek, przewijanie } = await wymiaryPol(database);
+    expect(pola).toHaveLength(5);
+    const szerokosci = pola.map((pole) => pole.szerokosc);
+    expect(Math.max(...szerokosci) - Math.min(...szerokosci)).toBeLessThan(1);
+    // Dwa pola w wierszu: lewa kolumna 1., 3. i 5. pola, prawa — 2. i 4.
+    expect(szerokosci[0]).toBeGreaterThan(pasek * 0.45);
+    expect(szerokosci[0]).toBeLessThan(pasek * 0.5);
+    for (const numer of [2, 4]) expect(Math.round(pola[numer].lewa)).toBe(Math.round(pola[0].lewa));
+    expect(Math.round(pola[3].lewa)).toBe(Math.round(pola[1].lewa));
+    expect(pola[1].lewa).toBeGreaterThan(pola[0].lewa + szerokosci[0]);
+    expect(Math.round(pola[1].gora)).toBe(Math.round(pola[0].gora));
+    expect(pola[2].gora).toBeGreaterThan(pola[0].gora + pola[0].wysokosc);
+    for (const pole of pola) {
+      expect(pole.wysokosc, pole.klucz).toBeGreaterThanOrEqual(44);
+      expect(pole.znaczekOdKrawedzi, pole.klucz).toBeGreaterThanOrEqual(12);
+    }
+    expect(przewijanie).toBeLessThanOrEqual(0);
   });
 });

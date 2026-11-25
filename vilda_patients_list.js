@@ -611,14 +611,17 @@
    *     dały wynik). To pole potrzebuje wyniku liczenia kart (options.cards); bez niego zakresu nie da się
    *     jeszcze policzyć (null), tak jak przy niewczytanej liście. */
   const SCOPE_SEX = { M: 'chłopcy', F: 'dziewczęta' };
+  // label — pełny opis (baner, raport, nazwa grupy); option — krótki napis w polu wyboru. Pola filtrów mają równą
+  // szerokość (P-BAZA-FILTRY, decyzja właściciela 2026-11-25), więc napis pozycji musi mieścić się w wąskim polu:
+  // „zapis ≤ 12 mies.” to ostatni zapis nie dawniej niż 12 miesięcy temu, „zapis > 12 mies.” — dawniej albo wcale.
   const SCOPE_RANGES = [
-    { key: 'm3', label: 'z zapisem w ostatnich 3 mies.', months: 3, within: true },
-    { key: 'm6', label: 'z zapisem w ostatnich 6 mies.', months: 6, within: true },
-    { key: 'm12', label: 'z zapisem w ostatnich 12 mies.', months: 12, within: true },
-    { key: 'o12', label: 'bez zapisu od ponad 12 mies.', months: 12, within: false },
-    { key: 'o24', label: 'bez zapisu od ponad 24 mies.', months: 24, within: false }
+    { key: 'm3', label: 'z zapisem w ostatnich 3 mies.', option: 'zapis ≤ 3 mies.', months: 3, within: true },
+    { key: 'm6', label: 'z zapisem w ostatnich 6 mies.', option: 'zapis ≤ 6 mies.', months: 6, within: true },
+    { key: 'm12', label: 'z zapisem w ostatnich 12 mies.', option: 'zapis ≤ 12 mies.', months: 12, within: true },
+    { key: 'o12', label: 'bez zapisu od ponad 12 mies.', option: 'zapis > 12 mies.', months: 12, within: false },
+    { key: 'o24', label: 'bez zapisu od ponad 24 mies.', option: 'zapis > 24 mies.', months: 24, within: false }
   ];
-  // cards — pole wyniku karty (details z cardsResult), section — klucz sekcji raportu, option — napis w polu wyboru.
+  // cards — pole wyniku karty (details z cardsResult), section — klucz sekcji raportu.
   const SCOPE_TREATMENTS = [
     { key: 'gh', label: 'leczeni hormonem wzrostu', option: 'hormon wzrostu', cards: 'gh', section: 'gh' },
     { key: 'ob', label: 'leczeni z powodu otyłości', option: 'otyłość', cards: 'ob', section: 'obesity' }
@@ -626,7 +629,7 @@
   function scopeRange(key) { return SCOPE_RANGES.find((range) => range.key === key) || null; }
   function scopeTreatment(key) { return SCOPE_TREATMENTS.find((treatment) => treatment.key === key) || null; }
   // Pozycje pól „Zakres” i „Leczenie” dla widoku i testów.
-  function scopeRanges() { return SCOPE_RANGES.map((range) => ({ key: range.key, label: range.label })); }
+  function scopeRanges() { return SCOPE_RANGES.map((range) => ({ key: range.key, label: range.label, option: range.option })); }
   function scopeTreatments() { return SCOPE_TREATMENTS.map((treatment) => ({ key: treatment.key, label: treatment.label, option: treatment.option })); }
   function scopeNeedsCards(filters) { return Boolean(scopeTreatment(filters && filters.treatment)); }
   /* P-BAZA-SEKCJE (uwaga właściciela 2026-11-24: leczenia hormonem wzrostu i leczenia otyłości nie prowadzi się
@@ -2808,11 +2811,11 @@
      * P-BAZA-ZAKRES, P-BAZA-SEKCJE: „Zakres” (ostatni zapis karty) i „Leczenie” to osobne pola; każda pozycja
      * pokazuje, ilu pacjentów całej bazy obejmuje. Liczniki „Leczenia” dochodzą, gdy skończy się liczenie kart. */
     function filterBar(sequence) {
-      const bar = el('div', 'pt-filters' + (mayUseLists() ? ' pt-filters--lists' : '')), base = basePatients();
+      const bar = el('div', 'pt-filters'), base = basePatients();
       bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zakres statystyk');
-      // options: [wartość, napis]; wide — pole z długimi pozycjami (na telefonie cały wiersz).
-      function field(key, labelText, options, value, wide) {
-        const holder = el('label', 'pt-filter' + (wide ? ' pt-filter--wide' : ''));
+      // options: [wartość, napis].
+      function field(key, labelText, options, value) {
+        const holder = el('label', 'pt-filter');
         holder.appendChild(el('span', 'pt-filter-label', labelText));
         const node = doc.createElement('select');
         node.className = 'pt-filter-select' + (value ? ' on' : '');
@@ -2825,11 +2828,15 @@
         fill(options);
         node.disabled = busy;
         node.addEventListener('change', () => setFilter(key, node.value));
-        holder.appendChild(node); bar.appendChild(holder);
+        // Pole stoi w ramce, która rysuje znaczek rozwijania z własnym odstępem od prawej krawędzi — strzałka
+        // systemowa (appearance) w części przeglądarek dotykała krawędzi pola (P-BAZA-FILTRY).
+        const box = el('span', 'pt-filter-box');
+        box.appendChild(node);
+        holder.appendChild(box); bar.appendChild(holder);
         return { node, fill };
       }
       field('range', 'Zakres', [['', 'cała baza (' + base.length + ')']].concat(SCOPE_RANGES.map((range) =>
-        [range.key, range.label + ' (' + scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault }).length + ')'])), state.filters.range || '', true);
+        [range.key, range.option + ' (' + scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault }).length + ')'])), state.filters.range || '');
       const treatmentRows = () => {
         const saved = savedCards();
         return [['', 'wszyscy']].concat(SCOPE_TREATMENTS.map((treatment) => {
@@ -2837,7 +2844,7 @@
           return [treatment.key, treatment.option + (members ? ' (' + members.length + ')' : '')];
         }));
       };
-      const treatmentField = field('treatment', 'Leczenie', treatmentRows(), state.filters.treatment || '', true);
+      const treatmentField = field('treatment', 'Leczenie', treatmentRows(), state.filters.treatment || '');
       // Po liczeniu kart zmieniają się tylko napisy pozycji — pole zostaje to samo (także otwarte albo z fokusem).
       filterRefresh = () => {
         if (!bar.isConnected) return;
@@ -2848,7 +2855,7 @@
         const chosen = state.filters.listId || '';
         const rows = (entries) => [['', 'wszystkie']].concat(entries.map(({ list }) => [list.id, list.name || '(bez nazwy)']));
         const known = chosen ? [{ list: { id: chosen, name: state.filters.listName || 'wybrana lista' } }] : [];
-        const listField = field('list', 'Lista pacjentów', rows(listCache || known), chosen, true);
+        const listField = field('list', 'Lista pacjentów', rows(listCache || known), chosen);
         if (!listCache) getCatalog().then((entries) => {
           if (!guardedRead(sequence) || !mayUseLists() || !bar.isConnected) return;
           listField.fill(rows(!chosen || entries.some(({ list }) => list.id === chosen) ? entries : entries.concat(known)));

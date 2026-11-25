@@ -33,12 +33,13 @@ const opcje = (extra = {}) => ({ now: DZIS, ...extra });
 describe('Pozycje pól „Zakres” i „Leczenie” (scopeRanges, scopeTreatments, scopeFilters, scopeLabel, scopeKey)', () => {
   it('„Zakres” ma pięć okien ostatniego zapisu, „Leczenie” dwie pozycje; tylko „Leczenie” potrzebuje wyniku kart', () => {
     const { scopeRanges, scopeTreatments, scopeNeedsCards } = modul();
+    // label — pełny opis (baner, raport, nazwa grupy); option — krótki napis w polu wyboru równej szerokości (P-BAZA-FILTRY).
     expect(scopeRanges()).toEqual([
-      { key: 'm3', label: 'z zapisem w ostatnich 3 mies.' },
-      { key: 'm6', label: 'z zapisem w ostatnich 6 mies.' },
-      { key: 'm12', label: 'z zapisem w ostatnich 12 mies.' },
-      { key: 'o12', label: 'bez zapisu od ponad 12 mies.' },
-      { key: 'o24', label: 'bez zapisu od ponad 24 mies.' },
+      { key: 'm3', label: 'z zapisem w ostatnich 3 mies.', option: 'zapis ≤ 3 mies.' },
+      { key: 'm6', label: 'z zapisem w ostatnich 6 mies.', option: 'zapis ≤ 6 mies.' },
+      { key: 'm12', label: 'z zapisem w ostatnich 12 mies.', option: 'zapis ≤ 12 mies.' },
+      { key: 'o12', label: 'bez zapisu od ponad 12 mies.', option: 'zapis > 12 mies.' },
+      { key: 'o24', label: 'bez zapisu od ponad 24 mies.', option: 'zapis > 24 mies.' },
     ]);
     expect(scopeTreatments()).toEqual([
       { key: 'gh', label: 'leczeni hormonem wzrostu', option: 'hormon wzrostu' },
