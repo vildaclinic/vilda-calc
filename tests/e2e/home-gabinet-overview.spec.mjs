@@ -1141,6 +1141,25 @@ test('Edytuj wizytę corrects only the chosen historical record and returns to t
   await history.locator(`.vhs-list button[data-visit-id="${seed.targetId}"]`).click();
   await detail.getByRole('button', { name: 'Edytuj wizytę' }).click();
   await expect(header).toContainText('Edycja wizyty', { timeout: 15_000 });
+  await header.getByRole('tab', { name: 'Przegląd', exact: true }).click();
+  await patientCard.getByRole('tab', { name: 'Siatki centylowe', exact: true }).click();
+  const charts = patientCard.locator('[role="tabpanel"][data-tab="traj"]');
+  const trajectory = charts.getByRole('button', { name: 'Otwórz analizę trajektorii', exact: true });
+  await expect(charts.locator('.vtap')).toBeHidden();
+  const readEncounter = () => frame.evaluate(id => {
+    const state = VildaHomeEncounter.state(id);
+    return { mode:state.mode, visitId:state.visitId, snapshotId:state.snapshotId, revision:state.revision };
+  }, ids.a);
+  const historical = await readEncounter();
+  expect(historical).toEqual({ mode:'edit', visitId:seed.targetId, snapshotId:seed.targetSnapshot, revision:seed.revision });
+  await trajectory.click();
+  const growth = frame.getByRole('dialog', { name: 'Zaawansowane obliczenia wzrostowe', exact: true });
+  await expect(growth.getByRole('tab', { name: 'Analiza', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(growth.locator('#vhomeGrowthPanel-analysis .vtap')).toBeAttached();
+  expect(await readEncounter()).toEqual(historical);
+  await growth.getByRole('button', { name: /^(Anuluj|Zamknij)$/ }).click();
+  await expect(trajectory).toBeFocused();
+  expect(await readEncounter()).toEqual(historical);
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await expect(frame.locator('#weight')).toHaveValue('54');
   await frame.locator('#weight').fill('44');

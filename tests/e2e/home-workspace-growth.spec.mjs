@@ -5,11 +5,11 @@ import { visibleChromeMenu } from '../support/chrome-menu-fixture.mjs';
 
 test.use({ serviceWorkers: 'block', reducedMotion: 'reduce' });
 test.setTimeout(240_000);
-async function setup(page, { shell = false, gh = false } = {}) {
+async function setup(page, { shell = false, gh = false, payload = fictionalPatient() } = {}) {
   await page.addInitScript(() => { window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true; });
   await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   const fixture = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload: true });
-  const payload = fictionalPatient(); payload.advanced.testicularVolume = '4to6';
+  payload.advanced.testicularVolume = '4to6';
   payload.puberty = { onsetAgeYears: 11.2, gnrhaStatus: 'zakonczone', gnrhaStartAgeYears: 8.5, gnrhaStopAgeYears: 10.5, cdgp: 'tak' };
   if (gh) payload.ghTherapyPoints = [{ ...ghStart }];
   const id = await fixture.frame.evaluate(async data => (await VildaVault.savePatient(data, { dedup: false })).patientId, payload);
@@ -718,6 +718,24 @@ test('home A2: long native trajectory stays compact and every historical measure
       expect(await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
     }
   }
+});
+
+test('home A2: shows the distinct earlier BMI warning beside the summary', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const payload = fictionalPatient({ weight: 52.5 });
+  payload.advanced.data.measurements.find(row => row.ageMonths === 120).weight = 46;
+  payload.advanced.data.measurements.find(row => row.ageMonths === 144).weight = 49.5;
+  const { frame } = await setup(page, { payload });
+  const dialog = await show(frame, 'analysis');
+  const isBmi = frame.locator('.nm', { hasText: /^BMI$/ });
+  const native = frame.locator('#advResults .vtap-card').filter({ has: isBmi });
+  const summary = dialog.locator('.vhome-a2-metric-card').filter({ has: isBmi });
+  const warning = native.locator('.vtap-seg').filter({ hasText: /najpoważniejszy odcinek: 9 lat → 10 lat/ });
+  await expect(warning).toHaveCount(1);
+  await expect(summary.locator('.vtap-seg')).toHaveCount(1);
+  await expect(summary.locator('.vtap-seg')).toBeVisible();
+  await expect(summary.locator('.vtap-seg')).toHaveText(await warning.textContent());
+  expect(await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
 });
 
 // Component regressions use only the fictional vault created by setup. All

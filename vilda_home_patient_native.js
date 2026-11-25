@@ -291,8 +291,29 @@
     if (disclaimer) disclaimer.textContent = 'Uproszczony podgląd trajektorii.';
     var pdf = panel.querySelector('.vilda-siatka-pdf-btn');
     if (pdf) pdf.textContent = 'Pobierz pełne siatki (PDF)';
+    var trajectory = null;
+    var analysis = button('Otwórz analizę trajektorii', function () {
+      if (!trajectory || !current(view) || blocked(view)) return;
+      if (!w.VildaHomeGrowth?.openTrajectory?.(trajectory, analysis)) {
+        trajectory.hidden = false;
+        var details = trajectory.querySelector('.vtap-main');
+        if (details) details.open = true;
+      }
+    }, 'vhome-b1-text-button vhome-b1-centile-analysis');
+    analysis.hidden = true;
+    analysis.dataset.homeCentileAnalysis = '';
+    analysis.setAttribute('aria-haspopup', 'dialog');
+    panel.insertBefore(analysis, pdf);
     panel.classList.add('vhome-b1-centile');
     panel.prepend(reference);
+
+    function refreshTrajectory() {
+      var next = charts.querySelector(':scope > .vtap');
+      if (trajectory === next && !analysis.hidden) return;
+      trajectory = next;
+      analysis.hidden = !(trajectory && typeof w.VildaHomeGrowth?.openTrajectory === 'function');
+      if (trajectory) trajectory.hidden = !analysis.hidden;
+    }
 
     function refreshTitles() {
       var items = Array.from(charts.querySelectorAll(':scope > .vilda-patient-section-h')).map(function (heading) {
@@ -331,11 +352,13 @@
         item.setAttribute('aria-pressed', String(item.style.backgroundColor === 'rgb(14, 133, 127)'));
       });
     }
-    refreshTitles(); refreshComparison(); refreshRange();
+    refreshTitles(); refreshComparison(); refreshRange(); refreshTrajectory();
     // Native range changes replace the charts and comparison toolbar. Leave
     // pointer readouts, overlays and the chart engine on their original nodes.
     view.centileObserver = new w.MutationObserver(function (changes) {
-      if (changes.some(function (change) { return change.target === charts; })) refreshTitles();
+      if (changes.some(function (change) { return change.target === charts; })) {
+        refreshTitles(); refreshTrajectory();
+      }
       if (changes.some(function (change) { return change.target === panel || change.target.classList?.contains('vilda-cmp-btn'); })) refreshComparison();
       if (changes.some(function (change) { return change.type === 'attributes'; })) refreshRange();
     });

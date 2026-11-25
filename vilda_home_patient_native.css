@@ -1123,6 +1123,11 @@ html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-con
   justify-self: start;
   margin: 0 !important;
 }
+#vhomePatientOverview .vhome-b1-centile > .vhome-b1-centile-analysis {
+  justify-self: start;
+  min-height: 44px;
+  font-size: .875rem;
+}
 html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview .vhome-b1-centile {
   --centile-ink: #21424d;
   --centile-muted: #4d6871;
