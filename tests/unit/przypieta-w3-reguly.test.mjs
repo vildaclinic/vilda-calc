@@ -179,12 +179,17 @@ describe('cień przycięcia (D4 = a): koszt i niezależność od kolejności (K1
 describe('funkcje wycięte z prawdziwego sejfu', () => {
   const src = readFileSync(path.join(repo, SEJF.N), 'utf8');
   const wytnij = (od, doo) => { const i = src.indexOf(od); return src.slice(i, src.indexOf(doo, i)); };
+  const doKonca = (od) => { const i = src.indexOf(od); return src.slice(i, src.indexOf('\n}\n', i) + 2); };
   const kod = [
     src.match(/function mt\(t\)\{var e=t&&t\.rev;[^}]*\}/)[0],
     src.match(/function Bm1\(t,e\)\{.*?return n==null\?\{\}:\{seq:n\}\}/)[0],
     wytnij('function Bkz_pozniejsza(', 'async function Bkz_podniesZapis('),
     'const de = 1e15, BKZ_KOSZ_MS = 1e14;',
     wytnij('function Bkz_czysc(', 'async function Bkz_czytaj('),
+    // E3-PR0e2b: wpis Kosza z chwilą przypisania — funkcje wycinka wołają odczyt i łączenie tej chwili
+    // (Bsw_chwilaPrzypisania, Bsw_przypisanie, Bnp_iso; są w sejfie także bez części Kosza)
+    doKonca('function Bsw_chwilaPrzypisania('),
+    doKonca('function Bnp_iso('),
   ].join('\n');
   // Wycięcie musi się udać: po przeróbce źródła test ma się zaczerwienić, a nie po cichu wypaść z ochrony.
   const f = new Function(kod + '\nreturn { Bgw_porownaj, Bgw_pozniejszy, Bpk_polacz, Bpk_zWpisu, Bkz_dolacz };')();

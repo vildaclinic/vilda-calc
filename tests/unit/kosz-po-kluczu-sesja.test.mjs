@@ -161,6 +161,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { repo, SEJF, sztucznyZegar, przesunZegar, urzadzenie, jan, zapisz, gdzie, poprawMase, przypnij, doKosza, sync, rundy, zeruj, zapisy } from './polkrata-uprzaz.mjs';
 import { ola } from './s4d7-wspolne.mjs';
+import { POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ } from '../support/czesci-wydania.mjs';
 
 Error.stackTraceLimit = 100;
 const M = 60e3;
@@ -427,7 +428,10 @@ describe('P-KOSZ-PO-KLUCZU — E4b: przerwane scalenie, zmiana sesji i błąd za
     await rundyIKontrola(u, KOSZ_74);
   });
 
-  it('E-S8: druga karta przeglądarki zapisuje pod X nowszy rekord x (80 kg) w trakcie zapisu listy — świeży odczyt go widzi: x 80 i karta X zostają; po rundach x 80 pod X na trzech', async () => {
+  // Po rundach: reguła z decyzji właściciela 2b z 2026-11-25 (POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ) — zapis „drugiej
+  // karty” (x 80 pod X) jest późniejszy niż Kosz K pod Z, a wpis Kosza zna scalenie, więc x 80 wychodzi z Kosza w karcie
+  // scalonej Z i X znika na trzech; bez reguły x 80 zostawała pod X. Literał tuż po scaleniu bez zmian.
+  it(`E-S8: druga karta przeglądarki zapisuje pod X nowszy rekord x (80 kg) w trakcie zapisu listy — świeży odczyt go widzi: x 80 i karta X zostają; po rundach x 80 ${POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? 'pod Z na trzech, bez karty X' : 'pod X na trzech'}`, async () => {
     const u = await trzyKarty();
     await krokiE4b(u);
     let zrobione = false;
@@ -448,7 +452,8 @@ describe('P-KOSZ-PO-KLUCZU — E4b: przerwane scalenie, zmiana sesji i błąd za
     await rundy(u.urz, 3);
     for (const v of u.urz) {
       expect(await stanX(v, u.sid), `${v.__nazwa}: po rundach x 80, bez kosza`).toEqual({ karta: { masa: 80, rev: 2 }, kosz: null });
-      expect((await gdzie(v, u.sid))?.pid, `${v.__nazwa}: x pod X`).toBe(u.X);
+      expect((await gdzie(v, u.sid))?.pid, `${v.__nazwa}: x pod ${POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? 'Z' : 'X'}`).toBe(POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? u.Z : u.X);
+      expect(await kartaX(v, u), `${v.__nazwa}: karta X`).toBe(!POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ);
     }
     zeruj(u.urz);
     await rundy(u.urz, 1);
@@ -829,7 +834,9 @@ describe('P-KOSZ-PO-KLUCZU — np-ret-A1: zmiana sesji w przeniesieniu wersji, k
     await rundy(u.urz, 1);
     expect(zapisy(u.urz), 'runda kontrolna bez zapisów').toEqual(bezZapisow(u.urz));
   }
-  const zapisPodY = () => wierszW('Bsw_przeniesPrzezyta', /await I\(\)\.putSnapshotForUser\(b, PatientClinicalWriteValue\(b,Object\.assign\(Bm1\(g\), g, \{ patientId: H \}\)\)\);/);
+  // Wiersz zapisu x pod kartą docelową; przy części Kosza (E3-PR0e2b) ten sam zapis dokłada chwilę przypisania z wpisu
+  // Kosza karty wpisu (Bsw_przypisanie) — kotwica przyjmuje oba kształty wiersza.
+  const zapisPodY = () => wierszW('Bsw_przeniesPrzezyta', /await I\(\)\.putSnapshotForUser\(b, PatientClinicalWriteValue\(b,Object\.assign\(Bm1\(g\), g, \{ patientId: H \}(?:, Bsw_przypisanie\([^;]*\))?\)\)\);/);
   const odczytX = () => wierszW('Bsw_przeniesPrzezyta', /const wX = await I\(\)\.listSnapshotsForUser\(b, X\);/);
 
   it('NR-S1: zalogowanie od nowa zaraz po zapisie x pod Y — SESSION_CHANGED, żadnego zapisu po przełączeniu; to samo scalenie od nowa: x 23* pod Y, bez X; po rundach na trzech', async () => {

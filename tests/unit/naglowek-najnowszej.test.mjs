@@ -335,7 +335,10 @@ describe('P-NAGLOWEK-NAJNOWSZEJ: odbiorca synchronizacji', () => {
     expect(await naglowek(A, Z)).toBe('Iksinska Janina|Iksinska/Janina|2020-01-01|M|5l0m');
   });
 
-  it('O9 przeniesienie najnowszej wersji karty z powrotem pod starą kartę: karta oddająca bierze nagłówek z pozostałych wersji', async () => {
+  // E3-PR0e2b: poprawka x1 w starej X na urządzeniu bez wiedzy o scaleniu nie przenosi już x1 z powrotem pod X — x1 ma
+  // chwilę przypisania zapisaną przez „Scal pacjentów”, więc zostaje pod Y z poprawką (decyzja właściciela 2a
+  // z 2026-11-23), a Y zachowuje nagłówek z x1; X nie wraca. Dotąd x1 wracała pod X, a Y brała nagłówek z y1.
+  it('O9 poprawka najnowszej wersji karty scalonej w starej karcie (urządzenie bez wiedzy o scaleniu): wersja zostaje pod kartą scaloną z poprawką, nagłówek karty scalonej z niej, stara karta nie wraca', async () => {
     sztucznyZegar();
     const A = await urzadzenie('A'), B = await urzadzenie('B');
     const y1 = await zapisz(A, zapis('Igrekowa Jan', '2020-02-02', 60));
@@ -349,9 +352,11 @@ describe('P-NAGLOWEK-NAJNOWSZEJ: odbiorca synchronizacji', () => {
     expect(await naglowek(A, Y), 'kontrola: najnowsza Y = x1').toBe('Iksinski Jan|Iksinski/Jan|2020-01-01|M|5l0m');
     await popraw(B, X, x1.snapshotId, (pl) => { pl.user.weight = 21; });
     await sync(B, A);
-    expect((await A.v.getPatient(Y)).snapshots.map((s) => s.snapshotId), 'kontrola: x1 wróciła pod X').toEqual([y1.snapshotId]);
-    expect(await naglowek(A, Y)).toBe('Igrekowa Jan|Igrekowa/Jan|2020-02-02|M|5l0m');
-    expect((await A.v.findSameNamePatients('Iksinski Jan')).map((x) => x.patientId)).toEqual([X]);
+    const pY = await A.v.getPatient(Y);
+    expect(pY.snapshots.map((s) => s.snapshotId).sort(), 'x1 zostaje pod Y').toEqual([x1.snapshotId, y1.snapshotId].sort());
+    expect(pY.snapshots.find((s) => s.snapshotId === x1.snapshotId).payload.user.weight, 'x1 pod Y z poprawką z B').toBe(21);
+    expect(await naglowek(A, Y)).toBe('Iksinski Jan|Iksinski/Jan|2020-01-01|M|5l0m');
+    expect(await A.v.getPatient(X), 'X nie wraca').toBeFalsy();
   });
 
   it('O11 [kontrola] „Scal pacjentów” G → F na B i kosz wersji scalenia: na A przeniesiona wersja G jest najnowszą F i daje jej nagłówek', async () => {

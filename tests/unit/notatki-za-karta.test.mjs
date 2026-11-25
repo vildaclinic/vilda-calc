@@ -719,7 +719,7 @@ describe('P-NOTATKI-ZA-KARTA — kontrole bez zmian (pomiar D-21, wiersze 6, 7, 
   // T20 [kontrola]: „Scal pacjentów” X → Y na A (przepięte notatki bez nagrobków, M7). Poprawka N1 pod X na B: dotąd
   // rozjazd G5 (B zostawało z N1 pod X, bez karty); od E2-PR3c4 (decyzja 6) N1 pod Y na obu.
   const SCAL = {
-    'B poprawia wizytę X': { wynik: 'bez zmian', zrob: (c) => c.B.v.updateMeasurementRow(c.pid, { uid: 'm-60' }, { ageMonths: 60, height: 110.8, weight: 18 }) },
+    'B poprawia wizytę X': { wynik: 'poprawka w karcie scalonej Y, X nie wraca (E3-PR0e2b; dotąd X wracała z poprawioną wizytą)', zrob: (c) => c.B.v.updateMeasurementRow(c.pid, { uid: 'm-60' }, { ageMonths: 60, height: 110.8, weight: 18 }) },
     'B dopisuje wizytę X': { wynik: 'bez zmian', zrob: async (c) => { const s3 = await c.B.v.savePatient(zapisP([W60, W66, W72, W78], W78), { patientId: c.pid, dedup: false }); c.sn[s3.snapshotId] = 's3B'; } },
     'B poprawia notatkę N1 pod X': { wynik: 'N1 pod Y na A i B (E2-PR3c4; na bazie B z N1 pod X)', zrob: (c) => c.B.v.savePatientNote({ id: c.n1, patientId: c.pid, title: 'Wynik TSH (poprawiony)', body: 'fikcyjny wynik, poprawka',
       clinicalDateISO: '2026-10-01', labResult: { test: 'TSH', value: '2.4', valueNum: 2.4, unit: 'mIU/l' } }) },
@@ -755,9 +755,11 @@ describe('P-NOTATKI-ZA-KARTA — kontrole bez zmian (pomiar D-21, wiersze 6, 7, 
 const T20_Y = 'Y: yScal[110/113/116] y1[110] s2[110/113/116] s1[110/113]';
 const T20_N = 'N[N1@Y "Wynik TSH", N2@Y "Lek", N3@Y "Notatka Y"] T[]';
 const T20_CEL = {
+  // E3-PR0e2b: s2 ma chwilę przypisania zapisaną przez „Scal pacjentów”, więc poprawka B idzie do s2 pod Y, a X nie
+  // wraca (decyzja właściciela 2a z 2026-11-23); dotąd X wracała z poprawioną s2.
   'B poprawia wizytę X': {
-    A: `X: s2[110.8/113/116]; Y: yScal[110/113/116] y1[110] s1[110/113] | ${T20_N}`,
-    B: `X: s2[110.8/113/116]; Y: yScal[110/113/116] y1[110] s1[110/113] | ${T20_N}`,
+    A: `X: BRAK; Y: yScal[110/113/116] y1[110] s2[110.8/113/116] s1[110/113] | ${T20_N}`,
+    B: `X: BRAK; Y: yScal[110/113/116] y1[110] s2[110.8/113/116] s1[110/113] | ${T20_N}`,
   },
   'B dopisuje wizytę X': { A: `X: s3B[110/113/116/119]; ${T20_Y} | ${T20_N}`, B: `X: s3B[110/113/116/119]; ${T20_Y} | ${T20_N}` },
   // Dotąd rozjazd G5 (pomiar 13): B zostawało z N1 pod X (D21-9). E2-PR3c4 (decyzja 6): karta X nie istnieje, więc
