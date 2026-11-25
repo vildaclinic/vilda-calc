@@ -1343,12 +1343,12 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline :is(
 }
 
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline div:has(> .vilda-patient-timeline-filters) {
-  margin: 0 0 14px !important;
+  margin: 0 0 var(--space-14px) !important;
 }
 
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vilda-patient-timeline-filters {
   margin: 0 !important;
-  gap: 6px !important;
+  gap: var(--space-6px) !important;
 }
 
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vilda-patient-timeline-filters > button {
@@ -1356,7 +1356,7 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vilda-patien
   width: auto !important;
   min-height: 36px;
   margin: 0;
-  padding: 6px 12px !important;
+  padding: var(--space-6px) var(--space-12px) !important;
   border-radius: var(--radius-8) !important;
   font-size: 14px !important;
   line-height: 1.4;
@@ -1376,7 +1376,7 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vilda-patien
 }
 
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline [data-timeline-part="group"] {
-  margin: 14px 0 8px !important;
+  margin: var(--space-14px) 0 var(--space-8px) !important;
   padding: 0 !important;
   color: var(--history-muted) !important;
   font-size: 15px !important;
@@ -1386,7 +1386,7 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline [data-timelin
 }
 
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline [data-timeline-part="date"] {
-  margin-bottom: 4px !important;
+  margin-bottom: var(--space-4px) !important;
   color: var(--history-muted) !important;
   font-size: 14px !important;
   font-weight: 550 !important;
@@ -1407,8 +1407,8 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline :is(
 
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline [data-timeline-part="card"] {
   min-width: 0;
-  padding: 10px 12px !important;
-  border: 1px solid var(--history-line) !important;
+  padding: var(--space-10px) var(--space-12px) !important;
+  border: var(--border-hairline) solid var(--history-line) !important;
   border-radius: var(--radius-9) !important;
   background: var(--hc-surface, #fff) !important;
   color: var(--history-ink) !important;
@@ -1442,7 +1442,7 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline button[aria-l
   padding: 0 !important;
   top: 4px !important;
   right: 4px !important;
-  border: 1px solid var(--history-line) !important;
+  border: var(--border-hairline) solid var(--history-line) !important;
   border-radius: 7px !important;
   background: var(--hc-surface, #fff) !important;
   box-shadow: none !important;
@@ -1453,7 +1453,7 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline :is(
   [data-timeline-part="card"],
   .vilda-patient-timeline-filters button
 ):focus-visible {
-  outline: 2px solid var(--history-accent);
+  outline: var(--border-emphasis) solid var(--history-accent);
   outline-offset: 2px;
 }
 
@@ -1461,8 +1461,8 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline [data-timelin
   box-shadow: var(--hc-shadow, 0 2px 8px rgb(29 65 78 / 6%));
 }
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vhome-timeline-linked {
-  margin-left: 6px !important;
-  padding-left: 24px !important;
+  margin-left: var(--space-6px) !important;
+  padding-left: var(--space-24px) !important;
 }
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-timeline .vhome-timeline-linked > svg {
   width: 24px;
