@@ -226,12 +226,16 @@
 // E3-PR0e3 (decyzje właściciela 1a i 4a z 2026-11-23; P-SYNC-WLASCICIEL): zmiana wizyty po Koszu wraca do karty wpisu
 // po „Scal pacjentów” — test wejściowy: blok trzech urządzeń z kopert aplikacji (światy 887–894: gwiazdka albo poprawka
 // C po Koszu A, drugie „Scal pacjentów” albo „Usuń pacjenta” zwróconej P przed kopertą C, oba stany przełącznika; W1
-// bez przełącznika — literał jednego naruszenia „utrata” v na C); przepisane literały katalogu Kosza npret-K (obie
-// kolejności: po samych zdarzeniach = W4, bez naruszeń wyroczni). Świat 885 z ręcznego bloku znanych usterek w CI (oba
-// stany przełącznika): wyjątek wyroczni „„Usuń pacjenta” zwróconej starej karty (wizyta nigdy w karcie scalonej)”
-// (decyzja 4a — świadome usunięcie, bez naruszeń bez klasy; literał naruszeń z klasą i faktów). Uprząż: każdy zapisany
-// stan urządzenia (ustawStan, stan po każdym zdarzeniu partii, gdy uprząż go liczy) idzie do WYR.obserwuj (fakt
-// kartyWidziane wyjątku); ddSwiat — przełącznik odsyłania świata przypadku (sc.echo).
+// bez przełącznika — literał jednego naruszenia „utrata” v na C; światy 895 i 896 — C najpierw pobiera, A → C przed
+// C → A: przy samych pełnych kopiach v przechodzi pod Q na C, zanim P zniknie); przepisane literały katalogu Kosza
+// npret-K (obie kolejności: po samych zdarzeniach = W4, bez naruszeń wyroczni). Świat 885 z ręcznego bloku znanych
+// usterek w CI (oba stany przełącznika): wyjątek wyroczni „„Usuń pacjenta” zwróconej starej karty (wizyta nigdy
+// w karcie scalonej)” (decyzja 4a — świadome usunięcie, bez naruszeń bez klasy; literał naruszeń z klasą i faktów).
+// Uprząż: każdy zapisany stan urządzenia (ustawStan, stan po każdym zdarzeniu partii, gdy uprząż go liczy) idzie do
+// WYR.obserwuj z nazwą urządzenia (fakt kartyWidziane; nagrobki pacjentów i wersje pod kartami, które urządzenie miało —
+// czy znało „Scal pacjentów” usuwanej karty), a każdy zapis rekordu wersji w magazynie urządzenia (także stany pośrednie
+// scalania i partii bez eksportu po zdarzeniu, sejfy starszej aplikacji) — do WYR.obserwujZapis; ddSwiat — przełącznik
+// odsyłania świata przypadku (sc.echo).
 //
 // KOLEJNOŚĆ W KROKU (E2-PR3a2, sprawdzana na emiterach): snap (także wersje przeniesione pod kartę celu „Scal pacjentów”
 // i głowy scalenia), potem stomb, potem ptomb, potem pnote, pnotetomb, note, notetomb, plist, plisttomb, pref, pk, pktomb,
@@ -686,6 +690,15 @@ async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {}, app = nul
     zrodla: sejf === 'N' ? { 'vilda_vault.js': (win) => { lancuch = zRejestrem(win); } } : zrodlaStarszej(sejf, { retencja: ret, lancuch: (l) => { lancuch = l; } }),
   });
   const U = { d, v: d.vault, ev: d.vault._eventLog, app: sejf, retencja: ret, nazwa, Q: [], setIds: new Set(), stan: null, usuniete: new Set(), znaneNotatki: new Map(), lancuch, swiatWyr: S };
+  // E3-PR0e3: każdy zapis rekordu wersji w magazynie urządzenia — do faktu kartyWidziane wyroczni (WYR.obserwujZapis)
+  if (d.adapter && typeof d.adapter.putSnapshotForUser === 'function') {
+    const put = d.adapter.putSnapshotForUser;
+    d.adapter.putSnapshotForUser = async function (uid, rek, ...reszta) {
+      const r = await put.call(this, uid, rek, ...reszta);
+      if (S.wyr && rek) WYR.obserwujZapis(S.wyr, rek.snapshotId, rek.patientId);
+      return r;
+    };
+  }
   ustawStan(U, await eksport(U));
   if (!zBlizniaka) S.hasla.set(idHasla(U.stan), HASLO_POCZATKOWE);
   return U;
@@ -695,7 +708,7 @@ async function urzadzenie(S, nazwa, zBlizniaka = null, { dodatki = {}, app = nul
 // wyjątku „„Usuń pacjenta” zwróconej starej karty (wizyta nigdy w karcie scalonej)”).
 function ustawStan(U, lad) {
   U.stan = lad;
-  if (U.swiatWyr && U.swiatWyr.wyr) WYR.obserwuj(U.swiatWyr.wyr, lad);
+  if (U.swiatWyr && U.swiatWyr.wyr) WYR.obserwuj(U.swiatWyr.wyr, lad, U.nazwa);
   for (const t of lad.tombstones || []) U.usuniete.add(t.patientId);
   if (U.znaneNotatki) for (const n of lad.patientNotes || []) U.znaneNotatki.set(n.id, { patientId: n.patientId, title: n.title });
 }
@@ -1236,7 +1249,7 @@ async function dostawa(S, X, Y, { k = Infinity, cofnij = 0, haki: zHakami = true
   const stanyH = zHakami && partia.length > 1;
   const stany = stanyH || S.odsyl || zEchem(S) ? [przed] : null;
   // czas eksportów robionych tylko dla licznika (bez modelu haków) — S.odsyl.msDodatkowe (druk)
-  if (stany) for (const e of partia) { await zastosuj(Y, [e]); const t0 = performance.now(); stany.push(await eksport(Y)); if (!stanyH && S.odsyl) S.odsyl.msDodatkowe.eksportyDostawy += performance.now() - t0; if (S.wyr) WYR.obserwuj(S.wyr, stany[stany.length - 1]); }
+  if (stany) for (const e of partia) { await zastosuj(Y, [e]); const t0 = performance.now(); stany.push(await eksport(Y)); if (!stanyH && S.odsyl) S.odsyl.msDodatkowe.eksportyDostawy += performance.now() - t0; if (S.wyr) WYR.obserwuj(S.wyr, stany[stany.length - 1], Y.nazwa); }
   else await zastosuj(Y, partia);
   S.kursor.set(nazwa, c + partia.length);
   const wyslane = Math.max(X.wyslane || 0, c + partia.length);
@@ -6998,7 +7011,7 @@ async function pqBaza(S) {
   return { A, B, C, Q: rq.patientId, P: r1.patientId, X: r1.patientId, v: r1.snapshotId, w: r2.snapshotId,
     n: new Map([[rq.patientId, 'Q'], [rq.snapshotId, 'q'], [r1.patientId, 'P'], [r1.snapshotId, 'v'], [r2.snapshotId, 'w']]) };
 }
-function pqSwiat(druga, zmiana, nr, echo) {
+function pqSwiat(druga, zmiana, nr, echo, pobiera = false) {
   return {
     nr, echo, wyrSwiat: 'wpis Kosza pod żywą kartą',
     baza: pqBaza,
@@ -7016,6 +7029,8 @@ function pqSwiat(druga, zmiana, nr, echo) {
       krok(60e3);
       if (druga === 'scal') await mutacja(S, A, 'Scal pacjentów 5 → 3 (drugie)', () => A.v.mergePatients(u.P, u.Q));
       else await mutacja(S, A, 'usuń pacjenta 5', () => A.v.removePatient(u.P));
+      // C najpierw pobiera (pełna synchronizacja: pobranie przed wysyłką): A → C przed C → A
+      if (pobiera) { krok(60e3); await ddDo(u, A, C); }
       krok(60e3); await ddDo(u, C, A);
       await ddSpoczynek(u);
     },
@@ -7026,6 +7041,12 @@ const PQ_WARIANTY = [['gwiazdka', 'scal'], ['gwiazdka', 'usun'], ['poprawka', 's
 const PQ_SWIATY = PQ_WARIANTY.flatMap(([zmiana, druga], i) => [false, true].map((echo, j) => ({
   nazwa: `${zmiana === 'gwiazdka' ? 'gwiazdka' : 'poprawka'} C po Koszu A, ${druga === 'scal' ? 'drugie „Scal pacjentów”' : '„Usuń pacjenta” zwróconej P'}, przełącznik ${echo ? 'włączony' : 'wyłączony'}`,
   sc: pqSwiat(druga, zmiana, 7 + 2 * i + j, echo),
+}))).concat([['gwiazdka', 'scal', 15], ['poprawka', 'usun', 16]].map(([zmiana, druga, nr]) => ({
+  // Światy 895 i 896: C najpierw pobiera (A → C przed C → A). Przy samych pełnych kopiach C dostaje nagrobek P razem
+  // z wpisem Kosza v pod Q w jednym ładunku, a v z jego zmianą leży u niego pod P (strona tutejsza) — v przechodzi pod Q
+  // na C, zanim P zniknie, i stamtąd na A i B (dotąd ginęła na A, B i C). Po samych zdarzeniach — jak w 887 i 893.
+  nazwa: `${zmiana === 'gwiazdka' ? 'gwiazdka' : 'poprawka'} C po Koszu A, ${druga === 'scal' ? 'drugie „Scal pacjentów”' : '„Usuń pacjenta” zwróconej P'}, C najpierw pobiera, przełącznik wyłączony`,
+  sc: pqSwiat(druga, zmiana, nr, false, true),
 })));
 describe('A ≡ B, zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (E3-PR0e3): trzy urządzenia z kopert aplikacji — test wejściowy', () => {
   d1();
@@ -7062,6 +7083,8 @@ const PQ_OCZEKIWANE = {
   "poprawka C po Koszu A, drugie „Scal pacjentów”, przełącznik włączony": {"czerwone": {"W1": [], "W4": [], "bloby": []}, "faktyW1": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "karta Q, 17.2 kg"}, "n": {"A": "karta Q, 24 kg", "B": "karta Q, 24 kg", "C": "karta Q, 24 kg"}}, "faktyBlobow": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "karta Q, 17.2 kg"}, "n": {"A": "karta Q, 24 kg", "B": "karta Q, 24 kg", "C": "karta Q, 24 kg"}}, "odsyl": {"echo": 1, "powtorzenia": 0}},
   "poprawka C po Koszu A, „Usuń pacjenta” zwróconej P, przełącznik wyłączony": {"czerwone": {"W1": ["W1: C wizyta v utrata [bez klasy] oczekiwane {\"loc\":\"karta\",\"pid\":\"Q\",\"tresc\":\"120cm/17.2kg\",\"pin\":false,\"przyczyna\":null,\"ukryta\":false} fakt {\"loc\":\"brak\",\"pid\":null,\"tresc\":null,\"pin\":null,\"ile\":null,\"wKoszuTez\":false}"], "W4": [], "bloby": []}, "faktyW1": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "brak"}, "n": {"A": "brak", "B": "brak", "C": "brak"}}, "faktyBlobow": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "karta Q, 17.2 kg"}, "n": {"A": "brak", "B": "brak", "C": "brak"}}, "odsyl": null},
   "poprawka C po Koszu A, „Usuń pacjenta” zwróconej P, przełącznik włączony": {"czerwone": {"W1": [], "W4": [], "bloby": []}, "faktyW1": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "karta Q, 17.2 kg"}, "n": {"A": "brak", "B": "brak", "C": "brak"}}, "faktyBlobow": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "karta Q, 17.2 kg"}, "n": {"A": "brak", "B": "brak", "C": "brak"}}, "odsyl": {"echo": 1, "powtorzenia": 0}},
+  "gwiazdka C po Koszu A, drugie „Scal pacjentów”, C najpierw pobiera, przełącznik wyłączony": {"czerwone": {"W1": ["W1: C wizyta v utrata [bez klasy] oczekiwane {\"loc\":\"karta\",\"pid\":\"Q\",\"tresc\":\"120cm/20kg\",\"pin\":true,\"przyczyna\":null,\"ukryta\":false} fakt {\"loc\":\"brak\",\"pid\":null,\"tresc\":null,\"pin\":null,\"ile\":null,\"wKoszuTez\":false}"], "W4": [], "bloby": []}, "faktyW1": {"v": {"A": "karta Q, 20 kg z gwiazdką", "B": "karta Q, 20 kg z gwiazdką", "C": "brak"}, "n": {"A": "karta Q, 24 kg", "B": "karta Q, 24 kg", "C": "karta Q, 24 kg"}}, "faktyBlobow": {"v": {"A": "karta Q, 20 kg z gwiazdką", "B": "karta Q, 20 kg z gwiazdką", "C": "karta Q, 20 kg z gwiazdką"}, "n": {"A": "karta Q, 24 kg", "B": "karta Q, 24 kg", "C": "karta Q, 24 kg"}}, "odsyl": null},
+  "poprawka C po Koszu A, „Usuń pacjenta” zwróconej P, C najpierw pobiera, przełącznik wyłączony": {"czerwone": {"W1": ["W1: C wizyta v utrata [bez klasy] oczekiwane {\"loc\":\"karta\",\"pid\":\"Q\",\"tresc\":\"120cm/17.2kg\",\"pin\":false,\"przyczyna\":null,\"ukryta\":false} fakt {\"loc\":\"brak\",\"pid\":null,\"tresc\":null,\"pin\":null,\"ile\":null,\"wKoszuTez\":false}"], "W4": [], "bloby": []}, "faktyW1": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "brak"}, "n": {"A": "brak", "B": "brak", "C": "brak"}}, "faktyBlobow": {"v": {"A": "karta Q, 17.2 kg", "B": "karta Q, 17.2 kg", "C": "karta Q, 17.2 kg"}, "n": {"A": "brak", "B": "brak", "C": "brak"}}, "odsyl": null},
 };
 
 // ══ Stres: echo jednego scalenia pełnej kopii w dużym świecie (E3-PR0b, P-ZBIEZNOSC-ZDARZEN; deterministyczny) ════════

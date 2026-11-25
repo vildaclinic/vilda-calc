@@ -1397,12 +1397,14 @@ describe('P-KOSZ-PO-KLUCZU — R6: nagrobek pacjenta tylko w sesji scalania (Bsl
 //        z natury);
 //   „Przywróć” i ponowny Kosz v w drugiej karcie (wpis późniejszy niż gwiazdka C) — wpis wygrywa: bez zapisu, v w Koszu
 //        (zielony z natury);
-//   przełączenie na konto B przy odczycie karty wpisu w decyzji i w szyfrowaniu rekordu wracającego pod Q —
-//        SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A to samo scalenie: v z gwiazdką pod Q, bez
-//        wpisu (czerwony na bazie: reguły nie ma — przełączenie nie zachodzi, scalenie „ok”, gwiazdka C ginie);
+//   przełączenie na konto B przy świeżym odczycie karty wpisu w fazie przeniesień i w szyfrowaniu rekordu wracającego
+//        pod Q — SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A to samo scalenie: v z gwiazdką pod
+//        Q, bez wpisu (czerwony na bazie: reguły nie ma — przełączenie nie zachodzi, scalenie „ok”, gwiazdka C ginie);
+//   wpis Kosza v przechodzi pod inną kartę R w drugiej karcie przeglądarki między decyzją a fazą (pełna kopia D, który
+//        scalił P → R i dał v do Kosza pod R po Koszu A, przed gwiazdką C) — bez zapisu pod Q; następne scalanie oddaje
+//        v do karty wpisu R z gwiazdką (czerwony na bazie: v nie wraca nigdzie);
 //   kontrola: to samo scalenie bez haka — v z gwiazdką pod Q, bez wpisu Kosza, karta P usunięta (czerwony na bazie:
 //        wpis zostaje, v nie wraca).
-const MA_REGULE_WPISU = /async function Bsw_doWpisu\(/.test(kod(SEJF.N));
 async function wpisPodQTrzy() {
   sztucznyZegar();
   const A = await urzadzenieH('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
@@ -1476,15 +1478,49 @@ describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-
     expect(await stanWpisu(u)).toEqual({ kartaP: false, kartaQ: true, v: null, rekordyV: 0, kosz: [{ karta: 'Q', masa: 20, gwiazdka: false }] });
   });
 
-  it('przełączenie na konto B przy odczycie karty wpisu Q w decyzji — SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A v z gwiazdką pod Q', async () => {
+  it('przełączenie na konto B przy świeżym odczycie karty wpisu Q w fazie przeniesień — SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A v z gwiazdką pod Q', async () => {
     const u = await wpisPodQTrzy();
-    const st = przelacz(u.A, (k, a, stos) => k === 'getPatientForUser' && a[0] === u.A.__uid && a[1] === u.Q && stos.includes('Bsw_doWpisu'), true);
+    const st = przelacz(u.A, (k, a, stos) => k === 'getPatientForUser' && a[0] === u.A.__uid && a[1] === u.Q && stos.includes('Bsw_doKartyWpisu'), true);
     expect(await scal(u.C, u.A)).toBe('SESSION_CHANGED');
-    expect(st.zrobione, 'przełączenie w decyzji').toBe(true);
+    expect(st.zrobione, 'przełączenie w fazie przeniesień').toBe(true);
     expect(zapisyPo(u.A, st), 'po przełączeniu żadnego zapisu').toEqual([]);
     await zalogujA(u.A);
     expect(await scal(u.C, u.A)).toBe('ok');
     expect(await stanWpisu(u)).toEqual(V_Z_GWIAZDKA);
+  });
+
+  it('wpis Kosza v przechodzi pod inną kartę R w drugiej karcie przeglądarki między decyzją a fazą (pełna kopia D: D scalił P → R i dał v do Kosza pod R po Koszu A, przed gwiazdką C) — bez zapisu pod Q; następne scalanie oddaje v do karty wpisu R z gwiazdką', async () => {
+    sztucznyZegar();
+    const A = await urzadzenieH('A'), B = await urzadzenie('B'), C = await urzadzenie('C'), D = await urzadzenie('D');
+    const Q = (await zapisz(A, ola(110, 18))).patientId;
+    const P = (await zapisz(A, jan(120, 20))).patientId;
+    await zapisz(A, jan(121, 21), { patientId: P });
+    const R = (await zapisz(A, ola(130, 28))).patientId;
+    const [v, w] = (await A.exportSyncPayload()).patients.find((p) => p.patientId === P).snapshots.map((s) => s.snapshotId);
+    await sync(A, B); await sync(A, C); await sync(A, D);
+    przesunZegar(M); await A.mergePatients(P, Q);
+    przesunZegar(M); await A.moveSnapshotToTrash(Q, v);
+    przesunZegar(M); await D.mergePatients(P, R);
+    przesunZegar(M); await D.moveSnapshotToTrash(R, v);
+    przesunZegar(M); await C.setSnapshotPinned(P, v, true);
+    przesunZegar(M); const n = (await zapisz(B, jan(122, 22), { patientId: P })).snapshotId;
+    przesunZegar(M); await sync(B, A);
+    przesunZegar(M); await A.mergePatients(P, Q);
+    przesunZegar(M);
+    const u = { A, B, C, P, Q, v, w, n };
+    const stanR = async () => {
+      const g = await gdzie(A, v);
+      const kosz = ((await A.exportSyncPayload()).snapshotTombstones || []).filter((e) => e.snapshotId === v).map((e) => (e.patientId === Q ? 'Q' : e.patientId === R ? 'R' : e.patientId === P ? 'P' : '?'));
+      return { v: g ? { pod: g.pid === Q ? 'Q' : g.pid === R ? 'R' : '?', gwiazdka: !!g.s.payload._pinned } : null, kosz };
+    };
+    let zrobione = false;
+    A.__hak.kiedy = poDecyzji(u);
+    A.__hak.akcja = async () => { zrobione = true; przesunZegar(1000); await sync(D, A); };
+    expect(await scal(C, A)).toBe('ok');
+    expect(zrobione, 'hak między decyzją a fazą').toBe(true);
+    const poPierwszym = await stanR();
+    expect(await scal(C, A)).toBe('ok');
+    expect({ poPierwszym, poDrugim: await stanR() }).toEqual({ poPierwszym: { v: null, kosz: ['R'] }, poDrugim: { v: { pod: 'R', gwiazdka: true }, kosz: [] } });
   });
 
   it('przełączenie na konto B w szyfrowaniu rekordu wersji wracającej pod Q — SESSION_CHANGED, po przełączeniu żadnego zapisu; po zalogowaniu A v z gwiazdką pod Q', async () => {
@@ -1528,9 +1564,10 @@ describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-
     };
     const decyzja = cialo('Bsw_doWpisu').join('\n');
     const zapis = cialo('Bsw_doKartyWpisu').join('\n');
-    // decyzja: karta wpisu inna niż karta z ładunku, spoza zbioru N, istnieje (jeden odczyt); odłożenie do fazy po straży
+    // decyzja: karta wpisu inna niż karta z ładunku i spoza zbioru N, bez odczytu (czy karta wpisu jest, rozstrzyga
+    // świeży odczyt w fazie — wynik nie zależy od kolejności kart w ładunku); odłożenie do fazy po straży
     expect(decyzja, 'decyzja: zbiór N').toContain('ctx.Bsw_N.has(');
-    expect(bezStrazy('Bsw_doWpisu', ODCZYT), 'decyzja: jeden odczyt karty wpisu po straży').toEqual({ ile: 1, zle: [] });
+    expect(bezStrazy('Bsw_doWpisu', ODCZYT).ile, 'decyzja bez odczytów magazynu').toBe(0);
     expect(bezStrazy('Bsw_doWpisu', /ctx\.Bsw_P\b/), 'decyzja: odłożenie do fazy przeniesień po straży').toEqual({ ile: 1, zle: [] });
     expect(bezStrazy('Bsw_doWpisu', ZAPIS_MAG).ile, 'decyzja bez zapisów').toBe(0);
     // zapis: świeży odczyt karty wpisu, wersji i wpisów Kosza; wpis nadal przegrywa; rekord z jednej kopii; nagłówek
@@ -1545,5 +1582,146 @@ describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-
     const faza = cialo('Bsl_przeniesWersje').join('\n');
     expect(faza, 'faza: zapis pod blokadą karty wpisu').toMatch(/Bsl_podBlokada\([^;]*Bsw_doKartyWpisu\(/);
     expect(faza, 'faza: wersja, która wróciła pod kartę wpisu, liczy się jak wersja zabrana (lista pacjentów)').toMatch(/Bsw_doKartyWpisu\([\s\S]{0,200}zabrane \+= 1/);
+  });
+});
+
+// ══ Zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3): pełna wymiana w obu kolejnościach i kolejność kart ════════
+// Ten sam świat co wyżej (A scala P → Q i daje v do Kosza pod Q; C bez wiedzy daje v gwiazdkę albo poprawia ją na
+// 17,2 kg w P; B bez wiedzy zapisuje w P nową wizytę n; B → A — P wraca na A; A drugi raz „Scal pacjentów” P → Q albo
+// „Usuń pacjenta” zwróconej P), same pełne kopie. „C najpierw wysyła”: C → A, potem A → C. „C najpierw pobiera” (pełna
+// synchronizacja zwykle najpierw pobiera — po odblokowaniu i przy konflikcie zapisu, potem wysyła): A → C, potem C → A.
+// Przy „najpierw pobiera” C dostaje nagrobek P razem z wpisem Kosza v pod Q w jednym ładunku, a v z jego zmianą leży
+// u niego pod P (strona tutejsza, Bsw_przezyteRetencji): v przechodzi pod Q, zanim P zniknie. Potem trzy kolejne pełne
+// wymiany A, B, C. Oczekiwanie w obu kolejnościach: v pod Q ze zmianą C na A, B i C, Kosz bez v (czerwony na bazie
+// przy „najpierw pobiera”: v ginie na A, B i C, w Koszu pod Q bez zmiany C). Kolejność kart w jednym ładunku: karta Q
+// usunięta na A wraca w tym samym ładunku C (późniejszy zapis C w Q) przed albo za kartą P — v wraca do Q w obu
+// kolejnościach (dotąd tylko przy Q przed P, bo decyzja czytała kartę Q przed zapisem dalszych kart ładunku). Kontrole
+// strony tutejszej (wynik jak dotąd): zmiana C wcześniejsza niż Kosz A (wpis wygrywa), wpis Kosza pod samą starą
+// kartą P (A dał v do Kosza w P przed „Scal pacjentów”) i karta wpisu Q scalona dalej Q → R (Q w zbiorze N): v nie
+// leży u C pod żadną kartą, wpis Kosza zostaje (dwie ostatnie — ograniczenie, jak po stronie ładunku: karta wpisu nie
+// jest żywą kartą spoza N).
+async function pelnaWymianaSwiat({ druga = 'scal', zmiana = 'gwiazdka', koszPrzedZmiana = false, koszWP = false, dalejDoR = false } = {}) {
+  sztucznyZegar();
+  const A = await urzadzenie('A'), B = await urzadzenie('B'), C = await urzadzenie('C');
+  const Q = (await zapisz(A, ola(110, 18))).patientId;
+  const P = (await zapisz(A, jan(120, 20))).patientId;
+  await zapisz(A, jan(121, 21), { patientId: P });
+  const R = dalejDoR ? (await zapisz(A, ola(130, 28))).patientId : null;
+  const [v] = (await A.exportSyncPayload()).patients.find((p) => p.patientId === P).snapshots.map((s) => s.snapshotId);
+  await sync(A, B); await sync(A, C);
+  const zmienC = async () => {
+    przesunZegar(M);
+    if (zmiana === 'gwiazdka') await C.setSnapshotPinned(P, v, true);
+    else await poprawMase(C, v, 17.2);
+  };
+  if (koszWP) { przesunZegar(M); await A.moveSnapshotToTrash(P, v); }
+  przesunZegar(M); await A.mergePatients(P, Q);
+  if (koszPrzedZmiana) await zmienC();
+  if (!koszWP) { przesunZegar(M); await A.moveSnapshotToTrash(Q, v); }
+  if (!koszPrzedZmiana) await zmienC();
+  przesunZegar(M); await zapisz(B, jan(122, 22), { patientId: P });
+  przesunZegar(M); await sync(B, A);
+  przesunZegar(M); if (druga === 'scal') await A.mergePatients(P, Q); else await A.removePatient(P);
+  if (dalejDoR) { przesunZegar(M); await A.mergePatients(Q, R); }
+  return { A, B, C, P, Q, R, v };
+}
+async function polozenieV(X, u) {
+  const nazwa = (pid) => (pid === u.Q ? 'Q' : pid === u.P ? 'P' : pid === u.R ? 'R' : '?');
+  const g = await gdzie(X, u.v);
+  const kosz = ((await X.exportSyncPayload()).snapshotTombstones || []).filter((e) => e.snapshotId === u.v).map((e) => `${nazwa(e.patientId)}${e.payload ? ` ${e.payload.user.weight} kg` : ''}`);
+  return { v: g ? `${nazwa(g.pid)} ${g.s.payload.user.weight} kg${g.s.payload._pinned ? ' z gwiazdką' : ''}` : null, kosz };
+}
+async function pelnaWymiana(u, kolejnosc) {
+  const kroki = {};
+  if (kolejnosc === 'C najpierw pobiera') { przesunZegar(M); await sync(u.A, u.C); kroki['C po pobraniu'] = await polozenieV(u.C, u); przesunZegar(M); await sync(u.C, u.A); }
+  else { przesunZegar(M); await sync(u.C, u.A); kroki['A po C'] = await polozenieV(u.A, u); przesunZegar(M); await sync(u.A, u.C); }
+  await rundy([u.A, u.B, u.C]);
+  return { ...kroki, A: await polozenieV(u.A, u), B: await polozenieV(u.B, u), C: await polozenieV(u.C, u) };
+}
+describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3): pełna wymiana w obu kolejnościach i kolejność kart w ładunku', () => {
+  for (const [druga, zmiana] of [['scal', 'gwiazdka'], ['usun', 'gwiazdka'], ['scal', 'poprawka'], ['usun', 'poprawka']]) {
+    for (const kolejnosc of ['C najpierw wysyła', 'C najpierw pobiera']) {
+      it(`${zmiana === 'gwiazdka' ? 'gwiazdka' : 'poprawka 17,2 kg'} C po Koszu A, ${druga === 'scal' ? 'drugie „Scal pacjentów”' : '„Usuń pacjenta” zwróconej P'}, ${kolejnosc}: v pod Q ze zmianą C na A, B i C, Kosz bez v`, async () => {
+        const w = await pelnaWymiana(await pelnaWymianaSwiat({ druga, zmiana }), kolejnosc);
+        console.log('E3-PR0e3 pełna wymiana', druga, zmiana, kolejnosc, JSON.stringify(w));
+        const ocz = { v: zmiana === 'gwiazdka' ? 'Q 20 kg z gwiazdką' : 'Q 17.2 kg', kosz: [] };
+        expect(w).toEqual({ ...(kolejnosc === 'C najpierw pobiera' ? { 'C po pobraniu': ocz } : { 'A po C': ocz }), A: ocz, B: ocz, C: ocz });
+      });
+    }
+  }
+
+  it('kolejność kart w jednym ładunku: karta wpisu Q usunięta na A wraca w tym samym ładunku C przed kartą P albo za nią — v wraca do Q z gwiazdką w obu kolejnościach', async () => {
+    const swiat = async (odwroc) => {
+      const u = await pelnaWymianaSwiat();
+      przesunZegar(M); await u.A.removePatient(u.Q);
+      przesunZegar(M); await zapisz(u.C, ola(111, 19), { patientId: u.Q });
+      const lad = JSON.parse(JSON.stringify(await u.C.exportSyncPayload()));
+      const kolejnosc = lad.patients.map((p) => (p.patientId === u.P ? 'P' : p.patientId === u.Q ? 'Q' : '?'));
+      lad.patients.sort((a, b) => ((a.patientId === u.Q) === !odwroc ? -1 : (b.patientId === u.Q) === !odwroc ? 1 : 0));
+      przesunZegar(M); await u.A.mergeSyncPayload(lad);
+      return { kolejnosc: lad.patients.map((p) => (p.patientId === u.P ? 'P' : p.patientId === u.Q ? 'Q' : '?')), przed: kolejnosc.length, kartaQ: !!(await u.A.getPatient(u.Q)), ...(await polozenieV(u.A, u)) };
+    };
+    const w = { 'Q przed P': await swiat(false), 'Q za P': await swiat(true) };
+    console.log('E3-PR0e3 kolejność kart', JSON.stringify(w));
+    expect(w).toEqual({
+      'Q przed P': { kolejnosc: ['Q', 'P'], przed: 2, kartaQ: true, v: 'Q 20 kg z gwiazdką', kosz: [] },
+      'Q za P': { kolejnosc: ['P', 'Q'], przed: 2, kartaQ: true, v: 'Q 20 kg z gwiazdką', kosz: [] },
+    });
+  });
+
+  for (const [nazwa, o] of [
+    ['gwiazdka C wcześniejsza niż Kosz A (wpis wygrywa)', { koszPrzedZmiana: true }],
+    ['wpis Kosza pod samą starą kartą P (A dał v do Kosza w P przed „Scal pacjentów”)', { koszWP: true }],
+    ['karta wpisu Q scalona dalej Q → R na A (Q w zbiorze N)', { dalejDoR: true }],
+  ]) {
+    it(`kontrola strony tutejszej, C najpierw pobiera: ${nazwa} — wynik jak dotąd`, async () => {
+      const u = await pelnaWymianaSwiat(o);
+      przesunZegar(M);
+      const r = await u.C.mergeSyncPayload(JSON.parse(JSON.stringify(await u.A.exportSyncPayload())));
+      // liczby wyniku scalania: wersja przeniesiona pod kartę wpisu liczy się jak dodana (bez przeniesienia — jak dotąd)
+      const w = { ...(await polozenieV(u.C, u)), dodane: r.addedSnapshotCount, usunieteKarty: r.deletedPatientCount };
+      console.log('E3-PR0e3 kontrola strony tutejszej', nazwa, JSON.stringify(w));
+      expect(w).toEqual(KONTROLA_STRONY_TUTEJSZEJ[nazwa]);
+    });
+  }
+});
+const KONTROLA_STRONY_TUTEJSZEJ = {
+  'gwiazdka C wcześniejsza niż Kosz A (wpis wygrywa)': { v: null, kosz: ['Q 20 kg'], dodane: 4, usunieteKarty: 1 },
+  'wpis Kosza pod samą starą kartą P (A dał v do Kosza w P przed „Scal pacjentów”)': { v: null, kosz: ['P 20 kg'], dodane: 4, usunieteKarty: 1 },
+  'karta wpisu Q scalona dalej Q → R na A (Q w zbiorze N)': { v: null, kosz: ['Q 20 kg'], dodane: 6, usunieteKarty: 2 },
+};
+
+// ══ Zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3): wyjątek ostatniej wersji karty wpisu (Q8) innej wizyty ══
+// A: karta Q „Testowa Ola” [q] i karta P „Testowy Jan” [v, w]; bliźniaki C (bez wiedzy o scaleniu) i D. A scala P → Q;
+// D (zna scalenie) daje q do Kosza; A daje do Kosza pozostałe wersje Q (także v); D → A — wpis Kosza q z nią wygrywa,
+// ale q zostaje w Q jako ostatnia wersja karty (Q8). C daje v gwiazdkę w starej P; pełna kopia C z kartą P z zapisem
+// sprzed scalenia — v wraca do Q (wpis Kosza v pod żywą Q przegrywa z gwiazdką). Q ma wtedy dwie wersje, więc koniec
+// scalania Kosza oddaje q do Kosza — jak w jednej karcie (wyjątek chroni tylko przed pustą kartą; nic nie znika:
+// q w Koszu). Dotąd: Q = [q], v w Koszu bez gwiazdki.
+describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3): ostatnia wersja karty wpisu z wpisem Kosza (Q8) innej wizyty', () => {
+  it('q ostatnią wersją Q z wygrywającym wpisem Kosza z D, v wraca pod Q z gwiazdką C — q odchodzi do Kosza, Q = [v z gwiazdką]', async () => {
+    sztucznyZegar();
+    const A = await urzadzenie('A'), C = await urzadzenie('C'), D = await urzadzenie('D');
+    const xq = await zapisz(A, ola(110, 18)); const Q = xq.patientId, q = xq.snapshotId;
+    const x1 = await zapisz(A, jan(120, 20)); const P = x1.patientId, v = x1.snapshotId;
+    await zapisz(A, jan(121, 21), { patientId: P });
+    await sync(A, C); await sync(A, D);
+    const zapisP = (await C.exportSyncPayload()).patients.find((p) => p.patientId === P).lastSavedAtISO;
+    przesunZegar(M); await A.mergePatients(P, Q);
+    await sync(A, D);
+    przesunZegar(M); await D.moveSnapshotToTrash(Q, q);
+    for (const s of (await A.getPatient(Q)).snapshots.map((y) => y.snapshotId).filter((id) => id !== q)) { przesunZegar(1000); await A.moveSnapshotToTrash(Q, s); }
+    await sync(D, A);
+    const nazwa = (id) => (id === q ? 'q' : id === v ? 'v' : 'inna');
+    const stan = async () => ({
+      Q: (await A.getPatient(Q)).snapshots.map((y) => nazwa(y.snapshotId) + (y.payload._pinned ? ' z gwiazdką' : '')).sort(),
+      kosz: ((await A.exportSyncPayload()).snapshotTombstones || []).filter((e) => e.snapshotId === q || e.snapshotId === v).map((e) => nazwa(e.snapshotId)).sort(),
+    });
+    const przed = await stan();
+    przesunZegar(M); await C.setSnapshotPinned(P, v, true);
+    const lad = JSON.parse(JSON.stringify(await C.exportSyncPayload()));
+    for (const p of lad.patients) if (p.patientId === P) p.lastSavedAtISO = zapisP;
+    await A.mergeSyncPayload(lad);
+    expect({ przed, po: await stan() }).toEqual({ przed: { Q: ['q'], kosz: ['q', 'v'] }, po: { Q: ['v z gwiazdką'], kosz: ['q'] } });
   });
 });

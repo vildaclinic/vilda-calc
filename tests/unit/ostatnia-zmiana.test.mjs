@@ -6,7 +6,8 @@
 // przy „Scal pacjentów”) jest naruszeniem bez klasy, i że każda klasa tabeli wyjątków wymaga swojego mechanizmu z historii:
 // dla każdej klasy pozytyw i negatyw (ten sam objaw bez mechanizmu — bez klasy). E3-PR0e3: klasa „„Usuń pacjenta”
 // zwróconej starej karty (wizyta nigdy w karcie scalonej)” (decyzja właściciela 4a z 2026-11-23) — pozytyw (świat 885
-// w miniaturze) i negatywy, każdy zdejmuje jeden warunek. Dane wyłącznie fikcyjne („Testowy Jan…”).
+// w miniaturze) i negatywy, każdy zdejmuje jeden warunek (także: karta wróciła po usunięciu, usunięcie na urządzeniu,
+// które scalenia nie znało, wizyta pod kartą scaloną tylko w zapisie magazynu). Dane wyłącznie fikcyjne („Testowy Jan…”).
 import { describe, expect, it } from 'vitest';
 import * as WYR from '../support/ostatnia-zmiana.mjs';
 import * as LO from '../support/licznik-odsylania.mjs';
@@ -1290,8 +1291,9 @@ describe('wyrocznia: „Usuń pacjenta” zwróconej starej karty (wizyta nigdy 
   const qPrzed = () => karta('Q', [wersja('q', 30, { pid: 'Q', imie: 'Jan2' })]);
   // o: bezScalenia — bez „Scal pacjentów” (karta bez aliasu); usuwa — urządzenie usuwające ('A' z b i n, 'C' tylko z b);
   // zapisPo — B (bez wiedzy o usunięciu) zdejmuje b gwiazdkę i stawia ją ponownie (ta sama treść i gwiazdka co na A
-  // w chwili usunięcia, ale zapis późniejszy niż usunięcie); widziana — 'mutacja' (eksport D z b pod Q w jego mutacji) albo 'dostawa'
-  // (stan C po dostawie z b pod Q, obserwuj); nWidoczna — C ma jeszcze P z n (bez nagrobka)
+  // w chwili usunięcia, ale zapis późniejszy niż usunięcie); widziana — 'mutacja' (eksport D z b pod Q w jego mutacji),
+  // 'dostawa' (stan C po dostawie z b pod Q, obserwuj) albo 'zapis' (rekord b pod Q w magazynie urządzenia,
+  // obserwujZapis); nWidoczna — C ma jeszcze P z n (bez nagrobka)
   function historia885(o = {}) {
     const M = WYR.nowyModel();
     const S0 = stan({ karty: [karta('P', pv()), qPrzed()] });
@@ -1305,12 +1307,17 @@ describe('wyrocznia: „Usuń pacjenta” zwróconej starej karty (wizyta nigdy 
       zap('D', 'poprawka q (D ma b pod Q)', zB, stan({ karty: [karta('Q', [wersja('q', 31, { pid: 'Q', imie: 'Jan2', rev: 2 }), wB(21.4, { pid: 'Q' })])] }), 3.5, [op('updateSnapshotPayload', 'Q', 'q')]);
     }
     if (o.widziana === 'dostawa') WYR.obserwuj(M, stan({ karty: [karta('Q', [wersja('q', 30, { pid: 'Q', imie: 'Jan2' }), wB(21.4, { pid: 'Q' })])] }));
+    // zapis rekordu b pod Q w magazynie urządzenia bez eksportu z nim (stan pośredni scalania albo partii zdarzeń)
+    if (o.widziana === 'zapis') WYR.obserwujZapis(M, 'b', 'Q');
     const pB = stan({ karty: [karta('P', [wB(21.4), wN(40.9)]), ...(o.bezScalenia ? [qPrzed()] : [qPo()])] });
     const pBg = stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 }), wN(40.9)]), ...(o.bezScalenia ? [qPrzed()] : [qPo()])] });
     zap('B', 'gwiazdka b', pB, pBg, 4, [op('setSnapshotPinned', 'P', 'b')]);
     const pA = stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 }), wN(38.8, { rev: 2 })]), ...(o.bezScalenia ? [qPrzed()] : [qPo()])] });
     zap('A', 'poprawka n', pBg, pA, 5, [op('updateSnapshotPayload', 'P', 'n')]);
+    if (o.poprawkaB) zap('B', 'poprawka b 22,0 kg (A jej nie zna; bez wiedzy o scaleniu)', pBg, stan({ karty: [karta('P', [wB(22.0, { pinned: true, rev: 3 }), wN(40.9)]), qPo()] }), 5.5, [op('updateSnapshotPayload', 'P', 'b')]);
     const koniec = o.bezScalenia ? stan({ karty: [qPrzed()], nagrobki: ['P'] }) : stan({ karty: [qPo()], nagrobki: ['P'] });
+    // C dostał wcześniej „Scal pacjentów” (nagrobek P w jego stanie po dostawie), potem P wróciła do niego tylko z b
+    if (o.usuwa === 'C') WYR.obserwuj(M, stan({ karty: [qPo()], nagrobki: ['P'] }), 'C');
     if (o.usuwa === 'C') zap('C', 'usuń pacjenta P (C ma tylko b)', stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 })]), qPo()] }), koniec, 6, [op('removePatient', 'P')]);
     else zap('A', 'usuń pacjenta P', pA, koniec, 6, [op('removePatient', 'P')]);
     if (o.zapisPo) {
@@ -1343,6 +1350,12 @@ describe('wyrocznia: „Usuń pacjenta” zwróconej starej karty (wizyta nigdy 
     expect(utraty(oc, 'n'), 'n').toEqual(kl(`n utrata [${KL}]`));
   });
 
+  it('negatyw (wizyta zapisana pod Q tylko w stanie pośrednim magazynu urządzenia, bez eksportu z nią — obserwacja zapisów): b bez klasy', () => {
+    const { oc } = historia885({ widziana: 'zapis' });
+    expect(utraty(oc, 'b'), 'b').toEqual(kl('b utrata [null]'));
+    expect(utraty(oc, 'n'), 'n').toEqual(kl(`n utrata [${KL}]`));
+  });
+
   it('negatyw (urządzenie usuwające nie miało wizyty w starej karcie — C usuwa P tylko z b): n bez klasy, b z klasą', () => {
     const { oc } = historia885({ usuwa: 'C' });
     expect(utraty(oc, 'n'), 'n').toEqual(kl('n utrata [null]'));
@@ -1358,6 +1371,94 @@ describe('wyrocznia: „Usuń pacjenta” zwróconej starej karty (wizyta nigdy 
     const { oc } = historia885({ nWidoczna: true });
     expect(utraty(oc, 'n'), 'n').toEqual(['A n utrata [null]', 'B n utrata [null]']);
     expect(utraty(oc, 'b'), 'b').toEqual(kl(`b utrata [${KL}]`));
+  });
+
+  it('negatyw (urządzenie usuwające miało starszą treść wizyty — poprawka b na B w starej karcie przed usunięciem, której A nie znało): b bez klasy, n z klasą', () => {
+    const { oc } = historia885({ poprawkaB: true });
+    expect(utraty(oc, 'b'), 'b').toEqual(kl('b utrata [null]'));
+    expect(utraty(oc, 'n'), 'n').toEqual(kl(`n utrata [${KL}]`));
+  });
+
+  // Dwa scalenia tej samej starej karty P: A scala P → Q; B (bez wiedzy) zapisuje b w P i daje jej gwiazdkę (zapis idzie
+  // w modelu za scaleniem do Q); drugie scalenie P — C: P → R przed usunięciem (alias P → R, Q poza łańcuchem aliasów P)
+  // albo D: P → Q ponownie po usunięciu (alias późniejszy niż usunięcie); A usuwa zwróconą P z b. Wyjątek tylko przy
+  // aliasie sprzed usunięcia i oczekiwanej karcie w łańcuchu aliasów — tu b bez klasy.
+  function historiaDwaScalenia(drugie) {
+    const M = WYR.nowyModel();
+    const rPrzed = () => karta('R', [wersja('r', 40, { pid: 'R', imie: 'Jan3' })]);
+    const rPo = () => karta('R', [wersja('v', 20, { pid: 'R', vid: 'wiz-v' }), wersja('w', 21, { pid: 'R', vid: 'wiz-w' }), wersja('r', 40, { pid: 'R', imie: 'Jan3' }), wersja('h2', 40, { pid: 'R', imie: 'Jan3' })]);
+    const S0 = stan({ karty: [karta('P', pv()), qPrzed(), rPrzed()] });
+    const zap = (dev, opis, przed, po, min, operacje = []) => WYR.zapisz(M, { dev, opis, przed, po, t: T(min), operacje });
+    zap('B', 'nowa b', S0, stan({ karty: [karta('P', [...pv(), wB(21.4)]), qPrzed(), rPrzed()] }), 1);
+    zap('A', 'Scal pacjentów P → Q', S0, stan({ karty: [qPo(), rPrzed()], nagrobki: ['P'] }), 2, [op('mergePatients', 'P', 'Q')]);
+    const pB = stan({ karty: [karta('P', [wB(21.4)]), qPo(), rPrzed()] });
+    const pBg = stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 })]), qPo(), rPrzed()] });
+    zap('B', 'gwiazdka b', pB, pBg, 4, [op('setSnapshotPinned', 'P', 'b')]);
+    if (drugie === 'P → R przed usunięciem') zap('C', 'Scal pacjentów P → R (bez wiedzy o b i o pierwszym scaleniu)', S0, stan({ karty: [qPrzed(), rPo()], nagrobki: ['P'] }), 5.5, [op('mergePatients', 'P', 'R')]);
+    const koniec = stan({ karty: [qPo(), rPrzed()], nagrobki: ['P'] });
+    zap('A', 'usuń pacjenta P', pBg, koniec, 6, [op('removePatient', 'P')]);
+    if (drugie === 'P → Q po usunięciu') zap('D', 'Scal pacjentów P → Q ponownie (bez wiedzy o b i o usunięciu)', S0, stan({ karty: [qPo(), rPrzed()], nagrobki: ['P'] }), 7, [op('mergePatients', 'P', 'Q')]);
+    return WYR.ocen(M, { A: widok(koniec), B: widok(koniec), C: widok(koniec) });
+  }
+  // Karta wróciła po usunięciu: E (bez wiedzy o usunięciu, ma P z b) zapisuje w P nową wizytę z — P wraca (H1) z tym, co
+  // E w niej ma. Widok: P wróciła z b i z (wynik zgodny z modelem — „inna karta” D-4 A) albo bez b (b zgubiona po powrocie
+  // karty — utrata, której wyjątek nie zwalnia).
+  function historiaPowrot(bezB) {
+    const M = WYR.nowyModel();
+    const S0 = stan({ karty: [karta('P', pv()), qPrzed()] });
+    const zap = (dev, opis, przed, po, min, operacje = []) => WYR.zapisz(M, { dev, opis, przed, po, t: T(min), operacje });
+    const pB1 = stan({ karty: [karta('P', [...pv(), wB(21.4)]), qPrzed()] });
+    zap('B', 'nowa b', S0, pB1, 1);
+    zap('A', 'Scal pacjentów P → Q', S0, stan({ karty: [qPo()], nagrobki: ['P'] }), 2, [op('mergePatients', 'P', 'Q')]);
+    const pB2 = stan({ karty: [karta('P', [...pv(), wB(21.4, { pinned: true, rev: 2 })]), qPrzed()] });
+    zap('B', 'gwiazdka b', pB1, pB2, 3, [op('setSnapshotPinned', 'P', 'b')]);
+    const pA = stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 })]), qPo()] });
+    WYR.obserwuj(M, pA, 'A');
+    const koniecA = stan({ karty: [qPo()], nagrobki: ['P'] });
+    zap('A', 'usuń pacjenta P', pA, koniecA, 5, [op('removePatient', 'P')]);
+    const pE = stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 })]), qPo()] });
+    const zZ = wersja('z', 33, { vid: 'wiz-z' });
+    zap('E', 'nowa z w P (bez wiedzy o usunięciu)', pE, stan({ karty: [karta('P', [wB(21.4, { pinned: true, rev: 2 }), zZ]), qPo()] }), 6);
+    const wynik = stan({ karty: [karta('P', bezB ? [zZ] : [wB(21.4, { pinned: true, rev: 2 }), zZ]), qPo()] });
+    return WYR.ocen(M, { A: widok(wynik), B: widok(wynik), C: widok(wynik) });
+  }
+  it('negatyw (karta wróciła po usunięciu — zapis w P bez wiedzy o usunięciu, P wraca bez b): b bez klasy; P wraca z b — „inna karta” D-4 A jak dotąd', () => {
+    expect(utraty(historiaPowrot(true), 'b'), 'b zgubiona po powrocie karty').toEqual(kl('b utrata [null]'));
+    expect(skrot(historiaPowrot(false).filter((x) => x.id === 'b')), 'P wraca z b').toEqual(kl('b inna karta [D-4 A (stara karta wraca po zapisie bez wiedzy o scaleniu)]'));
+  });
+
+  // Usunięcie na urządzeniu, które scalenia nie znało: D nie dostał „Scal pacjentów” P → Q, zapisuje w P nową wizytę d,
+  // poprawia ją i usuwa P. Bez nagrobka P i bez wersji przeniesionej tym scaleniem pod Q w żadnym wcześniejszym stanie D
+  // scalenie nie doszło do D — wyjątek nie przysługuje. Ten sam D, który znał scalenie — klasa: 'nagrobek' (miał
+  // nagrobek P, P wróciła do niego zapisem bez wiedzy o scaleniu) albo 'przeniesiona' (dostał wersje przeniesione pod Q,
+  // a jego P została, bo zapisał w niej później niż scalenie).
+  function historiaBezWiedzy(znal) {
+    const M = WYR.nowyModel();
+    const S0 = stan({ karty: [karta('P', pv()), qPrzed()] });
+    const zap = (dev, opis, przed, po, min, operacje = []) => WYR.zapisz(M, { dev, opis, przed, po, t: T(min), operacje });
+    zap('A', 'Scal pacjentów P → Q', S0, stan({ karty: [qPo()], nagrobki: ['P'] }), 2, [op('mergePatients', 'P', 'Q')]);
+    if (znal === 'nagrobek') WYR.obserwuj(M, stan({ karty: [qPrzed()], nagrobki: ['P'] }), 'D');
+    if (znal === 'przeniesiona') WYR.obserwuj(M, stan({ karty: [karta('P', pv()), qPo()] }), 'D');
+    const wD = (kg, o = {}) => wersja('d', kg, { vid: 'wiz-d', ...o });
+    const d1 = stan({ karty: [karta('P', [...pv(), wD(40)]), qPrzed()] });
+    zap('D', 'nowa d (bez wiedzy o scaleniu)', S0, d1, 3);
+    const d2 = stan({ karty: [karta('P', [...pv(), wD(41, { rev: 2 })]), qPrzed()] });
+    zap('D', 'poprawka d', d1, d2, 4, [op('updateSnapshotPayload', 'P', 'd')]);
+    const koniec = stan({ karty: [qPo()], nagrobki: ['P'] });
+    zap('D', 'usuń pacjenta P', d2, stan({ karty: [qPrzed()], nagrobki: ['P'] }), 5, [op('removePatient', 'P')]);
+    return WYR.ocen(M, { A: widok(koniec), D: widok(koniec) });
+  }
+  it('negatyw (usunięcie na urządzeniu, które scalenia nie znało — bez nagrobka P i bez wersji przeniesionej pod Q w żadnym jego stanie): d bez klasy; D, który znał scalenie (nagrobek P albo wersje przeniesione pod Q) — d z klasą', () => {
+    expect(skrot(historiaBezWiedzy(null).filter((x) => x.id === 'd' && x.rodzaj === 'utrata')), 'D nie znał scalenia').toEqual(['A d utrata [null]', 'D d utrata [null]']);
+    expect(skrot(historiaBezWiedzy('nagrobek').filter((x) => x.id === 'd' && x.rodzaj === 'utrata')), 'D miał nagrobek P').toEqual([`A d utrata [${KL}]`, `D d utrata [${KL}]`]);
+    expect(skrot(historiaBezWiedzy('przeniesiona').filter((x) => x.id === 'd' && x.rodzaj === 'utrata')), 'D miał wersje przeniesione pod Q').toEqual([`A d utrata [${KL}]`, `D d utrata [${KL}]`]);
+  });
+
+  it('negatyw (oczekiwana karta poza łańcuchem aliasów starej karty — drugie scalenie P → R przed usunięciem): b bez klasy', () => {
+    expect(utraty(historiaDwaScalenia('P → R przed usunięciem'), 'b'), 'b').toEqual(kl('b utrata [null]'));
+  });
+  it('negatyw (alias „Scal pacjentów” późniejszy niż usunięcie — drugie scalenie P → Q po usunięciu): b bez klasy', () => {
+    expect(utraty(historiaDwaScalenia('P → Q po usunięciu'), 'b'), 'b').toEqual(kl('b utrata [null]'));
   });
 
   it('kontrola („Usuń pacjenta” karty bez aliasu „Scal pacjentów”): model usuwa wizyty sam — bez naruszeń b i n', () => {

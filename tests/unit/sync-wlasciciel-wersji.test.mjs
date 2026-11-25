@@ -3343,3 +3343,43 @@ describe('strażniki źródła (P-SYNC-WLASCICIEL)', () => {
     expect(src).toContain('getSnapshotForUser:function(n,r){return e.getSnapshotForUser(n,r)}');
   });
 });
+
+// ── E3-PR0e3: zapis wersji wracającej do karty wpisu tylko pod blokadą tej karty ─────────────────────────────────────
+// A: karta P „Testowy Jan” [x1, x2] i karta Q [q]; B (osobne konto, kopia A). A scala P → Q i daje x1 do Kosza pod Q;
+// B stawia x1 gwiazdkę w starej P. Ładunek B z samą kartą P z zapisem sprzed scalenia: P przegrywa z nagrobkiem
+// scalenia, wpis Kosza x1 pod żywą Q przegrywa z gwiazdką B — x1 wraca do Q, zapis w fazie przeniesień pod blokadą Q.
+// Druga karta przeglądarki trzyma blokadę Q (atrapa Web Locks): scalanie czeka, po limicie przerywa — x1 nie leży pod
+// Q, wpis Kosza zostaje; po zwolnieniu blokady następne scalanie oddaje x1 do Q z gwiazdką, wpis zdjęty.
+describe('E3-PR0e3: wersja wracająca do karty wpisu — zapis tylko pod blokadą karty wpisu', () => {
+  it('blokada karty wpisu zajęta w drugiej karcie przeglądarki: x1 nie wraca pod Q, wpis Kosza zostaje; po zwolnieniu następne scalanie oddaje x1 do Q z gwiazdką', async () => {
+    const locks = atrapaLocks();
+    const A = await urzadzenie('A', { locks });
+    const B = await urzadzenie('B');
+    const P = await karta(A.v);
+    await chwila(4);
+    const Q = (await A.v.savePatient(zapis([70]), { dedup: false })).patientId;
+    await B.v.mergeSyncPayload(kopia(await A.v.exportSyncPayload()));
+    const zapisP = (await A.v.exportSyncPayload()).patients.find((p) => p.patientId === P).lastSavedAtISO;
+    const x1 = (await A.baza.listSnapshotsForUser(A.uid, P)).sort((a, b) => (a.savedAtISO < b.savedAtISO ? -1 : 1))[0].snapshotId;
+    await chwila(5); await A.v.mergePatients(P, Q);
+    await chwila(5); await A.v.moveSnapshotToTrash(Q, x1);
+    await chwila(5); await B.v.setSnapshotPinned(P, x1, true);
+    const lad = kopia(await B.v.exportSyncPayload());
+    lad.patients = lad.patients.filter((p) => p.patientId === P);
+    lad.patients[0].lastSavedAtISO = zapisP;
+    const wynik = async () => {
+      const w = (await A.baza.listSnapshotsForUser(A.uid, Q)).find((s) => s.snapshotId === x1) || null;
+      const s = w ? (await A.v.getPatient(Q)).snapshots.find((y) => y.snapshotId === x1) : null;
+      return { podQ: !!w, gwiazdka: !!(s && s.payload._pinned), kosz: (await A.v.listTrashedSnapshots()).some((e) => e.snapshotId === x1) };
+    };
+    const zwolnij = odroczone();
+    locks.request(`vilda-save-pat:${Q}`, () => zwolnij.obietnica);
+    let blad = null;
+    try { await A.v.mergeSyncPayload(kopia(lad), { lockTimeoutMs: 150 }); } catch (e) { blad = e; }
+    expect(await wynik(), `blokada Q zajęta (błąd scalania: ${blad && (blad.code || blad.message)})`).toEqual({ podQ: false, gwiazdka: false, kosz: true });
+    zwolnij.rozwiaz();
+    await chwila(5);
+    await A.v.mergeSyncPayload(kopia(lad));
+    expect(await wynik(), 'po zwolnieniu blokady').toEqual({ podQ: true, gwiazdka: true, kosz: false });
+  }, 30_000);
+});

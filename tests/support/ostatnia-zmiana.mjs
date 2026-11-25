@@ -34,8 +34,11 @@
 //   to świadome usunięcie wizyt, które nigdy nie były w karcie scalonej, a które urządzenie usuwające miało w X. Model
 //   ich nie usuwa (zapis w X idzie za scaleniem, oczekiwana karta — Y), a naruszenie „utrata” takiej wizyty dostaje klasę
 //   „„Usuń pacjenta” zwróconej starej karty (wizyta nigdy w karcie scalonej)” tylko przy mechanizmie z historii: fakt
-//   usunietaZeStarej (pętla kartowa „Usuń pacjenta”) i fakt kartyWidziane (karty wersji w każdym zapisanym stanie
-//   urządzenia: stan bazowy, eksport przed i po mutacji, stan po dostawie — obserwuj, woła uprząż testu).
+//   usunietaZeStarej (pętla kartowa „Usuń pacjenta”; urządzenie usuwające znało scalenie X: miało wcześniej nagrobek X
+//   albo wersję przeniesioną tym scaleniem pod kartą docelową — karta zwrócona albo zostawiona późniejszym zapisem),
+//   fakt kartyWidziane (karty wersji w każdym zapisanym stanie urządzenia: stan bazowy, eksport przed i po mutacji, stan
+//   po dostawie — obserwuj, i każdy zapis wersji w magazynie urządzenia — obserwujZapis; woła je uprząż testu) i karta X
+//   po usunięciu nie wróciła.
 // - „Scal pacjentów” X → Y przenosi wizyty i notatki do Y; przeniesienie nie jest zmianą wizyty (nie wygrywa z koszem
 //   ani z przycięciem). Wersja, którą scalenie dopisuje pod Y (głowa scalenia), nie jest zapisem lekarza: jej zniknięcie
 //   przy tej samej treści widocznej w karcie nie jest utratą (porównanie treści, nie tylko snapshotId). Zapis w starej
@@ -261,7 +264,9 @@ export function widokNapis(V) {
 
 // ── Model ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 export function nowyModel() {
-  return { w: new Map(), n: new Map(), l: new Map(), li: new Map(), karty: new Map(), alias: new Map(), app: new Map(), seq: 0, mutacji: 0, baza: false };
+  // nagrDev, parDev (E3-PR0e3): urządzenie → karty, których nagrobek pacjenta miało, i pary „wersja|karta”, które
+  // miało, w którymś zapisanym stanie (eksport przed i po mutacji, stan po dostawie z nazwą urządzenia — obserwuj)
+  return { w: new Map(), n: new Map(), l: new Map(), li: new Map(), karty: new Map(), alias: new Map(), app: new Map(), nagrDev: new Map(), parDev: new Map(), seq: 0, mutacji: 0, baza: false };
 }
 function karta(M, pid) { let k = M.karty.get(pid); if (!k) { k = { tObec: null, tUsun: null, przyczyna: null }; M.karty.set(pid, k); } return k; }
 function obecna(M, pid, czas) { const k = karta(M, pid); if (!k.tObec || cmp(czas, k.tObec) > 0) k.tObec = czas; }
@@ -299,8 +304,10 @@ function wizyta(M, sid) {
       w3NaN: false, naN: { jest: false, tresc: false, pin: false },
       // E3-PR0e3 (wyjątek z decyzji właściciela 4a z 2026-11-23): kartyWidziane — karty, pod którymi wersja leżała
       // w jakimkolwiek zapisanym stanie urządzenia (stan bazowy, eksport przed i po każdej mutacji, stan urządzenia po
-      // dostawie — obserwuj); usunietaZeStarej — ostatnie „Usuń pacjenta” karty, którą urządzenie usuwające miało z tą
-      // wersją (pętla kartowa): { czas, dev, pid, tresc, pin }
+      // dostawie — obserwuj; każdy zapis wersji w magazynie — obserwujZapis); usunietaZeStarej — ostatnie „Usuń
+      // pacjenta” karty, którą urządzenie usuwające miało z tą wersją (pętla kartowa): { czas, dev, pid, tresc, pin,
+      // znalScalenie — urządzenie znało „Scal pacjentów” tej karty: miało wcześniej jej nagrobek albo wersję przeniesioną
+      // tym scaleniem pod kartą docelową w którymś zapisanym stanie }
       kartyWidziane: new Set(), usunietaZeStarej: null };
     M.w.set(sid, m);
   }
@@ -389,7 +396,7 @@ export function zapisz(M, { dev, app = BIEZACA, opis = '', przed, po, t, operacj
     for (const q of [x, y]) if (q && q.loc === 'karta' && !(m.revTresci.get(q.tresc) >= q.rev)) m.revTresci.set(q.tresc, q.rev);
     // „Usuń pacjenta”: pętla kartowa; E3-PR0e3 — urządzenie usuwające miało tę wersję w usuwanej karcie (usunietaZeStarej)
     if (x && !y && !(b.ret.has(sid) && !a.ret.has(sid)) && noweNagr.includes(x.pid) && !cele.get(x.pid)) {
-      if (x.loc === 'karta') m.usunietaZeStarej = { czas, dev, pid: x.pid, tresc: x.tresc, pin: x.pin };
+      if (x.loc === 'karta') m.usunietaZeStarej = { czas, dev, pid: x.pid, tresc: x.tresc, pin: x.pin, znalScalenie: znaScalenie(M, dev, x.pid) };
       continue;
     }
     dotkniete.add(sid);
@@ -569,7 +576,9 @@ export function zapisz(M, { dev, app = BIEZACA, opis = '', przed, po, t, operacj
     }
     k.tUsun = czas; k.przyczyna = cel ? 'scal' : 'usuń pacjenta';
     if (cel) {
-      M.alias.set(p, { do: cel, czas, dev });
+      // E3-PR0e3: wersje, które to scalenie przeniosło pod kartę docelową (urządzenie scalające miało je w p)
+      const przeniesione = new Set([...a.w].filter(([, x]) => x.loc === 'karta' && x.pid === p).map(([sid]) => sid));
+      M.alias.set(p, { do: cel, czas, dev, przeniesione });
       // P6: notatki karty źródłowej, których urządzenie scalające nie znało, zostają pod starą kartą
       for (const [id, n] of M.n) if (n.obecna && n.pid === p && !a.n.has(id)) n.nieznanaScalajacemu = { czas, pid: p };
     }
@@ -592,8 +601,9 @@ export function zapisz(M, { dev, app = BIEZACA, opis = '', przed, po, t, operacj
     else { m.obecna = false; m.tObec = czas; m.przyczyna = kartowe ? 'usuń pacjenta' : b.nTomb.has(id) ? 'usuń notatkę' : 'inne'; m.kartaUsun = m.przyczyna === 'usuń pacjenta' ? x.pid : null; m.wraca = false; m.devUsun = dev; m.wracaPrzez = null; m.wracaZNotatka = null; m.dotarlaNaN = false; (m.usunieteNa = m.usunieteNa || new Set()).add(dev); h.usun = m.przyczyna; }
     m.hist.push(h);
   }
-  // E3-PR0e3: karty wersji w eksportach przed i po mutacji (wersje nowe w tej mutacji są już w modelu)
-  obserwujP(M, a); obserwujP(M, b);
+  // E3-PR0e3: karty wersji i nagrobki pacjentów w eksportach przed i po mutacji (wersje nowe w tej mutacji są już
+  // w modelu; nagrobek z tej mutacji liczy się dopiero dla następnych)
+  obserwujP(M, a, dev); obserwujP(M, b, dev);
   // Notatki biblioteki i listy
   for (const [slownik, pa, pb] of [[M.l, a.l, b.l], [M.li, a.li, b.li]]) {
     for (const id of new Set([...pa.keys(), ...pb.keys()])) {
@@ -606,14 +616,38 @@ export function zapisz(M, { dev, app = BIEZACA, opis = '', przed, po, t, operacj
   }
 }
 
-// E3-PR0e3: karty, pod którymi urządzenie miało wersję (projekcja stanu P), do faktu kartyWidziane.
-function obserwujP(M, P) { for (const [sid, x] of P.w) { const m = M.w.get(sid); if (m && x.loc === 'karta') m.kartyWidziane.add(x.pid); } }
+// E3-PR0e3: karty, pod którymi urządzenie miało wersję (projekcja stanu P), do faktu kartyWidziane; nagrobki pacjentów
+// w tym stanie urządzenia dev (nagrDev).
+function obserwujP(M, P, dev) {
+  for (const [sid, x] of P.w) { const m = M.w.get(sid); if (m && x.loc === 'karta') { m.kartyWidziane.add(x.pid); if (dev != null) dodajPare(M, dev, sid, x.pid); } }
+  if (dev != null) for (const pid of P.nagrP) dodajNagrobek(M, dev, pid);
+}
+const zbiorDev = (mapa, dev) => { let k = mapa.get(dev); if (!k) { k = new Set(); mapa.set(dev, k); } return k; };
+function dodajNagrobek(M, dev, pid) { zbiorDev(M.nagrDev, dev).add(pid); }
+function dodajPare(M, dev, sid, pid) { zbiorDev(M.parDev, dev).add(`${sid}|${pid}`); }
+// Urządzenie znało „Scal pacjentów” karty pid: miało jej nagrobek albo którąś z wersji przeniesionych tym scaleniem pod
+// kartą docelową (scalenie doszło do niego, a jego stara karta mogła zostać późniejszym zapisem albo wrócić).
+function znaScalenie(M, dev, pid) {
+  if (M.nagrDev.get(dev) && M.nagrDev.get(dev).has(pid)) return true;
+  const al = M.alias.get(pid), pary = M.parDev.get(dev);
+  return !!(al && pary && [...al.przeniesione].some((sid) => pary.has(`${sid}|${al.do}`)));
+}
 // Stan urządzenia po dostawie (eksport lad) — ta sama obserwacja; woła ją uprząż testu przy każdym zapisanym stanie
-// urządzenia (ustawStan, stan po każdym zdarzeniu partii, gdy uprząż go liczy). Przed pierwszą mutacją świata (model
-// bez stanu bazowego) — bez obserwacji: stan bazowy obserwuje baza().
-export function obserwuj(M, lad) {
+// urządzenia (ustawStan, stan po każdym zdarzeniu partii, gdy uprząż go liczy; dev — nazwa urządzenia, także kopii
+// urządzenia w wymianach W4: karty wersji kopii tylko zawężają wyjątek). Przed pierwszą mutacją świata (model bez stanu
+// bazowego) — bez obserwacji: stan bazowy obserwuje baza().
+export function obserwuj(M, lad, dev = null) {
   if (!M || !M.baza) return;
-  for (const p of lad.patients || []) for (const s of p.snapshots || []) { const m = M.w.get(s.snapshotId); if (m) m.kartyWidziane.add(p.patientId); }
+  for (const p of lad.patients || []) for (const s of p.snapshots || []) { const m = M.w.get(s.snapshotId); if (m) { m.kartyWidziane.add(p.patientId); if (dev != null) dodajPare(M, dev, s.snapshotId, p.patientId); } }
+  if (dev != null) for (const t of lad.tombstones || []) if (t && t.patientId) dodajNagrobek(M, dev, t.patientId);
+}
+// Każdy zapis rekordu wersji w magazynie urządzenia (snapshotId, karta) — także stany pośrednie scalania i partii
+// zdarzeń bez eksportu po zdarzeniu (wszystkie drogi dostawy, także sejfy starszej aplikacji); woła ją uprząż testu
+// z adaptera magazynu. Tylko zawęża wyjątek (więcej kart widzianych).
+export function obserwujZapis(M, sid, pid) {
+  if (!M || !M.baza || !sid || !pid) return;
+  const m = M.w.get(sid);
+  if (m) m.kartyWidziane.add(pid);
 }
 // Karty łańcucha aliasów „Scal pacjentów” od karty pid (karta scalona i dalsze; bez samej pid).
 function celeAliasu(M, pid) {
@@ -876,7 +910,7 @@ export const WYJATKI = Object.freeze({
   // (klasaWizyty), więc nie zmienia klasy żadnego wcześniej sklasyfikowanego naruszenia.
   [KL_USUN_ZWROCONEJ]: Object.freeze({
     opis: '„Scal pacjentów” X → Y, potem X wraca (D-4 A) zapisem nowych wizyt (albo poprawką, gwiazdką) na urządzeniu bez wiedzy o scaleniu; urządzenie, które ma X z tymi wizytami, usuwa zwróconą X („Usuń pacjenta”) razem z nimi. To świadome usunięcie (decyzja właściciela 4a z 2026-11-23): wizyt, które nigdy nie były w karcie scalonej, a które usuwające urządzenie widziało w X, nie ma potem nigdzie — także po pełnej wymianie i przy samych pełnych kopiach',
-    mechanizm: '„Usuń pacjenta” karty X na urządzeniu, którego eksport przed usunięciem miał tę wizytę w X z jej ostatnią treścią i gwiazdką, później niż każda jej zmiana; X z aliasem „Scal pacjentów” sprzed usunięcia; oczekiwana karta w łańcuchu aliasów X, a wizyta nie leżała pod żadną kartą tego łańcucha w żadnym zapisanym stanie żadnego urządzenia; „utrata” bez tej wizyty na żadnym urządzeniu punktu. Wizyta, która była w karcie scalonej, albo której urządzenie usuwające nie miało w X — bez klasy',
+    mechanizm: '„Usuń pacjenta” karty X na urządzeniu, którego eksport przed usunięciem miał tę wizytę w X z jej ostatnią treścią i gwiazdką, później niż każda jej zmiana, a które znało to scalenie (miało wcześniej nagrobek X albo wersję przeniesioną nim pod kartą docelową); X z aliasem „Scal pacjentów” sprzed usunięcia i bez powrotu po usunięciu; oczekiwana karta w łańcuchu aliasów X, a wizyta nie leżała pod żadną kartą tego łańcucha w żadnym zapisanym stanie żadnego urządzenia (eksporty, stany po dostawie, zapisy w magazynie); „utrata” bez tej wizyty na żadnym urządzeniu punktu. Wizyta, która była w karcie scalonej, której urządzenie usuwające nie miało w X, usunięcie na urządzeniu, które scalenia nie znało, albo X, która po usunięciu wróciła — bez klasy',
     zrodlo: 'docs/SYNC_PRZYROSTOWA_PLAN.md, rozdział 6, „Decyzje z 2026-11-23 (E3-PR0e, pytania 1–4 projektu)”, punkt 4; A ≡ B: świat 885 („Usuń pacjenta” zwróconej starej karty — usuwa urządzenie, które scaliło), ziarna 8 i 37 profilu pełnego; tests/unit/ostatnia-zmiana.test.mjs, przypadki „„Usuń pacjenta” zwróconej starej karty”',
     naprawa: 'bez naprawy: świadome usunięcie (decyzja właściciela 4a z 2026-11-23); ostrzeżenie w oknie „Usuń pacjenta” — do rozważenia z E3-PR0f',
     swiaty: Object.freeze(['W1', 'W4', 'bloby']),
@@ -999,11 +1033,14 @@ function klasaWizyty(M, m, e, v, rodzaj, V, sid, gdzie = []) {
   // E3-PR0e3 (decyzja właściciela 4a z 2026-11-23): „Usuń pacjenta” zwróconej starej karty X to świadome usunięcie wizyt,
   // które nigdy nie były w karcie scalonej, a które urządzenie usuwające widziało w X w chwili usunięcia. Wszystkie
   // warunki naraz: utrata wizyty oczekiwanej w karcie, której nie widać na żadnym urządzeniu punktu; X ma alias „Scal
-  // pacjentów” sprzed usunięcia; usunięcie później niż ostatni zapis treści, gwiazdki i położenia wizyty w modelu;
-  // urządzenie usuwające miało jej ostatnią treść i gwiazdkę w X; oczekiwana karta należy do łańcucha aliasów X, a żadna
-  // karta tego łańcucha nie wystąpiła w żadnym zapisanym stanie urządzenia z tą wizytą (kartyWidziane).
+  // pacjentów” sprzed usunięcia, które urządzenie usuwające znało (miało nagrobek X albo wersję przeniesioną tym
+  // scaleniem pod kartą docelową — nie urządzenie, które scalenia nie znało); X po usunięciu nie wróciła (zapis w X bez
+  // wiedzy o usunięciu); usunięcie później niż
+  // ostatni zapis treści, gwiazdki i położenia wizyty w modelu; urządzenie usuwające miało jej ostatnią treść
+  // i gwiazdkę w X; oczekiwana karta należy do łańcucha aliasów X, a żadna karta tego łańcucha nie wystąpiła
+  // w żadnym zapisanym stanie urządzenia z tą wizytą (kartyWidziane).
   const u = m.usunietaZeStarej;
-  if (rodzaj === 'utrata' && e.loc === 'karta' && u && gdzie.length === 0 && M.alias.has(u.pid) && cmp(M.alias.get(u.pid).czas, u.czas) < 0
+  if (rodzaj === 'utrata' && e.loc === 'karta' && u && u.znalScalenie && gdzie.length === 0 && !zywa(M, u.pid) && M.alias.has(u.pid) && cmp(M.alias.get(u.pid).czas, u.czas) < 0
     && [m.tTresc, m.tPin, m.tLoc].every((x) => cmp(x, u.czas) < 0) && m.tresc != null && rownaTresc(u.tresc, m.tresc) && u.pin === m.pin) {
     const cele = celeAliasu(M, u.pid);
     if (cele.has(e.pid) && ![...cele].some((q) => m.kartyWidziane.has(q))) return zKlasa(KL_USUN_ZWROCONEJ);

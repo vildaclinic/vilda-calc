@@ -3581,24 +3581,24 @@ const WPIS_POD_Q_PRZYPADKI = {
     return { s, zastosuj: async () => zastosuj(o, (await kopertaStarejP(s.B, s)).env) };
   },
   // Import pliku karty P z gwiazdką B (karta P tu scalona do Q, wpis Kosza v pod Q) — import idzie własną drogą i reguły
-  // nie zna (wynik jak na bazie): karta P wraca z pliku z v i w jak dotąd, v nie wraca do karty wpisu Q. Bez liczby
-  // wersji i licznika nagłówka karty Q (import nie przelicza karty, spod której zabiera wersję — poza zakresem).
+  // nie zna (wynik jak na bazie): karta P wraca z pliku z v i w jak dotąd, v nie wraca do karty wpisu Q. Liczba wersji
+  // i licznik nagłówka karty Q — jak przed tą zmianą: import zabiera w spod Q do P, ale nie przelicza licznika karty,
+  // spod której ją zabiera (licznik o jedną wersję za wysoki; nic nie ginie, poza zakresem — osobne zgłoszenie).
   '[kontrola] import pliku karty P z gwiazdką B po Koszu — bez powrotu do karty wpisu (import przywraca kartę z pliku jak dotąd)': async (o) => {
     const s = await wpisPodQ(o);
     await zmienWStarej(s.B, s, 'gwiazdka');
     const plik = await s.B.v.exportPatientEnvelope(s.P);
-    return { s, bezLicznikaQ: true, zastosuj: async () => { const r = await o.v.importPatientFromEnvelope(plik, o.A.haslo); await o.gotowe(); return { status: r && r.patientId === s.P ? 'import karty P' : 'import' }; } };
+    return { s, zastosuj: async () => { const r = await o.v.importPatientFromEnvelope(plik, o.A.haslo); await o.gotowe(); return { status: r && r.patientId === s.P ? 'import karty P' : 'import' }; } };
   },
 };
 async function przebiegPQ(nazwa) {
   const o = await okno({ bramka: true, echo: true });
   await o.zaloguj('A');
-  const { s, zastosuj: z, tozsamosc, bezLicznikaQ } = await WPIS_POD_Q_PRZYPADKI[nazwa](o);
+  const { s, zastosuj: z, tozsamosc } = await WPIS_POD_Q_PRZYPADKI[nazwa](o);
   const s0 = ostatni(o);
   const z0 = { log: o.idb.__atrapa.log.length };
   const r = await z();
   const wynik = { przyciete: s.przyciete, wynik: r.status, ...(r.dodane !== undefined ? { dodane: r.dodane } : {}), stan: await stanKartyWpisu(o, s), wiersze: wierszeWpisu(o, s, s0) };
-  if (bezLicznikaQ) { delete wynik.stan.wersjeQ; delete wynik.stan.licznikQ; }
   // kontrole wygranej wpisu: scalanie nie zapisuje sklepu wersji (bez zapisu wersji, która i tak nie zostaje pod Q)
   if (nazwa.startsWith('[kontrola] poprawka B przed')) wynik.zapisyWersji = zapisyWersji(o, z0).length;
   if (tozsamosc) {
@@ -3634,5 +3634,31 @@ const WPIS_POD_Q_OCZEKIWANE = {
   "karta wpisu Q scalona dalej Q → R na A — bez powrotu: wpis zostaje pod Q, karty P i Q usunięte (ograniczenie)": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": false, "vPodQ": null, "vGdzieIndziej": null, "kosz": [{"karta": "Q", "powod": "kosz", "masa": 20, "gwiazdka": false, "tresc": true}], "wersjeQ": null, "licznikQ": null}, "wiersze": [["stomb", "v", "pending"]]},
   "karta wpisu Q scalona dalej Q → R na B, pełna kopia B z nagrobkiem Q — bez powrotu do Q (Q w zbiorze N; ograniczenie)": {"przyciete": null, "wynik": "pełna kopia", "dodane": 2, "stan": {"kartaP": false, "kartaQ": false, "vPodQ": null, "vGdzieIndziej": null, "kosz": [{"karta": "Q", "powod": "kosz", "masa": 20, "gwiazdka": false, "tresc": true}], "wersjeQ": null, "licznikQ": null}, "wiersze": []},
   "v ostatnią wersją karty wpisu Q z wpisem Kosza (Q8), gwiazdka B po Koszu — gwiazdka przechodzi do tutejszego rekordu v pod Q, wpis zdjęty": {"przyciete": null, "wynik": "applied", "stan": {"kartaP": false, "kartaQ": true, "vPodQ": {"masa": 20, "gwiazdka": true}, "vGdzieIndziej": null, "kosz": [], "wersjeQ": 1, "licznikQ": 1}, "wiersze": [["snap", "Q/v", "pending"]]},
-  "[kontrola] import pliku karty P z gwiazdką B po Koszu — bez powrotu do karty wpisu (import przywraca kartę z pliku jak dotąd)": {"przyciete": null, "wynik": "import karty P", "stan": {"kartaP": true, "kartaQ": true, "vPodQ": null, "vGdzieIndziej": "P", "kosz": []}, "wiersze": [["snap", "P/v", "pending"], ["snap", "P/w", "pending"]]},
+  "[kontrola] import pliku karty P z gwiazdką B po Koszu — bez powrotu do karty wpisu (import przywraca kartę z pliku jak dotąd)": {"przyciete": null, "wynik": "import karty P", "stan": {"kartaP": true, "kartaQ": true, "vPodQ": null, "vGdzieIndziej": "P", "kosz": [], "wersjeQ": 2, "licznikQ": 3}, "wiersze": [["snap", "P/v", "pending"], ["snap", "P/w", "pending"]]},
 };
+
+// ── E3-PR0e3: tożsamość wizyty wracającej do karty wpisu (koperta z tożsamością) ─────────────────────────────────────
+// Wersja wracająca do karty wpisu Q niesie tożsamość wizyty wpisu Kosza przypisaną do Q — także w kopercie odsyłania
+// (snap Q/v), nie tylko przy odczycie karty (odczyt i eksport przypisują wizytę do karty, w której leży).
+describe('wpis Kosza pod żywą kartą po „Scal pacjentów”: wersja wracająca do karty wpisu — wizyta przypisana do karty wpisu (E3-PR0e3)', () => {
+  it('poprawka B po Koszu, koperta snap v z tożsamością wizyty — v wraca do Q, wizyta przypisana do Q z tożsamością wpisu Kosza, także w kopercie odsyłania', async () => {
+    const o = await okno({ bramka: true, echo: true });
+    await o.zaloguj('A');
+    const s = await wpisPodQ(o);
+    const vid = ((await wpisyEksportu(o, s.v))[0].payload.visit || {}).visitId || null;
+    await zmienWStarej(s.B, s, 'poprawka');
+    const s0 = ostatni(o);
+    expect((await zastosuj(o, (await kopertaStarejP(s.B, s)).env)).status).toBe('applied');
+    await o.gotowe();
+    const x = await wersja(o, s.Q, s.v);
+    const koperty = [];
+    for (const w of wierszeOd(o, s0)) {
+      const k = await odszyfruj(o, w.env);
+      for (const p of k.patients || []) for (const y of p.snapshots || []) if (y.snapshotId === s.v) koperty.push({ karta: nazwaId(s)(p.patientId), wizyta: y.payload.visit ? nazwaId(s)(y.payload.visit.patientId) : null, zWpisu: !!vid && !!y.payload.visit && y.payload.visit.visitId === vid });
+    }
+    expect({
+      podQ: !!x, karta: x && x.payload.visit ? nazwaId(s)(x.payload.visit.patientId) : null,
+      zWpisu: !!vid && !!x && !!x.payload.visit && x.payload.visit.visitId === vid, koperty,
+    }).toEqual({ podQ: true, karta: 'Q', zWpisu: true, koperty: [{ karta: 'Q', wizyta: 'Q', zWpisu: true }] });
+  }, CZAS);
+});
