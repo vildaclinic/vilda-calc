@@ -1520,6 +1520,32 @@ test('a visit diagnosis shows its destination and can be removed only from its o
   await card.getByRole('button', { name: 'Dodaj rozpoznanie', exact: true }).click();
   await expect(editor.getByText('Zapis z powiązaniem do wizyty z ' + date, { exact: true })).toBeVisible();
   await editor.getByLabel('Nazwa rozpoznania').fill(name);
+  await expect(editor).toHaveClass(/\bvpt-compact\b/);
+  const query = editor.getByRole('combobox', { name: 'Kod ICD-10 · opcjonalnie', exact: true });
+  await query.fill('I10');
+  await editor.getByRole('listbox', { name: 'Kody ICD-10', exact: true }).locator('[data-icd10-code="I10"]').click();
+  await expect(editor.getByLabel('Nazwa rozpoznania')).toHaveValue(name);
+  await expect(editor.locator('.vpt-icd10-selected')).toBeVisible();
+  await expect(editor.getByRole('button', { name: 'Użyj nazwy z katalogu', exact: true })).toBeVisible();
+  await expect(editor.locator('.vpt-icd10-source')).toBeHidden();
+  await expect(editor.locator('.vpt-icd10-status')).toHaveAttribute('aria-live', 'polite');
+  for (const [width, height] of [[1440, 1000], [390, 844], [320, 720]]) {
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => editor.evaluate(dialog => {
+      if (!dialog.isConnected) return false;
+      const box = dialog.getBoundingClientRect();
+      const fields = [...dialog.querySelectorAll('.vpt-field')]
+        .filter(node => node.getClientRects().length).map(node => node.getBoundingClientRect());
+      const actions = [...dialog.querySelectorAll('.vhome-dialog-footer button')]
+        .filter(node => node.getClientRects().length).map(node => node.getBoundingClientRect());
+      const separate = rects => rects.every((field, index) => rects.slice(index + 1).every(other =>
+        Math.min(field.right, other.right) - Math.max(field.left, other.left) <= 0.5 ||
+        Math.min(field.bottom, other.bottom) - Math.max(field.top, other.top) <= 0.5));
+      return box.width > 0 && dialog.scrollWidth <= dialog.clientWidth + 1 &&
+        [...fields, ...actions].every(field => field.width > 0 && field.left >= box.left && field.right <= box.right + 0.5) &&
+        separate(fields) && separate(actions);
+    }), { message: 'Compact diagnosis fields and actions remain separate at ' + width }).toBe(true);
+  }
   await editor.getByRole('button', { name: 'Zapisz', exact: true }).click();
   await expect(editor).toBeHidden();
   await expect.poll(diagnosis).toMatchObject({ visitContext: { visitId: visit.visitId, clinicalDateISO: visit.date } });
@@ -1528,6 +1554,48 @@ test('a visit diagnosis shows its destination and can be removed only from its o
   await expect(header.getByText('Tylko odczyt', { exact: true })).toBeVisible();
   const visits = () => frame.evaluate(id => window.VildaVault.getPatientVisits(id), ids.a);
   const beforeRemoval = await visits();
+  const episodeIds = await frame.evaluate(async patientId => {
+    const scope = window.VildaPatientTreatmentStore.createScope({ vault: window.VildaVault, patientId, isCurrent: () => true });
+    try {
+      const first = await scope.createEpisode({ title: 'Fikcyjne leczenie A', method: 'pharmacological', status: 'active',
+        medication: 'Fikcyjny preparat QA', dose: 'Fikcyjna dawka QA' });
+      const second = await scope.createEpisode({ title: 'Fikcyjne leczenie B', method: 'nonpharmacological', status: 'closed',
+        startDateISO: '2026-01-01', endDateISO: '2026-02-01' });
+      return [first.id, second.id];
+    } finally { scope.dispose(); }
+  }, ids.a);
+  await treatment.click();
+  const compact = card.locator('.vhome-treatment.vpt-compact');
+  await expect(compact).toBeVisible();
+  for (const title of ['Rozpoznania', 'Przebieg leczenia', 'Wpisy']) {
+    await expect(compact.getByRole('heading', { name: title, exact: true })).toBeVisible();
+  }
+  await expect(compact.getByRole('heading', { name: 'Leczenie', exact: true })).toHaveCount(0);
+  const selectedEpisode = compact.locator(`[data-treatment-therapy-id="${episodeIds[0]}"]`);
+  await expect(selectedEpisode).toHaveAttribute('data-selected');
+  await expect(selectedEpisode.getByRole('button', { name: 'Przebieg', exact: true })).toHaveAttribute('aria-current', 'true');
+  await expect(selectedEpisode.locator('[data-treatment-action="edit-therapy"]')).toBeHidden();
+  for (const [width, height] of [[1440, 1000], [390, 844], [320, 720]]) {
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => compact.evaluate(root => {
+      if (!root.isConnected) return false;
+      const cards = [...root.querySelectorAll('.vpt-episode-card')].map(node => node.getBoundingClientRect());
+      return cards.length === 2 && cards.every(box => box.width > 0 && box.left >= 0 && box.right <= innerWidth + 0.5) &&
+        root.scrollWidth <= root.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1 &&
+        cards.every((box, index) => cards.slice(index + 1).every(other =>
+          Math.min(box.right, other.right) - Math.max(box.left, other.left) <= 0.5 ||
+          Math.min(box.bottom, other.bottom) - Math.max(box.top, other.top) <= 0.5));
+    }), { message: 'Inline treatment cards fit without overlap at ' + width }).toBe(true);
+  }
+  await selectedEpisode.getByRole('button', { name: 'Przebieg', exact: true }).click();
+  const detail = compact.locator(`[data-treatment-detail-id="${episodeIds[0]}"]`);
+  await detail.getByRole('button', { name: 'Edytuj leczenie', exact: true }).click();
+  await expect(editor).toHaveClass(/\bvpt-compact\b/);
+  await expect(editor.getByLabel('Nazwa leczenia')).toHaveValue('Fikcyjne leczenie A');
+  await expect(editor.locator('[data-treatment-medication-fields]')).toBeVisible();
+  await editor.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  expect(await visits()).toEqual(beforeRemoval);
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const edit = card.locator(`[data-treatment-diagnosis-id="${note.id}"]`).getByRole('button', { name: 'Edytuj', exact: true });
   await treatment.click();
   await edit.click();

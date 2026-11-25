@@ -16,6 +16,16 @@
 }
 .vhome-treatment-editor .vpt-icd10-source { font-size: 12px; }
 .vhome-treatment-editor .vpt-icd10-status:empty { display: none; }
+.vhome-treatment-editor.vpt-compact .vpt-icd10-help,
+.vhome-treatment-editor.vpt-compact .vpt-icd10-query[aria-expanded="false"] ~ .vpt-icd10-status {
+  position: absolute;
+  width: var(--border-hairline);
+  height: var(--border-hairline);
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .vhome-treatment-editor .vpt-icd10-list {
   box-sizing: border-box;
   width: 100%;
