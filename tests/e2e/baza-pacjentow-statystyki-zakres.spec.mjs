@@ -250,25 +250,31 @@ test('pola filtrów mają tę samą szerokość; znaczek rozwijania jest odsuni�
 test.describe('telefon', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 
-  test('pola filtrów stoją w dwóch równych kolumnach; pełny opis zakresu pokazuje baner', async ({ page }) => {
+  test('dotychczasowy układ: „Zakres”, „Leczenie” i „Lista pacjentów” na całą szerokość, „Płeć” i „Wiek” obok siebie; wybrana pozycja mieści się w polu', async ({ page }) => {
     const { database } = await start(page);
     await zakres(database).selectOption('m12');
-    await expect(database.locator('.pt-scope-name')).toHaveText('z zapisem w ostatnich 12 mies.');
+    await leczenie(database).selectOption('gh');
+    await expect(database.locator('.pt-scope-name')).toHaveText('z zapisem w ostatnich 12 mies. · leczeni hormonem wzrostu');
     const { pola, pasek, przewijanie } = await wymiaryPol(database);
-    expect(pola).toHaveLength(5);
-    const szerokosci = pola.map((pole) => pole.szerokosc);
-    expect(Math.max(...szerokosci) - Math.min(...szerokosci)).toBeLessThan(1);
-    // Dwa pola w wierszu: lewa kolumna 1., 3. i 5. pola, prawa — 2. i 4.
-    expect(szerokosci[0]).toBeGreaterThan(pasek * 0.45);
-    expect(szerokosci[0]).toBeLessThan(pasek * 0.5);
-    for (const numer of [2, 4]) expect(Math.round(pola[numer].lewa)).toBe(Math.round(pola[0].lewa));
-    expect(Math.round(pola[3].lewa)).toBe(Math.round(pola[1].lewa));
-    expect(pola[1].lewa).toBeGreaterThan(pola[0].lewa + szerokosci[0]);
-    expect(Math.round(pola[1].gora)).toBe(Math.round(pola[0].gora));
-    expect(pola[2].gora).toBeGreaterThan(pola[0].gora + pola[0].wysokosc);
+    expect(pola.map((pole) => pole.klucz)).toEqual(['range', 'treatment', 'list', 'sex', 'band']);
+    // Trzy pola z długimi pozycjami mają cały wiersz, każde w osobnym.
+    for (const pole of pola.slice(0, 3)) {
+      expect(Math.round(pole.szerokosc), pole.klucz).toBe(Math.round(pasek));
+      expect(Math.round(pole.lewa), pole.klucz).toBe(Math.round(pola[0].lewa));
+    }
+    expect(pola[1].gora).toBeGreaterThan(pola[0].gora + pola[0].wysokosc);
+    expect(pola[2].gora).toBeGreaterThan(pola[1].gora + pola[1].wysokosc);
+    // „Płeć” i „Wiek” w jednym wierszu, po połowie.
+    expect(Math.round(pola[3].gora)).toBe(Math.round(pola[4].gora));
+    expect(Math.abs(pola[3].szerokosc - pola[4].szerokosc)).toBeLessThan(1);
+    expect(pola[3].szerokosc).toBeLessThan(pasek * 0.5);
+    expect(Math.round(pola[3].lewa)).toBe(Math.round(pola[0].lewa));
+    expect(pola[4].lewa).toBeGreaterThan(pola[3].lewa + pola[3].szerokosc);
     for (const pole of pola) {
+      expect(pole.wyglad, pole.klucz).toBe('none');
       expect(pole.wysokosc, pole.klucz).toBeGreaterThanOrEqual(44);
       expect(pole.znaczekOdKrawedzi, pole.klucz).toBeGreaterThanOrEqual(12);
+      expect(pole.napis, `${pole.klucz}: wybrana pozycja mieści się w polu`).toBeLessThanOrEqual(pole.wnetrze);
     }
     expect(przewijanie).toBeLessThanOrEqual(0);
   });

@@ -2813,9 +2813,9 @@
     function filterBar(sequence) {
       const bar = el('div', 'pt-filters'), base = basePatients();
       bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Zakres statystyk');
-      // options: [wartość, napis].
-      function field(key, labelText, options, value) {
-        const holder = el('label', 'pt-filter');
+      // options: [wartość, napis]; wide — pole z długimi pozycjami: na telefonie zajmuje cały wiersz.
+      function field(key, labelText, options, value, wide) {
+        const holder = el('label', 'pt-filter' + (wide ? ' pt-filter--wide' : ''));
         holder.appendChild(el('span', 'pt-filter-label', labelText));
         const node = doc.createElement('select');
         node.className = 'pt-filter-select' + (value ? ' on' : '');
@@ -2836,7 +2836,7 @@
         return { node, fill };
       }
       field('range', 'Zakres', [['', 'cała baza (' + base.length + ')']].concat(SCOPE_RANGES.map((range) =>
-        [range.key, range.option + ' (' + scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault }).length + ')'])), state.filters.range || '');
+        [range.key, range.option + ' (' + scopeMembers(base, { range: range.key }, { ageMonths: ageFromVault }).length + ')'])), state.filters.range || '', true);
       const treatmentRows = () => {
         const saved = savedCards();
         return [['', 'wszyscy']].concat(SCOPE_TREATMENTS.map((treatment) => {
@@ -2844,7 +2844,7 @@
           return [treatment.key, treatment.option + (members ? ' (' + members.length + ')' : '')];
         }));
       };
-      const treatmentField = field('treatment', 'Leczenie', treatmentRows(), state.filters.treatment || '');
+      const treatmentField = field('treatment', 'Leczenie', treatmentRows(), state.filters.treatment || '', true);
       // Po liczeniu kart zmieniają się tylko napisy pozycji — pole zostaje to samo (także otwarte albo z fokusem).
       filterRefresh = () => {
         if (!bar.isConnected) return;
@@ -2855,7 +2855,7 @@
         const chosen = state.filters.listId || '';
         const rows = (entries) => [['', 'wszystkie']].concat(entries.map(({ list }) => [list.id, list.name || '(bez nazwy)']));
         const known = chosen ? [{ list: { id: chosen, name: state.filters.listName || 'wybrana lista' } }] : [];
-        const listField = field('list', 'Lista pacjentów', rows(listCache || known), chosen);
+        const listField = field('list', 'Lista pacjentów', rows(listCache || known), chosen, true);
         if (!listCache) getCatalog().then((entries) => {
           if (!guardedRead(sequence) || !mayUseLists() || !bar.isConnected) return;
           listField.fill(rows(!chosen || entries.some(({ list }) => list.id === chosen) ? entries : entries.concat(known)));

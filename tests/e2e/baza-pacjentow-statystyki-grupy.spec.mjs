@@ -257,12 +257,17 @@ test.describe('telefon', () => {
     expect(pola).toHaveLength(5);
     expect(Math.min(...pola.map((pole) => pole.wysokosc))).toBeGreaterThanOrEqual(44);
     expect(Math.min(...pola.map((pole) => pole.pismo)), 'pismo < 16 px powiększa widok na iPhonie przy wejściu w pole').toBeGreaterThanOrEqual(16);
-    // P-BAZA-FILTRY: pięć pól równej szerokości w dwóch kolumnach (układ szczegółowo: baza-pacjentow-statystyki-zakres.spec.mjs).
+    // Telefon ma dotychczasowy układ (P-BAZA-FILTRY, decyzja właściciela 2026-11-25): „Zakres”, „Leczenie” i „Lista
+    // pacjentów” mają cały wiersz, „Płeć” i „Wiek” stoją obok siebie.
     const szerokosc = (pole) => pole.prawa - pole.lewa;
-    const szerokosci = pola.map(szerokosc);
-    expect(Math.max(...szerokosci) - Math.min(...szerokosci)).toBeLessThan(1);
-    expect(pola[1].lewa).toBeGreaterThan(pola[0].prawa);
-    expect(Math.round(pola[2].lewa)).toBe(Math.round(pola[0].lewa));
+    for (const pole of [pola[1], pola[2]]) {
+      expect(Math.round(pole.lewa)).toBe(Math.round(pola[0].lewa));
+      expect(Math.round(pole.prawa)).toBe(Math.round(pola[0].prawa));
+    }
+    expect(szerokosc(pola[0])).toBeGreaterThan(szerokosc(pola[3]) * 1.8);
+    expect(Math.round(pola[3].lewa)).toBe(Math.round(pola[0].lewa));
+    expect(pola[4].lewa).toBeGreaterThan(pola[3].prawa);
+    expect(Math.round(pola[4].prawa)).toBe(Math.round(pola[0].prawa));
 
     await filtr(database, 'band').selectOption('6-9');
     await expect(database.locator('.pt-scope-name')).toHaveText('6–9 lat');

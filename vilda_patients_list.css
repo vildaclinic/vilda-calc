@@ -744,7 +744,8 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 /* P-BAZA-FILTRY (decyzja właściciela 2026-11-25): pola filtrów mają tę samą szerokość. Jest ich cztery albo pięć
    (z „Listą pacjentów”); w wierszu staje tyle równych kolumn, ile się mieści, a pozostałe pola przechodzą do
    następnego wiersza z tą samą szerokością. 218 px to najkrótsze pole, w którym mieści się najdłuższa pozycja
-   z trzycyfrowym licznikiem; przy tej wartości pięć pól staje w jednym wierszu od okna 1280 px. */
+   z trzycyfrowym licznikiem; przy tej wartości pięć pól staje w jednym wierszu od okna 1280 px. Telefon ma
+   własny układ (niżej). */
 .pt-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(218px, 1fr));
@@ -869,12 +870,16 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   color: var(--danger-strong);
 }
 
-/* P-BAZA-FILTRY: na telefonie pola stoją w dwóch równych kolumnach — pięć pól jedno pod drugim zajmowałoby cały
-   pierwszy ekran. Dłuższa wybrana pozycja jest wtedy skracana wielokropkiem; pełny opis zakresu pokazuje baner
-   pod filtrami. */
-@media (max-width: 520px) {
+/* P-BAZA-FILTRY: na telefonie zostaje dotychczasowy układ (decyzja właściciela 2026-11-25: „Dotychczasowy układ
+   mobile mi się podoba”) — „Zakres”, „Leczenie” i „Lista pacjentów” zajmują cały wiersz, „Płeć” i „Wiek” stoją
+   obok siebie. Równa szerokość wszystkich pól dotyczy szerszych okien. */
+@media (max-width: 760px) {
   .pt-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pt-filter--wide {
+    grid-column: 1 / -1;
   }
 }
 
