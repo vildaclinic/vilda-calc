@@ -741,13 +741,14 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
 /* P-BAZA-GRUPY (makieta statystyk; decyzja właściciela 2026-11-24: „praca nad grupami pacjentów z makiety”).
    Pasek filtrów zakresu nad statystykami (zwykłe pola wyboru) oraz praca z grupą na liście: formularz
    „Zapisz jako listę” i komunikat w pasku grupy. */
-/* P-BAZA-ZAKRES, P-BAZA-SEKCJE: pól jest cztery albo pięć (z „Listą pacjentów”). „Zakres” ma najdłuższe pozycje,
-   więc dostaje najszerszą kolumnę; „Leczenie” — nieco szerszą niż krótkie „Płeć” i „Wiek”. */
+/* P-BAZA-FILTRY (decyzja właściciela 2026-11-25): pola filtrów mają tę samą szerokość. Jest ich cztery albo pięć
+   (z „Listą pacjentów”); w wierszu staje tyle równych kolumn, ile się mieści, a pozostałe pola przechodzą do
+   następnego wiersza z tą samą szerokością. 218 px to najkrótsze pole, w którym mieści się najdłuższa pozycja
+   z trzycyfrowym licznikiem; przy tej wartości pięć pól staje w jednym wierszu od okna 1280 px. Telefon ma
+   własny układ (niżej). */
 .pt-filters {
   display: grid;
-  grid-auto-flow: column;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr);
-  grid-auto-columns: minmax(0, .8fr);
+  grid-template-columns: repeat(auto-fit, minmax(218px, 1fr));
   gap: var(--space-10px) var(--space-12px);
 }
 
@@ -766,16 +767,40 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   text-transform: uppercase;
 }
 
+/* Ramka pola rysuje znaczek rozwijania z własnym odstępem od prawej krawędzi. Strzałka systemowa jest wyłączona
+   (appearance), bo jej położenia nie da się ustawić i w części przeglądarek dotykała krawędzi pola. */
+.pt-filter-box {
+  position: relative;
+  display: block;
+  color: var(--text-muted);
+}
+
+.pt-filter-box::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: var(--space-16px);
+  width: 7px;
+  height: 7px;
+  margin-top: -6px;
+  border-right: var(--border-emphasis) solid currentColor;
+  border-bottom: var(--border-emphasis) solid currentColor;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
 /* Ramkę, zaokrąglenie i tło pola wyboru daje skórka szkła (wspólna reguła pól formularza) — tu tylko wymiary i pismo. */
 .pt-filter-select {
   box-sizing: border-box;
   width: 100%;
   min-height: 44px;
-  padding: var(--space-8px) var(--space-12px);
+  padding: var(--space-8px) 32px var(--space-8px) var(--space-12px);
   color: var(--text-strong);
   font: inherit;
   font-size: 16px;
   text-overflow: ellipsis;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .pt-filter-select.on {
@@ -845,36 +870,15 @@ body.liquid-ios26:is(.high-contrast-level-1, .high-contrast-level-2, .high-contr
   color: var(--danger-strong);
 }
 
-.pt-filters--lists {
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 1fr);
-}
-
-/* P-BAZA-ZAKRES, P-BAZA-SEKCJE: najdłuższa pozycja „Zakresu” z licznikiem ma mieścić się w polu bez ucinania.
-   Do 1366 px pola stoją w dwóch wierszach: „Zakres” i „Leczenie” po połowie, pod nimi pozostałe (trzy pola
-   po jednej trzeciej albo dwa po połowie). Poniżej 760 px pola z długimi pozycjami („Zakres”, „Leczenie”,
-   „Lista pacjentów”) zajmują cały wiersz, a „Płeć” i „Wiek” zostają obok siebie. */
-@media (max-width: 1366px) {
-  .pt-filters {
-    grid-auto-flow: row;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-
-  .pt-filter {
-    grid-column: span 3;
-  }
-
-  .pt-filters--lists .pt-filter:nth-child(n+3) {
-    grid-column: span 2;
-  }
-}
-
+/* P-BAZA-FILTRY: na telefonie zostaje dotychczasowy układ (decyzja właściciela 2026-11-25: „Dotychczasowy układ
+   mobile mi się podoba”) — „Zakres”, „Leczenie” i „Lista pacjentów” zajmują cały wiersz, „Płeć” i „Wiek” stoją
+   obok siebie. Równa szerokość wszystkich pól dotyczy szerszych okien. */
 @media (max-width: 760px) {
-  .pt-filters--lists .pt-filter:nth-child(n+3) {
-    grid-column: span 3;
+  .pt-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .pt-filters .pt-filter.pt-filter--wide,
-  .pt-filters--lists .pt-filter.pt-filter--wide:nth-child(n+3) {
+  .pt-filter--wide {
     grid-column: 1 / -1;
   }
 }

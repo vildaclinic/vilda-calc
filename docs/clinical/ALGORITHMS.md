@@ -49163,6 +49163,8 @@ Liczniki pozycji „Leczenia” pojawiają się po policzeniu kart; wybrane „L
 Układ: powyżej 1366 px pięć pól w jednym wierszu („Zakres” najszersze); do 1366 px dwa wiersze („Zakres” i „Leczenie”,
 pod nimi pozostałe); poniżej 760 px „Zakres”, „Leczenie” i „Lista pacjentów” zajmują cały wiersz, „Płeć” i „Wiek” stoją
 obok siebie — wybrana pozycja z licznikiem nie jest ucinana (progi z istniejącej listy).
+*(2026-11-25, P-BAZA-FILTRY: układ zmieniony — pola mają równą szerokość, a pozycje „Zakresu” krótsze napisy; opis
+niżej, w sekcji „P-BAZA-FILTRY”.)*
 
 **Przypadek syntetyczny (dane fikcyjne; osiem osób a–h z bazy testowej, rozpoznania jak w racie 2).**
 - Wejście w Statystyki: „Rozpoznania — z aktywnym rozpoznaniem: 5 z 8 (63%) — Rozwiń”, „Kompletność danych — z brakami:
@@ -49195,3 +49197,55 @@ powrocie z listy i odświeżeniu widoku; brak rozpoznań; sekcje leczenia na ekr
 zapisu; telefon). Testy treści sekcji (`baza-pacjentow-statystyki*.spec.mjs`) rozwijają je pomocnikiem `otworzStatystyki`.
 
 **Wersje.** `vilda_patients_list.js` 14 → 15, `vilda_patients_list.css` 12 → 13, wstrzykujące `vilda_chrome.js` 338 → 339 i `vilda_session_bridge.js` 254 → 255; SW 1.1.593 → 1.1.594 — `npm run podbij-wersje` po scaleniu `audyt` z E3-PR0e3 (tamten PR wziął SW 1.1.593 oraz `vilda_chrome.js` 338 i `vilda_session_bridge.js` 254). Bez nowego pliku w pamięci offline.
+
+## P-BAZA-FILTRY — Baza pacjentów: pola filtrów Statystyk tej samej szerokości, znaczek rozwijania odsunięty od krawędzi (SW 1.1.595, `vilda_patients_list.js` 16, `vilda_patients_list.css` 14, 2026-11-25)
+
+**Zmiana kliniczna: BRAK algorytmu.** Wygląd paska filtrów i napisy pozycji; żadna liczba ani definicja się nie zmienia.
+
+**Decyzja właściciela.** 2026-11-25: „wolałbym żeby te pola selektorów (Zakres, Leczenie, Lista pacjentów, Płeć, Wiek)
+były tej samej szerokości, i odsuń trochę od prawej krawędzi ten znaczek strzałki w dół, bo on dotyka prawej krawędzi”.
+Tego samego dnia, po obejrzeniu propozycji z dwiema kolumnami na telefonie: „Dotychczasowy układ mobile mi się podoba”
+— telefon zostaje bez zmiany układu.
+
+**Równa szerokość.** Pola filtrów stoją w równych kolumnach: w wierszu tyle pól, ile się mieści przy najmniejszej
+szerokości 218 px, a pozostałe przechodzą do następnego wiersza **z tą samą szerokością**. Zmierzone przy pięciu polach:
+jeden wiersz w oknach 1280, 1366 i 1440 px; 4 + 1 w oknach 1024 i 1100 px; 3 + 2 w oknach 768 i 900 px. Bez pola
+„Lista pacjentów” cztery pola dzielą wiersz po równo. Dotychczasowe szerokości zależne od pola w szerokich oknach
+(P-BAZA-ZAKRES, P-BAZA-SEKCJE) znikają.
+**Telefon (do 760 px) ma dotychczasowy układ:** „Zakres”, „Leczenie” i „Lista pacjentów” zajmują cały wiersz, „Płeć”
+i „Wiek” stoją obok siebie.
+
+**Krótsze napisy „Zakresu”.** Żeby pozycja mieściła się w polu równej szerokości, pole pokazuje krótki napis
+(`option`), a pełny opis (`label`) zostaje w banerze „Statystyki grupy”, nazwie grupy na liście, nagłówku raportu
+i podpowiadanej nazwie listy:
+
+| Pozycja w polu | Pełny opis (baner, raport) | Kto wchodzi (bez zmian) |
+|---|---|---|
+| zapis ≤ 3 mies. | z zapisem w ostatnich 3 mies. | ostatni zapis karty nie dawniej niż 3 miesiące temu |
+| zapis ≤ 6 mies. | z zapisem w ostatnich 6 mies. | …nie dawniej niż 6 miesięcy temu |
+| zapis ≤ 12 mies. | z zapisem w ostatnich 12 mies. | …nie dawniej niż 12 miesięcy temu |
+| zapis > 12 mies. | bez zapisu od ponad 12 mies. | każdy bez zapisu w ostatnich 12 miesiącach (także bez daty zapisu) |
+| zapis > 24 mies. | bez zapisu od ponad 24 mies. | każdy bez zapisu w ostatnich 24 miesiącach |
+
+Reguły dat i dopełnień są te same co w P-BAZA-ZAKRES. Krótkie napisy obowiązują także na telefonie.
+
+**Znaczek rozwijania.** Strzałka systemowa pola wyboru jest wyłączona (`appearance: none`), bo jej położenia nie da się
+ustawić i w części przeglądarek dotykała prawej krawędzi. Znaczek rysuje ramka pola (`.pt-filter-box::after`) 16 px od
+prawej krawędzi; napis pola kończy się przed znaczkiem (prawy odstęp pola 32 px). Pole nadal jest zwykłym polem wyboru:
+klawiatura, czytnik ekranu i systemowa lista na telefonie działają jak dotąd; pismo 16 px i wysokość co najmniej 44 px
+zostają.
+
+**Przypadek syntetyczny (dane fikcyjne; baza z testów „Zakresu” — osoby a–h oraz i, j).** Pozycje pola „Zakres”: „cała
+baza (10)”, „zapis ≤ 3 mies. (8)”, „zapis ≤ 6 mies. (8)”, „zapis ≤ 12 mies. (8)”, „zapis > 12 mies. (2)”, „zapis >
+24 mies. (1)”; wybór „zapis ≤ 12 mies.” i „hormon wzrostu” → baner „z zapisem w ostatnich 12 mies. · leczeni hormonem
+wzrostu”. Okno 1440 i 1280 px: pięć pól w jednym wierszu, równej szerokości; 1024 px: cztery w pierwszym wierszu;
+900 px: trzy — zawsze równe. Okno 390 px: trzy pola na całą szerokość, „Płeć” i „Wiek” po połowie.
+
+**Prywatność.** Bez wpływu na dane.
+
+**Strażnicy.** `tests/e2e/baza-pacjentow-statystyki-zakres.spec.mjs` (5; nowe: równa szerokość pól w oknach 1440, 1280,
+1024 i 900 px, wyłączona strzałka systemowa, znaczek co najmniej 12 px od krawędzi, napis przed znaczkiem, wybrana
+pozycja mieści się w polu; telefon — dotychczasowy układ i znaczek); `tests/unit/baza-statystyki-zakres.test.mjs`
+(krótki napis obok pełnego opisu); `tests/e2e/baza-pacjentow-statystyki-grupy.spec.mjs` (telefon: dotychczasowy układ).
+
+**Wersje.** `vilda_patients_list.js` 15 → 16, `vilda_patients_list.css` 13 → 14, wstrzykujące `vilda_chrome.js` 339 → 340 i `vilda_session_bridge.js` 255 → 256; SW 1.1.594 → 1.1.595 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.

@@ -257,8 +257,8 @@ test.describe('telefon', () => {
     expect(pola).toHaveLength(5);
     expect(Math.min(...pola.map((pole) => pole.wysokosc))).toBeGreaterThanOrEqual(44);
     expect(Math.min(...pola.map((pole) => pole.pismo)), 'pismo < 16 px powiększa widok na iPhonie przy wejściu w pole').toBeGreaterThanOrEqual(16);
-    // P-BAZA-ZAKRES, P-BAZA-SEKCJE: „Zakres”, „Leczenie” i „Lista pacjentów” mają cały wiersz (długa pozycja nie jest
-    // ucinana), „Płeć” i „Wiek” stoją obok siebie.
+    // Telefon ma dotychczasowy układ (P-BAZA-FILTRY, decyzja właściciela 2026-11-25): „Zakres”, „Leczenie” i „Lista
+    // pacjentów” mają cały wiersz, „Płeć” i „Wiek” stoją obok siebie.
     const szerokosc = (pole) => pole.prawa - pole.lewa;
     for (const pole of [pola[1], pola[2]]) {
       expect(Math.round(pole.lewa)).toBe(Math.round(pola[0].lewa));
