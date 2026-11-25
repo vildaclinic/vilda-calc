@@ -1056,13 +1056,13 @@ html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-con
   font-weight: 600;
 }
 #vhomePatientOverview .vhome-b1-centile .vilda-siatka-range > span {
-  margin-inline-end: 4px;
+  margin-inline-end: var(--space-4px);
 }
 #vhomePatientOverview .vhome-b1-centile :is(.vilda-siatka-range-btn, .vilda-cmp-btn, .vilda-cmp-clear, .vilda-siatka-pdf-btn) {
   min-height: 40px;
   padding: 7px 11px !important;
-  border: 1px solid var(--centile-line, var(--vhome-b1-line)) !important;
-  border-radius: 8px !important;
+  border: var(--border-hairline) solid var(--centile-line, var(--vhome-b1-line)) !important;
+  border-radius: var(--radius-8) !important;
   font-size: .875rem !important;
   font-weight: 650 !important;
   line-height: 1.25;
@@ -1078,7 +1078,7 @@ html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-con
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: var(--space-6px) var(--space-8px);
   margin: 0;
   padding: 0;
 }
@@ -1093,7 +1093,7 @@ html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-con
 }
 #vhomePatientOverview .vhome-b1-centile .vilda-siatka-charts > .vilda-patient-chart-wrap {
   margin: 0;
-  padding: 8px 5px 6px;
+  padding: var(--space-8px) 5px var(--space-6px);
   border-radius: var(--radius-12);
 }
 #vhomePatientOverview .vhome-b1-centile .vilda-patient-chart {
@@ -1103,7 +1103,7 @@ html.vilda-home-workspace body:not(.dark-bg-level-1, .dark-bg-level-2, .high-con
   font-size: 11.5px;
 }
 #vhomePatientOverview .vhome-b1-centile > .vilda-patient-chart-legend {
-  gap: 7px 14px;
+  gap: 7px var(--space-14px);
   margin: 0;
   padding: 0;
   font-size: .875rem;
@@ -1144,7 +1144,7 @@ body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contr
   background: var(--centile-accent) !important;
 }
 body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contrast-level-2, .high-contrast-level-3) #vhomePatientOverview .vhome-b1-centile .vilda-siatka-charts > .vilda-patient-chart-wrap {
-  border: 1px solid var(--centile-line);
+  border: var(--border-hairline) solid var(--centile-line);
   background: #fff;
   box-shadow: 0 3px 10px #23465008;
 }
@@ -1177,7 +1177,7 @@ body:not(.dark-bg-level-1, .dark-bg-level-2, .high-contrast-level-1, .high-contr
     width: 100%;
     min-width: 0;
     margin: 0 !important;
-    padding-inline: 4px !important;
+    padding-inline: var(--space-4px) !important;
   }
   #vhomePatientOverview .vhome-b1-centile .vilda-siatka-range-btn:nth-of-type(-n+2) {
     grid-column: span 3;
