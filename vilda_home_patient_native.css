@@ -900,7 +900,7 @@ html.vilda-home-workspace #vhomePatientOverview .vhome-b1-nav > [data-tab="remin
 /* Accepted Status A, inline Overview only. Reuse the native metric nodes and
  * their result classes; other tabs and modal Patient cards keep their layout. */
 html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels > [data-tab="antro"] {
-  gap: 20px;
+  gap: var(--space-20px);
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) {
   padding: 0;
@@ -909,14 +909,14 @@ html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1
   background: transparent;
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-measure-title {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-12px);
   color: var(--vhome-b1-ink);
   font-size: 18px;
   font-weight: 650;
   line-height: 1.4;
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-context {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-12px);
   color: var(--vhome-b1-ink);
   line-height: 1.5;
 }
@@ -925,20 +925,20 @@ html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-sta
   font-weight: 650;
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-growth .vhome-b1-section-heading {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-12px);
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) > .vilda-patient-stats-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-auto-rows: 1fr;
-  gap: 12px;
+  gap: var(--space-12px);
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) .vilda-patient-stat {
   display: flex;
   min-height: 0;
   gap: 5px;
-  padding: 12px 13px;
-  border-top-width: 1px;
-  border-radius: 10px;
+  padding: var(--space-12px) 13px;
+  border-top-width: var(--border-hairline);
+  border-radius: var(--radius-10);
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-measure .vilda-patient-stat-label {
   min-height: 0;
@@ -948,16 +948,16 @@ html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-sta
   font-size: clamp(22px, 2.1vw, 28px);
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-growth .vilda-patient-stat {
-  padding-block: 10px;
+  padding-block: var(--space-10px);
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-status-growth .vilda-patient-stat-value {
   font-size: 20px;
   text-align: start;
 }
 html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-treatment-summary {
-  padding: 10px 0 0;
+  padding: var(--space-10px) 0 0;
   border: 0;
-  border-top: 1px solid var(--vhome-b1-line);
+  border-top: var(--border-hairline) solid var(--vhome-b1-line);
   border-radius: 0;
   background: transparent;
   font-size: 15px;
@@ -968,15 +968,15 @@ html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] .vhome-b1-tre
 @media (max-width: 940px) {
   html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) > .vilda-patient-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: var(--space-10px);
   }
 }
 @media (max-width: 650px) {
   html.vilda-home-workspace #vhomePatientOverview .vhome-b1-panels > [data-tab="antro"] {
-    gap: 16px;
+    gap: var(--space-16px);
   }
   html.vilda-home-workspace #vhomePatientOverview [data-tab="antro"] :is(.vhome-b1-status-measure, .vhome-b1-status-growth) .vilda-patient-stat {
-    padding: 10px;
+    padding: var(--space-10px);
   }
 }
 
