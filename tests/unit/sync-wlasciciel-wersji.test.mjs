@@ -60,6 +60,14 @@ import { POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ } from '../support/czesci-wydania.m
 // Bkz_wygrywa, Bkz_zmiana i Bgw_stan bajt w bajt (zielony z natury); blokada karty wpisu zajęta w drugiej karcie
 // przeglądarki — wizyta nie wraca, wpis zostaje, następne scalanie ją oddaje (na d2f1eded czerwony). Pozostałe przypadki
 // zmiany wizyty po Koszu — tests/unit/sync-odsylanie.test.mjs i tests/unit/kosz-po-kluczu-sesja.test.mjs.
+// Od E3-PR0e2b (decyzje właściciela 2a i 3a z 2026-11-23: „Scal pacjentów” zapisuje chwilę przypisania wersji do karty)
+// liczba testów bez zmian (387), przepisane literały: poprawka albo gwiazdka wizyty przeniesionej, zrobiona w starej
+// karcie na urządzeniu bez wiedzy o scaleniu, zostaje w karcie scalonej, a stara karta nie wraca (dotąd wracała, D-4 A);
+// dwa niezależne „Scal pacjentów” tej samej karty — karta późniejszego scalenia według zegarów (dotąd mniejszy
+// identyfikator); strażnik źródła odłożenia decyzji z decyzją „do karty wpisu” (reguła z decyzji właściciela 2b
+// z 2026-11-25); poprawka z delty starej karty liczy się jako zmieniona wersja i odświeża listę. Na bazie 30008d8f
+// czerwone 84. Przypadki pola — tests/unit/sync-chwila-przypisania.test.mjs, reguły Kosza —
+// tests/unit/kosz-poprawka-po-scaleniu.test.mjs.
 // Wcześniejsze stany pliku: 233 testy — na `audyt` 184, na dd21d11 29 (po łańcuchu „Scal pacjentów” X → Y → Z zmiana
 // wersji w starej karcie na urządzeniu, które o scaleniach nie wiedziało, ginęła pod dawną treścią z wyższą rev; z dwóch
 // współbieżnych poprawek pod różnymi kartami wygrywała ta z urządzenia scalającego, nie późniejsza); 203 testy — na

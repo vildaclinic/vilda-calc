@@ -15,7 +15,7 @@
 // zdarzeniach ma dalej swoją X z poprawką — przeniesie ją do Y przy najbliższej pełnej wymianie (droga przeniesienia
 // z chwilą przypisania, którą widzi ochrona planów opieki); to nie powrót karty (T jej nie usunął).
 //
-// PRZYPADKI (na bazie 30008d8f czerwone: X wraca z poprawioną wizytą na K i T, a jej „Usuń pacjenta” kasuje wizytę;
+// PRZYPADKI (51; na bazie 30008d8f czerwone 46: X wraca z poprawioną wizytą na K i T, a jej „Usuń pacjenta” kasuje wizytę;
 // zielone z natury — kontrole, każda z mutantem reguły obok): poprawka (cztery dostawy), gwiazdka, „Przywróć” w starej
 // karcie zamiast poprawki (T dał wizytę do Kosza w X przed scaleniem), zegar T +3 min,
 // dwie poprawki, łańcuch X → Y → Z (także T znający X → Y), nowa wizyta obok poprawki (X wraca z nową, poprawka w Y),

@@ -11,7 +11,7 @@
 // znika po cichu), a kanon odsyłania Kosza je pomija (różnica samego pola nie jest odsyłana —
 // tests/unit/sync-odsylanie.test.mjs, POLA_POMIJANE.stomb w tests/support/licznik-odsylania.mjs).
 //
-// PRZYPADKI (na bazie 30008d8f czerwone — powód w nawiasie; zielone z natury — kontrole, każda z mutantem obok):
+// PRZYPADKI (11; na bazie 30008d8f czerwone 8 — powód w nawiasie; zielone z natury 3 — kontrole, każda z mutantem obok):
 //   półkrata wpisów z polem z kodu sejfu (Bkz_dolacz): przemienność, idempotencja, pochłanianie, łączność (czerwone —
 //        pole ginie przy łączeniu: wynik bez pola); pole razem z kartą: dwa wpisy tej samej wersji pod X (późniejsze
 //        usunięcie, bez pola) i pod Y (z polem) — X bez pola (zielony z natury; mutant: pole łączone osobno od karty —

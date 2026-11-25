@@ -2975,6 +2975,12 @@ osiemnastu podmian i czytelne źródła bez zmian) bazą warstwy jest obraz trwa
 `722d8ee00fbc7ff5d916ad40744a3760bcf90e5cb431ccfe85f5062dd195206b` (manifest warstwy i `BASE` w narzędziu). Obrazy
 `3bebcc8e…` i `4f625ec4…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
 
+Od E3-PR0e2b (P-SYNC-WLASCICIEL, drugie wydanie chwili przypisania wersji do karty, 2026-11-25; zmiana sejfu pod
+warstwą, teksty osiemnastu podmian i czytelne źródła bez zmian) bazą warstwy jest obraz trwałych wizyt po E3-PR0e2b:
+SHA-256 `efa04516546c0070d4b8240ba6b48baec40f804568360d785a8a059e11fe69cf`, a wynikiem —
+`08169375dae9f2076f5b6e81cd9f87af76fd2012529843c8942d80f84e245b0d` (manifest warstwy i `BASE` w narzędziu). Obrazy
+`119b9413…` i `722d8ee0…` odpowiadają stanowi sprzed E3-PR0e2b (`audyt` `d6434893` i `30008d8f`).
+
 **2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i trzy podmiany.** Plik jest zminifikowany; zmiany po unikalnych
 kotwicach, bez ponownej minifikacji:
 
@@ -3052,6 +3058,11 @@ dziesięciu podmian i czytelne źródło bez zmian) bazą warstwy jest obraz war
 `81de091bece15acf7d632bb44ba5411c5165d13efd90ea527594d01c577c9ee1` (manifest warstwy i `BASE` w narzędziu). Obrazy
 `4f625ec4…` i `46535d45…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
 
+Od E3-PR0e2b (P-SYNC-WLASCICIEL, 2026-11-25; zmiana sejfu pod warstwą, teksty dziesięciu podmian i czytelne źródło bez
+zmian) bazą warstwy jest obraz warstwy leczenia `08169375…`, a wynikiem —
+`5e2be9ebe716a9bb8965eee5537628871898d19dd5b6781e20420752273e2485` (manifest warstwy i `BASE` w narzędziu). Obrazy
+`722d8ee0…` i `81de091b…` odpowiadają stanowi sprzed E3-PR0e2b (`audyt` `d6434893` i `30008d8f`).
+
 **2. Karta (`vilda_auth_ui.js`) — blok `Kr_` i jedna podmiana poza nim.** Zmiany po unikalnych kotwicach
 (skrypt łatki: każda kotwica dokładnie raz), bez ponownej minifikacji:
 
@@ -3112,6 +3123,11 @@ Od E3-PR0e3 (P-SYNC-WLASCICIEL, scalenie z `audyt` `65955ed4`, 2026-11-25; zmian
 podmian i czytelne źródło bez zmian) bazą warstwy jest obraz warstwy usuwania rozpoznania `81de091b…`, a wynikiem —
 bieżący `vilda_vault.js` (`7f863902e113d80d585e07d18a5e591a6e61f2120fddbf96dfc02baeddcebc29`; manifest warstwy
 i `BASE` w narzędziu). Obrazy `46535d45…` i `d9efa2e5…` odpowiadają stanowi sprzed E3-PR0e3 (`audyt` `65955ed4`).
+
+Od E3-PR0e2b (P-SYNC-WLASCICIEL, 2026-11-25; zmiana sejfu pod warstwą, teksty trzech podmian i czytelne źródło bez
+zmian) bazą warstwy jest obraz warstwy usuwania rozpoznania `5e2be9eb…`, a wynikiem — bieżący `vilda_vault.js`
+(`872594ee8907635464d6e7e76c54f161fa3bf817ddca7933ea03987461e67839`; manifest warstwy i `BASE` w narzędziu). Obrazy
+`81de091b…` i `7f863902…` odpowiadają stanowi sprzed E3-PR0e2b (`audyt` `d6434893` i `30008d8f`).
 
 Strażnicy: `tests/unit/treatment-sync-hydration-vault.test.mjs`, `tests/unit/treatment-sync-hydration-vault-boundary.test.mjs`.
 
@@ -3209,6 +3225,14 @@ bez bloku trwałych wizyt: SHA-256 `16f6d3717292c6ca7dea3ea25a676b3690567103a387
 obraz pod trzema warstwami P-ROZPOZNANIA (`119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf`;
 warstwy i ich skróty — wyżej, łatki P-ROZPOZNANIA). Baza `50063edf…` (po vildaclinic/vilda-calc#1053) odpowiada
 stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded` i `65955ed4`); bieżącą bazę daje to samo odwrócenie delty co wyżej.
+
+Od E3-PR0e2b (P-SYNC-WLASCICIEL, drugie wydanie chwili przypisania wersji do karty — zapis w „Scal pacjentów”, wpis Kosza
+z tą chwilą, poprawka po Koszu w karcie scalonej; zmiana poza blokiem trwałych wizyt, w bloku P-DZIENNIK-ZDARZEN tylko
+kształt koperty wpisu Kosza i reguła pola odsyłania Kosza, teksty 41 haków bez zmian) bazą delty jest obraz sejfu po tej
+zmianie bez bloku trwałych wizyt: SHA-256 `ea18085ff297dad8805cc9e2c574a2173d39835b5189ac3b481fa322a8a4b10f`, a wynikiem —
+obraz pod trzema warstwami P-ROZPOZNANIA (`efa04516546c0070d4b8240ba6b48baec40f804568360d785a8a059e11fe69cf`). Baza
+`16f6d371…` (po vildaclinic/vilda-calc#1072) odpowiada stanowi sprzed E3-PR0e2b (`audyt` `d6434893` i `30008d8f`);
+bieżącą bazę daje to samo odwrócenie delty co wyżej.
 
 Każdy punkt wpięcia musi występować dokładnie raz. Narzędzie odrzuca inne
 bajty bazy, zmianę źródła bez zgodnego manifestu, niejednoznaczny punkt wpięcia
@@ -3385,6 +3409,14 @@ to `a693e447bddeb0e021ee8b8187026956b9fddf87e477c9141f613e1152af0f11`, a `integr
 `81671471feccf5ae6c92d772728a32520f199a545f0fcdb118f3d81f9074c947`. Baza `989fec00…` (po vildaclinic/vilda-calc#1053)
 odpowiada stanowi sprzed E3-PR0e3 (`audyt` `d2f1eded` i `65955ed4`). Blok natywny, haki natywne, rodzina modułów `0278bf7106c2`,
 `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
+
+Od E3-PR0e2b (P-SYNC-WLASCICIEL; zmiana sejfu tylko poza blokiem natywnym — zapis chwili przypisania w „Scal pacjentów”
+i gałęzi następcy, wpis Kosza z tą chwilą, reguła Kosza z decyzji z 2026-11-25, licznik zmienionej wersji, komentarze;
+w bloku P-DZIENNIK-ZDARZEN tylko kształt koperty wpisu Kosza i reguła pola odsyłania Kosza) baza sejfu to
+`732b860ff28846d8237a28a6f8d628c0224c4a7cacea8f3708c095d169b1aa07`, a `integratedVaultSHA256` (obraz pośredni) —
+`270ee6d787236622c312953f73e0e8c65eab35563c0dabdff67822f6033ddc8f`. Baza `a693e447…` (po vildaclinic/vilda-calc#1072)
+odpowiada stanowi sprzed E3-PR0e2b (`audyt` `d6434893` i `30008d8f`). Blok natywny, haki natywne, rodzina modułów
+`0278bf7106c2`, `fragmentSHA256` i archiwum bez zmian; bieżące wartości są w `runtime/clinical-workspace-v1/manifest.json`.
 
 Warstwy `vilda_vault.js` od środka: baza → blok natywny i 16 haków natywnych (manifest,
 `nativeHooks`) → delta Kt/V (`tools/klirens-ktv-vault-delta.mjs`, poza blokiem) → delta trwałych

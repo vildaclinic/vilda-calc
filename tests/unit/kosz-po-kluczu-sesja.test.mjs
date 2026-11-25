@@ -124,6 +124,10 @@
 //        które zmieniło wizytę, najpierw wysyła albo najpierw pobiera); kolejność kart w jednym ładunku; ostatnia wersja
 //        karty wpisu z wpisem Kosza innej wizyty (Q8); strażnik źródła decyzji (bez odczytów magazynu) i zapisu
 //        (czerwone na bazie: zasady nie ma); trzy kontrole strony urządzenia, które zmieniło wizytę (wynik jak dotąd).
+//   E3-PR0e2b (części wydania z tests/support/czesci-wydania.mjs): E-S8 po wymianach — x 80 z Kosza w karcie scalonej
+//        Z, bez karty X (reguła z decyzji właściciela 2b z 2026-11-25); pełna wymiana w obu kolejnościach — wersja
+//        wracająca do karty wpisu niesie chwilę przypisania z wpisu Kosza (część Kosza); kotwica wiersza zapisu NR-S1
+//        przyjmuje wiersz z chwilą z wpisu. Na bazie 30008d8f czerwone 9.
 //   Strażniki źródła: Bkz_obceKarty — pierwszy odczyt pod blokadą to listSnapshotsForUser (przed getPatientForUser),
 //        każda decyzja do ctx i zapis podniesionej rev tuż po Bses_pilnuj; Bkz_usunZObcych — Bses_pilnuj tuż przed
 //        removePatientForUser, Bpc_usunieta, nagrobkiem karty (F-R2) i removeSnapshotForUser; Bsl_przeniesWersje —

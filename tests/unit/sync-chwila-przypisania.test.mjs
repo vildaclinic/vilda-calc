@@ -55,8 +55,8 @@
 // 8): wersja wracająca do karty wpisu z chwilą przypisania z ładunku i bez niej (nowy zapis pola nie tworzy); starsza
 // aplikacja (221, 276) tej zasady nie zna — 8 układów z literałem położenia wizyty (zielone z natury 2: starsza
 // aplikacja zmienia wizytę i najpierw pobiera — gwiazdka ginie jak dotąd).
-// E3-PR0e2b (drugie wydanie pola; decyzje właściciela 2a i 3a z 2026-11-23, potwierdzenie z 2026-11-24, że wszystkie
-// urządzenia mają SW 1.1.586): „Scal pacjentów” zapisuje chwilę przypisania w każdej wersji przeniesionej do karty
+// E3-PR0e2b (96 przypadków, +15; na bazie 30008d8f czerwone 22; drugie wydanie pola; decyzje właściciela 2a i 3a
+// z 2026-11-23, potwierdzenie z 2026-11-24, że wszystkie urządzenia mają SW 1.1.586): „Scal pacjentów” zapisuje chwilę przypisania w każdej wersji przeniesionej do karty
 // docelowej — późniejszą z dwóch: „teraz” (w gałęzi następcy fazy przeniesień — chwila wersji-siostry pod kartą
 // następcy, bez niej chwila nagrobka karty z bieżącego skoku) i poprzednia chwila tej wersji + dokładnie 1 ms; gdy
 // „poprzednia + 1 ms” nie ma postaci kanonicznej (rok 9999) — zostaje poprzednia. Nowa głowa scalenia i wersje karty
