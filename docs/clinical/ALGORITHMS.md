@@ -48563,7 +48563,7 @@ dostosowane do pola `range` i nowego układu filtrów na telefonie.
 
 **Wersje.** `vilda_patients_list.js` 13 → 14, `vilda_patients_list.css` 11 → 12, wstrzykujące `vilda_chrome.js` 336 → 337 i `vilda_session_bridge.js` 252 → 253; SW 1.1.591 → 1.1.592 — `npm run podbij-wersje`. Bez nowego pliku w pamięci offline.
 
-## Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (P-SYNC-WLASCICIEL, E3-PR0e3, SW 1.1.587, `vilda_vault.js` 288, 2026-11-24)
+## Zmiana wizyty po Koszu wraca do karty wpisu po „Scal pacjentów” (P-SYNC-WLASCICIEL, E3-PR0e3, SW 1.1.593, `vilda_vault.js` 291, 2026-11-24)
 
 **Zmiana kliniczna: TAK — synchronizacja.** Wzory, progi, jednostki i interpretacje bez zmian. Zmienia się, gdzie po
 synchronizacji jest wizyta, którą jedno urządzenie dało do Kosza po „Scal pacjentów”, a inne — bez wiedzy o scaleniu —
@@ -48956,20 +48956,26 @@ nowy blok trzech urządzeń i świata 885 (14 przypadków) 5,2–5,4 s, świat p
 - A ≡ B, blok znanych usterek: świat 885 przeniesiony do CI, pole naprawy „bez naprawy: świadome usunięcie” — wyjątek.
 - `ostatnia-zmiana`: liczba klas samych bieżących urządzeń 17 → 18 — wyjątek.
 
-**Kontrola granicy obrazu sejfu.** Zmiany kodu poza blokiem P-DZIENNIK-ZDARZEN (na bazie 6810–10459, teraz 6914–10563)
-i poza fragmentem natywnym (teraz 13574–14948), wszystkie w wierszach 3043–6457: dwie nowe funkcje (`Bsw_doWpisu`,
+**Kontrola granicy obrazu sejfu.** Zmiany kodu poza blokiem P-DZIENNIK-ZDARZEN (na bazie 6812–10461, teraz 6916–10565) i
+poza fragmentem natywnym (teraz 13589–14963), wszystkie w wierszach 3045–6459: dwie nowe funkcje (`Bsw_doWpisu`,
 `Bsw_doKartyWpisu`), warunek w `Bsw_zKartyZNagrobkiem`, gałąź w fazie przeniesień, strona urządzenia, które zmieniło
 wizytę, w `Bsw_przezyteRetencji` i komentarze; kod `Bsl_koszZLadunku` bez zmian (tylko komentarz). Blok
 P-DZIENNIK-ZDARZEN, fragment natywny i teksty 41 haków trwałych wizyt bajt w bajt; zero nazw `Bem_`/`Bob_`/`Bev_` we
 fragmencie natywnym; bez nowych wywołań `Bem_`/`Bob_`; `Le`, `Bkz_wygrywa`, `Bkz_zmiana`, `Bgw_stan` i `Bkz_scalKoniec`
 bez zmian; nowy kod nie zawiera napisu pola przypisania (w pliku 8 = 8). Przeliczone skróty: baza trwałych wizyt
 `16f6d371…` i obraz `119b9413…` (`runtime/durable-visits-v1/manifest.json`, `tools/visits-vault-delta.mjs`,
-`tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `a693e447…`, `integratedVaultSHA256` `81671471…`
-i `BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
-`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0e3 w komentarzu); `fragmentSHA256` bez zmian.
-`node tools/visits-vault-delta.mjs` i `node tools/check_clinical_workspace_boundary.mjs` — zielone. `vilda_sync.js` bez
-zmian. Sejf się zmienił — przy następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json`
-na `audyt`.
+`tests/unit/visits-vault-boundary.test.mjs`) oraz `baseVaultSHA256` `a693e447…`, `integratedVaultSHA256` `81671471…` i
+`BASE` natywnej przestrzeni klinicznej (`runtime/clinical-workspace-v1/manifest.json`,
+`tools/check_clinical_workspace_boundary.mjs`, z opisem E3-PR0e3 w komentarzu); `fragmentSHA256` bez zmian. Po scaleniu
+`audyt` `65955ed4` nad tym obrazem leżą trzy zewnętrzne warstwy P-ROZPOZNANIA, więc mają nowe pary `baseVaultSHA256` →
+`integratedVaultSHA256` w manifestach (`runtime/patient-treatment-v1/`, `runtime/diagnosis-mutation-v1/`,
+`runtime/treatment-sync-hydration-v1/`) i `BASE` w narzędziach: warstwa leczenia `119b9413…` → `722d8ee0…`, usuwanie
+rozpoznania `722d8ee0…` → `81de091b…`, uzupełnianie kontekstu `81de091b…` → `7f863902…` (bieżący `vilda_vault.js`);
+teksty ich 18, 10 i 3 podmian, czytelne źródła i bloki w sejfie bajt w bajt jak w `audyt`.
+`node tools/visits-vault-delta.mjs`, `node tools/check_clinical_workspace_boundary.mjs`,
+`node tools/patient-treatment-vault-delta.mjs`, `node tools/diagnosis-mutation-vault-delta.mjs` i
+`node tools/treatment-sync-hydration-vault-delta.mjs` — zielone. `vilda_sync.js` bez zmian. Sejf się zmienił — przy
+następnej pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
 
 **Ograniczenia.**
 - **Karta wpisu, której tu nie ma, usunięta albo dalej scalona (Q → R)** — bez zasady, wpis zostaje jak dotąd (sejf nie
@@ -49043,7 +49049,8 @@ Rekomendacja przy każdym punkcie: przyjąć.
     akceptacji”, punkt 11) — test importu w tym PR przypina dzisiejszy wynik (2 wizyty, licznik 3), więc poprawka
     będzie w nim widoczna.
 12. **Warunek E3-PR0e2b bez zmian:** potwierdzenie właściciela, że każde urządzenie (Ustawienia, linia „Wersja
-    aplikacji”) ma SW 1.1.586 albo wyższy.
+    aplikacji”) ma SW 1.1.586 albo wyższy. *(2026-11-24: spełniony — właściciel potwierdził, że wszystkie urządzenia
+    mają SW 1.1.586; plan, wiersz 5c.)*
 
 **Wejście do kolejnych PR** (kolejka ścisła: E3-PR0e1 → E3-PR0e2a → E3-PR0e3 → E3-PR0e2b).
 - **E3-PR0e2b** — po scaleniu tego PR i dopiero po potwierdzeniu właściciela, że wszystkie urządzenia mają **SW 1.1.586**
@@ -49069,20 +49076,27 @@ warunek w `Bsw_zKartyZNagrobkiem` (`if (ctx.mapa && ctx.mapa.get(S.snapshotId)) 
 w fazie przeniesień i obu nowych funkcji, dawne warunki wpisów przycięcia w `Bsw_przezyteRetencji` — z przeliczeniem
 skrótów kontroli granicy; wyjątek wyroczni osobno (tylko testy).
 
-**Gdzie w kodzie.** `vilda_vault.js`, poza blokiem P-DZIENNIK-ZDARZEN (6914–10563) i fragmentem natywnym (13574–14948):
-`Bsw_zKartyZNagrobkiem` (6424–6442: warunek z `Bkz_wygrywa` 6429–6430, decyzja 6433; komentarz 6407–6423), `Bsw_doWpisu`
-(6444–6456, nowa, z komentarzem), `Bsl_koszZLadunku` (komentarz 6384–6387, kod bez zmian), `Bsl_przeniesWersje`
-(komentarz 4273–4275, gałąź „do karty wpisu” 4284–4290), `Bsw_doKartyWpisu` (4424–4466, nowa, z komentarzem),
-`Bsw_przezyteRetencji` (komentarz 4351–4364; wpisy Kosza 4371 i 4410, `kartaWpisu` 4376–4382, cel 4414); komentarze —
-`Bkz_obceKarty` (dom wizyty, 3043–3044) i nagłówek P-SYNC-WLASCICIEL (zapisy z jednej kopii, 3691–3695). Bez zmian:
-`Le`, `Bkz_wygrywa` (1502), `Bkz_zmiana` (1480), `Bgw_stan` (1559), `Bkz_scalKoniec` (3230), `Bsl_wersjaZLadunku`
-(3641), `Bsw_przeniesPrzezyta` (4470), `Bkz_przebudujNaglowek` (2375), `Bsw_bezSladu` (4643), w bloku `Bev_echo`
-(7823) i `Bev_echoKosza` (7951), strażnik natywny (14640), `vilda_sync.js`, `vilda_sync_integration.js`. W testach:
+**Gdzie w kodzie.** `vilda_vault.js`, poza blokiem P-DZIENNIK-ZDARZEN (6916–10565) i fragmentem natywnym (13589–14963):
+`Bsw_zKartyZNagrobkiem` (6426–6444: warunek z `Bkz_wygrywa` 6431–6432, decyzja 6435; komentarz 6409–6425), `Bsw_doWpisu`
+(6446–6458, nowa, z komentarzem), `Bsl_koszZLadunku` (komentarz 6386–6389, kod bez zmian), `Bsl_przeniesWersje`
+(komentarz 4275–4277, gałąź „do karty wpisu” 4286–4292), `Bsw_doKartyWpisu` (4426–4468, nowa, z komentarzem),
+`Bsw_przezyteRetencji` (komentarz 4353–4366; wpisy Kosza 4373 i 4412, `kartaWpisu` 4378–4384, cel 4416); komentarze —
+`Bkz_obceKarty` (dom wizyty, 3045–3046) i nagłówek P-SYNC-WLASCICIEL (zapisy z jednej kopii, 3693–3697). Bez zmian:
+`Le`, `Bkz_wygrywa` (1504), `Bkz_zmiana` (1482), `Bgw_stan` (1561), `Bkz_scalKoniec` (3232), `Bsl_wersjaZLadunku`
+(3643), `Bsw_przeniesPrzezyta` (4472), `Bkz_przebudujNaglowek` (2377), `Bsw_bezSladu` (4645), w bloku `Bev_echo`
+(7825) i `Bev_echoKosza` (7953), strażnik natywny (14655), `vilda_sync.js`, `vilda_sync_integration.js`. W testach:
 `tests/support/ostatnia-zmiana.mjs` (klasa w `WYJATKI`, warunek na końcu `klasaWizyty`, fakty `usunietaZeStarej`
 i `kartyWidziane`, `obserwuj`, `obserwujZapis`), uprząż pliku A ≡ B (`ustawStan`, `dostawa`, zapis rekordu wersji
 w magazynie urządzenia).
 
-**Wersje.** `vilda_vault.js` 287 → 288, `vilda_chrome.js` 331 → 332 i `vilda_session_bridge.js` 247 → 248 (wstrzykują
-sejf), SW 1.1.586 → 1.1.587 — `npm run podbij-wersje`; baza `origin/audyt` `d2f1eded` (po vildaclinic/vilda-calc#1053).
-Zasada nie zmienia formatu danych, więc nie wymaga dwóch wydań: urządzenie bez tego wydania zachowuje się jak dotąd
-(jak starsza aplikacja wyżej). Bez nowego pliku w pamięci offline.
+**Wersje.** `vilda_vault.js` 290 → 291, `vilda_chrome.js` 337 → 338 i `vilda_session_bridge.js` 253 → 254 (wstrzykują
+sejf), SW 1.1.592 → 1.1.593 — `npm run podbij-wersje`; baza `origin/audyt` `65955ed4` (po vildaclinic/vilda-calc#1069;
+przygotowany na `d2f1eded`, po vildaclinic/vilda-calc#1053). Od `d2f1eded` sejf w `audyt` zmienił się tylko o trzy
+zewnętrzne warstwy P-ROZPOZNANIA (zapis rozpoznań, usuwanie rozpoznania, uzupełnianie kontekstu zapisu leczenia przy
+synchronizacji; poza kodem tej zmiany, blokiem P-DZIENNIK-ZDARZEN i fragmentem natywnym), a `vilda_sync.js`,
+`vilda_sync_integration.js`, testy `tests/unit/sync-*`, `kosz-*` i `ostatnia-zmiana*` oraz `tests/support/` poza
+`static-server.mjs` (paczka interfejsu wizyt z katalogiem ICD-10) i nowym `baza-pacjentow-statystyki.mjs` są bez zmian.
+Czerwone na bazie powtórzone na `65955ed4` (te same 47 co na `d2f1eded`); pliki testów tego PR po scaleniu zielone;
+długie przebiegi z tabeli wyżej liczone na `d2f1eded`, po scaleniu nie powtarzane. Zasada nie zmienia formatu danych,
+więc nie wymaga dwóch wydań: urządzenie bez tego wydania zachowuje się jak dotąd (jak starsza aplikacja wyżej). Bez
+nowego pliku w pamięci offline.
