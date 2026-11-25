@@ -40,7 +40,7 @@ describe('independent visit UI resources in one verified transport', () => {
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
     expect(urls).toHaveLength(56);
     expect(urls).toContain('/vilda_docpro_visit_guard.js?v=2');
-    expect(urls).toContain('/vilda_home_gabinet.css?v=11');
+    expect(urls).toContain('/vilda_home_gabinet.css?v=12');
     expect(urls).toContain('/vilda_home_gabinet_start.css?v=6');
     expect(urls).toContain('/vilda_home_gabinet_quick.js?v=1');
     expect(urls).toContain('/vilda_home_gabinet_start.js?v=8');
@@ -81,8 +81,8 @@ describe('independent visit UI resources in one verified transport', () => {
     expect(urls).toContain('/vilda_icd10_search.js?v=1');
     expect(urls).toContain('/vilda_icd10_picker.js?v=1');
     expect(urls).toContain('/vilda_icd10_picker.css?v=1');
-    expect(urls).toContain('/vilda_home_reminders.js?v=3');
-    expect(urls).toContain('/vilda_home_reminders.css?v=2');
+    expect(urls).toContain('/vilda_home_reminders.js?v=4');
+    expect(urls).toContain('/vilda_home_reminders.css?v=3');
     expect(urls).toContain('/vilda_home_reminders_runtime.js?v=3');
     expect(urls).toContain('/vilda_home_tools.css?v=5');
     expect(urls).toContain('/vilda_home_tools.js?v=6');
