@@ -163,19 +163,22 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 #userSection #vhomeVisitFields:disabled :is(input, select) {
   opacity: 1; color: var(--text); -webkit-text-fill-color: var(--text); background-color: var(--card);
 }
-#vhomeGabinetHeader .gb-card-actions { display: flex; align-items: center; justify-self: end; flex: 0 0 auto; gap: var(--space-0-5); width: auto; min-width: 0; }
+#vhomeGabinetHeader .gb-card-actions {
+  --gb-action-icon-size: 1.05rem;
+  display: flex; align-items: center; justify-self: end; flex: 0 0 auto; gap: var(--space-0-5); width: auto; min-width: 0;
+}
 #vhomeGabinetHeader .gb-card-actions button {
   min-width: 0; height: 44px; min-height: 44px; justify-content: center; padding: var(--space-0-45) .72rem; line-height: 1.25;
   border: var(--border-hairline) solid var(--gb-visit-border) !important; border-radius: var(--radius-8) !important;
   background: var(--bg) !important; color: #116971 !important; box-shadow: none !important;
   font-size: .875rem; font-weight: 650; text-align: center; white-space: nowrap;
 }
-#vhomeGabinetHeader .gb-card-actions button svg { width: 1.05rem; height: 1.05rem; flex: 0 0 1.05rem; }
+#vhomeGabinetHeader .gb-card-actions button svg { width: var(--gb-action-icon-size); height: var(--gb-action-icon-size); flex: 0 0 var(--gb-action-icon-size); }
 #vhomeGabinetHeader .gb-card-actions .gb-primary { display: grid; grid-template-columns: minmax(0,1fr); background: var(--gb-visit-teal) !important; color: #fff !important; border-color: var(--gb-visit-teal) !important; }
 /* Reserve the widest label so switching between New and Save keeps the row stable. */
 #vhomeGabinetHeader .gb-action-copy { grid-area: 1 / 1; display: flex; align-items: center; justify-content: center; min-width: 0; column-gap: inherit; }
 #vhomeGabinetHeader .gb-action-reserve { visibility: hidden; pointer-events: none; }
-#vhomeGabinetHeader .gb-action-reserve::before { content: ''; flex: 0 0 1.05rem; }
+#vhomeGabinetHeader .gb-action-reserve::before { content: ''; flex: 0 0 var(--gb-action-icon-size); }
 #vhomeGabinetHeader .gb-action-reserve::after { content: attr(data-longest); }
 #vhomeGabinetHeader .gb-card-actions button:hover:not(:disabled) { background: #edf5f5 !important; border-color: #a6c8cc !important; }
 #vhomeGabinetHeader .gb-card-actions .gb-primary:hover:not(:disabled) { background: #006a72 !important; border-color: #006a72 !important; }
@@ -273,6 +276,14 @@ html.vilda-embedded.vilda-form-host-desktop #vhomeGabinetHeader[data-decor-rail]
 }
 @media (max-width: 340px) {
   :is(#vhomeGabinetHeader .gb-header-top,#gbEntryHeader) { min-height: 2.8rem; }
+  #vhomeGabinetHeader .gb-header-top .gb-breadcrumb button { max-width: 100%; text-align: start; line-height: 1.25; white-space: normal; }
+  #vhomeGabinetHeader .gb-header-top .gb-breadcrumb button span { min-width: 0; overflow-wrap: anywhere; }
+  #vhomeGabinetHeader .gb-card-actions { --gb-action-icon-size: .875rem; }
+  #vhomeGabinetHeader .gb-card-actions button:is([data-home-encounter],[data-visit-actions]) { gap: .25rem; padding-inline: .25rem; }
+  #vhomeGabinetHeader .gb-patient-tabs button {
+    flex: 1 1 auto; min-width: 0; padding-inline: .12rem; line-height: 1.2;
+    white-space: normal; overflow-wrap: anywhere;
+  }
 }
 
 .vilda-home-workspace #vhomeVisitTrashConfirm { width: min(35rem, calc(100% - 1.25rem)); height: auto; max-height: calc(var(--vhome-dialog-viewport-height, 100dvh) - 1.5rem); }

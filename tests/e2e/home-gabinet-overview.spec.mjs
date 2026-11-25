@@ -146,11 +146,20 @@ test('the outer header stays visible and aligned while switching or scrolling Ga
     await checkScroll('Przegląd', false, patientBack);
     await analysis.click();
     await expect(analysis).toHaveAttribute('aria-selected', 'true');
-    await checkScroll('Analiza', true, width > 991 ? patientBack.or(analysis) : patientBack);
+    await checkScroll('Analiza', true, patientBack.or(analysis));
     if (width < 500) {
-      const stickyHeight = await frame.evaluate(() => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop));
-      expect(stickyHeight).toBeGreaterThan(40);
-      expect(stickyHeight, 'Na telefonie pozostaje miejsce na pomiary').toBeLessThan(100);
+      const pinned = await frame.locator('#gbWorkspaceHeader').evaluate(node => {
+        const { bottom } = node.getBoundingClientRect();
+        return {
+          position: getComputedStyle(node).position,
+          bottom, viewportHeight: innerHeight,
+          scrollPadding: parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop),
+        };
+      });
+      expect(pinned.position).toBe('fixed');
+      expect(Math.abs(pinned.scrollPadding - pinned.bottom), 'Przewijanie uwzględnia cały nagłówek pacjenta').toBeLessThanOrEqual(1);
+      expect(pinned.viewportHeight - pinned.bottom, 'Na telefonie co najmniej połowa okna pozostaje na pomiary')
+        .toBeGreaterThanOrEqual(pinned.viewportHeight / 2);
     }
     await patientBack.click();
     await entryBack.click();
@@ -255,25 +264,34 @@ test.describe('touch footer navigation', () => {
     await lastTool.evaluate((node, bottom) => window.scrollBy({
       top: Math.max(0, node.getBoundingClientRect().bottom - bottom), behavior: 'instant',
     }), visibleBottom - frameTop);
-    await expect.poll(() => lastTool.evaluate(node => {
-      const { left, right, top, bottom } = node.getBoundingClientRect();
-      return [left + 12, (left + right) / 2, right - 12].flatMap(x =>
-        [top + 12, (top + bottom) / 2, bottom - 12].map(y => ({
-          x, y, hit: x >= 0 && y >= 0 && x < innerWidth && y < innerHeight &&
-            node.contains(document.elementFromPoint(x, y)),
-        })));
-    })).toEqual(Array.from({ length: 9 }, () => expect.objectContaining({ hit: true })));
-    const points = await lastTool.evaluate(node => {
-      const { left, right, top, bottom } = node.getBoundingClientRect();
-      return [left + 12, (left + right) / 2, right - 12].flatMap(x =>
-        [top + 12, (top + bottom) / 2, bottom - 12].map(y => ({ x, y })));
-    });
-    await expect.poll(() => page.locator('iframe.app-pane[title="Start"]').evaluate((iframe, points) => {
-      const rect = iframe.getBoundingClientRect();
-      return points.map(({ x, y }) => iframe === document.elementFromPoint(
-        rect.left + x * rect.width / iframe.clientWidth,
-        rect.top + y * rect.height / iframe.clientHeight));
-    }, points)).toEqual(Array(9).fill(true));
+    async function expectToolRowsHit(rows) {
+      await expect.poll(() => lastTool.evaluate((node, rows) => {
+        const { left, right, top, bottom } = node.getBoundingClientRect();
+        const ys = [top + 12, (top + bottom) / 2, bottom - 12];
+        return [left + 12, (left + right) / 2, right - 12].flatMap(x =>
+          rows.map(row => ({ x, y: ys[row], hit: x >= 0 && ys[row] >= 0 && x < innerWidth && ys[row] < innerHeight &&
+            node.contains(document.elementFromPoint(x, ys[row])) })));
+      }, rows)).toEqual(Array.from({ length: rows.length * 3 }, () => expect.objectContaining({ hit: true })));
+      const points = await lastTool.evaluate((node, rows) => {
+        const { left, right, top, bottom } = node.getBoundingClientRect();
+        const ys = [top + 12, (top + bottom) / 2, bottom - 12];
+        return [left + 12, (left + right) / 2, right - 12].flatMap(x => rows.map(row => ({ x, y: ys[row] })));
+      }, rows);
+      await expect.poll(() => page.locator('iframe.app-pane[title="Start"]').evaluate((iframe, points) => {
+        const rect = iframe.getBoundingClientRect();
+        return points.map(({ x, y }) => iframe === document.elementFromPoint(
+          rect.left + x * rect.width / iframe.clientWidth,
+          rect.top + y * rect.height / iframe.clientHeight));
+      }, points)).toEqual(Array(points.length).fill(true));
+    }
+    await expectToolRowsHit([1, 2]);
+    // The complete mobile patient header can cover the top of this tall tile
+    // while its bottom is at the dock. Ordinary scrolling exposes its top too.
+    await lastTool.evaluate(node => window.scrollBy({
+      top: Math.min(0, node.getBoundingClientRect().top - document.getElementById('gbWorkspaceHeader').getBoundingClientRect().bottom - 8),
+      behavior: 'instant',
+    }));
+    await expectToolRowsHit([0]);
     await expect(legacy).toBeHidden();
     await expect(frame.locator('#scrollTopBtn')).toBeHidden();
 
