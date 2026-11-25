@@ -16,14 +16,18 @@
 // z chwilą przypisania, którą widzi ochrona planów opieki); to nie powrót karty (T jej nie usunął).
 //
 // PRZYPADKI (na bazie 30008d8f czerwone: X wraca z poprawioną wizytą na K i T, a jej „Usuń pacjenta” kasuje wizytę;
-// zielone z natury — kontrole, każda z mutantem reguły obok): poprawka (cztery dostawy), gwiazdka, zegar T +3 min,
+// zielone z natury — kontrole, każda z mutantem reguły obok): poprawka (cztery dostawy), gwiazdka, „Przywróć” w starej
+// karcie zamiast poprawki (T dał wizytę do Kosza w X przed scaleniem), zegar T +3 min,
 // dwie poprawki, łańcuch X → Y → Z (także T znający X → Y), nowa wizyta obok poprawki (X wraca z nową, poprawka w Y),
 // notatka obok poprawki (decyzja właściciela z 2026-11-25), wizyta przypięta i „Odepnij i usuń”, „Usuń pacjenta” X na T
-// przed pełną wymianą, trzy urządzenia, dwa niezależne scalenia, „Przywróć” po regule, liczniki scalania, wyścigi
+// przed pełną wymianą, trzy urządzenia, dwa niezależne scalenia (też stan po pierwszej pełnej wymianie), „Przywróć”
+// po regule, liczniki scalania (z liczbą pominiętych), wyścigi
 // z drugą kartą przeglądarki, karta wpisu bez rekordu i karta wpisu usunięta na trzecim urządzeniu; kontrole: zegar T
 // −3 min i −90 s (Kosz wygrywa), wpis Kosza bez chwili przypisania (mutant: każdy wpis Kosza pod Q), T zna scalenie,
 // „Usuń pacjenta” Y przed poprawką, Kosz pod Y i Y → Z (karta wpisu w zbiorze N), „Przywróć” przed poprawką, import pliku
-// i „Scal kopię konta” (poza regułą), odtworzenie konta, starsza aplikacja (276) z Koszem.
+// i „Scal kopię konta” (poza regułą), odtworzenie konta, starsza aplikacja (276) z Koszem, wpis samego przycięcia
+// z chwilą przypisania (nie Kosz), karta wpisu = karta z ładunku (dwa scalenia do tej samej karty), adapter bez
+// magazynu nagrobków kart.
 // Prawdziwy vilda_vault.js w uprzęży tests/support/urzadzenie-sync.mjs; dane WYŁĄCZNIE FIKCYJNE („Testowy Jan…”), bez PESEL.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utworzAtrapeWorkera, zegarSterowany } from '../support/atrapa-workera-sync.mjs';
@@ -134,7 +138,8 @@ async function stosuj(d, lista) { const r = []; for (const env of lista) { krok(
 const wersjeKarty = async (d, P) => (await d.adapter.listSnapshotsForUser(uid(d), P)).map((s) => [P, s.snapshotId]);
 async function pelne(pary) { const w = []; for (const [z, na] of pary) { krok(); w.push(await blad(() => scal(z, na))); } return w.filter(Boolean); }
 
-// Świat: opcje — zmiana ('poprawka' | 'gwiazdka'), offT (zegar T), bezPola (wpis Kosza bez chwili przypisania — dane
+// Świat: opcje — zmiana ('poprawka' | 'gwiazdka' | 'przywroc' — T dał v do Kosza w X przed scaleniem i przywraca ją
+// tam później niż Kosz K), offT (zegar T), bezPola (wpis Kosza bez chwili przypisania — dane
 // sprzed wydania), znaScalenie (T dostaje pełną kopię K po scaleniu, przed Koszem — zmienia v w Y), nowa (T zapisuje też
 // nową wizytę w X), notatka (T dopisuje notatkę w X), gwiazdkaK (v przypięta przed scaleniem; K „Odepnij i usuń”), dwa
 // (T poprawia dwa razy), usunY (K „Usuń pacjenta” Y po Koszu), lancuch (K scala X → Y → Z, Kosz pod Z), znaPierwsze
@@ -154,6 +159,7 @@ async function swiat(o = {}) {
   if (o.gwiazdkaK) { krok(); await K.vault.setSnapshotPinned(X, v, true); }
   const T = await blizniak(K, 'T', o.Tstary ? { zrodla: zrodlaStarszej('S276') } : {});
   const et = { [X]: 'X', [Y]: 'Y', ...(Z ? { [Z]: 'Z' } : {}) };
+  if (o.zmiana === 'przywroc') { krok(); await T.vault.moveSnapshotToTrash(X, v); }
   krok(); await K.vault.mergePatients(X, Y);
   if (o.znaPierwsze) { krok(); await scal(K, T); }
   if (o.lancuch && !o.koszPrzedDrugim) { krok(); await K.vault.mergePatients(Y, Z); }
@@ -163,7 +169,9 @@ async function swiat(o = {}) {
   krok(); await K.vault.moveSnapshotToTrash(Q, v, o.gwiazdkaK ? { odepnij: true } : undefined);
   if (o.usunY) { krok(); await K.vault.removePatient(Q); }
   if (o.koszPrzedDrugim) { krok(); await K.vault.mergePatients(Y, Z); }
-  if ((o.zmiana || 'poprawka') === 'poprawka') await popraw(T, v, 44, o.offT || 0); else await gwiazdka(T, v, o.offT || 0);
+  if ((o.zmiana || 'poprawka') === 'poprawka') await popraw(T, v, 44, o.offT || 0);
+  else if (o.zmiana === 'przywroc') { krok(); await T.vault.restoreTrashedSnapshot(X, v); }
+  else await gwiazdka(T, v, o.offT || 0);
   if (o.dwa) await popraw(T, v, 45, o.offT || 0);
   if (o.notatka) { krok(); await T.vault.savePatientNote({ patientId: X, title: 'Notatka N', body: 'Fikcyjna treść', category: 'inne' }); }
   let n2 = null;
@@ -196,6 +204,9 @@ const D2 = ['zdarzenia T→K', 'pełne K→T'];
 const SWIATY = {
   'poprawka w X później niż Kosz': { o: {}, dostawy: DOSTAWY },
   'gwiazdka w X zamiast poprawki': { o: { zmiana: 'gwiazdka' }, dostawy: D2 },
+  // „Przywróć” w starej karcie (T dał v do Kosza w X przed scaleniem, przywraca ją później niż Kosz K pod Y) — późniejsza
+  // zmiana wersji jak poprawka: v wychodzi z Kosza w Y, X nie wraca (na bazie 30008d8f X wracała z v na K i T).
+  '„Przywróć” w X zamiast poprawki (T dał v do Kosza w X przed scaleniem)': { o: { zmiana: 'przywroc' }, dostawy: D2 },
   'zegar T +3 min': { o: { offT: 3 * MIN }, dostawy: D2 },
   'T poprawia dwa razy': { o: { dwa: true }, dostawy: D2 },
   'łańcuch X → Y → Z, Kosz pod Z': { o: { lancuch: true }, dostawy: D2 },
@@ -236,6 +247,8 @@ const OCZEKIWANE = {
   'poprawka w X później niż Kosz — pełne K→T': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:44'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
   'gwiazdka w X zamiast poprawki — zdarzenia T→K': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:20*'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:20*'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:20*'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:20*'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
   'gwiazdka w X zamiast poprawki — pełne K→T': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:20*'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:20*'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:20*'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:20*'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
+  '„Przywróć” w X zamiast poprawki (T dał v do Kosza w X przed scaleniem) — zdarzenia T→K': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:20'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:20'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:20'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:20'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
+  '„Przywróć” w X zamiast poprawki (T dał v do Kosza w X przed scaleniem) — pełne K→T': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:20'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:20'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:20'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:20'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
   'zegar T +3 min — zdarzenia T→K': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:44'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
   'zegar T +3 min — pełne K→T': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:44'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
   'T poprawia dwa razy — zdarzenia T→K': { wpis: ['z chwilą'], W1: { K: { karty: { Y: ['21', '30', '30', 'v:45'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { X: ['v:45'], Y: ['21', '30', '30'] }, v: 'X', kosz: [] } }, W4: { K: { karty: { Y: ['21', '30', '30', 'v:45'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:45'] }, v: 'Y z chwilą', kosz: [] } }, bledy: [] },
@@ -339,11 +352,48 @@ describe.skipIf(!POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ)('poprawka po Koszu w karci
       else { krok(); await K.vault.mergePatients(X, Y); krok(); await D.vault.mergePatients(X, W); }
       krok(); await K.vault.moveSnapshotToTrash(Y, v);
       await popraw(D, v, 44);
-      const bl = await pelne([[D, K], [K, D], [D, K], [K, D]]);
-      w[kiedy] = { K: await stanU(K, et, v), D: await stanU(D, et, v), bledy: bl };
+      // Pierwsza pełna wymiana D → K: K rozstrzyga regułą od razu (wpis Kosza zna późniejsze scalenie albo nie).
+      const bl = await pelne([[D, K]]);
+      const poPierwszej = await stanU(K, et, v);
+      bl.push(...await pelne([[K, D], [D, K], [K, D]]));
+      w[kiedy] = { poPierwszej, K: await stanU(K, et, v), D: await stanU(D, et, v), bledy: bl };
     }
     expect(w).toEqual(OCZEKIWANE_INNE['dwa scalenia']);
   }, 2 * CZAS);
+
+  // Karta wpisu Kosza = karta z ładunku: K i D niezależnie scalają X → Y (K później), K daje v do Kosza pod Y, D poprawia
+  // v w Y później niż Kosz. Wpis zna późniejszą chwilę przypisania (scalenie K), ale to ta sama karta — reguła nie
+  // dotyczy: v wraca do Y zwykłą drogą (zmiana po Koszu, wersja nowa dla K), z chwilą przypisania z ładunku (scalenie D).
+  it('[kontrola] dwa niezależne „Scal pacjentów” X → Y (K później, Kosz pod Y), D poprawia v w Y później niż Kosz: karta wpisu = karta z ładunku — v wraca do Y zwykłą drogą, z chwilą przypisania z ładunku', async () => {
+    const K = await urzadzenie('K');
+    const { P: X, ids: [v] } = await karta(K, 1, [20, 21]);
+    const { P: Y } = await karta(K, 2, [30]);
+    const D = await blizniak(K, 'D');
+    const et = { [X]: 'X', [Y]: 'Y' };
+    krok(); await D.vault.mergePatients(X, Y);
+    krok(); await K.vault.mergePatients(X, Y);
+    const tD = (await rek(D, v))[POLE], tK = (await rek(K, v))[POLE];
+    krok(); await K.vault.moveSnapshotToTrash(Y, v);
+    await popraw(D, v, 44);
+    const bl = await pelne([[D, K]]);
+    const poPierwszej = { stan: await stanU(K, et, v), pole: (await rek(K, v))[POLE] };
+    bl.push(...await pelne([[K, D], [D, K]]));
+    const w = { kontrola: tD < tK, poPierwszej, pole: { K: (await rek(K, v))[POLE], D: (await rek(D, v))[POLE] }, bledy: bl };
+    expect(w).toEqual({ kontrola: true, poPierwszej: { stan: { karty: { Y: ['21', '30', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, pole: tD }, pole: { K: tD, D: tD }, bledy: [] });
+  }, CZAS);
+
+  // Bez magazynu nagrobków kart na K (adapter bez listy, zapisu i zdjęcia nagrobka) scalanie nie zna kart przegrywających
+  // z nagrobkiem — reguła działa tylko ze scalaniem z magazynem nagrobków (jak wersja przeżywająca przycięcie): X wraca
+  // z v, jak dotąd.
+  it('[kontrola] adapter K bez magazynu nagrobków kart: reguła nie działa — pełna kopia T → K, X wraca z v, jak dotąd', async () => {
+    const s = await swiat({});
+    const BEZ = new Set(['listTombstonesForUser', 'putTombstoneForUser', 'removeTombstoneForUser']);
+    const surowy = s.K.adapter;
+    s.K.vault.setStorageAdapter(new Proxy(surowy, { get(o, k) { if (BEZ.has(k)) return undefined; const f = o[k]; return typeof f === 'function' ? f.bind(o) : f; } }));
+    krok(); const b = await blad(() => scal(s.T, s.K));
+    s.K.vault.setStorageAdapter(surowy);
+    expect({ b, K: await stanU(s.K, s.et, s.v) }).toEqual({ b: null, K: { karty: { Y: ['21', '30', '30'], X: ['v:44'] }, v: 'X', kosz: [] } });
+  }, CZAS);
 
   // Trzecie urządzenie D „Usuń pacjenta” karty scalonej Y po Koszu; T poprawia v w X. D → T, T → K: Y w N na K, reguła
   // nie działa (bez warunku „karta wpisu spoza N” v szłaby do Y i znikała z nią). T → K, D → K: K najpierw stosuje
@@ -380,11 +430,33 @@ describe.skipIf(!POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ)('poprawka po Koszu w karci
     expect(w).toEqual(OCZEKIWANE_INNE['Q bez rekordu']);
   }, CZAS);
 
-  it('liczniki scalania (pełna kopia T → K): wizyta wracająca do karty scalonej liczy się jak dodana wersja, karta nie powstaje', async () => {
+  // Pominięte: druga wizyta X (leży na K pod Y z późniejszą chwilą przypisania) i wersja Y bez zmian; wizyta wracająca
+  // z Kosza do Y nie jest pominięta (liczy się jak dodana).
+  it('liczniki scalania (pełna kopia T → K): wizyta wracająca do karty scalonej liczy się jak dodana wersja, nie jak pominięta; karta nie powstaje', async () => {
     const s = await swiat({});
     krok();
     const r = wynikScalenia(await scal(s.T, s.K));
-    expect([r, (await stanU(s.K, s.et, s.v)).v]).toEqual([{ dodaneWersje: 1, dodaneKarty: 0, pominiete: r.pominiete }, 'Y z chwilą']);
+    expect([r, (await stanU(s.K, s.et, s.v)).v]).toEqual([{ dodaneWersje: 1, dodaneKarty: 0, pominiete: 2 }, 'Y z chwilą']);
+  }, CZAS);
+
+  // Reguła działa tylko dla wpisu Kosza, nie dla samego przycięcia (retencja to nie decyzja lekarza o Koszu). Stan
+  // zbudowany wprost w magazynie K: wpis v pod Y z chwilą przypisania, ale jako wpis samego przycięcia (bez chwili
+  // Kosza i bez treści Kosza).
+  it('[kontrola] wpis samego przycięcia pod Y z chwilą przypisania zamiast wpisu Kosza: reguła nie działa — pełna kopia T → K, X wraca z v, jak dotąd', async () => {
+    const s = await swiat({});
+    const m = await s.K.adapter.getUserMeta(uid(s.K));
+    m.snapshotTombstones = (m.snapshotTombstones || []).map((e) => {
+      if (e.snapshotId !== s.v) return e;
+      const n = { ...e, powod: 'retencja' };
+      for (const k of ['koszISO', 'Bpk', 'payloadCipher', 'trescISO']) delete n[k];
+      return n;
+    });
+    await s.K.adapter.putUserMeta(uid(s.K), m);
+    const wpis = (await koszWpisy(s.K, s.v)).map((e) => ({ karta: s.et[e.patientId], powod: e.powod || null, pole: maPole(e) }));
+    krok(); const b = await blad(() => scal(s.T, s.K));
+    expect({ wpis, b, K: await stanU(s.K, s.et, s.v) }).toEqual({
+      wpis: [{ karta: 'Y', powod: 'retencja', pole: true }], b: null, K: { karty: { Y: ['21', '30', '30'], X: ['v:44'] }, v: 'X', kosz: [] },
+    });
   }, CZAS);
 
   it('„Przywróć” po regule: K daje v (już w Y z poprawką) znów do Kosza i przywraca — v w Y z chwilą przypisania; po wymianach na K i T', async () => {
@@ -465,7 +537,7 @@ describe.skipIf(!POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ)('poprawka po Koszu w karci
 // Literały (zmierzone na kodzie z regułą; na bazie 30008d8f czerwone przypadki reguły — X wraca z v; kontrole — jak tu).
 const OCZEKIWANE_INNE = {
   'trzy urządzenia': { 'T→C, potem K↔T': { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, C: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, bledy: [] }, 'K↔T, potem T→C': { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, C: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, bledy: [] }, 'C bez wiedzy (bliźniak sprzed scalenia)': { K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, C: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, bledy: [] } },
-  'dwa scalenia': { 'D scala wcześniej niż K': { K: { karty: { Y: ['21', '30', '30', 'v:44'], W: ['50', '50'] }, v: 'Y z chwilą', kosz: [] }, D: { karty: { Y: ['21', '30', '30', 'v:44'], W: ['50', '50'] }, v: 'Y z chwilą', kosz: [] }, bledy: [] }, 'D scala później niż K': { K: { karty: { Y: ['30', '30'], W: ['21', '50', '50', 'v:44'] }, v: 'W z chwilą', kosz: [] }, D: { karty: { Y: ['30', '30'], W: ['21', '50', '50', 'v:44'] }, v: 'W z chwilą', kosz: [] }, bledy: [] } },
+  'dwa scalenia': { 'D scala wcześniej niż K': { poPierwszej: { karty: { Y: ['21', '30', '30', 'v:44'], W: ['50', '50'] }, v: 'Y z chwilą', kosz: [] }, K: { karty: { Y: ['21', '30', '30', 'v:44'], W: ['50', '50'] }, v: 'Y z chwilą', kosz: [] }, D: { karty: { Y: ['21', '30', '30', 'v:44'], W: ['50', '50'] }, v: 'Y z chwilą', kosz: [] }, bledy: [] }, 'D scala później niż K': { poPierwszej: { karty: { Y: ['30', '30'], W: ['21', '50', '50', 'v:44'] }, v: 'W z chwilą', kosz: [] }, K: { karty: { Y: ['30', '30'], W: ['21', '50', '50', 'v:44'] }, v: 'W z chwilą', kosz: [] }, D: { karty: { Y: ['30', '30'], W: ['21', '50', '50', 'v:44'] }, v: 'W z chwilą', kosz: [] }, bledy: [] } },
   'D usuwa kartę scaloną': { 'D→T, T→K': { W1: { K: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] }, T: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] }, D: { karty: {}, v: null, kosz: ['Y z chwilą'] } }, W4: { K: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] }, T: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] }, D: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] } }, bledy: [] }, 'T→K, D→K': { W1: { K: { karty: {}, v: null, kosz: ['Y z chwilą'] }, T: { karty: { X: ['21', 'v:44'], Y: ['30'] }, v: 'X', kosz: [] }, D: { karty: {}, v: null, kosz: ['Y z chwilą'] } }, W4: { K: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] }, T: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] }, D: { karty: { X: ['21', 'v:44'] }, v: 'X', kosz: [] } }, bledy: [] } },
   'Q bez rekordu': { K: { karty: { X: ['21', 'v:44'], Y: ['30'] }, v: 'X', kosz: [] }, bledy: [] },
   'Przywróć po regule': { poRegule: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, dk: null, pr: null, poPrzywroceniu: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, K: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] }, T: { karty: { Y: ['21', '30', '30', 'v:44'] }, v: 'Y z chwilą', kosz: [] } },

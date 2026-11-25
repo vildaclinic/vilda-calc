@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'acorn';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = 'f5d023f1bc5b356f4e9ee78fc7c2e28fa7920f2a99859f0cd3ca8f60dfb41caf';
+const BASE = '5e2be9ebe716a9bb8965eee5537628871898d19dd5b6781e20420752273e2485';
 const SOURCE = 'runtime/treatment-sync-hydration-v1/vault-fragment.js';
 const MANIFEST = 'runtime/treatment-sync-hydration-v1/manifest.json';
 const START = '/* BEGIN VILDA TREATMENT SYNC HYDRATION V1 */\n';

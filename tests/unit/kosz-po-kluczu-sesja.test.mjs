@@ -161,7 +161,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { repo, SEJF, sztucznyZegar, przesunZegar, urzadzenie, jan, zapisz, gdzie, poprawMase, przypnij, doKosza, sync, rundy, zeruj, zapisy } from './polkrata-uprzaz.mjs';
 import { ola } from './s4d7-wspolne.mjs';
-import { POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ } from '../support/czesci-wydania.mjs';
+import { KOSZ_PAMIETA_PRZYPISANIE, POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ } from '../support/czesci-wydania.mjs';
 
 Error.stackTraceLimit = 100;
 const M = 60e3;
@@ -428,7 +428,7 @@ describe('P-KOSZ-PO-KLUCZU — E4b: przerwane scalenie, zmiana sesji i błąd za
     await rundyIKontrola(u, KOSZ_74);
   });
 
-  // Po rundach: reguła z decyzji właściciela 2b z 2026-11-25 (POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ) — zapis „drugiej
+  // Po wymianach: reguła z decyzji właściciela 2b z 2026-11-25 (POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ) — zapis „drugiej
   // karty” (x 80 pod X) jest późniejszy niż Kosz K pod Z, a wpis Kosza zna scalenie, więc x 80 wychodzi z Kosza w karcie
   // scalonej Z i X znika na trzech; bez reguły x 80 zostawała pod X. Literał tuż po scaleniu bez zmian.
   it(`E-S8: druga karta przeglądarki zapisuje pod X nowszy rekord x (80 kg) w trakcie zapisu listy — świeży odczyt go widzi: x 80 i karta X zostają; po rundach x 80 ${POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? 'pod Z na trzech, bez karty X' : 'pod X na trzech'}`, async () => {
@@ -1637,18 +1637,24 @@ async function pelnaWymianaSwiat({ druga = 'scal', zmiana = 'gwiazdka', koszPrze
   if (dalejDoR) { przesunZegar(M); await A.mergePatients(Q, R); }
   return { A, B, C, P, Q, R, v };
 }
-async function polozenieV(X, u) {
+// zChwila: także, czy element v w eksporcie niesie chwilę przypisania wersji do karty (E3-PR0e2b).
+async function polozenieV(X, u, { zChwila = false } = {}) {
   const nazwa = (pid) => (pid === u.Q ? 'Q' : pid === u.P ? 'P' : pid === u.R ? 'R' : '?');
   const g = await gdzie(X, u.v);
-  const kosz = ((await X.exportSyncPayload()).snapshotTombstones || []).filter((e) => e.snapshotId === u.v).map((e) => `${nazwa(e.patientId)}${e.payload ? ` ${e.payload.user.weight} kg` : ''}`);
-  return { v: g ? `${nazwa(g.pid)} ${g.s.payload.user.weight} kg${g.s.payload._pinned ? ' z gwiazdką' : ''}` : null, kosz };
+  const lad = await X.exportSyncPayload();
+  const kosz = (lad.snapshotTombstones || []).filter((e) => e.snapshotId === u.v).map((e) => `${nazwa(e.patientId)}${e.payload ? ` ${e.payload.user.weight} kg` : ''}`);
+  const el = g && zChwila ? ((lad.patients || []).find((p) => p.patientId === g.pid) || { snapshots: [] }).snapshots.find((s) => s.snapshotId === u.v) : null;
+  return { v: g ? `${nazwa(g.pid)} ${g.s.payload.user.weight} kg${g.s.payload._pinned ? ' z gwiazdką' : ''}${el && el.assignedAtISO ? ' z chwilą przypisania' : ''}` : null, kosz };
 }
 async function pelnaWymiana(u, kolejnosc) {
   const kroki = {};
-  if (kolejnosc === 'C najpierw pobiera') { przesunZegar(M); await sync(u.A, u.C); kroki['C po pobraniu'] = await polozenieV(u.C, u); przesunZegar(M); await sync(u.C, u.A); }
-  else { przesunZegar(M); await sync(u.C, u.A); kroki['A po C'] = await polozenieV(u.A, u); przesunZegar(M); await sync(u.A, u.C); }
+  // E3-PR0e2b (część Kosza): wpis Kosza A pod Q pamięta chwilę przypisania wersji do Q („Scal pacjentów” P → Q), więc v
+  // wracająca pod Q (strona ładunku i strona tutejsza) ma ją na każdym urządzeniu.
+  const o = { zChwila: KOSZ_PAMIETA_PRZYPISANIE };
+  if (kolejnosc === 'C najpierw pobiera') { przesunZegar(M); await sync(u.A, u.C); kroki['C po pobraniu'] = await polozenieV(u.C, u, o); przesunZegar(M); await sync(u.C, u.A); }
+  else { przesunZegar(M); await sync(u.C, u.A); kroki['A po C'] = await polozenieV(u.A, u, o); przesunZegar(M); await sync(u.A, u.C); }
   await rundy([u.A, u.B, u.C]);
-  return { ...kroki, A: await polozenieV(u.A, u), B: await polozenieV(u.B, u), C: await polozenieV(u.C, u) };
+  return { ...kroki, A: await polozenieV(u.A, u, o), B: await polozenieV(u.B, u, o), C: await polozenieV(u.C, u, o) };
 }
 describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-PR0e3): pełna wymiana w obu kolejnościach i kolejność kart w ładunku', () => {
   for (const [druga, zmiana] of [['scal', 'gwiazdka'], ['usun', 'gwiazdka'], ['scal', 'poprawka'], ['usun', 'poprawka']]) {
@@ -1656,7 +1662,7 @@ describe('P-SYNC-WLASCICIEL — zmiana wizyty po Koszu wraca do karty wpisu (E3-
       it(`${zmiana === 'gwiazdka' ? 'gwiazdka' : 'poprawka 17,2 kg'} C po Koszu A, ${druga === 'scal' ? 'drugie „Scal pacjentów”' : '„Usuń pacjenta” zwróconej P'}, ${kolejnosc}: v pod Q ze zmianą C na A, B i C, Kosz bez v`, async () => {
         const w = await pelnaWymiana(await pelnaWymianaSwiat({ druga, zmiana }), kolejnosc);
         console.log('E3-PR0e3 pełna wymiana', druga, zmiana, kolejnosc, JSON.stringify(w));
-        const ocz = { v: zmiana === 'gwiazdka' ? 'Q 20 kg z gwiazdką' : 'Q 17.2 kg', kosz: [] };
+        const ocz = { v: `${zmiana === 'gwiazdka' ? 'Q 20 kg z gwiazdką' : 'Q 17.2 kg'}${KOSZ_PAMIETA_PRZYPISANIE ? ' z chwilą przypisania' : ''}`, kosz: [] };
         expect(w).toEqual({ ...(kolejnosc === 'C najpierw pobiera' ? { 'C po pobraniu': ocz } : { 'A po C': ocz }), A: ocz, B: ocz, C: ocz });
       });
     }

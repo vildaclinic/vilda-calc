@@ -179,10 +179,10 @@ describe('P-KOSZ-PO-KLUCZU — F-R5: „Przywróć” wizyty, którą żywa kart
 
   // „Przywróć” x na P (bez wiedzy o scaleniu X → Y) przywraca x do karty wpisu X. Dotąd (E1 — obecność) urządzenia
   // trwale się różniły: K i C przenosiły x z Y do X, a P zostawał z Y[y]. Od E3-PR0e2b x w Y ma chwilę przypisania
-  // zapisaną przez „Scal pacjentów”, więc po rundach x wraca do karty scalonej Y na wszystkich urządzeniach, a X zostaje
+  // zapisaną przez „Scal pacjentów”, więc po wymianach x wraca do karty scalonej Y na wszystkich urządzeniach, a X zostaje
   // tylko z nową wizytą (wizyta przeniesiona scaleniem zostaje w karcie scalonej — decyzja właściciela 2a z 2026-11-23).
   for (const kol of ['K←C,P←K', 'C←P,C←K']) {
-    it(`żywa Y (${kol}), „Przywróć” x na P — do X; po rundach x w karcie scalonej Y na P, K i C (chwila przypisania z „Scal pacjentów”), X z nową wizytą`, async () => {
+    it(`żywa Y (${kol}), „Przywróć” x na P — do X; po wymianach x w karcie scalonej Y na P, K i C (chwila przypisania z „Scal pacjentów”), X z nową wizytą`, async () => {
       const u = await przygotuj();
       await zywaY(u);
       await przebieg(u, kol);

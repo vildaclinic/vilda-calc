@@ -59,8 +59,9 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // without it stay byte for byte as before; a later correction or star of such a version lying in the trash under the
 // merged card, made in the old card on a device that did not know about the merge, takes the version out of the trash
 // in the merged card in the move phase when the trash entry knows the later moment, instead of bringing the old card
-// back; in effect at once).
-const BASE = '537e147e917ff68a23098fe1803350b1c51dc83b34cf85ba88c2bf88486e6f5e';
+// back; a correction or star that lands in the merged card counts as an updated visit version in the merge result,
+// so the app refreshes the patient list and the open card also after a single delta or event; in effect at once).
+const BASE = '732b860ff28846d8237a28a6f8d628c0224c4a7cacea8f3708c095d169b1aa07';
 const START = '/* BEGIN VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const END = '/* END VILDA CLINICAL WORKSPACE NATIVE V1 */\n';
 const digest = value => createHash('sha256').update(value).digest('hex');

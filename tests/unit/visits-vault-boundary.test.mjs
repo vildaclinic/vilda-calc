@@ -15,7 +15,7 @@ const digest = value => createHash('sha256').update(value).digest('hex');
 describe('durable visits preserve the exact native-workspace boundary proof', () => {
   it('reconstructs the deployed vault byte for byte from the pinned base and readable source', () => {
     const base = restoreDurableVisitsBaseline(source);
-    expect(digest(base)).toBe('adca83c1c9995b3ee22cb840abb34fd165ca70ee1f273bff48c4e5e1430d2502');
+    expect(digest(base)).toBe('ea18085ff297dad8805cc9e2c574a2173d39835b5189ac3b481fa322a8a4b10f');
     expect(digest(fragment)).toBe(manifest.fragmentSHA256);
     expect(source.includes(fragment)).toBe(true);
     expect(applyDurableVisitsDelta(base)).toBe(source);

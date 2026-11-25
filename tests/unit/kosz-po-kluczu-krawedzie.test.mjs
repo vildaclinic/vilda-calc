@@ -556,7 +556,7 @@ describe('P-KOSZ-PO-KLUCZU — A4: późniejsza gwiazdka i starsza poprawka z dw
 
 // --- 9. Wersja pod starą kartą zmieniona po usunięciu (M39/M40) i nieczytelna przy retencji (M40 przeglądu) ------------
 describe('P-KOSZ-PO-KLUCZU — wersja pod inną kartą: późniejsza zmiana wygrywa z koszem, nieczytelna przeżywa retencję', () => {
-  // Kontrola po scaleniu, w którym urządzenie z poprawką dostaje kosz K (P w P←K, C w C←P,C←K). Po rundach: reguła
+  // Kontrola po scaleniu, w którym urządzenie z poprawką dostaje kosz K (P w P←K, C w C←P,C←K). Po wymianach: reguła
   // z decyzji właściciela 2b z 2026-11-25 (POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ) — wpis Kosza K pod Z zna scalenie
   // (późniejszą chwilę przypisania), więc x z poprawką P wychodzi z Kosza w karcie scalonej Z, a X nie wraca (nagrobek
   // X zostaje); bez reguły X wracała z x 74 na trzech (D-4 A). Pierwszy literał (po jednym scaleniu) bez zmian.

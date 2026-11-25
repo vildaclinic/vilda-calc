@@ -1039,7 +1039,9 @@ describe('P-SYNC-WLASCICIEL — wynik scalania i odświeżenie listy pacjentów 
   }, CZAS);
 
   // E3-PR0e2b: x1 ma na A chwilę przypisania zapisaną przez „Scal pacjentów”, więc poprawka z delty X idzie do x1 pod Y,
-  // a X nie powstaje (decyzja właściciela 2a); dotąd X zakładana w fazie przeniesień liczyła się jako dodana.
+  // a X nie powstaje (decyzja właściciela 2a); dotąd X zakładana w fazie przeniesień liczyła się jako dodana. Poprawka
+  // x1 pod Y liczy się jak zmieniona wersja, więc integracja odświeża listę i otwartą kartę raz (bez tego licznika delta
+  // nie dawała żadnego odświeżenia).
   it.each(KOLEJNOSCI)('poprawka x1 w starej X na B, delta X na A (%s): poprawka w x1 pod Y, X nie powstaje — lista bez X, bez dodanej karty', async (kolejnoscId) => {
     const A = await urzadzenie('A'), B = await urzadzenie('B');
     const X = await karta(A.v);
@@ -1058,6 +1060,7 @@ describe('P-SYNC-WLASCICIEL — wynik scalania i odświeżenie listy pacjentów 
     expect(await listaKart(A, { [X]: 'X', [Y]: 'Y' })).toEqual(['Y']);
     expect(wynik.addedPatientCount).toBe(0);
     expect(await trescWersji(A, Y, idPo(et, 'x1')), 'x1 pod Y z poprawką z B').toBe('61:120.5');
+    expect([wynik.updatedSnapshotCount, okno.odswiezenia()], 'poprawka x1 pod Y: zmieniona wersja, jedno odświeżenie').toEqual([1, 1]);
   }, CZAS);
 });
 

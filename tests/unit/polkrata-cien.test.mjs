@@ -21,6 +21,8 @@
 //        zamiatania (zamiatanie w oknie blokady nie zalicza zamiatania nowej sesji); sprzątanie po liście zapisanej w sesji
 //        scalania po blokadzie nic nie usuwa (zapisy S4 pilnują sesji jak P-CHMURA-OPIS) — sieroty zamiata nowa sesja;
 //   N4, N5 — Bgw_wskrzes czyta pełny szyfr z magazynu na trasie naturalnej w jednej karcie (R3; m17 czerwieni oba);
+//   N6 (E3-PR0e2b, część Kosza; tests/support/czesci-wydania.mjs) — wersja wskrzeszona z cienia wraca z chwilą
+//        przypisania wersji do karty wpisu, gdy wpis ją zna (stan wpisu zbudowany wprost w magazynie);
 //   L2 — zamiatanie sierot ponawiane po blokadzie i odblokowaniu tego samego konta (R5; kontrola bez blokady);
 //   M10 — „Usuń pacjenta” zdejmuje cień wersji tej karty od razu (decyzja właściciela 2026-10-26, 1: S4V-MP4 = b): 0 rekordów
 //        i 0 zaślepek tej karty jedną partią, kosz z treścią zostaje, cień innej karty nietknięty; krawędź D-21 (karta
@@ -42,6 +44,7 @@ import {
   sztucznyZegar, przesunZegar, zegar, urzadzenie, urzadzenia, aktualizuj, poprawMase, przypnij, doKosza, przytnij, sync, rundy, widoki,
   stan, jan, zapisz, DZIEN,
 } from './polkrata-uprzaz.mjs';
+import { KOSZ_PAMIETA_PRZYPISANIE } from '../support/czesci-wydania.mjs';
 
 const M = 60e3;
 afterEach(() => { vi.useRealTimers(); });
@@ -547,6 +550,34 @@ describe('P-CIEN-POZA-LISTA: odczyt z magazynu w Bgw_wskrzes (trasa naturalna)',
     const { u, sid } = await trasa();
     for (let r = 0; r < 3; r += 1) { przesunZegar(M); await sync(u.K, u.C); await sync(u.C, u.K); }
     expect(await widoki({ K: u.K, C: u.C }, sid)).toEqual({ K: 'karta 74*', C: 'karta 74*' });
+  }, 120_000);
+  // E3-PR0e2b (część Kosza): wersja wskrzeszona z cienia wraca pod kartę wpisu z chwilą przypisania wersji do tej karty,
+  // gdy wpis ją zna. Stan zbudowany wprost w magazynie K przed K←P: wpis retencji sid na K dostaje chwilę przypisania
+  // (pole wpisu i składnik karty półkraty, odcisk przeliczony); wpis Kosza z P jej nie zna, a jego składnik karty
+  // przegrywa późniejszym usunięciem — więc wpis po scaleniu ją ma.
+  it.skipIf(!KOSZ_PAMIETA_PRZYPISANIE)('N6: wpis na K zna chwilę przypisania wersji do karty wpisu — wersja 74* wskrzeszona z cienia na K wraca z nią', async () => {
+    sztucznyZegar();
+    const { u, sid } = await urzadzenia(['P', 'K', 'C']);
+    const { P, K, C } = u;
+    przesunZegar(M); await przypnij(P, sid, true);
+    przesunZegar(M); await doKosza(K, sid);
+    przesunZegar(M); await sync(K, P);
+    przesunZegar(M); await poprawMase(C, sid, 74);
+    przesunZegar(M); await sync(C, K);
+    przesunZegar(M); await przytnij(C, sid);
+    przesunZegar(M); await sync(C, K);
+    const T = '2026-03-02T09:30:00.000Z';
+    const m = await K.__px.getUserMeta(K.__uid);
+    m.snapshotTombstones = (m.snapshotTombstones || []).map((e) => {
+      if (e.snapshotId !== sid) return e;
+      const n = { ...e, assignedAtISO: T };
+      if (n.Bpk) n.Bpk = { ...n.Bpk, p: { ...n.Bpk.p, assignedAtISO: T }, f: JSON.stringify([...JSON.parse(n.Bpk.f), T]) };
+      return n;
+    });
+    await K.__px.putUserMeta(K.__uid, m);
+    przesunZegar(M); await sync(P, K);
+    const r = await K.__px.getSnapshotForUser(K.__uid, sid);
+    expect({ K: (await widoki({ K }, sid)).K, pole: (r && r.assignedAtISO) || null }).toEqual({ K: 'karta 74*', pole: T });
   }, 120_000);
 });
 
