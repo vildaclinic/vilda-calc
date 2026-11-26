@@ -435,3 +435,319 @@ dialog.vcp.vcp-dialog.vcp-setup-dialog[open] { display: flex; flex-direction: co
   .vcp.vcp-setup-dialog .vcp-setup-actions button { flex: 1 1 150px; }
   .vcp.vcp-conflict-dialog .vcp-conflict-patient { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Care plans in the inline patient Overview. */
+#vhomePatientOverview .vilda-patient-care-section:has(> .vcp-patient-overview) {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+#vhomePatientOverview .vcp-patient-overview {
+  --plans-ink: #213f49;
+  --plans-muted: #4e6871;
+  --plans-line: #d4e4e6;
+  --plans-surface: #f6f9f9;
+  --plans-accent: #006d75;
+  --plans-radius: var(--radius-12);
+  container: care-overview / inline-size;
+  min-width: 0;
+  --vcp-ink: var(--plans-ink);
+  --vcp-muted: var(--plans-muted);
+  --vcp-teal: var(--plans-accent);
+  --vcp-line: var(--plans-line);
+  background: var(--plans-surface);
+  border: var(--border-hairline) solid var(--plans-line);
+  border-radius: var(--plans-radius);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-tools {
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: var(--space-8px);
+  padding: var(--space-10px) var(--space-14px);
+  border-bottom: var(--border-hairline) solid var(--plans-line);
+  background: white;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-tools > button {
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-8px) var(--space-14px) !important;
+  border: var(--border-hairline) solid var(--plans-line) !important;
+  border-radius: var(--radius-8) !important;
+  background: white !important;
+  color: var(--plans-accent) !important;
+  font-size: 15px;
+  font-weight: 650;
+  text-align: center;
+  white-space: normal;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-tools > .vcp-create {
+  border-color: var(--plans-accent) !important;
+  background: var(--plans-accent) !important;
+  color: white !important;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-list-pane {
+  background: var(--plans-surface);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-plan-group {
+  padding: 0 var(--space-12px) var(--space-8px);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-plan-group-return {
+  padding: var(--space-8px) var(--space-12px) 0;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-plan-group-switch {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px !important;
+  gap: var(--space-8px);
+  padding: var(--space-6px) var(--space-8px) !important;
+  border-radius: var(--radius-8) !important;
+  font-size: 15px;
+  font-weight: 650;
+  text-align: start;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-plan-group-switch:hover {
+  background: #e9f5f4 !important;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-plan-group:not(.vcp-plan-group-return) > .vcp-plan-group-switch::after {
+  content: "→";
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-plan-group .vcp-count {
+  min-width: 1.4rem;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: #e8f2f3;
+  color: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-list {
+  padding: var(--space-12px);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row {
+  display: block;
+  min-width: 0;
+  min-height: 44px !important;
+  padding: var(--space-12px) !important;
+  border: var(--border-hairline) solid var(--plans-line) !important;
+  border-radius: var(--radius-10) !important;
+  margin: 0 0 var(--space-8px);
+  background: white !important;
+  color: var(--plans-ink);
+  box-shadow: 0 1px 4px rgb(29 71 78 / 6%) !important;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row:not(.is-selected)::after {
+  display: none;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row.is-selected {
+  border-color: #b7d7d9 !important;
+  background: #f0f8f7 !important;
+  box-shadow: inset 3px 0 var(--plans-accent) !important;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row:hover {
+  border-color: #a9cdd0 !important;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row-title {
+  margin: 0;
+  color: var(--plans-ink);
+  font-size: 16px;
+  font-weight: 680;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row-meta {
+  gap: var(--space-6px);
+  margin-top: var(--space-6px);
+  font-size: 14px;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row-next {
+  margin-top: 7px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row-progress {
+  margin-top: 5px;
+  color: var(--plans-muted);
+  font-size: 14px;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-status {
+  padding: 3px 7px;
+  border-radius: var(--radius-6);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: normal;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-detail {
+  padding: var(--space-16px) var(--space-20px) 22px;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-detail-top {
+  align-items: center;
+  gap: var(--space-8px);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-detail-date {
+  margin: 0;
+  font-size: 14px;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-title {
+  margin-top: var(--space-6px);
+  color: var(--plans-ink);
+  font-size: clamp(20px, 3.1cqi, 25px);
+  font-weight: 720;
+}
+#vhomePatientOverview .vcp-patient-overview :is(.vcp-goal, .vcp-plan-strip, .vcp-help, .vcp-step .vcp-description, .vcp-notice, .vcp-decision, .vcp-closed, .vcp-timeline-entry) {
+  font-size: 15px;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-plan-strip {
+  gap: 7px var(--space-12px);
+  margin-top: var(--space-12px);
+  padding-block: var(--space-8px);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-step {
+  min-width: 0;
+  padding: var(--space-10px) var(--space-12px);
+  margin-block: var(--space-8px);
+  border: var(--border-hairline) solid var(--plans-line);
+  border-radius: var(--radius-9);
+  background: white;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-stage {
+  padding: var(--space-12px);
+  border-radius: var(--radius-10);
+  background: var(--plans-surface);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-stage > .vcp-section-heading {
+  margin-top: 0;
+}
+#vhomePatientOverview .vcp-patient-overview :is(.vcp-step-title, .vcp-activity-title) {
+  color: var(--plans-ink);
+  font-size: 16px;
+  font-weight: 650;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-step-actions {
+  gap: var(--space-4px) var(--space-12px);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-step-actions button {
+  min-height: 40px !important;
+  font-size: 14px;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-step-actions .vcp-action {
+  border-radius: var(--radius-8) !important;
+  font-weight: 650;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-menu summary {
+  display: grid;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  padding: 0 var(--space-8px);
+  border: var(--border-hairline) solid var(--plans-line);
+  border-radius: var(--radius-8);
+  color: var(--plans-accent);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-menu-items button {
+  min-height: 44px;
+  font-size: 15px;
+  white-space: normal;
+}
+#vhomePatientOverview .vcp-patient-overview :is(.vcp-history summary, .vcp-timeline-entry time, .vcp-empty, .vcp-back) {
+  font-size: 15px;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-history summary {
+  padding: var(--space-6px) 0;
+  color: var(--plans-accent);
+  font-weight: 650;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-empty {
+  padding: var(--space-18px) var(--space-10px);
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-layout {
+  display: block;
+  overflow: visible;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-list-pane {
+  height: auto;
+  border: 0;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: var(--space-10px);
+  overflow: visible;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-list > :not(.vcp-row) {
+  grid-column: 1 / -1;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-row {
+  align-self: stretch;
+  margin: 0;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-detail,
+#vhomePatientOverview .vcp-patient-overview.vcp-show-detail .vcp-list-pane {
+  display: none;
+}
+#vhomePatientOverview .vcp-patient-overview.vcp-show-detail .vcp-detail {
+  display: block;
+  height: auto;
+  overflow: visible;
+}
+#vhomePatientOverview .vcp-patient-overview .vcp-back {
+  display: block;
+}
+#vhomePatientOverview .vcp-patient-overview button.vcp-back {
+  min-height: 44px;
+  padding: var(--space-4px) 0;
+  font-weight: 650;
+}
+
+dialog.vcp.vcp-patient-overview-dialog .vcp-form-head h2 {
+  color: #213f49;
+  font-size: 22px;
+  line-height: 1.35;
+}
+dialog.vcp.vcp-patient-overview-dialog .vcp-form :is(.vcp-field, .vcp-field input, .vcp-field textarea, .vcp-field select, .vcp-check) {
+  font-size: 16px;
+}
+dialog.vcp.vcp-patient-overview-dialog .vcp-form :is(.vcp-form-patient, .vcp-help, .vcp-notice) {
+  font-size: 14px;
+}
+dialog.vcp.vcp-patient-overview-dialog .vcp-form-actions {
+  gap: var(--space-8px);
+}
+dialog.vcp.vcp-patient-overview-dialog .vcp-form-actions button {
+  min-height: 44px;
+  border-radius: var(--radius-8) !important;
+  font-size: 15px;
+}
+
+@container care-overview (max-width: 690px) {
+  #vhomePatientOverview .vcp-patient-overview .vcp-detail {
+    padding: var(--space-10px) var(--space-12px) var(--space-16px);
+  }
+  #vhomePatientOverview .vcp-patient-overview .vcp-step-actions button {
+    min-height: 44px !important;
+  }
+}
+@container care-overview (max-width: 530px) {
+  #vhomePatientOverview .vcp-patient-overview .vcp-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@container care-overview (max-width: 400px) {
+  #vhomePatientOverview .vcp-patient-overview .vcp-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding-inline: var(--space-10px);
+  }
+  #vhomePatientOverview .vcp-patient-overview .vcp-tools > button {
+    width: 100% !important;
+    padding-inline: 5px !important;
+  }
+}

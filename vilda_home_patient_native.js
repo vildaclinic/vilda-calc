@@ -666,7 +666,10 @@
       panel.id = 'vhomePatientNativePanel-' + suffix + '-' + key; panel.setAttribute('role', 'tabpanel');
       tab.setAttribute('aria-controls', panel.id); panel.setAttribute('aria-labelledby', tab.id);
       if (key === 'lab') panel.dataset.homePatientView = 'labs';
-      if (key === 'care') panel.dataset.homePatientView = 'care';
+      if (key === 'care') {
+        panel.dataset.homePatientView = 'care';
+        if (view.workspaceHeader) panel.dataset.carePlanLayout = 'patient-overview';
+      }
       var option = node('option', '', key === 'traj' ? tab.textContent.trim() : names[key]); option.value = key; view.mobile.appendChild(option);
       nav.appendChild(tab); view.scroller.appendChild(panel); view.tabs.push(tab); view.panels.push(panel);
     });
