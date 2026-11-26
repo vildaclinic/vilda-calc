@@ -304,7 +304,6 @@ html dialog.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-detached-de
   text-align: start;
   justify-content: flex-start;
   min-height: 44px;
-  color: var(--vhr-overview-accent);
   font-size: 15px;
   font-weight: 620;
 }
@@ -312,7 +311,6 @@ html dialog.vb22.vb22--stable.vhome-reminders-dialog.vhome-reminders-detached-de
   --vhr-overview-ink: #23444e;
   --vhr-overview-muted: #4e6872;
   --vhr-overview-line: #dae6e8;
-  --vhr-overview-accent: #006e78;
   --vhr-overview-pad: clamp(12px, 2.6cqi, 22px);
 }
 #vhomePatientRemindersSlot .vhome-reminders-count {
