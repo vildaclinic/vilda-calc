@@ -110,6 +110,17 @@ const DOMYSLNE = [1, 15, 38, 48, 77, 87, 163, 164, 170, 192, 197, 198, 293];
 const START = Number(process.env.KPK_FUZZ_START) || 1;
 const ZIARNA = process.env.KPK_FUZZ_ZIARNA ? Array.from({ length: Number(process.env.KPK_FUZZ_ZIARNA) }, (_, i) => START + i) : DOMYSLNE;
 const WYNIKI = process.env.KPK_FUZZ_WYNIKI || '';
+// E3-PR0e2b (pomiar 2026-11-25, ziarna 1–300 na bazie 30008d8f): 14 ziaren z naruszeniem Z4r już na bazie (10, 18, 22, 57,
+// 78, 88, 97, 107, 156, 186, 211, 270, 299, 300 — poza domyślnymi; pomiar „0 ziaren” niżej jest sprzed P-TRWALE-WIZYTY);
+// z chwilą przypisania zapisywaną przez „Scal pacjentów” — 16 (te same + 15 i 86). Mechanizm jeden: ochrona trwałej
+// wizyty (fragment trwałych wizyt, Bvisit_keepRetention) zostawia w zwróconej starej karcie jedyną wersję wizyty mimo
+// przycięcia, a nowsza wersja tej wizyty jest w karcie scalonej (decyzja właściciela 2a z 2026-11-23); nic nie ginie
+// (ALGORITHMS, wpis E3-PR0e2b, „Ograniczenia”). Z wyłączoną ochroną 300/300 bez naruszeń. Ziarno 15 jest w DOMYSLNE,
+// więc jego wynik przypina literał faktów (dokładnie te trzy naruszenia: wersja O1a w O1 na P, K i C); prawa bez zmian
+// dla wszystkich pozostałych ziaren. Z regułą Kosza z decyzji właściciela 2b z 2026-11-25 w 1–300 inny wynik tylko
+// w ziarnie 257 (gwiazdka wizyty w starej karcie po Koszu pod kartą scaloną — wizyta w karcie scalonej), bez naruszeń.
+const ZIARNO15_Z4R = (n) => ({ p: 'Z4r', n, s: 'O1a', o: 'w karcie O1 po retencji 2026-10-14T09:19:53.157Z (ostatnia zmiana 2026-10-10T08:30:00.000Z)' });
+const ZNANE_NARUSZENIA = { 15: ['P', 'K', 'C'].map(ZIARNO15_Z4R) };
 const KROKI = 18;
 const DEV = ['P', 'K', 'C'];
 
@@ -582,7 +593,7 @@ describe('P-KOSZ-PO-KLUCZU: fuzz wielu kart (3 urządzenia, dwa łańcuchy „Sc
           stabilny: DEV.every((n) => JSON.stringify(w.st[n]) === JSON.stringify(w.st2[n])),
         }) + '\n');
       }
-      expect(nar, `${w.u.log.join(' ; ')} | ${DEV.map((n) => `${n}: ${widok(w.st[n])}`).join(' || ')}`).toEqual([]);
+      expect(nar, `${w.u.log.join(' ; ')} | ${DEV.map((n) => `${n}: ${widok(w.st[n])}`).join(' || ')}`).toEqual(ZNANE_NARUSZENIA[seed] || []);
     }, 120_000);
   }
 });

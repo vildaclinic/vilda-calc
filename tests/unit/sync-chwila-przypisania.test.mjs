@@ -55,6 +55,28 @@
 // 8): wersja wracająca do karty wpisu z chwilą przypisania z ładunku i bez niej (nowy zapis pola nie tworzy); starsza
 // aplikacja (221, 276) tej zasady nie zna — 8 układów z literałem położenia wizyty (zielone z natury 2: starsza
 // aplikacja zmienia wizytę i najpierw pobiera — gwiazdka ginie jak dotąd).
+// E3-PR0e2b (96 przypadków, +15; na bazie 30008d8f czerwone 22; drugie wydanie pola; decyzje właściciela 2a i 3a
+// z 2026-11-23, potwierdzenie z 2026-11-24, że wszystkie urządzenia mają SW 1.1.586): „Scal pacjentów” zapisuje chwilę przypisania w każdej wersji przeniesionej do karty
+// docelowej — późniejszą z dwóch: „teraz” (w gałęzi następcy fazy przeniesień — chwila wersji-siostry pod kartą
+// następcy, bez niej chwila nagrobka karty z bieżącego skoku) i poprzednia chwila tej wersji + dokładnie 1 ms; gdy
+// „poprzednia + 1 ms” nie ma postaci kanonicznej (rok 9999) — zostaje poprzednia. Nowa głowa scalenia i wersje karty
+// docelowej — bez pola. Jedyne miejsca z kluczem pola: Bsw_przypisanie (bez zegara) i Bsw_przypisanieScalenia (jeden
+// zegar), wołana tylko z Bsw_poScaleniu, a ta tylko z „Scal pacjentów” i z gałęzi następcy (strażnik drzewa składni).
+// Literały przepisane: wersja przeniesiona z chwilą późniejszą niż „teraz” dostaje ją + 1 ms (scalenie, następca,
+// IndexedDB, koperty), kształt elementu po scaleniu ma pole w wersjach przeniesionych, strażnik „nikt nie ustawia”
+// zamieniony na strażnik „ustawia tylko „Scal pacjentów”” i przebieg dróg rozdzielony (bez scalenia — nigdzie; ze
+// scaleniem — tylko wersje przeniesione, ta sama chwila na każdym urządzeniu bieżącym). Przy części Kosza
+// (tests/support/czesci-wydania.mjs, KOSZ_PAMIETA_PRZYPISANIE; decyzja właściciela z 2026-11-24) wpis Kosza pamięta
+// chwilę przypisania: „Przywróć” wersji tylko z Kosza, koperta wpisu Kosza i wersja wracająca do karty wpisu
+// (E3-PR0e3) niosą ją — literał przy stałej. Notatka w starej karcie obok poprawki wizyty przeniesionej (decyzja
+// właściciela z 2026-11-25, 1a) — blok na końcu pliku. Na bazie 30008d8f czerwone: przepisane literały i nowe
+// przypadki zapisu (pole nie powstaje), strażnik (brak Bsw_przypisanieScalenia); zielone z natury — przebieg bez
+// „Scal pacjentów”, kontrole notatki (sama notatka, notatka i nowa wizyta).
+// Także: notatka i „Przywróć” wizyty przeniesionej w starej karcie (ta sama sytuacja co w decyzji 1a); poprawka, która
+// trafia do karty scalonej, liczy się w wyniku scalania i koperty jak zmieniona wersja (odświeżenie widoku; na bazie
+// koperta bez licznika); „Przywróć” wersji leżącej też w karcie wpisu — późniejsza z obu chwil; wersja przeżywająca
+// przycięcie pod kartą inną niż karta wpisu retencji — bez chwili z wpisu; łańcuch dwóch skoków z siostrami bez chwili
+// — chwila nagrobka karty z bieżącego skoku.
 //
 // Prawdziwy vilda_vault.js (i vilda_crypto.js, vilda_retention.js) w oknie uprzęży tests/support/urzadzenie-sync.mjs:
 // bliźniaki tego samego konta (klon stanu magazynu w pamięci), starsza aplikacja przez zrodlaStarszej('S221' | 'S276'),
@@ -69,6 +91,7 @@ import { sprzatnijUrzadzenia, utworzUrzadzenie } from '../support/urzadzenie-syn
 import { zrodlaStarszej } from '../support/starsza-aplikacja.mjs';
 import { AtrapaIDBKeyRange, utworzIndexedDB } from '../support/atrapa-indexeddb.mjs';
 import { naglowek, zrodlo } from './sesja-zapisu-uprzaz.mjs';
+import { KOSZ_PAMIETA_PRZYPISANIE } from '../support/czesci-wydania.mjs';
 
 const HASLO = 'Vilda#Przypisanie!2026abc';
 const START = Date.parse('2026-03-02T08:00:00.000Z');
@@ -77,6 +100,9 @@ const CZAS = 60_000;
 const POLE = 'assignedAtISO';
 const T1 = '2026-03-02T09:30:00.000Z';
 const T2 = '2026-03-02T09:40:00.000Z';
+// E3-PR0e2b: „Scal pacjentów” wersji z chwilą T1 (późniejszą niż „teraz” scalenia) — T1 + dokładnie 1 ms.
+const T1P = '2026-03-02T09:30:00.001Z';
+const isoTeraz = () => new Date(teraz).toISOString();
 // Kształt elementu wersji eksportu i koperty bez pola — jak dotąd (kolejność kluczy).
 const KLUCZE = ['snapshotId', 'savedAtISO', 'rev', 'updatedAtISO', 'payload'];
 
@@ -246,17 +272,22 @@ describe('chwila przypisania zachowana w każdej drodze zapisu rekordu wersji', 
     expect({ poEdycji, poUsunieciu }).toEqual({ poEdycji: T1, poUsunieciu: T1 });
   }, CZAS);
 
-  it('„Scal pacjentów” przenosi wersję z jej chwilą przypisania bez zmiany (rev + 1), wersja bez niej zostaje bez niej, nowa głowa scalenia jej nie dostaje', async () => {
+  // E3-PR0e2b: „Scal pacjentów” zapisuje chwilę przypisania każdej wersji przeniesionej — późniejszą z „teraz”
+  // i poprzedniej + 1 ms (dawniej: wersja zachowywała swoją chwilę bez zmiany, wersja bez niej zostawała bez niej).
+  it('„Scal pacjentów” zapisuje chwilę przypisania w każdej wersji przeniesionej (rev + 1): z chwilą późniejszą niż „teraz” — ta chwila + dokładnie 1 ms; bez chwili i z wcześniejszą — „teraz” scalenia; nowa głowa scalenia i wersja karty docelowej bez niej', async () => {
     const A = await urzadzenie('A');
-    const { P: X, ids: [v, w] } = await karta(A, 1, [22, 23]);
-    const { P: Y } = await karta(A, 2, [30]);
+    const { P: X, ids: [v, w, u] } = await karta(A, 1, [22, 23, 24]);
+    const { P: Y, ids: [y] } = await karta(A, 2, [30]);
     await wstaw(A, v, T1);
+    await wstaw(A, u, '2026-03-02T07:00:00.000Z');
     const revV = (await rek(A, v)).rev;
     krok();
+    const tScal = isoTeraz();
     const glowa = (await A.vault.mergePatients(X, Y)).snapshotId;
     const r = await rek(A, v);
     expect([r.patientId === Y, r.rev], 'kontrola: v pod Y z rev + 1').toEqual([true, revV + 1]);
-    expect({ v: await pole(A, v), w: await pole(A, w), glowa: await pole(A, glowa) }).toEqual({ v: T1, w: null, glowa: null });
+    expect({ v: await pole(A, v), w: await pole(A, w), u: await pole(A, u), y: await pole(A, y), glowa: await pole(A, glowa) })
+      .toEqual({ v: T1P, w: tScal, u: tScal, y: null, glowa: null });
   }, CZAS);
 });
 
@@ -462,14 +493,16 @@ describe('wersja wspólna dwóm kartom — każda decyzja scalania zachowuje pó
     expect(await pole(A, v)).toBe(T1);
   }, CZAS);
 
-  it('następca — „Scal pacjentów” Y → W w drugiej karcie przeglądarki między decyzją „zabierz” a fazą: wersja pod W (rev + 1) z tutejszą chwilą przypisania', async () => {
+  // E3-PR0e2b: gałąź następcy odtwarza „Scal pacjentów” Y → W — tutejsza chwila T1 jest późniejsza niż chwila tamtego
+  // scalenia, więc wersja dostaje T1 + 1 ms (dawniej: T1 bez zmiany).
+  it('następca — „Scal pacjentów” Y → W w drugiej karcie przeglądarki między decyzją „zabierz” a fazą: wersja pod W (rev + 1) z tutejszą chwilą przypisania + 1 ms (późniejszą niż chwila scalenia Y → W)', async () => {
     const c = await dwieKarty({ czwarta: true });
     krok(); await c.B.vault.mergePatients(c.X, c.Y);
     await wstaw(c.A, c.v, T1);
     krok();
     await zOknem(c, (q) => q.A.vault.mergePatients(q.Y, q.W));
     expect((await stan(c.A, c.v, c.et)).karta, 'kontrola: v pod W').toBe('W');
-    expect(await pole(c.A, c.v)).toBe(T1);
+    expect(await pole(c.A, c.v)).toBe(T1P);
   }, CZAS);
 });
 
@@ -549,7 +582,34 @@ describe('wersja przeżywająca przycięcie, Kosz i „Przywróć”, magazyn In
     expect(await pole(P, x)).toBe(T1);
   }, CZAS);
 
-  it('„Przywróć” z Kosza: wersja leżąca też w karcie (stan po przerwanym scaleniu) zachowuje swoją chwilę przypisania; wersja tylko w Koszu wraca bez niej — wpis Kosza jej nie przechowuje', async () => {
+  // Jak wyżej, ale wpis retencji x pod X zna chwilę przypisania wersji do X (T2, późniejszą niż T1 wersji; stan zbudowany
+  // wprost w magazynie K przed wymianą). Wersja przechodzi pod Y — inną kartę niż karta wpisu — więc chwila wpisu (mówi
+  // o przypisaniu do X) do rekordu pod Y nie przechodzi: zostaje chwila wersji. Nigdy chwila jednej karty przy innej.
+  it('wersja przeżywająca przycięcie przechodzi pod kartę inną niż karta wpisu retencji: rekord bez chwili przypisania z wpisu (wpis pod X z późniejszą chwilą), z chwilą wersji', async () => {
+    const K = await urzadzenie('K');
+    const { P: X, ids: [, x] } = await karta(K, 1, [20, 23, 25]);
+    const { P: Y } = await karta(K, 2, [30]);
+    const P = await blizniak(K, 'P');
+    const C = await blizniak(K, 'C');
+    await gwiazdka(P, x, true);
+    krok();
+    expect((await C.vault.pruneSnapshotsForPatient(X, { recentHours: 0 })).prunedIds, 'kontrola: C przycina x').toContain(x);
+    krok(); await K.vault.mergePatients(X, Y);
+    krok(); await scal(C, K);
+    const m = await K.adapter.getUserMeta(uid(K));
+    m.snapshotTombstones = (m.snapshotTombstones || []).map((e) => (e.snapshotId === x ? { ...e, [POLE]: T2 } : e));
+    await K.adapter.putUserMeta(uid(K), m);
+    const wpis = ((await eksport(K)).snapshotTombstones || []).filter((e) => e.snapshotId === x).map((e) => [e.patientId === X ? 'X' : '?', e.powod || null, e[POLE] || null]);
+    await wstaw(P, x, T1);
+    krok();
+    await scal(K, P);
+    const s = await stan(P, x, { [Y]: 'Y', [X]: 'X' });
+    expect({ wpis, karta: s.karta, gwiazdka: s.gwiazdka, pole: await pole(P, x) }).toEqual({ wpis: [['X', 'retencja', T2]], karta: 'Y', gwiazdka: true, pole: T1 });
+  }, CZAS);
+
+  // Część Kosza (KOSZ_PAMIETA_PRZYPISANIE, decyzja właściciela z 2026-11-24): wpis Kosza pamięta chwilę przypisania
+  // wersji do karty wpisu, więc wersja tylko w Koszu wraca z nią; bez tej części — bez niej (jak w E3-PR0e2a).
+  it(`„Przywróć” z Kosza: wersja leżąca też w karcie (stan po przerwanym scaleniu) zachowuje swoją chwilę przypisania; wersja tylko w Koszu wraca ${KOSZ_PAMIETA_PRZYPISANIE ? 'z nią — wpis Kosza ją pamięta' : 'bez niej — wpis Kosza jej nie przechowuje'}`, async () => {
     const A = await urzadzenie('A');
     const { P, ids: [v, w, u] } = await karta(A, 1, [22, 23, 24]);
     // v: do Kosza, potem rekord v z chwilą przypisania znów w karcie (jak po scaleniu przerwanym przed usunięciem wersji)
@@ -566,10 +626,26 @@ describe('wersja przeżywająca przycięcie, Kosz i „Przywróć”, magazyn In
     expect(!!(rv && rv.alreadyInCard), 'kontrola: zapis przywrócenia, nie „już w karcie”').toBe(false);
     krok();
     await A.vault.restoreTrashedSnapshot(P, w);
-    expect({ v: await pole(A, v), w: await pole(A, w), u: await pole(A, u) }).toEqual({ v: T1, w: null, u: null });
+    expect({ v: await pole(A, v), w: await pole(A, w), u: await pole(A, u) }).toEqual({ v: T1, w: KOSZ_PAMIETA_PRZYPISANIE ? T1 : null, u: null });
   }, CZAS);
 
-  it('magazyn IndexedDB w trybie „Komputer prywatny”: „Scal pacjentów” i gwiazdka zachowują chwilę przypisania zapisaną w rekordzie', async () => {
+  // „Przywróć” wersji leżącej też w karcie wpisu (stan po przerwanym scaleniu), gdy wersja w karcie ma późniejszą
+  // chwilę przypisania (T2) niż wpis Kosza (T1): rekord z późniejszą z obu — nie z samego wpisu.
+  it('„Przywróć” wersji leżącej też w karcie wpisu z późniejszą chwilą przypisania niż wpis Kosza: rekord z późniejszą z obu', async () => {
+    const A = await urzadzenie('A');
+    const { P, ids: [v] } = await karta(A, 1, [22, 23]);
+    await wstaw(A, v, T1);
+    const rekordV = await rek(A, v);
+    krok(); await A.vault.moveSnapshotToTrash(P, v);
+    expect(await rek(A, v), 'kontrola: v poza kartą').toBeFalsy();
+    await A.adapter.putSnapshotForUser(uid(A), { ...rekordV, [POLE]: T2 });
+    krok();
+    const rv = await A.vault.restoreTrashedSnapshot(P, v);
+    expect(!!(rv && rv.alreadyInCard), 'kontrola: zapis przywrócenia, nie „już w karcie”').toBe(false);
+    expect(await pole(A, v)).toBe(T2);
+  }, CZAS);
+
+  it('magazyn IndexedDB w trybie „Komputer prywatny”: „Scal pacjentów” zapisuje w rekordzie chwilę przypisania (zapisana T1, późniejsza niż „teraz” — T1 + 1 ms), gwiazdka ją zachowuje', async () => {
     vi.stubGlobal('IDBKeyRange', AtrapaIDBKeyRange);
     const idb = utworzIndexedDB();
     const A = await urzadzenie('A', { magazynSejfu: 'natywny', indexedDB: idb });
@@ -595,7 +671,7 @@ describe('wersja przeżywająca przycięcie, Kosz i „Przywróć”, magazyn In
     krok(); await A.vault.mergePatients(X, Y);
     const poScaleniu = await poleIdb();
     krok(); await A.vault.setSnapshotPinned(Y, v, true);
-    expect({ poScaleniu, poGwiazdce: await poleIdb() }).toEqual({ poScaleniu: T1, poGwiazdce: T1 });
+    expect({ poScaleniu, poGwiazdce: await poleIdb() }).toEqual({ poScaleniu: T1P, poGwiazdce: T1P });
   }, CZAS);
 });
 
@@ -635,20 +711,32 @@ describe('przesyłanie — eksporty i importy niosą chwilę przypisania, bez ni
     expect(wynik).toEqual({ 'eksport pełny': oczekiwany, 'delta karty': oczekiwany, 'plik karty': oczekiwany, 'kopia konta': oczekiwany });
   }, CZAS);
 
-  it('bez chwili przypisania element wersji każdego eksportu i każdej koperty wersji ma kształt jak dotąd (te same klucze w tej samej kolejności)', async () => {
+  // E3-PR0e2b: po „Scal pacjentów” wersje przeniesione mają chwilę przypisania (za payload); dawniej przypadek sprawdzał
+  // kształt bez pola także po scaleniu.
+  it('bez chwili przypisania element wersji każdego eksportu i każdej koperty wersji ma kształt jak dotąd (te same klucze w tej samej kolejności); po „Scal pacjentów” wersje przeniesione mają ją za payload, nowa głowa i wersja karty docelowej — kształt jak dotąd', async () => {
     const A = await urzadzenie('A');
     const { P: X, ids } = await karta(A, 1, [22, 23]);
-    const { P: Y } = await karta(A, 2, [30]);
+    const { P: Y, ids: idsY } = await karta(A, 2, [30]);
     const ev = A.vault._eventLog;
-    const ksztalty = new Set();
-    const dodaj = (o) => { for (const sid of ids) for (const e of wszystkieElementy(o, sid)) ksztalty.add(JSON.stringify(Object.keys(e))); };
-    for (const tresc of Object.values(await eksporty(A, X))) dodaj(tresc);
-    for (const sid of ids) dodaj(await ev.buildSnapshotEvent(X, sid, null));
-    dodaj(await ev.buildPatientFullEvents(X, null));
-    krok(); await A.vault.mergePatients(X, Y);
-    dodaj(await ev.buildPatientTombstoneEvent(X, null));
-    for (const tresc of Object.values(await eksporty(A, Y))) dodaj(tresc);
-    expect([...ksztalty]).toEqual([JSON.stringify(KLUCZE)]);
+    const zbior = (sids) => {
+      const k = new Set();
+      return { k, dodaj: (o) => { for (const sid of sids) for (const e of wszystkieElementy(o, sid)) k.add(JSON.stringify(Object.keys(e))); } };
+    };
+    const przed = zbior([...ids, ...idsY]);
+    for (const tresc of Object.values(await eksporty(A, X))) przed.dodaj(tresc);
+    for (const sid of ids) przed.dodaj(await ev.buildSnapshotEvent(X, sid, null));
+    przed.dodaj(await ev.buildPatientFullEvents(X, null));
+    krok();
+    const glowa = (await A.vault.mergePatients(X, Y)).snapshotId;
+    const przeniesione = zbior(ids), pozostale = zbior([...idsY, glowa]);
+    for (const z of [przeniesione, pozostale]) {
+      z.dodaj(await ev.buildPatientTombstoneEvent(X, null));
+      z.dodaj(await ev.buildPatientFullEvents(Y, null));
+      for (const sid of [...ids, ...idsY, glowa]) z.dodaj(await ev.buildSnapshotEvent(Y, sid, null));
+      for (const tresc of Object.values(await eksporty(A, Y))) z.dodaj(tresc);
+    }
+    expect({ przed: [...przed.k], przeniesione: [...przeniesione.k], pozostale: [...pozostale.k] })
+      .toEqual({ przed: [JSON.stringify(KLUCZE)], przeniesione: [JSON.stringify([...KLUCZE, POLE])], pozostale: [JSON.stringify(KLUCZE)] });
   }, CZAS);
 
   it('import karty z pliku zapisuje chwilę przypisania z pliku', async () => {
@@ -716,7 +804,8 @@ describe('koperta zdarzenia — chwila przypisania w kształcie elementu eksport
     const po = await elEksportu();
     const ptomb = elementy(await ev.buildPatientTombstoneEvent(X, null), v)[0];
     expect({ snap, pfull, ptomb }, 'element koperty = element eksportu').toEqual({ snap: przed, pfull: przed, ptomb: po });
-    expect([Object.keys(snap), snap[POLE], Object.keys(ptomb), ptomb[POLE]]).toEqual([[...KLUCZE, POLE], T1, [...KLUCZE, POLE], T1]);
+    // E3-PR0e2b: nagrobek po „Scal pacjentów” niesie chwilę przypisania zapisaną przez scalenie (T1 + 1 ms)
+    expect([Object.keys(snap), snap[POLE], Object.keys(ptomb), ptomb[POLE]]).toEqual([[...KLUCZE, POLE], T1, [...KLUCZE, POLE], T1P]);
   }, CZAS);
 
   it('encryptEvent przyjmuje kopertę z chwilą przypisania (wersja, pełna karta); obce pole wersji i numer kolejny wersji dalej odrzucane (EVENT_ENVELOPE_INVALID)', async () => {
@@ -761,7 +850,7 @@ describe('koperta zdarzenia — chwila przypisania w kształcie elementu eksport
   it('„Scal pacjentów” wersji z chwilą przypisania: koperty przeniesionych wersji, nowej głowy, pełnej karty i nagrobka karty źródłowej z kartą docelową powstają i szyfrują się jak bez niej (żadna nie znika)', async () => {
     const bez = await kopertyScalenia('bez', false);
     const z = await kopertyScalenia('z', true);
-    expect(z.pole, 'kontrola: przeniesiona wersja z chwilą przypisania').toBe(T1);
+    expect(z.pole, 'kontrola: przeniesiona wersja z chwilą przypisania (T1 + 1 ms)').toBe(T1P);
     expect(z.opis).toEqual(bez.opis);
     expect(bez.opis.every((x) => x[2] === 'ok'), 'kontrola: każda koperta zaszyfrowana').toBe(true);
   }, CZAS);
@@ -785,7 +874,9 @@ describe('koperta zdarzenia — chwila przypisania w kształcie elementu eksport
     expect({ nowa: await pole(B, q), taSamaKarta: await pole(B, v) }).toEqual({ nowa: T1, taSamaKarta: T2 });
   }, CZAS);
 
-  it('koperta wpisu Kosza nie niesie chwili przypisania (wpis Kosza jej nie przechowuje), także element Kosza w eksporcie', async () => {
+  // Część Kosza (KOSZ_PAMIETA_PRZYPISANIE): wpis Kosza pamięta chwilę przypisania, koperta wpisu i element Kosza
+  // w eksporcie niosą ją; bez tej części — nie (jak w E3-PR0e2a).
+  it(`koperta wpisu Kosza ${KOSZ_PAMIETA_PRZYPISANIE ? 'niesie chwilę przypisania (wpis Kosza ją pamięta)' : 'nie niesie chwili przypisania (wpis Kosza jej nie przechowuje)'}, także element Kosza w eksporcie; koperta się szyfruje`, async () => {
     const A = await urzadzenie('A');
     const { P, ids: [v] } = await karta(A, 1, [22, 23]);
     await wstaw(A, v, T1);
@@ -795,7 +886,7 @@ describe('koperta zdarzenia — chwila przypisania w kształcie elementu eksport
     expect(k && (k.snapshotTombstones || []).some((e) => e.snapshotId === v), 'kontrola: koperta wpisu Kosza v').toBe(true);
     await ev.encryptEvent(k);
     expect({ koperta: JSON.stringify(k).includes(POLE), eksport: JSON.stringify((await eksport(A)).snapshotTombstones || []).includes(POLE) })
-      .toEqual({ koperta: false, eksport: false });
+      .toEqual({ koperta: KOSZ_PAMIETA_PRZYPISANIE, eksport: KOSZ_PAMIETA_PRZYPISANIE });
   }, CZAS);
 });
 
@@ -990,7 +1081,7 @@ describe('porównanie w scalaniu — wersja wspólna dwóm kartom rozstrzygana n
   }, CZAS);
 });
 
-// ── Nikt nie ustawia chwili przypisania w tym wydaniu ───────────────────────────────────────────────────────────────
+// ── Chwilę przypisania ustawia tylko „Scal pacjentów” (E3-PR0e2b; w E3-PR0e2a — nikt) ─────────────────────────────
 // Wystąpienia nazwy pola w drzewie składni: klucz obiektu, odczyt właściwości, napis, inne (szablon, identyfikator,
 // napis zawierający nazwę) — z funkcją pliku i stałą, w których leżą.
 function wystapienia(ast, nazwa) {
@@ -1033,27 +1124,58 @@ function zegar(node) {
   idz(node.body);
   return z;
 }
-const DOZWOLONE = { klucz: ['Bsw_przypisanie'], odczyt: ['Bsw_chwilaPrzypisania'], napis: ['Bev_POLA_WERSJI', 'Bev_ECHO_POMIJANE'] };
+// E3-PR0e2b: klucz pola tylko w Bsw_przypisanie (późniejsza z istniejących, bez zegara) i Bsw_przypisanieScalenia
+// (chwila „Scal pacjentów”, jeden zegar); napis pola tylko w liście pól koperty wersji i stałej odsyłania, przy części
+// Kosza także w liście pól koperty wpisu Kosza i w kanonie odsyłania Kosza.
+const DOZWOLONE = {
+  klucz: ['Bsw_przypisanie', 'Bsw_przypisanieScalenia'], odczyt: ['Bsw_chwilaPrzypisania'],
+  napis: ['Bev_POLA_WERSJI', 'Bev_ECHO_POMIJANE', ...(KOSZ_PAMIETA_PRZYPISANIE ? ['Bev_POLA_KOSZA', 'Bev_KANON_KOSZA'] : [])],
+};
 const niedozwolone = (lista) => lista.filter((w) => !(DOZWOLONE[w.rodzaj] || []).includes(w.rodzaj === 'napis' ? w.stala : w.fn))
   .map((w) => `${w.rodzaj} w ${w.fn || w.stala || '(poza funkcją)'}`);
-
-describe('nikt nie ustawia chwili przypisania w tym wydaniu', () => {
-  it('w kodzie sejfu chwila przypisania powstaje tylko jako kopia albo późniejsza z istniejących wartości: klucz obiektu tylko w Bsw_przypisanie, odczyt tylko w Bsw_chwilaPrzypisania, napis tylko w liście pól koperty i stałej odsyłania; obie funkcje bez zegara i bez innych wywołań', () => {
-    // samokontrola wykrywacza na kodzie z naruszeniami
-    const proba = parse(`function Bsw_poScaleniu(w, c) { return { patientId: c, ${POLE}: new Date().toISOString() }; }
-      function inna(x) { return x.${POLE} || x['${POLE}']; } const Bev_POLA_WERSJI = ['${POLE}']; const LISTA = ['${POLE}', 'x${POLE}'];`, { ecmaVersion: 'latest' });
-    expect(niedozwolone(wystapienia(proba, POLE))).toEqual(['klucz w Bsw_poScaleniu', 'odczyt w inna', 'odczyt w inna', 'napis w LISTA', 'inne w LISTA']);
-    const { ast, dekl } = sejfAst();
-    const lista = wystapienia(ast, POLE);
-    expect(niedozwolone(lista), 'wystąpienia nazwy pola poza dozwolonymi miejscami').toEqual([]);
-    if (lista.length) {
-      for (const n of ['Bsw_przypisanie', 'Bsw_chwilaPrzypisania']) expect(dekl.has(n), `${n} w sejfie`).toBe(true);
-      expect([...domkniecie(['Bsw_przypisanie'])].sort(), 'domknięcie wywołań pomocniczych').toEqual(['Bnp_iso', 'Bsw_chwilaPrzypisania', 'Bsw_przypisanie']);
-      expect([...domkniecie(['Bsw_przypisanie'])].flatMap((n) => zegar(dekl.get(n))), 'bez zegara').toEqual([]);
+// Odwołania do funkcji (wywołanie albo inne użycie nazwy) z funkcją pliku, w której leżą: { 'funkcja': liczba }.
+function odwolania(ast, nazwa) {
+  const out = {};
+  const idz = (n, rodzic, fn) => {
+    if (!n || typeof n.type !== 'string') return;
+    let f = fn;
+    if (n.type === 'FunctionDeclaration' && n.id && !fn) f = n.id.name;
+    if (n.type === 'Identifier' && n.name === nazwa && !(rodzic && rodzic.type === 'FunctionDeclaration' && rodzic.id === n)
+      && !(rodzic && ((rodzic.type === 'Property' && rodzic.key === n && !rodzic.computed) || (rodzic.type === 'MemberExpression' && rodzic.property === n && !rodzic.computed)))) {
+      const k = `${rodzic && rodzic.type === 'CallExpression' && rodzic.callee === n ? '' : 'użycie '}${f || '(poza funkcją)'}`;
+      out[k] = (out[k] || 0) + 1;
     }
+    for (const k of Object.keys(n)) {
+      const x = n[k];
+      if (Array.isArray(x)) x.forEach((y) => idz(y, n, f));
+      else if (x && typeof x.type === 'string') idz(x, n, f);
+    }
+  };
+  idz(ast, null, null);
+  return out;
+}
+
+describe('chwilę przypisania ustawia tylko „Scal pacjentów” (E3-PR0e2b)', () => {
+  it('w kodzie sejfu klucz pola tylko w Bsw_przypisanie i Bsw_przypisanieScalenia, odczyt tylko w Bsw_chwilaPrzypisania, napis tylko w listach pól kopert i stałych odsyłania; Bsw_przypisanie bez zegara, Bsw_przypisanieScalenia z jednym zegarem (new Date()) i bez innych wywołań niż odczyt pola i postać kanoniczna; Bsw_przypisanieScalenia woła tylko Bsw_poScaleniu, a tę tylko „Scal pacjentów” (Bsc_podBlokada) i gałąź następcy fazy przeniesień (Bsw_doF)', () => {
+    // samokontrola wykrywaczy na kodzie z naruszeniami
+    const proba = parse(`function Bsw_przypisanie(a) { return { ${POLE}: Date.now() }; }
+      function inna(x) { return { ${POLE}: x }; } function Bsc_podBlokada(w) { return Bsw_poScaleniu(w); }
+      function obca(w) { const f = Bsw_poScaleniu; return f(w) || Bsw_poScaleniu(w); } const LISTA = ['${POLE}'];`, { ecmaVersion: 'latest' });
+    expect(niedozwolone(wystapienia(proba, POLE)), 'samokontrola: klucz w innej funkcji, napis poza listami').toEqual(['klucz w inna', 'napis w LISTA']);
+    expect(zegar(proba.body[0]), 'samokontrola: zegar w Bsw_przypisanie').toEqual(['Date.now']);
+    expect(odwolania(proba, 'Bsw_poScaleniu'), 'samokontrola: wywołanie i użycie spoza dwóch miejsc').toEqual({ Bsc_podBlokada: 1, 'użycie obca': 1, obca: 1 });
+    const { ast, dekl } = sejfAst();
+    for (const n of ['Bsw_przypisanie', 'Bsw_chwilaPrzypisania', 'Bsw_poScaleniu', 'Bsw_przypisanieScalenia']) expect(dekl.has(n), `${n} w sejfie`).toBe(true);
+    expect(niedozwolone(wystapienia(ast, POLE)), 'wystąpienia nazwy pola poza dozwolonymi miejscami').toEqual([]);
+    expect([...domkniecie(['Bsw_przypisanie'])].sort(), 'domknięcie Bsw_przypisanie').toEqual(['Bnp_iso', 'Bsw_chwilaPrzypisania', 'Bsw_przypisanie']);
+    expect([...domkniecie(['Bsw_przypisanie'])].flatMap((n) => zegar(dekl.get(n))), 'Bsw_przypisanie bez zegara').toEqual([]);
+    expect([...domkniecie(['Bsw_przypisanieScalenia'])].sort(), 'domknięcie Bsw_przypisanieScalenia (bez losowego dodatku Bpp_chwilaZmiany)').toEqual(['Bnp_iso', 'Bsw_chwilaPrzypisania', 'Bsw_przypisanieScalenia']);
+    expect(zegar(dekl.get('Bsw_przypisanieScalenia')), 'jeden zegar w Bsw_przypisanieScalenia').toEqual(['new Date()']);
+    expect(odwolania(ast, 'Bsw_przypisanieScalenia'), 'Bsw_przypisanieScalenia wołana tylko z Bsw_poScaleniu').toEqual({ Bsw_poScaleniu: 1 });
+    expect(odwolania(ast, 'Bsw_poScaleniu'), 'Bsw_poScaleniu wołana tylko z „Scal pacjentów” i z gałęzi następcy').toEqual({ Bsc_podBlokada: 1, Bsw_doF: 1 });
   });
 
-  it('bez chwili przypisania na wejściu żadna droga jej nie tworzy: zapisy, poprawka, gwiazdka, Kosz i „Przywróć”, „Scal pacjentów”, „Usuń pacjenta”, przycięcie, wymiany pełnych kopii z bliźniakiem i ze starszą aplikacją (221, 276), koperty, import karty, „Scal kopię konta” i odtworzenie konta — ani w rekordach, ani w eksportach, kopertach i plikach', async () => {
+  it('bez „Scal pacjentów” i bez chwili przypisania na wejściu żadna droga jej nie tworzy: zapisy, poprawka, gwiazdka, Kosz i „Przywróć”, „Usuń pacjenta”, przycięcie, wymiany pełnych kopii z bliźniakiem i ze starszą aplikacją (221, 276), koperty, import karty, „Scal kopię konta” i odtworzenie konta — ani w rekordach, ani w eksportach, kopertach i plikach', async () => {
     const A = await urzadzenie('A');
     const { P: X, ids: [x1, x2, x3] } = await karta(A, 1, [20, 22, 24]);
     const { P: Y } = await karta(A, 2, [30]);
@@ -1067,30 +1189,27 @@ describe('nikt nie ustawia chwili przypisania w tym wydaniu', () => {
     await gwiazdka(A, x2);
     krok(); await A.vault.moveSnapshotToTrash(X, x3);
     krok(); await A.vault.restoreTrashedSnapshot(X, x3);
-    krok(); await A.vault.mergePatients(X, Y);
     krok(); await A.vault.removePatient(Z);
-    krok(); await A.vault.pruneSnapshotsForPatient(Y, { recentHours: 0 });
+    krok(); await A.vault.pruneSnapshotsForPatient(X, { recentHours: 0 });
     await popraw(B, x1, 25);
     await karta(B, 4, [50]);
     await popraw(O276, x2, 26);
     const wymiany = [[B, A], [A, B], [O221, A], [A, O221], [O276, A], [A, O276], [B, O276], [O276, B]];
     for (let i = 0; i < 2; i += 1) for (const [z, na] of wymiany) { krok(); await scal(z, na); }
     const teksty = [];
-    // koperty z A, zastosowane na B i 276
     const ev = A.vault._eventLog;
     const koperty = [];
     for (const k of await A.adapter.listPatientsForUser(uid(A))) {
       for (const s of await A.adapter.listSnapshotsForUser(uid(A), k.patientId)) koperty.push(await ev.buildSnapshotEvent(k.patientId, s.snapshotId, null));
       koperty.push(...await ev.buildPatientFullEvents(k.patientId, null));
     }
-    koperty.push(await ev.buildPatientTombstoneEvent(X, null), await ev.buildPatientTombstoneEvent(Z, null));
+    koperty.push(await ev.buildPatientTombstoneEvent(Z, null));
     for (const e of (await eksport(A)).snapshotTombstones || []) koperty.push(await ev.buildSnapshotTombstoneEvent(e.snapshotId, null));
     for (const k of koperty.filter(Boolean)) {
       teksty.push(['koperta', JSON.stringify(k)]);
       const { env } = await ev.encryptEvent(k);
       for (const O of [B, O276]) expect((await O.vault._eventLog.applyEncryptedEvent(env)).status, `kontrola: koperta ${k.event.kind} na ${O.nazwa}`).toBe('applied');
     }
-    // pliki
     const plik = await A.vault.exportPatientEnvelope(Y);
     const kopia = await A.vault.exportVaultBackup();
     teksty.push(['plik karty', JSON.stringify(await A.vault.decryptPayloadForCurrentUser(plik.payload.iv, plik.payload.data))]);
@@ -1099,7 +1218,6 @@ describe('nikt nie ustawia chwili przypisania w tym wydaniu', () => {
     krok(); await E.vault.mergeVaultBackup(kopia, HASLO);
     const R = await urzadzenie('R', { haslo: 'Vilda#Odtworzenie!2026abc' });
     krok(); await R.vault.restoreVaultBackup(kopia, HASLO, { label: 'Fikcyjne odtworzenie konta' });
-    // rekordy i eksporty każdego urządzenia
     for (const d of [A, B, O221, O276, D, E, R]) {
       const rekordy = [];
       for (const k of await d.adapter.listPatientsForUser(uid(d))) rekordy.push(...await d.adapter.listSnapshotsForUser(uid(d), k.patientId));
@@ -1107,6 +1225,59 @@ describe('nikt nie ustawia chwili przypisania w tym wydaniu', () => {
       teksty.push([`rekordy ${d.nazwa}`, JSON.stringify(rekordy)], [`eksport ${d.nazwa}`, JSON.stringify(await eksport(d))]);
     }
     expect(teksty.filter(([, t]) => t.includes(POLE)).map(([n]) => n)).toEqual([]);
+  }, 2 * CZAS);
+
+  // Ta sama wymiana z „Scal pacjentów” X → Y na A: chwila przypisania powstaje raz, w trzech wersjach przeniesionych
+  // (ta sama chwila scalenia), a dalej przechodzi tylko jako kopia — na bliźniaku, w kopertach, w pliku karty, w kopii
+  // konta i w odtworzonym koncie ta sama wartość; nowa głowa scalenia, wersja karty docelowej i wersje innych kart bez
+  // niej; starsza aplikacja jej nie zapisuje.
+  it('„Scal pacjentów” tworzy chwilę przypisania tylko w wersjach przeniesionych — tę samą chwilę scalenia; nowa głowa, wersja karty docelowej i wersje innych kart bez niej; wymiany, koperty, import karty, „Scal kopię konta” i odtworzenie konta przenoszą tę samą wartość, starsza aplikacja (221, 276) jej nie zapisuje', async () => {
+    const A = await urzadzenie('A');
+    // D i E — bliźniaki sprzed kart (import i „Scal kopię konta” zapisują wersje, których tu nie ma)
+    const D = await blizniak(A, 'D');
+    const E = await blizniak(A, 'E');
+    const { P: X, ids: [x1, x2, x3] } = await karta(A, 1, [20, 22, 24]);
+    const { P: Y, ids: [y1] } = await karta(A, 2, [30]);
+    const B = await blizniak(A, 'B');
+    const O221 = await blizniak(A, 'S221', { zrodla: zrodlaStarszej('S221') });
+    const O276 = await blizniak(A, 'S276', { zrodla: zrodlaStarszej('S276') });
+    await popraw(A, x1, 21);
+    await gwiazdka(A, x2);
+    krok(); await A.vault.moveSnapshotToTrash(X, x3);
+    krok(); await A.vault.restoreTrashedSnapshot(X, x3);
+    krok();
+    const tScal = isoTeraz();
+    const glowa = (await A.vault.mergePatients(X, Y)).snapshotId;
+    const et = { [x1]: 'x1', [x2]: 'x2', [x3]: 'x3', [y1]: 'y1', [glowa]: 'głowa' };
+    await popraw(B, x1, 25);
+    et[(await karta(B, 4, [50])).ids[0]] = 'b4';
+    await popraw(O276, x2, 26);
+    const wymiany = [[B, A], [A, B], [O221, A], [A, O221], [O276, A], [A, O276], [B, O276], [O276, B]];
+    for (let i = 0; i < 2; i += 1) for (const [z, na] of wymiany) { krok(); await scal(z, na); }
+    const ev = A.vault._eventLog;
+    const zKopert = {};
+    for (const k of await A.adapter.listPatientsForUser(uid(A))) {
+      for (const s of await A.adapter.listSnapshotsForUser(uid(A), k.patientId)) {
+        const kop = await ev.buildSnapshotEvent(k.patientId, s.snapshotId, null);
+        for (const e of wszystkieElementy(kop, s.snapshotId)) if (POLE in e) zKopert[et[s.snapshotId] || '?'] = e[POLE];
+      }
+    }
+    const plik = await A.vault.exportPatientEnvelope(Y);
+    const kopia = await A.vault.exportVaultBackup();
+    krok(); await D.vault.importPatientFromEnvelope(plik, HASLO);
+    krok(); await E.vault.mergeVaultBackup(kopia, HASLO);
+    const R = await urzadzenie('R', { haslo: 'Vilda#Odtworzenie!2026abc' });
+    krok(); await R.vault.restoreVaultBackup(kopia, HASLO, { label: 'Fikcyjne odtworzenie konta' });
+    const wynik = { koperty: zKopert };
+    for (const d of [A, B, O221, O276, D, E, R]) {
+      const p = {};
+      for (const k of await d.adapter.listPatientsForUser(uid(d))) {
+        for (const r of await d.adapter.listSnapshotsForUser(uid(d), k.patientId)) if (POLE in r) p[et[r.snapshotId] || '?'] = r[POLE];
+      }
+      wynik[d.nazwa] = p;
+    }
+    const trzy = { x1: tScal, x2: tScal, x3: tScal };
+    expect(wynik).toEqual({ koperty: trzy, A: trzy, B: trzy, S221: {}, S276: {}, D: trzy, E: trzy, R: trzy });
   }, 2 * CZAS);
 });
 
@@ -1221,8 +1392,10 @@ describe('wersja wracająca do karty wpisu Kosza po „Scal pacjentów” (E3-PR
   it('ładunek z chwilą przypisania: v wraca do Q z gwiazdką i z chwilą przypisania z ładunku', async () => {
     expect(await przebieg(T1)).toEqual({ karta: 'Q', gwiazdka: true, pole: T1 });
   }, CZAS);
-  it('ładunek bez chwili przypisania: v wraca do Q z gwiazdką, rekord bez pola (nowy zapis go nie tworzy)', async () => {
-    expect(await przebieg(undefined)).toEqual({ karta: 'Q', gwiazdka: true, pole: null });
+  // E3-PR0e2b: A scala P → Q, więc v w Koszu pod Q ma chwilę scalenia; przy części Kosza wpis ją pamięta i rekord
+  // pod Q dostaje późniejszą z kopii z ładunku i z wpisu (Bsw_doKartyWpisu), bez niej — kopię z ładunku (bez pola).
+  it(`ładunek bez chwili przypisania: v wraca do Q z gwiazdką, rekord ${KOSZ_PAMIETA_PRZYPISANIE ? 'z chwilą przypisania z wpisu Kosza (chwila scalenia P → Q)' : 'bez pola (zapis z jednej kopii go nie tworzy)'}`, async () => {
+    expect(await przebieg(undefined)).toEqual({ karta: 'Q', gwiazdka: true, pole: KOSZ_PAMIETA_PRZYPISANIE ? '2026-03-02T08:04:00.000Z' : null });
   }, CZAS);
 });
 
@@ -1282,3 +1455,214 @@ const FLOTA_OCZEKIWANE = {
   'S276 zmienia najpierw wysyła': FLOTA_Q, 'S276 zmienia najpierw pobiera': FLOTA_KOSZ,
   'S276 scala najpierw wysyła': FLOTA_Q, 'S276 scala najpierw pobiera': FLOTA_Q,
 };
+
+// ── E3-PR0e2b: „Scal pacjentów” zapisuje chwilę przypisania — przypadki brzegowe ───────────────────────────────────────
+describe('„Scal pacjentów” zapisuje chwilę przypisania (E3-PR0e2b) — przepełnienie, gałąź następcy, łańcuch scaleń i zegar cofnięty', () => {
+  it('przepełnienie: wersja z chwilą 9999-12-31T23:59:59.999Z zachowuje ją (+1 ms nie ma postaci kanonicznej), wersja z chwilą o 1 ms wcześniejszą dostaje dokładnie +1 ms', async () => {
+    const A = await urzadzenie('A');
+    const { P: X, ids: [v, w] } = await karta(A, 1, [22, 23]);
+    const { P: Y } = await karta(A, 2, [30]);
+    await wstaw(A, v, '9999-12-31T23:59:59.999Z');
+    await wstaw(A, w, '9999-12-31T23:59:59.998Z');
+    krok(); await A.vault.mergePatients(X, Y);
+    expect({ v: await pole(A, v), w: await pole(A, w) }).toEqual({ v: '9999-12-31T23:59:59.999Z', w: '9999-12-31T23:59:59.999Z' });
+  }, CZAS);
+
+  // Okno jak w „następca” wyżej, ale wersja nie ma tutejszej chwili późniejszej niż scalenie w drugiej karcie
+  // przeglądarki, a zegar idzie dalej przed fazą przeniesień: chwila wersji pod kartą następcy to chwila wersji-siostry
+  // (to samo przypisanie co pozostałe wersje przeniesione tamtym scaleniem), nie „teraz” fazy.
+  it('następca: wersja bez późniejszej tutejszej chwili dostaje pod W chwilę wersji-siostry spod W (scalenie Y → W w drugiej karcie przeglądarki), nie „teraz” fazy przeniesień', async () => {
+    const c = await dwieKarty({ czwarta: true });
+    krok(); await c.B.vault.mergePatients(c.X, c.Y);
+    krok();
+    let tW = null;
+    await zOknem(c, async (q) => { tW = isoTeraz(); await q.A.vault.mergePatients(q.Y, q.W); krok(); });
+    expect([(await stan(c.A, c.v, c.et)).karta, tW < isoTeraz()], 'kontrola: v pod W, zegar przesunięty po scaleniu Y → W').toEqual(['W', true]);
+    expect(await pole(c.A, c.v)).toBe(tW);
+  }, CZAS);
+
+  // Jak wyżej, ale wersja-siostra pod Y ma już chwilę przypisania T1, późniejszą niż „teraz”: scalenie Y → W w drugiej
+  // karcie przeglądarki daje jej T1 + 1 ms, a nagrobkowi Y — „teraz”. Wersja pod W dostaje chwilę siostry (to samo
+  // przypisanie co pozostałe wersje przeniesione tamtym scaleniem); chwila nagrobka karty z bieżącego skoku — tylko
+  // wtedy, gdy siostra jej nie ma.
+  it('następca: chwila wersji-siostry ma pierwszeństwo przed chwilą nagrobka karty z bieżącego skoku (siostra z chwilą T1 dostaje T1 + 1 ms, nagrobek Y — „teraz” scalenia Y → W)', async () => {
+    const c = await dwieKarty({ czwarta: true });
+    const siostry = (await c.A.adapter.listSnapshotsForUser(uid(c.A), c.Y)).map((s) => s.snapshotId);
+    expect(siostry.length, 'kontrola: jedna wersja pod Y na A').toBe(1);
+    krok(); await c.B.vault.mergePatients(c.X, c.Y);
+    await wstaw(c.A, siostry[0], T1);
+    krok();
+    let tW = null;
+    await zOknem(c, async (q) => { tW = isoTeraz(); await q.A.vault.mergePatients(q.Y, q.W); krok(); });
+    expect([(await stan(c.A, c.v, c.et)).karta, await pole(c.A, siostry[0]), tW < T1], 'kontrola: v pod W, siostra pod W z T1 + 1 ms, „teraz” scalenia Y → W wcześniejsze niż T1').toEqual(['W', T1P, true]);
+    expect(await pole(c.A, c.v)).toBe(T1P);
+  }, CZAS);
+
+  // Dwa skoki gałęzi następcy: w kroku karty Q druga karta przeglądarki scala Y → W; w fazie przeniesień, gdy faza
+  // przechodzi już do W (drugi odczyt karty W — pierwszy to sprawdzenie następcy), scala W → V. Chwila z bieżącego
+  // skoku (siostra pod V), nie z pierwszego (pod W) i nie z karty z ładunku.
+  it('łańcuch dwóch skoków gałęzi następcy (Y → W, potem W → V w drugiej karcie przeglądarki): wersja pod V z chwilą wersji-siostry z ostatniego skoku', async () => {
+    const c = await dwieKarty({ czwarta: true });
+    const { P: V } = await karta(c.A, 6, [60]);
+    c.et[V] = 'V';
+    krok(); await c.B.vault.mergePatients(c.X, c.Y);
+    krok();
+    let tV = null, drugi = null;
+    await zOknem(c, async (q) => {
+      await q.A.vault.mergePatients(q.Y, q.W);
+      let n = 0;
+      drugi = pulapka(q.A, 'getPatientForUser', (u, pid) => pid === q.W && ++n === 2);
+      drugi.osiagnieta.then(async () => { krok(); tV = isoTeraz(); await q.A.vault.mergePatients(q.W, V); krok(); drugi.zwolnij(); });
+      krok();
+    });
+    expect([tV !== null, (await stan(c.A, c.v, c.et)).karta], 'kontrola: drugie okno osiągnięte, v pod V').toEqual([true, 'V']);
+    expect(await pole(c.A, c.v)).toBe(tV);
+  }, CZAS);
+
+  // Jak wyżej, ale wersje-siostry pod V nie mają chwili przypisania (zdjęta wprost w magazynie po scaleniu W → V): wersja
+  // pod V dostaje chwilę nagrobka karty z bieżącego skoku (W — scalenie W → V), nie nagrobka karty z pierwszego skoku.
+  it('łańcuch dwóch skoków gałęzi następcy, wersje-siostry pod V bez chwili przypisania: wersja pod V z chwilą nagrobka W (bieżący skok), nie nagrobka Y', async () => {
+    const c = await dwieKarty({ czwarta: true });
+    const { P: V } = await karta(c.A, 6, [60]);
+    c.et[V] = 'V';
+    krok(); await c.B.vault.mergePatients(c.X, c.Y);
+    krok();
+    let tV = null, tW = null, drugi = null;
+    await zOknem(c, async (q) => {
+      tW = isoTeraz();
+      await q.A.vault.mergePatients(q.Y, q.W);
+      let n = 0;
+      drugi = pulapka(q.A, 'getPatientForUser', (u, pid) => pid === q.W && ++n === 2);
+      drugi.osiagnieta.then(async () => {
+        krok(); tV = isoTeraz(); await q.A.vault.mergePatients(q.W, V);
+        for (const s of await q.A.adapter.listSnapshotsForUser(uid(q.A), V)) await wstaw(q.A, s.snapshotId, undefined);
+        krok(); drugi.zwolnij();
+      });
+      krok();
+    });
+    expect([tV !== null, (await stan(c.A, c.v, c.et)).karta, tW < tV], 'kontrola: drugie okno osiągnięte, v pod V').toEqual([true, 'V', true]);
+    expect(await pole(c.A, c.v)).toBe(tV);
+  }, CZAS);
+
+  // Monotoniczność przy zegarze cofniętym: K scala X → Y, C (zna to scalenie, zegar −10 min) scala Y → Z, T (bez
+  // wiedzy) poprawia v w starej X. Chwila C = chwila K + 1 ms (nie wcześniejsza), więc wizyta nie wraca do Y ani X.
+  it('zegar cofnięty w łańcuchu scaleń: drugie scalenie (zegar −10 min) daje chwilę pierwszego + 1 ms; po wymianach v z poprawką z X w Z na K, C i T', async () => {
+    const K = await urzadzenie('K');
+    const { P: X, ids: [v] } = await karta(K, 1, [20, 21]);
+    const { P: Y } = await karta(K, 2, [30]);
+    const { P: Z } = await karta(K, 3, [35]);
+    const C = await blizniak(K, 'C');
+    const T = await blizniak(K, 'T');
+    krok(); await K.vault.mergePatients(X, Y);
+    const poleK = await pole(K, v);
+    krok(); await scal(K, C);
+    const t0 = teraz;
+    ustaw(t0 - 10 * MIN); await C.vault.mergePatients(Y, Z);
+    const poleC = await pole(C, v);
+    ustaw(t0 + MIN);
+    await popraw(T, v, 44);
+    for (let i = 0; i < 2; i += 1) for (const [z, na] of [[K, C], [C, K], [T, K], [K, T], [C, T], [T, C]]) { krok(); await scal(z, na); }
+    const et = { [X]: 'X', [Y]: 'Y', [Z]: 'Z' };
+    const wynik = {};
+    for (const d of [K, C, T]) { const s = await stan(d, v, et); wynik[d.nazwa] = [s.karta, s.masa, await pole(d, v)]; }
+    expect({ poleK, poleC }).toEqual({ poleK: '2026-03-02T08:05:00.000Z', poleC: '2026-03-02T08:05:00.001Z' });
+    expect(wynik).toEqual({ K: ['Z', 44, poleC], C: ['Z', 44, poleC], T: ['Z', 44, poleC] });
+  }, 2 * CZAS);
+});
+
+// ── Notatka w starej karcie obok poprawki wizyty przeniesionej (decyzja właściciela z 2026-11-25) ─────────────────────
+// K scala X → Y (wizyta v 20 kg, druga 21 kg); T (bliźniak sprzed scalenia, bez wiedzy o nim) w starej X: poprawia v na
+// 44 kg i dopisuje notatkę / „Przywróć” v (dał ją do Kosza w X przed scaleniem) i dopisuje notatkę / tylko dopisuje
+// notatkę / zapisuje nową wizytę (50 kg) i dopisuje notatkę; potem cztery pełne wymiany. Notatka „widoczna” — leży pod istniejącą kartą; „bez karty” — zapisana w magazynie pod kartą, której
+// nie ma (niewidoczna; nie skasowana).
+describe('notatka zapisana w starej karcie na urządzeniu bez wiedzy o „Scal pacjentów” (decyzja właściciela z 2026-11-25)', () => {
+  async function przebieg(wariant) {
+    const K = await urzadzenie('K');
+    const { P: X, ids: [v] } = await karta(K, 1, [20, 21]);
+    const { P: Y } = await karta(K, 2, [30]);
+    const T = await blizniak(K, 'T');
+    const et = { [X]: 'X', [Y]: 'Y' };
+    if (wariant.przywroc) { krok(); await T.vault.moveSnapshotToTrash(X, v); }
+    krok(); await K.vault.mergePatients(X, Y);
+    if (wariant.poprawka) await popraw(T, v, 44);
+    if (wariant.przywroc) { krok(); await T.vault.restoreTrashedSnapshot(X, v); }
+    if (wariant.nowa) { krok(); await T.vault.savePatient(naglowek(1, { masa: 50 }), { dedup: false, patientId: X }); }
+    krok(); await T.vault.savePatientNote({ patientId: X, title: 'Notatka N', body: 'Fikcyjna treść', category: 'inne' });
+    for (const [z, na] of [[K, T], [T, K], [K, T], [T, K]]) { krok(); await scal(z, na); }
+    const wynik = {};
+    for (const d of [K, T]) {
+      const karty = {};
+      const ids = new Set();
+      for (const k of await d.adapter.listPatientsForUser(uid(d))) {
+        ids.add(k.patientId);
+        const p = await d.vault.getPatient(k.patientId);
+        karty[et[k.patientId] || '?'] = (p ? p.snapshots : []).map((s) => String(s.payload.user.weight)).sort();
+      }
+      const notatki = (await d.adapter.listPatientNotesForUser(uid(d))).map((n) => `${ids.has(n.patientId) ? 'widoczna w' : 'bez karty, zapisana pod'} ${et[n.patientId] || '?'}`);
+      wynik[d.nazwa] = { karty, notatki };
+    }
+    return wynik;
+  }
+  const obaj = (x) => ({ K: x, T: x });
+
+  // Decyzja właściciela z 2026-11-25 (1a): poprawka wizyty przeniesionej idzie do karty scalonej (2a) także wtedy, gdy
+  // w tej samej starej karcie dopisano notatkę; notatka zostaje zapisana bez widocznej karty (jak dziś sama notatka —
+  // znane ograniczenie, przeniesienie notatek starej karty do karty scalonej: E3-PR0f). Dawniej X wracała z poprawką
+  // i z widoczną notatką (duplikat karty).
+  it('notatka i poprawka wizyty przeniesionej: poprawka w karcie scalonej Y, stara karta X nie wraca, notatka zapisana bez widocznej karty (decyzja właściciela z 2026-11-25)', async () => {
+    expect(await przebieg({ poprawka: true })).toEqual(obaj({ karty: { Y: ['21', '30', '30', '44'] }, notatki: ['bez karty, zapisana pod X'] }));
+  }, 2 * CZAS);
+
+  // „Przywróć” wizyty przeniesionej w starej karcie to także późniejsza zmiana tej wersji (jak poprawka): wizyta zostaje
+  // w karcie scalonej Y (zachowanie z projektu tego wydania — „Przywróć” w starej karcie kończy w karcie scalonej),
+  // X nie wraca, a notatka dopisana w X zostaje zapisana bez widocznej karty — ta sama sytuacja co w decyzji właściciela
+  // z 2026-11-25 (do potwierdzenia przez właściciela przed scaleniem). Dawniej X wracała z v i z widoczną notatką.
+  it('notatka i „Przywróć” wizyty przeniesionej (T dał ją do Kosza w X przed scaleniem): wizyta w karcie scalonej Y, stara karta X nie wraca, notatka zapisana bez widocznej karty', async () => {
+    expect(await przebieg({ przywroc: true })).toEqual(obaj({ karty: { Y: ['20', '21', '30', '30'] }, notatki: ['bez karty, zapisana pod X'] }));
+  }, 2 * CZAS);
+
+  it('[kontrola] sama notatka: jak dotąd — X nie wraca, notatka zapisana bez widocznej karty', async () => {
+    expect(await przebieg({})).toEqual(obaj({ karty: { Y: ['20', '21', '30', '30'] }, notatki: ['bez karty, zapisana pod X'] }));
+  }, 2 * CZAS);
+
+  it('[kontrola] notatka i nowa wizyta: jak dotąd — X wraca z nową wizytą i z widoczną notatką, wizyty przeniesione zostają w Y', async () => {
+    expect(await przebieg({ nowa: true })).toEqual(obaj({ karty: { Y: ['20', '21', '30', '30'], X: ['50'] }, notatki: ['widoczna w X'] }));
+  }, 2 * CZAS);
+});
+
+// ── Poprawka wizyty przeniesionej, która trafia do karty scalonej, liczy się jak zmieniona wersja (odświeżenie widoku) ──
+// K scala X → Y; T (bez wiedzy o scaleniu) poprawia v w starej X na 44 kg. Na K poprawka przechodzi do v pod Y (decyzja
+// 'tresc'), a X nie powstaje — wynik scalania liczy ją w zmienionych wersjach, więc integracja odświeża listę i otwartą
+// kartę (vilda:sync-merged) także po samej kopercie albo delcie. Dotąd taka poprawka nie miała żadnego licznika: po
+// kopercie widok na K się nie odświeżał (na bazie 30008d8f — liczniki koperty puste).
+describe('poprawka wizyty przeniesionej w karcie scalonej liczy się jak zmieniona wersja — wynik scalania i koperty', () => {
+  async function swiat() {
+    const K = await urzadzenie('K');
+    const { P: X, ids: [v] } = await karta(K, 1, [20, 21]);
+    const { P: Y } = await karta(K, 2, [30]);
+    const T = await blizniak(K, 'T');
+    krok(); await K.vault.mergePatients(X, Y);
+    await popraw(T, v, 44);
+    return { K, T, X, Y, v, et: { [X]: 'X', [Y]: 'Y' } };
+  }
+  // Liczniki zmiany — te, na które integracja odświeża widok (Bdz_czyZmiana w vilda_sync.js); niezerowe.
+  const ZMIANA = ['addedPatientCount', 'deletedPatientCount', 'addedPatientNoteCount', 'updatedPatientNoteCount', 'deletedPatientNoteCount',
+    'mergedPatientCount', 'addedNoteCount', 'updatedNoteCount', 'deletedNoteCount', 'addedSnapshotCount', 'updatedSnapshotCount',
+    'trashedSnapshotCount', 'prunedSnapshotCount', 'addedPatientListCount', 'updatedPatientListCount', 'deletedPatientListCount',
+    'updatedPreferenceCount', 'addedPasskeyCount', 'removedPasskeyCount'];
+  const niezerowe = (w) => Object.fromEntries(ZMIANA.filter((k) => ((w || {})[k] || 0) > 0).map((k) => [k, w[k]]));
+  it('pełna kopia T → K: poprawka v pod Y — zmieniona wersja (updatedSnapshotCount 1), karta X nie powstaje', async () => {
+    const s = await swiat();
+    krok(); const w = await scal(s.T, s.K);
+    expect({ liczniki: niezerowe(w), v: (await stan(s.K, s.v, s.et)).karta, masa: (await wersja(s.K, s.v)).payload.user.weight })
+      .toEqual({ liczniki: { mergedPatientCount: 1, updatedSnapshotCount: 1 }, v: 'Y', masa: 44 });
+  }, CZAS);
+  it('koperta wersji v (stara karta X) z T na K: applied, poprawka v pod Y — zmieniona wersja (updatedSnapshotCount 1)', async () => {
+    const s = await swiat();
+    const ev = s.T.vault._eventLog;
+    const { env } = await ev.encryptEvent(await ev.buildSnapshotEvent(s.X, s.v, null));
+    krok(); const r = await s.K.vault._eventLog.applyEncryptedEvent(env);
+    expect({ status: r.status, liczniki: niezerowe(r.result), v: (await stan(s.K, s.v, s.et)).karta, masa: (await wersja(s.K, s.v)).payload.user.weight })
+      .toEqual({ status: 'applied', liczniki: { updatedSnapshotCount: 1 }, v: 'Y', masa: 44 });
+  }, CZAS);
+});

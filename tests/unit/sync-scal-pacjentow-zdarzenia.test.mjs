@@ -497,10 +497,13 @@ describe('SZ11–SZ13: odbiorca koperty ptomb z kartą Y', () => {
       it(`SZ11: ${zmiana}, ${metoda}, kolejność emisji (snap ×3, ptomb z kartą Y) — u B x pod Y ${opisZmiany}, karta X usunięta`, async () => {
         const s = await scenariuszOdbiorcy(zmiana);
         expect(await dostarcz(s.B, s.snapy.map((w) => w.env), droga)).toEqual(['applied', 'applied', 'applied']);
-        // Kontrola: po snap ×3 x zostaje pod X (remis rev, późniejsza zmiana B), więc pod Y przenosi ją dopiero ptomb.
-        const xPodX = (await s.B.v.getPatient(s.X.P)).snapshots.find((w) => w.snapshotId === s.x);
-        expect([!!xPodX && ZMIANY.find((z) => z[0] === zmiana)[1](xPodX), (await wersje(s.B.v, s.Y.P)).includes(s.x)],
-          `kontrola: po snap ×3 x pod X ${opisZmiany}, nie pod Y`).toEqual([true, false]);
+        // E3-PR0e2b: koperty snap niosą chwilę przypisania zapisaną przez „Scal pacjentów”, więc już po snap ×3 x jest pod
+        // Y ze zmianą B, a opróżniona X znika (dotąd x zostawała pod X — remis rev, późniejsza zmiana B — i pod Y
+        // przenosiła ją dopiero koperta ptomb z kartą Y).
+        const Yp = await s.B.v.getPatient(s.Y.P);
+        const xPodY = Yp && Yp.snapshots.find((w) => w.snapshotId === s.x);
+        expect([!!(await s.B.v.getPatient(s.X.P)), !!xPodY && ZMIANY.find((z) => z[0] === zmiana)[1](xPodY)],
+          `po snap ×3 karta X opróżniona, x pod Y ${opisZmiany}`).toEqual([false, true]);
         expect(await dostarcz(s.B, [s.nagrobek.env], droga)).toEqual(['applied']);
         expect(await stanB(s, zmiana), `B: karta X usunięta, x pod Y ${opisZmiany}`).toEqual({ kartaX: false, wersjeY: await wersje(s.A.v, s.Y.P), x: true });
         expect(await wersje(s.A.v, s.Y.P), 'kontrola: Y u A — y, x0, x i scalona').toEqual([s.y, s.x0, s.x, s.m].sort());
@@ -518,15 +521,17 @@ describe('SZ11–SZ13: odbiorca koperty ptomb z kartą Y', () => {
 
   for (const [zmiana] of ZMIANY) {
     for (const [droga, metoda] of DROGI) {
-      it(`SZ13: kontrola — ${zmiana}, ${metoda}, ptomb(X) bez karty Y (sam nagrobek) w kolejności emisji — x znika u B (w żadnej karcie)`, async () => {
+      // E3-PR0e2b: dotąd sam nagrobek (bez karty Y) po snap ×3 usuwał X razem z x — x ginęła u B; teraz koperty snap
+      // z chwilą przypisania przenoszą x pod Y przed nagrobkiem, więc sam nagrobek niczego nie gubi.
+      it(`SZ13: ${zmiana}, ${metoda}, ptomb(X) bez karty Y (sam nagrobek) w kolejności emisji — x pod Y u B (koperty snap z chwilą przypisania przenoszą ją przed nagrobkiem), karta X usunięta`, async () => {
         const s = await scenariuszOdbiorcy(zmiana);
         const k = await odszyfruj(s.A, s.nagrobek.env);
         delete k.patients;
         const sam = (await s.A.ev.encryptEvent(k)).env;
         expect(await dostarcz(s.B, [...s.snapy.map((w) => w.env), sam], droga)).toEqual(['applied', 'applied', 'applied', 'applied']);
-        expect(await stanB(s, zmiana), 'B: karta X usunięta razem z x').toEqual({ kartaX: false, wersjeY: [s.y, s.x0, s.m].sort(), x: 'brak' });
+        expect(await stanB(s, zmiana), 'B: karta X usunięta, x pod Y ze zmianą').toEqual({ kartaX: false, wersjeY: await wersje(s.A.v, s.Y.P), x: true });
         const lad = await s.B.v.exportSyncPayload();
-        expect(lad.patients.some((p) => (p.snapshots || []).some((w) => w.snapshotId === s.x)), 'x w żadnej karcie B').toBe(false);
+        expect(lad.patients.filter((p) => (p.snapshots || []).some((w) => w.snapshotId === s.x)).map((p) => p.patientId), 'x tylko w Y u B').toEqual([s.Y.P]);
       }, CZAS);
     }
   }
@@ -578,15 +583,16 @@ describe('Karta opróżniona kopertą ptomb z kartą Y (E3-PR0e1)', () => {
       expect(await nagrobekX(s.B, s.X.P), 'B: nagrobek X z chwilą scalenia').toBe(s.T);
     }, CZAS);
 
-    it(`[kontrola] ${metoda}: koperty w kolejności kolejki A (snap ×3, ptomb z kartą Y sprzed poprawki, snap poprawki x) — X opróżnia dopiero ostatnia koperta snap, bez znanego nagrobka: X znika bez nagrobka jak dotąd`, async () => {
+    // E3-PR0e2b: koperty snap niosą chwilę przypisania z „Scal pacjentów”, więc x0 i x przechodzą pod Y już przy
+    // kopertach snap, a nie dopiero przy ostatniej (dotąd: po ptomb X zostawała z x, a opróżniała ją ostatnia koperta
+    // snap bez znanego nagrobka). Wynik końcowy jak dotąd: X usunięta, Y z wersjami jak u A.
+    it(`${metoda}: koperty w kolejności kolejki A (snap ×3, ptomb z kartą Y sprzed poprawki, snap poprawki x) — X opróżniają już koperty snap z chwilą przypisania; na końcu X usunięta, Y jak u A`, async () => {
       const s = await scenariuszOproznionej();
       expect(await dostarcz(s.B, s.wiersze.slice(0, 4).map((w) => w.env), droga)).toEqual(['applied', 'applied', 'applied', 'applied']);
-      expect(await wersje(s.B.v, s.X.P), 'kontrola: po ptomb X zostaje z x (poprawka B późniejsza, ta sama rev)').toEqual([s.x]);
-      expect(await nagrobekX(s.B, s.X.P), 'kontrola: nagrobek X przegrał z zapisem X na B').toBe(null);
+      const poCzterech = { kartaX: !!(await s.B.v.getPatient(s.X.P)), wersjeX: await wersje(s.B.v, s.X.P), nagrobekX: await nagrobekX(s.B, s.X.P) };
       expect(await dostarcz(s.B, [s.wiersze[4].env], droga)).toEqual(['applied']);
-      expect(await s.B.v.getPatient(s.X.P), 'B: karta X usunięta').toBeFalsy();
-      expect(await wersje(s.B.v, s.Y.P)).toEqual(await wersje(s.A.v, s.Y.P));
-      expect(await nagrobekX(s.B, s.X.P), 'B: bez nagrobka X — scalanie koperty snap go nie zna').toBe(null);
+      const koniec = { kartaX: !!(await s.B.v.getPatient(s.X.P)), nagrobekX: await nagrobekX(s.B, s.X.P), Y: (await wersje(s.B.v, s.Y.P)).join() === (await wersje(s.A.v, s.Y.P)).join() };
+      expect({ poCzterech, koniec }).toEqual({ poCzterech: { kartaX: false, wersjeX: [], nagrobekX: s.T }, koniec: { kartaX: false, nagrobekX: s.T, Y: true } });
     }, CZAS);
   }
 });

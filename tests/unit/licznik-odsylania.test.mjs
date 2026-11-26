@@ -544,7 +544,8 @@ describe('licznik odsyłania: rozstrzygnięcie „nagrobek wygrywa z wersją” 
       if (!n || typeof n.type !== 'string') return;
       if (n.type === 'NewExpression' && n.callee.type === 'Identifier' && n.callee.name === 'Date' && n.arguments.length === 0) z.push('new Date()');
       if (n.type === 'CallExpression' && n.callee.type === 'Identifier' && n.callee.name === 'Date') z.push('Date()');
-      if (n.type === 'MemberExpression' && n.object.type === 'Identifier' && ['Date', 'performance'].includes(n.object.name)) z.push(n.object.name + '.…');
+      // Date.parse(x) — czysta funkcja argumentu, nie zegar (Bnp_iso, wołana przy części Kosza E3-PR0e2b)
+      if (n.type === 'MemberExpression' && n.object.type === 'Identifier' && ['Date', 'performance'].includes(n.object.name) && !(n.object.name === 'Date' && !n.computed && n.property.name === 'parse')) z.push(n.object.name + '.…');
       for (const k of Object.keys(n)) { const x = n[k]; if (Array.isArray(x)) x.forEach(idz); else if (x && typeof x.type === 'string') idz(x); }
     };
     idz(node.body);
@@ -556,6 +557,7 @@ describe('licznik odsyłania: rozstrzygnięcie „nagrobek wygrywa z wersją” 
     expect([...zmienne].sort(), 'zmienne modułu w domknięciu = STALE_WYGRYWA').toEqual([...LO.STALE_WYGRYWA].sort());
     expect([...funkcje].filter((n) => zegar(dekl.get(n)).length), 'funkcje z zegarem w domknięciu').toEqual([]);
     expect(zegar({ body: (await import('acorn')).parse('function f() { return Date.now(); }', { ecmaVersion: 'latest' }).body[0].body }), 'samokontrola wykrywacza zegara').toEqual(['Date.…']);
+    expect(zegar({ body: (await import('acorn')).parse('function f(x) { return Date.parse(x); }', { ecmaVersion: 'latest' }).body[0].body }), 'samokontrola: Date.parse(x) nie jest zegarem').toEqual([]);
     const tekstLO = readFileSync(path.join(repo, 'tests/support/licznik-odsylania.mjs'), 'utf8');
     expect([...LO.WYGRYWA_Z_SEJFU, ...LO.STALE_WYGRYWA].filter((n) => new RegExp(`(?:function\\s+${n}\\s*\\(|(?:const|let|var)\\s+${n}\\s*=)`).test(tekstLO)), 'deklaracje w liczniku').toEqual([]);
   });

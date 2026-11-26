@@ -74,6 +74,7 @@ import {
 } from './polkrata-uprzaz.mjs';
 import { KOLEJNOSCI_8, ola } from './s4d7-wspolne.mjs';
 import { pelnyStan, widok } from './kosz-po-kluczu-wspolne.mjs';
+import { POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ } from '../support/czesci-wydania.mjs';
 
 Error.stackTraceLimit = 100;
 const M = 60e3;
@@ -176,15 +177,19 @@ describe('P-KOSZ-PO-KLUCZU — F-R5: „Przywróć” wizyty, którą żywa kart
     }
   }
 
-  // Znane ograniczenie (E1 — obecność): P nie ma x w żadnej karcie, a ostatnią wersją jego Y jest y (dana do kosza na C).
+  // „Przywróć” x na P (bez wiedzy o scaleniu X → Y) przywraca x do karty wpisu X. Dotąd (E1 — obecność) urządzenia
+  // trwale się różniły: K i C przenosiły x z Y do X, a P zostawał z Y[y]. Od E3-PR0e2b x w Y ma chwilę przypisania
+  // zapisaną przez „Scal pacjentów”, więc po wymianach x wraca do karty scalonej Y na wszystkich urządzeniach, a X zostaje
+  // tylko z nową wizytą (wizyta przeniesiona scaleniem zostaje w karcie scalonej — decyzja właściciela 2a z 2026-11-23).
   for (const kol of ['K←C,P←K', 'C←P,C←K']) {
-    it(`żywa Y (${kol}), „Przywróć” x na P — do X; K i C przenoszą x z Y do X (pusta Y znika bez nagrobka), P zostaje z Y[y] (E1, jak dotąd)`, async () => {
+    it(`żywa Y (${kol}), „Przywróć” x na P — do X; po wymianach x w karcie scalonej Y na P, K i C (chwila przypisania z „Scal pacjentów”), X z nową wizytą`, async () => {
       const u = await przygotuj();
       await zywaY(u);
       await przebieg(u, kol);
       expect(await przywroc(u, u.P, u.X), 'P: przywrócono do karty wpisu').toBe('przywrócono X');
       const r = await przebieg(u, null);
-      expect(r.widoki, 'po rundach').toEqual({ P: `X[nowa,x:23] Y[y] Z[z] | ${KOSZ_Y}`, K: `X[nowa,x:23] Z[z] | ${KOSZ_Y}`, C: `X[nowa,x:23] Z[z] | ${KOSZ_Y}` });
+      const w = `X[nowa] Y[x:23] Z[z] | ${KOSZ_Y}`;
+      expect(r.widoki, 'po rundach').toEqual({ P: w, K: w, C: w });
       for (const n of ['P', 'K', 'C']) expect(puste(r.st[n]), `${n}: bez pustej karty`).toEqual([]);
       expect(r.stabilny).toBe(true);
       expect(r.zapisy, 'runda kontrolna bez zapisów').toEqual(ZERO3);
@@ -218,7 +223,10 @@ async function przerwaneE4b(u) {
   return st;
 }
 describe('P-KOSZ-PO-KLUCZU — F-R5: „Przywróć” po scaleniu przerwanym po zapisie listy (wizyta w starej karcie i w koszu)', () => {
-  it('E4b, P←K przerwane przed usunięciem X; „Przywróć” x na P — x 74 zostaje w X (bez pustej karty), X wraca na trzech (D-4 A), po rundach zbieżnie', async () => {
+  // Reguła z decyzji właściciela 2b z 2026-11-25 (POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ): x z poprawką P, późniejszą niż
+  // Kosz K pod Z, wychodzi z Kosza w karcie scalonej Z, a X nie wraca (nagrobek X zostaje); bez reguły X wracała na
+  // trzech z x 74 (D-4 A).
+  it(`E4b, P←K przerwane przed usunięciem X; „Przywróć” x na P — x 74 zostaje w X (bez pustej karty); po rundach ${POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? 'x 74 w karcie scalonej Z na trzech, nagrobek X' : 'X wraca na trzech (D-4 A)'}, zbieżnie`, async () => {
     const u = await przygotuj();
     const st = await przerwaneE4b(u);
     expect(st, 'kontrola: lista zapisana, usunięcie X nieudane').toEqual({ lista: true, blad: true });
@@ -227,7 +235,7 @@ describe('P-KOSZ-PO-KLUCZU — F-R5: „Przywróć” po scaleniu przerwanym po 
     const s = await pelnyStan(u, u.P);
     expect({ widok: widok(s), puste: puste(s) }, 'P po „Przywróć”').toEqual({ widok: 'X[x:74] Z[m2,m1,z,y,x3,x1] | nagr Y', puste: [] });
     const r = await przebieg(u, null);
-    const w = 'X[x:74] Z[m2,m1,z,y,x3,x1] | nagr Y';
+    const w = POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? 'Z[m2,m1,z,y,x3,x:74,x1] | nagr X,Y' : 'X[x:74] Z[m2,m1,z,y,x3,x1] | nagr Y';
     expect(r.widoki, 'po rundach').toEqual({ P: w, K: w, C: w });
     for (const n of ['P', 'K', 'C']) expect(puste(r.st[n]), `${n}: bez pustej karty`).toEqual([]);
     expect(r.zbiezny, 'ten sam pełny stan').toBe(true);

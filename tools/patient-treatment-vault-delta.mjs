@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { restoreDiagnosisMutationBaseline } from './diagnosis-mutation-vault-delta.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const BASE = '119b941358b9256ec15d0e87298707510e98524e1aad67f8979cc26ffb4e4faf';
+const BASE = 'efa04516546c0070d4b8240ba6b48baec40f804568360d785a8a059e11fe69cf';
 const START = '/* BEGIN VILDA PATIENT TREATMENT V1 */\n';
 const END = '/* END VILDA PATIENT TREATMENT V1 */\n';
 const TOKEN = '{{PATIENT_TREATMENT_FRAGMENT}}';

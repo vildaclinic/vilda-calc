@@ -122,6 +122,7 @@ import {
 } from './polkrata-uprzaz.mjs';
 import { KOLEJNOSCI_8, ola } from './s4d7-wspolne.mjs';
 import { pelnyStan, widok } from './kosz-po-kluczu-wspolne.mjs';
+import { POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ } from '../support/czesci-wydania.mjs';
 
 const M = 60e3;
 const DZIEN = 864e5;
@@ -555,9 +556,12 @@ describe('P-KOSZ-PO-KLUCZU — A4: późniejsza gwiazdka i starsza poprawka z dw
 
 // --- 9. Wersja pod starą kartą zmieniona po usunięciu (M39/M40) i nieczytelna przy retencji (M40 przeglądu) ------------
 describe('P-KOSZ-PO-KLUCZU — wersja pod inną kartą: późniejsza zmiana wygrywa z koszem, nieczytelna przeżywa retencję', () => {
-  // Kontrola po scaleniu, w którym urządzenie z poprawką dostaje kosz K (P w P←K, C w C←P,C←K).
+  // Kontrola po scaleniu, w którym urządzenie z poprawką dostaje kosz K (P w P←K, C w C←P,C←K). Po wymianach: reguła
+  // z decyzji właściciela 2b z 2026-11-25 (POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ) — wpis Kosza K pod Z zna scalenie
+  // (późniejszą chwilę przypisania), więc x z poprawką P wychodzi z Kosza w karcie scalonej Z, a X nie wraca (nagrobek
+  // X zostaje); bez reguły X wracała z x 74 na trzech (D-4 A). Pierwszy literał (po jednym scaleniu) bez zmian.
   for (const [kol, na] of [['P←K,K←C', 'P'], ['C←P,C←K', 'C']]) {
-    it(`E4b-po (${kol}): K: X → Y → Z, kosz x; P (bez wiedzy) poprawia potem x w X na 74 — ${na} po koszu K: x 74 w X bez wpisu kosza; po rundach X[x:74] na trzech`, async () => {
+    it(`E4b-po (${kol}): K: X → Y → Z, kosz x; P (bez wiedzy) poprawia potem x w X na 74 — ${na} po koszu K: x 74 w X bez wpisu kosza; po rundach ${POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? 'x 74 w Z, nagrobek X' : 'X[x:74]'} na trzech`, async () => {
       const u = await przygotuj();
       await XYZ(u); await krok(() => doKosza(u.K, u.sid)); await krok(() => poprawMase(u.P, u.sid, 74));
       for (const k of kol.split(',')) { const [n, z] = k.split('←'); await sync(u[z], u[n]); }
@@ -565,7 +569,7 @@ describe('P-KOSZ-PO-KLUCZU — wersja pod inną kartą: późniejsza zmiana wygr
       expect({ x: await gdzieX(u, u[na]), kosz: await koszX(u[na], u.sid), wpis }, `${na}: poprawka późniejsza niż usunięcie zostaje, wpis kosza zdjęty`)
         .toEqual({ x: 'X 74 r1', kosz: null, wpis: null });
       const r = await przebieg(u, '');
-      const w = 'X[x:74] Z[m2,m1,z,y,x3,x1] | nagr Y';
+      const w = POPRAWKA_PO_KOSZU_W_KARCIE_SCALONEJ ? 'Z[m2,m1,z,y,x3,x:74,x1] | nagr X,Y' : 'X[x:74] Z[m2,m1,z,y,x3,x1] | nagr Y';
       expect(r.widoki).toEqual({ P: w, K: w, C: w });
       expect(r.zbiezny, 'ten sam pełny stan').toBe(true);
       expect(r.stabilny).toBe(true);

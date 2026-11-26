@@ -10,12 +10,17 @@ afterEach(() => { vi.useRealTimers(); });
 
 const src = readFileSync(path.join(repoRoot, 'vilda_vault.js'), 'utf8');
 const wytnij = (od, doo) => { const i = src.indexOf(od); return src.slice(i, src.indexOf(doo, i)); };
+const doKonca = (od) => { const i = src.indexOf(od); return src.slice(i, src.indexOf('\n}\n', i) + 2); };
 const kod = [
   src.match(/function mt\(t\)\{var e=t&&t\.rev;[^}]*\}/)[0],
   src.match(/function Bm1\(t,e\)\{.*?return n==null\?\{\}:\{seq:n\}\}/)[0],
   wytnij('function Bkz_pozniejsza(', 'async function Bkz_podniesZapis('),
   'const de = 1e15, BKZ_KOSZ_MS = 1e14;',
   wytnij('function Bkz_czysc(', 'async function Bkz_czytaj('),
+  // E3-PR0e2b: wpis Kosza z chwilą przypisania — funkcje wycinka wołają odczyt i łączenie tej chwili
+  // (Bsw_chwilaPrzypisania, Bsw_przypisanie, Bnp_iso; są w sejfie także bez części Kosza)
+  doKonca('function Bsw_chwilaPrzypisania('),
+  doKonca('function Bnp_iso('),
 ].join('\n');
 const { Bkz_dolacz } = new Function(kod + '\nreturn { Bkz_dolacz };')();
 

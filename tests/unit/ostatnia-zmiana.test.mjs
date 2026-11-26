@@ -209,6 +209,23 @@ describe('wyrocznia: klasy tabeli wyjątków wymagają mechanizmu (pozytyw; nega
     expect(tylko(WYR.ocen(M2, { B: widok(stan({ karty: baza.patients })) }), 'n'), 'bez scalenia: utrata bez klasy').toEqual(['B n utrata [null]']);
   });
 
+  // E3-PR0e2b (model notatki przy dwóch przeciwnych „Scal pacjentów”; ziarno 22 profilu pełnego): A scala P → Q (n pod
+  // Q), B bez wiedzy scala Q → P (n u B pod P) i usuwa P („Usuń pacjenta”), widząc w niej n. Usunięcie dotyczy n — model
+  // nie uznaje go za „pominięte”, bo karta n w modelu (Q) prowadzi aliasem późniejszego scalenia B do P. Negatyw: jedno
+  // scalenie i „Usuń pacjenta” starej karty bez wiedzy o nim — nadal „pominięte” (D21-9, przypadek wyżej).
+  it('dwa przeciwne „Scal pacjentów” (P → Q na A, Q → P na B bez wiedzy) i „Usuń pacjenta” P na B: usunięcie dotyczy notatki (bez naruszenia, gdy jej nie ma; „wskrzeszenie”, gdy jest); jedno scalenie — nadal D21-9', () => {
+    const baza = bazaPQ({ notatki: [notatka('n', 'P', 'Fikcyjna treść')] });
+    const M = WYR.nowyModel();
+    const scaloneA = scalonePQ({ notatki: [notatka('n', 'Q', 'Fikcyjna treść', { rev: 2 })] });
+    WYR.zapisz(M, { dev: 'A', opis: 'Scal pacjentów', przed: baza, po: scaloneA, t: T(1), operacje: [op('mergePatients', 'P', 'Q')] });
+    const scaloneB = stan({ karty: [karta('P', [...baza.patients[0].snapshots, ...baza.patients[1].snapshots])], nagrobki: ['Q'], notatki: [notatka('n', 'P', 'Fikcyjna treść')] });
+    WYR.zapisz(M, { dev: 'B', opis: 'Scal pacjentów (bez wiedzy o scaleniu A)', przed: baza, po: scaloneB, t: T(2), operacje: [op('mergePatients', 'Q', 'P')] });
+    const usunietyB = stan({ nagrobki: ['P', 'Q'], nagrNotatek: [{ id: 'n' }] });
+    WYR.zapisz(M, { dev: 'B', opis: 'usuń pacjenta', przed: scaloneB, po: usunietyB, t: T(3), operacje: [op('removePatient', 'P')] });
+    expect(tylko(WYR.ocen(M, { B: widok(usunietyB) }), 'n'), 'bez notatki po usunięciu — bez naruszenia').toEqual([]);
+    expect(M.n.get('n').hist.some((h) => h.usun === 'pominięte (notatka przeniesiona do innej karty)'), 'usunięcie nie „pominięte”').toBe(false);
+  });
+
   it('P5: wpis Kosza pod kartą z aliasem „Scal pacjentów”, okno Kosza go nie pokazuje (pozytyw); ukryty wpis Kosza karty bez scalenia — bez klasy', () => {
     const baza = bazaPQ();
     const koszB = stan({ karty: [karta('P', [baza.patients[0].snapshots[1]]), baza.patients[1]], kosz: [wpisKosza('v', 'P', 20, { vid: 'wiz-v' })] });

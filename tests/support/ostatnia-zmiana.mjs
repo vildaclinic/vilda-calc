@@ -593,7 +593,12 @@ export function zapisz(M, { dev, app = BIEZACA, opis = '', przed, po, t, operacj
     // notatka, która wróciła z kartą (hak H1, ratunek D-21), jest obecna dla nagrobka tej mutacji
     const obecnaEf = m.obecna || (m.przyczyna === 'usuń pacjenta' && m.wraca && m.kartaUsun && (zywePrzed.has(m.kartaUsun) ? zywePrzed.get(m.kartaUsun) : zywa(M, m.kartaUsun)));
     if (!y && kartowe && !obecnaEf) { h.usun = 'już usunięta w modelu'; m.hist.push(h); continue; }
-    if (!y && kartowe && m.pid && m.pid !== x.pid) { h.usun = 'pominięte (notatka przeniesiona do innej karty)'; m.hist.push(h); continue; }
+    // E3-PR0e2b: notatka, której karta w modelu prowadzi aliasem późniejszego „Scal pacjentów” do karty usuwanej (dwa
+    // przeciwne scalenia: A X → Y, B bez wiedzy Y → X, potem B „Usuń pacjenta” X), była u usuwającego w tej karcie —
+    // usunięcie jej dotyczy (powrót karty — z nią), nie jest „pominięte”. Jedno scalenie i „Usuń pacjenta” starej karty
+    // bez wiedzy o nim — jak dotąd (D21-9).
+    if (!y && kartowe && m.pid && m.pid !== x.pid && rozwiaz(M, m.pid, m.tPid) !== x.pid) { h.usun = 'pominięte (notatka przeniesiona do innej karty)'; m.hist.push(h); continue; }
+    if (!y && kartowe && m.pid && m.pid !== x.pid) { h.przeciwne = m.pid; m.pid = x.pid; }
     // zapis notatki w starej karcie X po „Scal pacjentów” (urządzenie bez wiedzy o nim): D-4 A albo P6 tej notatki
     if (y && y.pid && M.alias.has(y.pid) && cmp(M.alias.get(y.pid).czas, czas) < 0 && !op.scal) m.zapisPoScaleniu = { czas, pid: y.pid };
     if (y && (!x || x.tekst !== y.tekst || (x.raw !== y.raw && x.pid === y.pid))) { Object.assign(m, { obecna: true, tekst: y.tekst, pid: y.pid, tPid: czas, tTekst: czas, tObec: czas, przyczyna: null }); h.tekst = y.tekst; h.pid = y.pid; }

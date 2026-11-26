@@ -113,6 +113,7 @@
 //   klucza v najpierw do wierszy E3-PR0d tego klucza ('echo'), potem do wierszy ze stanu ('stan', z polem retencja);
 //   snap — 'echo'; koperta stomb bez wiersza — wyjątek.
 import { encje, sortuj } from './encje-ladunku.mjs';
+import { KOSZ_PAMIETA_PRZYPISANIE } from './czesci-wydania.mjs';
 
 export const LIMITY = Object.freeze({
   partiaZdarzen: 200, partiaBajtow: 1048576, zdarzenieBajtow: 262144,
@@ -145,8 +146,10 @@ export const POLA_KANDYDACI = Object.freeze({ stomb: Object.freeze(['visitCipher
 // E3-PR0e2a (P-SYNC-WLASCICIEL): pola wersji pomijane w porównaniach odsyłania jak rev — chwila przypisania wersji do
 // karty (assignedAtISO). Samo pole nie wywołuje odesłania: zbieżność daje łączenie „późniejsza z obu” przy każdym zapisie
 // rekordu wersji. Ta sama lista co stała Bev_ECHO_POMIJANE części Bev_ sejfu (strażnik w tests/unit/sync-odsylanie.test.mjs).
-// Bez pola w danych kanon jest taki sam jak dotąd.
-export const POLA_POMIJANE = Object.freeze({ snap: Object.freeze(['assignedAtISO']) });
+// Bez pola w danych kanon jest taki sam jak dotąd. E3-PR0e2b, część Kosza (KOSZ_PAMIETA_PRZYPISANIE,
+// tests/support/czesci-wydania.mjs): wpis Kosza pamięta tę chwilę, a kanon odsyłania Kosza ją pomija (ta sama lista co
+// początek stałej Bev_KANON_KOSZA; bez tej części — pusta).
+export const POLA_POMIJANE = Object.freeze({ snap: Object.freeze(['assignedAtISO']), stomb: Object.freeze(KOSZ_PAMIETA_PRZYPISANIE ? ['assignedAtISO'] : []) });
 
 const obiekt = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const bez = (o, pola) => { if (!obiekt(o)) return o; const x = { ...o }; for (const p of pola) delete x[p]; return x; };
@@ -170,7 +173,7 @@ export function kanon2a(kind, v) {
   // z obu wersji; ta różnica nie jest zmianą dla lekarza i nie jest odsyłana (jak R2 wersji, decyzja 2a) — klasa
   // „sam rev notatki” (echoScalenia).
   if (kind === 'pnote') return bez(v, ['rev']);
-  if (kind === 'stomb') return (Array.isArray(v) ? v : []).map((e) => bezW(bez(e, POLA_D7), 'payload', POSTAC_GWIAZDKI));
+  if (kind === 'stomb') return (Array.isArray(v) ? v : []).map((e) => bezW(bez(e, [...POLA_D7, ...POLA_POMIJANE.stomb]), 'payload', POSTAC_GWIAZDKI));
   if (BEZ_REV.includes(kind)) return bez(v, ['rev']);
   return v;
 }
@@ -634,11 +637,13 @@ export function nowyLicznikOdsylania({ regula = 'T', rekordZlozony = null } = {}
 }
 
 // ── Model odsyłania ukrytego wpisu Kosza karty usuniętej (E3-PR0d2; opis w nagłówku) ─────────────────────────────────
-// Domknięcie wywołań Bkz_wygrywa, Bkz_zmiana i Bgw_stan w vilda_vault.js (25 funkcji) i jedyna zmienna modułu w nim;
-// strażnik „wycięte = sejf” w tests/unit/licznik-odsylania.test.mjs.
+// Domknięcie wywołań Bkz_wygrywa, Bkz_zmiana i Bgw_stan w vilda_vault.js (25 funkcji; przy części Kosza E3-PR0e2b —
+// 28: składnik karty wpisu i odcisk wpisu czytają chwilę przypisania przez Bsw_przypisanie, Bsw_chwilaPrzypisania
+// i Bnp_iso) i jedyna zmienna modułu w nim; strażnik „wycięte = sejf” w tests/unit/licznik-odsylania.test.mjs.
 export const WYGRYWA_Z_SEJFU = Object.freeze(['Bm1', 'Bkz_pozniejsza', 'Bkz_chwilaKosza', 'Bkz_chwilaRetencji', 'Bkz_ostatnie', 'Bkz_zmiana',
   'Bkz_znanaZmiana', 'Bkz_wygrywa', 'Bpk_przypieta', 'Bgw_rej', 'Bgw_g', 'Bgw_stan', 'Bgw_kanon', 'Bgw_odcisk', 'Bgw_porownaj', 'Bgw_pozniejszy',
-  'Bgw_zWpisu', 'Bpk_opis', 'Bpk_tr', 'Bpk_odcisk', 'Bgw_czKlucz', 'Bgw_czZTresci', 'Bpk_zWpisu', 'Bpk_revPary', 'mt']);
+  'Bgw_zWpisu', 'Bpk_opis', 'Bpk_tr', 'Bpk_odcisk', 'Bgw_czKlucz', 'Bgw_czZTresci', 'Bpk_zWpisu', 'Bpk_revPary', 'mt',
+  ...(KOSZ_PAMIETA_PRZYPISANIE ? ['Bsw_przypisanie', 'Bsw_chwilaPrzypisania', 'Bnp_iso'] : [])]);
 export const STALE_WYGRYWA = Object.freeze(['Bgw_czPam']);
 // Tekst deklaracji stałej modułu n z tekstu sejfu (od „const” do pierwszego średnika; strażnik w teście licznika
 // porównuje go z deklaracją z drzewa składni) — jedno źródło wycinka stałych dla licznika i testów.

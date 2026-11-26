@@ -1730,20 +1730,28 @@ function Bpk_dl(a, c) {
   if (a.t !== c.t) return a.t > c.t ? a : c;
   return Bpk_nowszy(c.d, a.d) ? c : a;
 }
+// Karta wpisu z najpozniejszego nagrobka (t), przy remisie chwil — wiekszy id. Od E3-PR0e2b (decyzja wlasciciela
+// z 2026-11-24) skladnik niesie tez chwile przypisania wersji do tej karty (assignedAtISO, tylko gdy jest) — zawsze
+// razem z karta, ktora wygrala, nigdy chwila jednej karty przy innej; przy tej samej karcie i chwili — pozniejsza
+// z obu (brak = najwczesniej). Porzadek leksykograficzny (t, id, chwila): przemiennie, lacznie, idempotentnie.
 function Bpk_karta(a, c) {
   if (!a) return c;
   if (!c) return a;
   if (a.t !== c.t) return a.t > c.t ? a : c;
-  return c.id > a.id ? c : a;
+  if (a.id !== c.id) return c.id > a.id ? c : a;
+  return Bsw_chwilaPrzypisania(c) > Bsw_chwilaPrzypisania(a) ? c : a;
 }
 // Skladniki nagrobka e: z lokalnego stanu (e.Bpk) albo — ladunek, dawna lista — z jego pol.
 // Odcisk pol wpisu, z ktorych Bpk_wpis zbudowal wpis (K1, decyzja wlasciciela D10 = a). Starszy kod (cofniecie wydania,
 // stara karta przegladarki na tym samym magazynie) zmienia pola wpisu przez Object.assign i przenosi Bpk bez zmian — przy
 // niezgodnym odcisku skladniki liczone sa z pol, jak dla dawnej listy (inaczej spadala rev i ginela pozniejsza poprawka).
+// Chwila przypisania wersji do karty wpisu (E3-PR0e2b) — w odcisku tylko, gdy jest: odcisk wpisu bez niej jest bajt
+// w bajt jak dotad (skladniki zapisane wczesniej nie licza sie od nowa).
 function Bpk_odcisk(e) {
   const c = e.payloadCipher;
   return JSON.stringify([e.patientId, e.deletedAtISO, e.przycietoISO || null, e.powod || null, mt(e), e.updatedAtISO || null,
-    e.savedAtISO || null, e.seq == null ? null : e.seq, e.zmianaISO || null, e.koszISO || null, e.revPary || null, c ? c.iv : null]);
+    e.savedAtISO || null, e.seq == null ? null : e.seq, e.zmianaISO || null, e.koszISO || null, e.revPary || null, c ? c.iv : null]
+    .concat(Bsw_chwilaPrzypisania(e) ? [Bsw_chwilaPrzypisania(e)] : []));
 }
 // Z4: chwila tresci wpisu kosza bez skladnikow i bez trescISO — z tresci (Bgw_stan), jak dla tresci z ladunku
 // (Bkz_scalStart). Dotad z opisu: wpis kosza starszej aplikacji z gwiazdka zmieniona na tym urzadzeniu (opis = chwila
@@ -1788,7 +1796,8 @@ function Bpk_zWpisu(e) {
     wr: -1,
     dm: opis,
     dl: { t: ost, d: opis },
-    p: { t: ost, id: e.patientId },
+    // Karta wpisu i (E3-PR0e2b) chwila przypisania wersji do niej, tylko gdy jest (Bpk_karta).
+    p: Object.assign({ t: ost, id: e.patientId }, Bsw_przypisanie(e)),
     g: Bgw_zWpisu(e),
   };
 }
@@ -1885,6 +1894,8 @@ function Bpk_wpis(baza, pk) {
   // W3: rejestr gwiazdki (bez rejestru „nigdy jawnie” — nic nie mowi) i chwila tresci kosza.
   if (pk.g && (pk.g.pin || pk.g.at)) e.gwiazdka = { pin: !!pk.g.pin, at: pk.g.at || null };
   if (wazny && pk.t && pk.t.c) e.trescISO = Bpk_cz(pk.t);
+  // E3-PR0e2b: chwila przypisania wersji do karty wpisu — ze skladnika karty, razem z nia (bez niej wpis jak dotad).
+  Object.assign(e, Bsw_przypisanie(pk.p));
   e.Bpk = wazny && pk.t && pk.t.c ? Object.assign({}, pk, { t: { wE: true, o: pk.t.o, od: pk.t.od, cz: Bpk_cz(pk.t) } }) : Object.assign({}, pk);
   e.Bpk.f = Bpk_odcisk(e);
   return e;
@@ -2478,6 +2489,9 @@ async function Bkz_doKosza(patientId, snapshotId, opcje) {
       visitCipher: Bvisit_cipher,
       trescISO: Bgw_st.cz,
     }, Bm1(zapis), Bgw_st.pin || Bgw_st.at ? { gwiazdka: { pin: Bgw_st.pin, at: Bgw_st.at } } : null);
+    // E3-PR0e2b (decyzja wlasciciela z 2026-11-24): wpis pamieta chwile przypisania usuwanej wersji do karty (kopia,
+    // tylko gdy jest; bez nowej chwili) — bez niej wpis bajt w bajt jak dotad.
+    Object.assign(wpis, Bsw_przypisanie(zapis));
     // Najpierw kosz, potem usuniecie: bez potwierdzonego wpisu w koszu wersja zostaje.
     // F-F (panel 2026-10-22): odpiecie jest juz zapisane — przy bledzie kosza (np. brak miejsca w IndexedDB) wersja wraca
     // przypieta (Bkz_przypnijPoBledzie), inaczej zostawala odpieta mimo komunikatu „karta bez zmian” i retencja mogla ja
@@ -2668,9 +2682,12 @@ async function Bkz_przywroc(patientId, snapshotId) {const PatientClinicalOperati
       Bgw_szyfr = await V(Bgw_ustaw(zrodlo, zmiana, g || rej));
     } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); /* tresc bez zmian */ }
     const zapisano = zKarty ? (obecna.savedAtISO || e.savedAtISO || teraz) : (e.savedAtISO || teraz);
-    // Chwila przypisania wersji do karty (E3-PR0e2a, P-SYNC-WLASCICIEL) — z wersji w karcie (obecna), gdy jest. Wpis
-    // kosza jej nie przechowuje (polkrata kosza odbudowuje wpis ze swoich skladnikow), wiec zapis tylko z kosza wraca
-    // bez niej, a wlasciciela takiej wersji wspolnej dwom kartom rozstrzyga regula dla danych bez tej chwili (rev).
+    // Chwila przypisania wersji do karty (E3-PR0e2a, P-SYNC-WLASCICIEL) — pozniejsza z wersji w karcie (obecna), gdy
+    // jest, i z wpisu kosza, gdy wersja wraca pod karte wpisu. Od E3-PR0e2b wpis kosza ja pamieta (skladnik karty
+    // polkraty, razem z karta wpisu; decyzja wlasciciela z 2026-11-24), wiec zapis tylko z kosza wraca z nia: poprawka
+    // albo gwiazdka tej wersji w starej karcie na urzadzeniu bez wiedzy o „Scal pacjentow” dalej trafia do karty
+    // scalonej. Pod inna karta niz karta wpisu (wersja lezy tu pod inna karta) — tylko chwila wersji, ktora tam lezy;
+    // wpis bez tej chwili (sprzed E3-PR0e2b) — jak dotad.
     pilnuj();
     await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(zKarty ? Bm1(obecna, e) : Bm1(e), {
       snapshotId: snapshotId,
@@ -2679,7 +2696,7 @@ async function Bkz_przywroc(patientId, snapshotId) {const PatientClinicalOperati
       rev: Math.max(revUsuniecia, obecna ? mt(obecna) : 0) + 1,
       updatedAtISO: zmiana,
       payloadCipher: Bgw_szyfr,
-    }, Bsw_przypisanie(obecna))));
+    }, Bsw_przypisanie(karta === patientId ? e : null, obecna))));
     // Kolejnosc: wersja, naglowek, wpis kosza. Przerwane przed zdjeciem wpisu zostawia go w koszu, a nastepne „Przywroc”
     // konczy przywrocenie („juz w karcie” z naglowkiem); wersja ze stemplem i tak wygrywa z nagrobkiem przy
     // synchronizacji (gdy ta przyjdzie pierwsza, zdejmuje wpis, a chwila zapisu karty zostaje w tyle — ograniczenie).
@@ -2720,6 +2737,7 @@ async function Bkz_eksport() {
         if (typeof e.przycietoISO === 'string' && e.przycietoISO) w.przycietoISO = e.przycietoISO;
         if (Array.isArray(e.revPary) && e.revPary.length) w.revPary = e.revPary; // P-KOSZ-POLKRATA: pary rev tresci
       }
+      Object.assign(w, Bsw_przypisanie(e)); // E3-PR0e2b: chwila przypisania wersji do karty wpisu, tylko gdy jest
       if (typeof e.zmianaISO === 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;
       const gwiazdka = Bgw_zWpisu(e);
       if (gwiazdka) w.gwiazdka = gwiazdka; // P-PRZYPIETA-POLKRATA (W3): rejestr gwiazdki; brak — „nieznany”
@@ -2769,6 +2787,8 @@ async function Bkz_scalStart(t) {
         e.przycietoISO = z.przycietoISO;
       }
       if (typeof z.zmianaISO === 'string' && z.zmianaISO > Bkz_zmiana(e)) e.zmianaISO = z.zmianaISO;
+      // E3-PR0e2b: chwila przypisania wersji do karty wpisu z ladunku — tylko w postaci kanonicznej (Bsw_przypisanie).
+      Object.assign(e, Bsw_przypisanie(z));
       // W3: rejestr gwiazdki nagrobka z ladunku — tylko z pola gwiazdka (brak pola: „nieznany”, decyduje gwiazdka wersji,
       // jak we flocie starszych aplikacji); z tresci kosza — tylko chwila tresci. Nowa aplikacja wysyla w polu rejestr,
       // ktory zna jej nagrobek (takze rejestr tresci kosza). Starsza aplikacja pola nie zna, a jej „Odepnij i usun” wklada
@@ -2916,8 +2936,9 @@ async function Bgw_zloz(ctx, patientId, lokalna, tresc, e, opcje) {const Patient
 // pozniejsza zmiane), nagrobek nie jest waznym koszem, a jego rejestr gwiazdki jest przypiety — „przypieta → karta”:
 // wersja wraca do karty z cienia (najnowsza tresc, jaka zna to urzadzenie) z ta gwiazdka. Gdy tresc i rejestr sa te
 // same co w cieniu — dawny rekord bez zmian (rev, chwile); inaczej rekord zlozony. Bez cienia — nic (wersja przyjdzie
-// z urzadzenia, ktore ja ma). Zwraca { rekord, st } albo false. Chwili przypisania wersji do karty (E3-PR0e2a) wpis
-// kosza nie przechowuje, wiec wersja z cienia wraca bez niej (jak „Przywroc” zapisu tylko z kosza).
+// z urzadzenia, ktore ja ma). Zwraca { rekord, st } albo false. Chwila przypisania wersji do karty (E3-PR0e2a) — od
+// E3-PR0e2b z wpisu kosza (pamieta ja dla karty wpisu, pod ktora wersja wraca; jak „Przywroc” zapisu tylko z kosza),
+// tylko gdy jest.
 // P-KOSZ-PO-KLUCZU (F-R4, przeglad 3): w delcie (bez listy kosza, ctx.pelny falsz) Bkz_gdzieIndziej nie szuka, wiec
 // wersje lezaca tu pod inna karta zapis z cienia pod karta wpisu przenosil (ten sam snapshotId) bez licznika i naglowka
 // tamtej karty — po stanie M01 (x 74* pod stara X, wpis retencji x pod Z z cieniem) delta na zywo zostawilaby X z 1 wizyta
@@ -2950,6 +2971,7 @@ async function Bgw_wskrzes(ctx, patientId, e, opcje) {const PatientClinicalOpera
     updatedAtISO: zlozony ? Bkz_pozniejsza(st.cz, pk.g.at) : (o.updatedAtISO || null),
     payloadCipher: zlozony ? await V(nowa) : Bpc_c,
   });
+  Object.assign(rekord, Bsw_przypisanie(e)); // E3-PR0e2b: chwila przypisania z wpisu kosza (karta wpisu), gdy jest
   Bses_pilnuj(opcje); // P-CHMURA-OPIS w S4: zapis tylko w sesji scalania, bez await przed nim
   await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(Bm1(rekord), rekord)));
   ctx.dotknieci.add(patientId);
@@ -3691,28 +3713,68 @@ function Bsl_wersjaZLadunku(F, S, szyfr, teraz) {
  *     ta chwila — wtedy osobny zapis), wersja wspolna dwom kartom (decyzje 'zabierz', 'przenies', 'tresc', rekord W3,
  *     nastepca) i „Przywroc” wersji lezacej tez w karcie. Zapisy z jednej kopii biora chwile z tej kopii: decyzja
  *     'nowa' (takze nad rekordem wersji bez karty), od E3-PR0e3 wersja wracajaca do karty wpisu kosza
- *     (Bsw_doKartyWpisu; tutejszej kopii nie ma, a wpis kosza jej nie przechowuje), import karty, „Scal kopie konta”
- *     i odtworzenie konta (z pliku — import karty takze nad wersja, ktora lezy tu pod inna karta: przenosi ja do
- *     importowanej karty jak dotad, z chwila z pliku), a „Przywroc” zapisu tylko z kosza i wskrzeszenie z cienia
- *     kosza — bez niej (wpis kosza jej nie przechowuje).
+ *     (Bsw_doKartyWpisu; tutejszej kopii nie ma — od E3-PR0e2b pozniejsza z ladunku i z wpisu kosza), import karty,
+ *     „Scal kopie konta” i odtworzenie konta (z pliku — import karty takze nad wersja, ktora lezy tu pod inna karta:
+ *     przenosi ja do importowanej karty jak dotad, z chwila z pliku), a „Przywroc” zapisu tylko z kosza i wskrzeszenie
+ *     z cienia kosza — do E3-PR0e2b bez niej, od E3-PR0e2b z chwila z wpisu kosza (nizej).
  *     Faza przeniesien przenosi tylko rekord, ktorego chwila przypisania nie zmienila sie od decyzji (Bsw_przenies).
  *     Eksport pelny, delta karty, plik karty, kopia konta i koperta zdarzenia niosa ja za payload;
  *     bez niej rekord i element sa bajt w bajt jak dotad. O wlascicielu wersji wspolnej dwom kartom decyduje najpierw
  *     pozniejsza chwila przypisania (brak = najwczesniej), potem jak wyzej (Bsw_ladunekWygrywa; straznik natywny wola
  *     te sama funkcje). Sama ta chwila nie wywoluje odeslania (lista pol pomijanych w odsylaniu w bloku
- *     P-DZIENNIK-ZDARZEN). W tym wydaniu zadna droga jej nie tworzy („Scal pacjentow” zachowuje chwile przenoszonej
- *     wersji, nowej nie ustawia), wiec dzialanie jest bez zmian; ustawiac zacznie „Scal pacjentow” w E3-PR0e2b, gdy
- *     wszystkie urzadzenia beda mialy to wydanie (starsze gubia pole przy wlasnym zapisie i eksporcie).
+ *     P-DZIENNIK-ZDARZEN). Od E3-PR0e2b (drugie wydanie pola; decyzje wlasciciela z 2026-11-23, potwierdzenie
+ *     z 2026-11-24, ze wszystkie urzadzenia maja E3-PR0e2a — starsze gubily pole przy wlasnym zapisie i eksporcie)
+ *     chwile ustawia „Scal pacjentow” w kazdej wersji przeniesionej do karty docelowej (Bsw_poScaleniu,
+ *     Bsw_przypisanieScalenia): pozniejsza z „teraz” i z poprzedniej chwili tej wersji + dokladnie 1 ms (monotonicznie,
+ *     takze przy cofnietym zegarze; gdy wynik nie ma postaci kanonicznej — rok 9999 — zostaje poprzednia). Nowa glowa
+ *     scalenia i wersje karty docelowej — bez niej. Galaz nastepcy fazy przeniesien (wersja 'zabierz' idzie za
+ *     wersjami F pod H, Bsw_doF) odtwarza tamto scalenie z chwila wersji-siostry pod H, a bez niej z chwila nagrobka
+ *     karty z biezacego skoku. Poprawka albo gwiazdka wersji przeniesionej, zrobiona potem w starej karcie na
+ *     urzadzeniu bez wiedzy o scaleniu, przegrywa wiec przypisaniem z karta scalona i trafia do niej, a stara karta nie
+ *     wraca z jej powodu; nowa wizyta w starej karcie dalej ja zwraca (notatki — jak dotad). Inne drogi nowej chwili
+ *     nie tworza (decyzje fazy przeniesien, import karty, „Scal kopie konta”, odtworzenie konta, „Przywroc”, wersja
+ *     przezywajaca retencje, wersja wracajaca do karty wpisu kosza) — tylko kopia albo pozniejsza z istniejacych.
+ *     Od E3-PR0e2b takze wpis kosza pamieta chwile przypisania wersji do karty wpisu (decyzja wlasciciela
+ *     z 2026-11-24: to samo wydanie, osobna, osobno sprawdzana czesc): „Do Kosza” kopiuje ja z usuwanej wersji, polkrata
+ *     kosza niesie ja w skladniku karty wpisu (zawsze razem z ta karta; przy tej samej karcie i chwili usuniecia —
+ *     pozniejsza z obu; Bpk_karta), eksport, koperta wpisu kosza i przyjecie z ladunku — tylko w postaci kanonicznej,
+ *     a „Przywroc” pod karta wpisu, wskrzeszenie z cienia, wersja wracajaca do karty wpisu (takze wersja przezywajaca
+ *     retencje pod karta wpisu) lacza ja z chwila wersji (Bsw_przypisanie). Bez nowej chwili i bez zegara; odcisk,
+ *     eksport i koperta wpisu bez tego pola — bajt w bajt jak dotad. Sama ta chwila nie wywoluje odeslania wpisu kosza
+ *     (kanon odsylania kosza w bloku P-DZIENNIK-ZDARZEN). Kosz z „Przywroc” w karcie scalonej i poprawka tej wizyty
+ *     w starej karcie na urzadzeniu bez wiedzy o scaleniu konczy wiec w karcie scalonej, a stara karta nie wraca.
+ *     Od E3-PR0e2b (decyzja wlasciciela z 2026-11-25) takze bez „Przywroc”: wersja z ladunku, ktorej tu nie ma pod
+ *     zadna karta, a jej wpis kosza lezy pod inna zywa karta Q spoza N, jest koszem, zna pozniejsza chwile przypisania
+ *     wersji do karty niz kopia z ladunku i przegrywa z nia (zmiana po koszu — zasada „pozniejsza zmiana wygrywa
+ *     z koszem” bez zmian), wraca z kosza pod Q w fazie przeniesien (decyzja 'doWpisu', Bsw_wpisZnaKarte; wykonanie
+ *     jak E3-PR0e3 — Bsw_doKartyWpisu), a karta z ladunku nie powstaje z jej powodu (powstaje, gdy ma inne wersje, np.
+ *     nowa wizyte). Wpis bez tej chwili (sprzed E3-PR0e2b) — jak dotad. Strona tutejsza (urzadzenie, ktore samo
+ *     poprawilo wizyte w starej karcie) dochodzi do tego samego wyniku przy pelnej wymianie (decyzja 'przenies').
  * Format ladunku, delt i nagrobkow bez zmian (delta nagrobka wypelnia istniejace pole patients); od E3-PR0e2a wersja
  * moze niesc jedno pole wiecej (wyzej).
  */
 
 // „Scal pacjentow” (Bsc_podBlokada): wersja przechodzi pod karte docelowa jako nowa rewizja rekordu — synchronizacja
 // wie wtedy, ktore przypisanie jest nowsze. Tresc, chwila zmiany i chwila zapisu bez zmian (regula kosza ta sama).
-// Chwila przypisania wersji do karty (E3-PR0e2a) przechodzi z rozpietym rekordem bez zmian; nowej scalenie w tym
-// wydaniu nie ustawia (zacznie E3-PR0e2b, po potwierdzeniu wlasciciela, ze wszystkie urzadzenia maja E3-PR0e2a).
-function Bsw_poScaleniu(wersja, celId) {
-  return { patientId: celId, rev: mt(wersja) + 1 };
+// Od E3-PR0e2b (decyzje wlasciciela z 2026-11-23; potwierdzenie z 2026-11-24, ze wszystkie urzadzenia maja
+// E3-PR0e2a) wersja dostaje tez chwile przypisania do karty docelowej (Bsw_przypisanieScalenia): poprawka albo
+// gwiazdka tej wersji zrobiona potem w starej karcie na urzadzeniu bez wiedzy o scaleniu trafia do karty scalonej,
+// a stara karta nie wraca z jej powodu. Bez trzeciego argumentu — „teraz” (wywolanie w „Scal pacjentow”); w galezi
+// nastepcy fazy przeniesien (Bsw_doF) — chwila przypisania z tamtego scalenia (zrodloChwili, Bsw_nastepca).
+function Bsw_poScaleniu(wersja, celId, zrodloChwili) {
+  return Object.assign({ patientId: celId, rev: mt(wersja) + 1 }, Bsw_przypisanieScalenia(wersja, zrodloChwili));
+}
+// Chwila przypisania wersji do karty przy „Scal pacjentow” (E3-PR0e2b) — jedyne miejsce z zegarem i z kluczem pola
+// poza Bsw_przypisanie. Wartosc: pozniejsza z dwoch — zrodlo (gdy w postaci kanonicznej, Bnp_iso), a bez niego
+// „teraz” (new Date(), osobno dla kazdej wersji; rozni sie ulamkami ms przy jednym zegarze), oraz poprzednia chwila
+// tej wersji + dokladnie 1 ms. Monotonicznie takze przy zegarze cofnietym wzgledem poprzedniego scalenia, bez
+// losowego dodatku chwili zmiany (Bpp_chwilaZmiany) — remis rozstrzyga dalej rev + 1, chwila zmiany i mniejszy
+// patientId (Bsw_ladunekWygrywa). Gdy „poprzednia + 1 ms” nie ma postaci kanonicznej (rok 9999) — zostaje poprzednia.
+function Bsw_przypisanieScalenia(wersja, zrodlo) {
+  const p = Bsw_chwilaPrzypisania(wersja);
+  let t = Bnp_iso(zrodlo) ? zrodlo : new Date().toISOString();
+  if (p && p >= t) { const n = new Date(Date.parse(p) + 1).toISOString(); t = Bnp_iso(n) ? n : p; }
+  return { assignedAtISO: t };
 }
 
 // Cele „Scal pacjentow” wykonanych w tej sesji (konto|karta zrodlowa -> karta docelowa), dla delty nagrobka karty
@@ -3757,20 +3819,22 @@ function Bsw_zmiana(x) { return x && typeof x.updatedAtISO === 'string' ? x.upda
 
 // Chwila przypisania wersji do karty (pole rekordu wersji assignedAtISO; E3-PR0e2a, P-SYNC-WLASCICIEL): jawna chwila
 // (postac toISOString), w ktorej „Scal pacjentow” przypisalo wersje do karty — bez tresci klinicznej, jak savedAtISO.
-// Pierwsze wydanie nowego pola w dwoch wydaniach (decyzja wlasciciela z 2026-11-23, wzor decyzji z 2026-11-17): to
-// wydanie pole przechowuje, przesyla i porownuje, ale zadna droga go nie tworzy — zapisywac zacznie „Scal pacjentow”
-// w E3-PR0e2b, gdy wszystkie urzadzenia beda mialy to wydanie (starsze gubia pole przy wlasnym zapisie i eksporcie).
+// Nowe pole w dwoch wydaniach (decyzja wlasciciela z 2026-11-23, wzor decyzji z 2026-11-17): E3-PR0e2a pole
+// przechowuje, przesyla i porownuje; od E3-PR0e2b zapisuje je „Scal pacjentow” (Bsw_przypisanieScalenia), gdy
+// wszystkie urzadzenia maja E3-PR0e2a (potwierdzenie wlasciciela z 2026-11-24; starsze gubily pole przy wlasnym
+// zapisie i eksporcie).
 // Bsw_chwilaPrzypisania — jedyny odczyt pola: chwila w postaci kanonicznej (Bnp_iso) albo '' (brak); kazda inna
 // wartosc (bez milisekund, liczba, pusty napis) liczy sie jak brak: nie decyduje o wlascicielu wersji i nie przechodzi
 // do eksportu, koperty ani rekordu budowanego z listy pol. Drogi, ktore przepisuja caly rekord (np. „Scal pacjentow”,
 // kosz), zostawilyby ja w rekordzie bez skutku — kazdy odczyt idzie przez te funkcje; sama aplikacja zlej postaci nie
-// zapisuje (do rekordu trafia tylko wynik Bsw_przypisanie).
+// zapisuje (do rekordu trafia tylko wynik Bsw_przypisanie albo Bsw_przypisanieScalenia).
 function Bsw_chwilaPrzypisania(x) { const a = x && x.assignedAtISO; return Bnp_iso(a) ? a : ''; }
 // Pole do zapisu rekordu wersji i elementu eksportu albo koperty: { assignedAtISO } z pozniejsza chwila dwoch kopii
 // (S — z ladunku albo pliku, g — tutejsza; kazda moze byc pusta) albo {} — bez pola rekord i element sa bajt w bajt jak
 // dotad. Przemienne i laczne (pozniejsza z chwil), wiec wynik nie zalezy od tego, ktora kopia wygrala tresc ani
-// przypisanie karty. Jedyne miejsce, w ktorym powstaje obiekt z tym polem — tylko kopia albo pozniejsza z istniejacych
-// wartosci, bez zegara.
+// przypisanie karty. Jedno z dwoch miejsc, w ktorych powstaje obiekt z tym polem — tylko kopia albo pozniejsza
+// z istniejacych wartosci, bez zegara; nowa chwile (z jednym zegarem) daje tylko Bsw_przypisanieScalenia przy
+// „Scal pacjentow” (E3-PR0e2b).
 function Bsw_przypisanie(S, g) {
   const a = Bsw_chwilaPrzypisania(S), c = Bsw_chwilaPrzypisania(g), m = a > c ? a : c;
   return m ? { assignedAtISO: m } : {};
@@ -3867,9 +3931,35 @@ async function Bsw_wersjaLokalna(ctx, snapshotId) {
 //                pozniejsza tresc albo pozniejszy rejestr gwiazdki (Bsw_wklad, W3; typowo poprawka w starej karcie po
 //                kilku „Scal pacjentow”): wklad przechodzi do tutejszego rekordu w fazie przeniesien;
 //   'pomin'    — lezy pod inna istniejaca karta, a tutejszy rekord i jego tresc sa nowsze: zostaje tam bez zmian.
+//   'doWpisu'  — nie ma jej tu nigdzie, a jej wpis kosza lezy pod inna zywa karta Q i zna pozniejsza chwile
+//                przypisania wersji do karty niz ladunek (Bsw_wpisZnaKarte): wraca z kosza pod Q w fazie przeniesien.
+// E3-PR0e2b (P-SYNC-WLASCICIEL, decyzja wlasciciela z 2026-11-25): wpis kosza wersji, ktorej tu nie ma pod zadna karta,
+// zna jej karte. Wpis lezy pod zywa karta Q (inna niz F, spoza N), jest koszem (nie samym przycieciem), zna pozniejsza
+// chwile przypisania wersji do karty niz kopia z ladunku (ta sama os co Bsw_ladunekWygrywa: „Scal pacjentow”
+// przypisalo wersje do Q pozniej niz do F) i przegrywa z nia (Bkz_wygrywa: zmiana po koszu). Typowo: „Scal pacjentow”
+// X -> Q tutaj, wizyta dana tu do kosza pod Q, a urzadzenie bez wiedzy o scaleniu poprawilo ja albo postawilo jej
+// gwiazdke w starej X pozniej niz kosz. Dotad wersja wracala z kosza do X i X wracala z nia (D-4 A); teraz wraca pod Q
+// (zasada „pozniejsza zmiana wygrywa z koszem” bez zmian — zmienia sie tylko karta), a X nie powstaje z jej powodu.
+// Wpis bez tej chwili (sprzed E3-PR0e2b) albo z ta sama — null, jak dotad. Tylko scalanie z magazynem nagrobkow
+// i poza importem (ctx.Bsw_m z Le; jak Bsw_przezyteRetencji): import pliku i „Scal kopie konta” — jak dotad.
+// Zwraca wpis albo null; bez odczytow.
+function Bsw_wpisZnaKarte(ctx, F, S) {
+  const e = ctx.mapa && ctx.mapa.get(S.snapshotId);
+  const Q = e && e.patientId;
+  if (!ctx.Bsw_m || !Q || Q === F.patientId || !Bkz_chwilaKosza(e) || (ctx.Bsw_N && ctx.Bsw_N.has(Q))) return null;
+  if (!(Bsw_chwilaPrzypisania(e) > Bsw_chwilaPrzypisania(S))) return null;
+  if (!S.payload || typeof S.payload !== 'object' || Bkz_wygrywa(e, Bkz_zmiana(S), Bgw_stan(S, S.payload))) return null;
+  return e;
+}
 async function Bsw_decyzja(ctx, F, S) {
   const g = await Bsw_wersjaLokalna(ctx, S.snapshotId);
-  if (!g || !g.patientId || g.patientId === F.patientId) return { co: 'nowa', g: null };
+  if (!g) {
+    // E3-PR0e2b: karta wpisu jest tu w chwili decyzji (bez niej — 'nowa', jak dotad: wersja nie znika razem z karta,
+    // ktorej nie ma); czy jest nadal, sprawdza faza przeniesien pod jej blokada (Bsw_doKartyWpisu).
+    const e = Bsw_wpisZnaKarte(ctx, F, S);
+    return e && (await I().getPatientForUser(b, e.patientId)) ? { co: 'doWpisu', g: null, e: e } : { co: 'nowa', g: null };
+  }
+  if (!g.patientId || g.patientId === F.patientId) return { co: 'nowa', g: null };
   if (!(await I().getPatientForUser(b, g.patientId))) return { co: 'nowa', g: null };
   if (ctx.Bsw_N && ctx.Bsw_N.has(g.patientId)) return { co: 'zabierz', g: g };
   if (Bsw_ladunekWygrywa(S, g, F.patientId, g.patientId)) return { co: 'przenies', g: g };
@@ -3981,6 +4071,17 @@ function Bsw_rekord(cel, S, szyfr, teraz, g, tutejszaKarta) {
 // rekord W3 obu kopii, Bsw_rekordW3), jak zapis od razu na 32b6557 (Bsw_rekord z d.g) — a nie sama tresc z ladunku, pod ktora ginela poprawka albo przypiecie zrobione tu
 // przed synchronizacja (uwaga recenzenta do eb81091).
 function Bsw_odloz(ctx, F, naglowek, S, szyfr, d) {
+  if (d.co === 'doWpisu') {
+    // E3-PR0e2b: Bkz_pomin zapisal juz przegrana wpisu z ta wersja pod F (W3 na wersje pod F, wpis do zdjecia);
+    // wersja idzie jednak pod Q, wiec wpis zostaje w tym scalaniu, a rozstrzyga go koniec scalania kosza pod Q
+    // (Bgw_zloz, Bkz_przegral) — jak po Bsw_doWpisu. Bez zapisu pod Q (Bsw_doKartyWpisu: Q zniknela, wersja juz jest,
+    // wpis wygrywa) wpis zostaje w koszu — nic nie znika.
+    ctx.nadpisane.delete(S.snapshotId);
+    if (ctx.przegraneDo) ctx.przegraneDo.delete(S.snapshotId);
+    if (ctx.Bgw_po) ctx.Bgw_po.delete(S.snapshotId);
+    (ctx.Bsw_P || (ctx.Bsw_P = [])).push({ F: { patientId: d.e.patientId }, naglowek: null, S: S, szyfr: null, G: d.e.patientId, doWpisu: true });
+    return;
+  }
   const g = d.g;
   (ctx.Bsw_P || (ctx.Bsw_P = [])).push({
     F: { patientId: F.patientId, createdAtISO: F.createdAtISO, lastSavedAtISO: F.lastSavedAtISO },
@@ -4177,7 +4278,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
         // pod blokadami obu kart; tu, pod sama blokada F, zapisujemy wylacznie wersje, ktorej nie ma tu nigdzie ('nowa').
         const d = await Bsw_decyzja(ctx, F, S);
         Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): decyzja i zapis nowej wersji tylko w sesji scalania
-        if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
+        if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz' || d.co === 'doWpisu') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
         if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
         if (d.co !== 'nowa') continue;
         await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k])));
@@ -4219,7 +4320,7 @@ async function Bsl_scalPacjenta(F, wersjeZdalne, naglowek, szyfry, ctx, teraz, o
       // dawne wersje, ktore leza tu pod inna karta, nie przechodza bez porownania rekordow.
       const d = await Bsw_decyzja(ctx, F, S);
       Bses_pilnuj(opcje); // P-KOSZ-PO-KLUCZU (P-CHMURA-OPIS): decyzja i zapis nowej wersji tylko w sesji scalania
-      if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
+      if (d.co === 'tresc' || d.co === 'przenies' || d.co === 'zabierz' || d.co === 'doWpisu') Bsw_odloz(ctx, F, naglowek, S, szyfry[k], d);
       if (d.co === 'pomin' || d.co === 'tresc') { w.pominiete += 1; continue; }
       if (d.co !== 'nowa') { czekaja += 1; continue; }
       await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Bng_dopisz(Bng_zap, Bng_j, Object.assign(Bsw_rekord(F, S, szyfry[k], teraz, d.g), Bm1(S)), S.payload || {}, szyfry[k])));
@@ -4271,10 +4372,15 @@ function Bsw_bezNowych(rek, ileWersji, zapisZLadunku) {
 // zakleszczen. Zwraca liczbe przeniesionych wersji, poprawionych tresci oraz kart zalozonych (dodane) i usunietych
 // (usuniete) w tej fazie — Le dolicza karty do wyniku scalania, bo na te liczby integracja odswieza liste pacjentow
 // (vilda:sync-merged po delcie na zywo). zabrane — wersje przeniesione decyzja 'zabierz' (spod karty ze zbioru N): Le
-// liczy je jak dotad jako dodane wersje (addedSnapshotCount), teraz w chwili zapisu, a nie decyzji.
+// liczy je jak dotad jako dodane wersje (addedSnapshotCount), teraz w chwili zapisu, a nie decyzji. poprawione —
+// decyzje 'tresc' z zapisem (Bsw_poprawTresc): od E3-PR0e2b Le liczy je jako zmienione wersje (updatedSnapshotCount;
+// dotad bez licznika, wiec po delcie albo kopercie z sama taka poprawka integracja nie odswiezala widoku).
 // E3-PR0e3: takze decyzja „do karty wpisu” (doWpisu, Bsw_doWpisu) — wersja z karty z ladunku przegranej z nagrobkiem
 // pacjenta wraca do karty swojego wpisu kosza albo retencji, z ktorym wygrywa; zapis pod jedna blokada tej karty
 // (Bsw_doKartyWpisu), a udany liczy sie w zabrane (nowa wersja karty — integracja odswieza liste pacjentow).
+// E3-PR0e2b (decyzja wlasciciela z 2026-11-25): ta sama droga takze dla decyzji 'doWpisu' z karty spoza N — wersji tu
+// nie ma, a jej wpis kosza pod zywa karta zna pozniejsza chwile przypisania wersji do karty niz ladunek
+// (Bsw_wpisZnaKarte, Bsw_decyzja).
 async function Bsl_przeniesWersje(ctx, teraz, opcje) {
   const lista = ctx.Bsw_P || [];
   ctx.Bsw_P = [];
@@ -4297,8 +4403,10 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
     }, opcje);
     if (r && r.dalej) {
       // 'zabierz': F zniknela po decyzji („Scal pacjentow” F -> H w innej karcie przegladarki) — wersja idzie za
-      // wersjami F pod H: kolejny wpis tej samej fazy, pod blokadami H i G (rosnace id), na swiezym odczycie.
-      if ((p.skok || 0) < 8) lista.push(Object.assign({}, p, { F: { patientId: r.dalej }, nastepca: true, skok: (p.skok || 0) + 1, zrodlo: p.zrodlo || F }));
+      // wersjami F pod H: kolejny wpis tej samej fazy, pod blokadami H i G (rosnace id), na swiezym odczycie. Od
+      // E3-PR0e2b wpis niesie chwile przypisania tamtego scalenia z biezacego skoku (r.chwila, Bsw_doF) — zapis pod H
+      // odtwarza ja jak „Scal pacjentow” (Bsw_poScaleniu).
+      if ((p.skok || 0) < 8) lista.push(Object.assign({}, p, { F: { patientId: r.dalej }, nastepca: true, skok: (p.skok || 0) + 1, zrodlo: p.zrodlo || F, chwilaNastepcy: r.chwila || null }));
       continue;
     }
     if (!r) continue;
@@ -4364,6 +4472,9 @@ async function Bsl_przeniesWersje(ctx, teraz, opcje) {
  * zmiana ginela tu z karta X, a ladunek stad nie niosl juz tej wizyty — ginela na wszystkich urzadzeniach. Teraz
  * wersja przechodzi pod Q, a koniec scalania kosza zdejmuje wpis (Bkz_scalKoniec: wersja pozniejsza niz wpis bierze
  * jego rejestr gwiazdki i nowsza tresc z cienia, W3) — tak samo jak dzis w jednej karcie.
+ * E3-PR0e2b: pod karta wpisu (karta docelowa = karta wpisu kosza albo przyciecia) rekord dostaje tez chwile
+ * przypisania wersji do karty z wpisu — pozniejsza z wersji i z wpisu (Bsw_przypisanie); pod inna karta — rekord
+ * bez zmian, jak dotad.
  */
 async function Bsw_przezyteRetencji(ctx, lista, opcje) {
   const wynik = { przeniesione: 0, usuniete: 0, odlozone: [] };
@@ -4414,7 +4525,7 @@ async function Bsw_przezyteRetencji(ctx, lista, opcje) {
       try { tresc = await G(s.payloadCipher.iv, s.payloadCipher.data); } catch(PatientClinicalCaught) {PatientClinicalRethrow(PatientClinicalCaught); tresc = null; }
       if (!tresc || typeof tresc !== 'object' || Bkz_wygrywa(e, Bkz_zmiana(s), Bgw_stan(s, tresc))) continue;
       const H = Bkz_chwilaKosza(e) ? await kartaWpisu(X, e) : await cel(X, e, wersje);
-      if (H) kand.push({ X: X, s: s, H: H, m: m[X] });
+      if (H) kand.push({ X: X, s: s, H: H, m: m[X], e: e });
     }
     for (let i = 0; i < kand.length; i += 1) {
       if (await Bsw_przeniesPrzezyta(kand[i], wynik, opcje) === 'bezH') wynik.odlozone.push(kand[i]);
@@ -4423,15 +4534,18 @@ async function Bsw_przezyteRetencji(ctx, lista, opcje) {
   return wynik;
 }
 
-// E3-PR0e3 (P-SYNC-WLASCICIEL): decyzja „do karty wpisu” (Bsw_doWpisu) w fazie przeniesien, pod blokada karty wpisu Q,
-// na swiezym odczycie — stan z chwili decyzji: karta Q nadal jest; wersji nadal nie ma tu pod zadna karta (pojawila
-// sie w miedzyczasie, np. „Przywroc” w innej karcie przegladarki — bez zapisu, rozstrzygnie nastepne scalanie); wpis
+// E3-PR0e3 (P-SYNC-WLASCICIEL): decyzja „do karty wpisu” (Bsw_doWpisu; od E3-PR0e2b takze decyzja 'doWpisu' z karty
+// spoza N, gdy wpis zna pozniejsza chwile przypisania wersji do karty — Bsw_wpisZnaKarte) w fazie przeniesien, pod
+// blokada karty wpisu Q, na swiezym odczycie — stan z chwili decyzji: karta Q nadal jest; wersji nadal nie ma tu pod
+// zadna karta (pojawila sie w miedzyczasie, np. „Przywroc” w innej karcie przegladarki — bez zapisu, rozstrzygnie
+// nastepne scalanie); wpis
 // tej wersji, razem z wpisami zapisanymi tu po starcie scalania (Bkz_czytaj, Bkz_dolacz — jak Bsw_bezSladu), nadal
 // lezy pod Q i nadal z nia nie wygrywa (np. ponowny kosz w innej karcie przegladarki wygrywa — bez zapisu). Wtedy
 // wersja z ladunku zostaje zapisana pod Q jako nowa wersja tej karty: rekord z jednej kopii (Bsl_wersjaZLadunku —
 // tresc, gwiazdka, chwila zmiany, rev, chwila zapisu i chwila przypisania wersji do karty z ladunku, Bsw_przypisanie;
-// tutejszej kopii nie ma, a wpis kosza tej chwili nie przechowuje), tozsamosc wizyty spieta z wpisem i przypisana do Q
-// (Bvisit_bindTombstone, Bvisit_read — jak nowa wersja w Bsl_scalPacjenta), licznik i naglowek Q z najnowszej wersji
+// tutejszej kopii nie ma; od E3-PR0e2b — pozniejsza z ladunku i z wpisu kosza, ktory ja pamieta dla Q), tozsamosc
+// wizyty spieta z wpisem i przypisana do Q (Bvisit_bindTombstone, Bvisit_read — jak nowa wersja w Bsl_scalPacjenta),
+// licznik i naglowek Q z najnowszej wersji
 // (Bkz_przebudujNaglowek, D-3 A; chwila zapisu karty — pozniejsza z dotychczasowej i chwili zapisu najnowszej wersji,
 // wiec chwila zmiany tej wersji jej nie podnosi, jak przy decyzji 'tresc'). Wpis rozstrzyga potem koniec scalania
 // kosza (Bkz_scalKoniec), tak samo jak dzis w jednej karcie: wersja pozniejsza niz wpis bierze jego rejestr gwiazdki
@@ -4461,14 +4575,15 @@ async function Bsw_doKartyWpisu(p, teraz, ctx, opcje) {const PatientClinicalOper
   const szyfr = await V(Bvisit_payload);
   const rek = Bsl_wersjaZLadunku({ patientId: Q }, S, szyfr, teraz);
   Bses_pilnuj(opcje);
-  await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(rek, Bm1(S))));
+  await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(rek, Bsw_przypisanie(rek, e), Bm1(S))));
   Bses_pilnuj(opcje);
   await Bkz_przebudujNaglowek(Q, undefined, opcje);
   return PatientClinicalWriteValue(PatientClinicalOperationAccount,{ dodana: 0, usunieta: 0 });
 }
 
 // Przeniesienie wersji k.s spod karty k.X pod k.H (Bsw_przezyteRetencji) pod blokadami obu kart (rosnace id), na
-// swiezym odczycie. 'bezH' — karty docelowej tu jeszcze nie ma (zalozy ja 'zabierz' tej fazy).
+// swiezym odczycie. 'bezH' — karty docelowej tu jeszcze nie ma (zalozy ja 'zabierz' tej fazy). Od E3-PR0e2b pod karta
+// wpisu k.e — z chwila przypisania z wpisu (pozniejsza z obu), pod inna — bez niej.
 async function Bsw_przeniesPrzezyta(k, wynik, opcje) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
   const X = k.X, H = k.H, para = X < H ? [X, H] : [H, X];
   const r = await Bsl_podBlokada(para[0], function () {
@@ -4486,7 +4601,7 @@ async function Bsw_przeniesPrzezyta(k, wynik, opcje) {const PatientClinicalOpera
       const g = wX.find(function (q) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,q && q.snapshotId === k.s.snapshotId); });
       if (!g || mt(g) !== mt(k.s) || (g.updatedAtISO || null) !== (k.s.updatedAtISO || null)) return PatientClinicalWriteValue(PatientClinicalOperationAccount,null);
       Bses_pilnuj(opcje); // P-CHMURA-OPIS: zapis tylko w sesji scalania, bez await przed nim
-      await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(Bm1(g), g, { patientId: H })));
+      await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(Bm1(g), g, { patientId: H }, Bsw_przypisanie(g, k.e && k.e.patientId === H ? k.e : null))));
       Bses_pilnuj(opcje);
       await Bkz_przebudujNaglowek(H, undefined, opcje);
       const pozostale = wX.filter(function (q) { return PatientClinicalWriteValue(PatientClinicalOperationAccount,q && q.snapshotId !== g.snapshotId); });
@@ -4571,8 +4686,8 @@ async function Bsw_poprawTresc(p, teraz, opcje) {const PatientClinicalOperationA
 //   - F zniknela z nagrobkiem zapisanym po decyzji: „Scal pacjentow” F -> H — wersja idzie pod H, za pozostalymi
 //     wersjami F (Bsw_nastepca; kolejny wpis tej samej fazy, pod blokadami H i G); „Usun pacjenta” F (wersji F nie ma
 //     nigdzie) — wersja zostaje pod G i znika razem z nia, jak razem z F.
-// Zwraca null (bez zmian), { dalej: H } albo { dodana, usunieta }: 1, gdy karta F tu powstala, i 1, gdy pusta karta G
-// zniknela.
+// Zwraca null (bez zmian), { dalej: H, chwila } albo { dodana, usunieta }: 1, gdy karta F tu powstala, i 1, gdy pusta
+// karta G zniknela.
 async function Bsw_przenies(p, teraz, ctx, opcje) {
   const G = p.G;
   const wersjeG = await I().listSnapshotsForUser(b, G);
@@ -4594,8 +4709,11 @@ async function Bsw_przenies(p, teraz, ctx, opcje) {
 // Zapis wersji pod F w fazie przeniesien (Bsw_przenies, pod blokadami F i G); g — tutejszy rekord wersji (wersja znikla
 // razem z G — rekord z chwili decyzji 'zabierz', p.gDecyzji). Karty F nie ma: nagrobek F zapisany po decyzji (usuniecie albo scalenie F
 // w innej karcie przegladarki przed wzieciem blokad tej fazy) i nie wczesniejszy niz zapis z ladunku — F nie powstaje od
-// nowa; dla 'zabierz' { dalej: H } (Bsw_nastepca), inaczej null — wersja zostaje pod G. Karta-nastepca H (p.nastepca)
-// nie powstaje nigdy, a wersja dostaje pod nia rev + 1, jak przy „Scal pacjentow” F -> H (Bsw_poScaleniu).
+// nowa; dla 'zabierz' { dalej: H, chwila } (Bsw_nastepca), inaczej null — wersja zostaje pod G. Karta-nastepca H
+// (p.nastepca) nie powstaje nigdy, a wersja dostaje pod nia rev + 1 i od E3-PR0e2b chwile przypisania, jak przy
+// „Scal pacjentow” F -> H (Bsw_poScaleniu): chwila to przypisanie z tamtego scalenia — chwila wersji-siostry pod H,
+// a bez niej (np. siostre przeniosla starsza aplikacja) chwila nagrobka F z tego skoku; bez obu — „teraz”. W lancuchu
+// skokow (H tez juz scalona dalej) — z biezacego skoku, nie z pierwotnej karty p.zrodlo.
 // Naglowek F (i nastepcy H) z najnowszej wersji po zapisie (D-3 A); karta, ktora tu powstaje, bez czytelnej najnowszej
 // wersji — naglowek z ladunku. Chwila zapisu karty H — bez zmian.
 async function Bsw_doF(p, teraz, ctx, g, opcje) {const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);
@@ -4605,8 +4723,8 @@ async function Bsw_doF(p, teraz, ctx, g, opcje) {const PatientClinicalOperationA
   if (!rekF) {
     const nagrobek = await Bpu_nagrobek(F);
     if (p.nastepca || nagrobek && (!p.F.lastSavedAtISO || nagrobek.deletedAtISO >= p.F.lastSavedAtISO)) {
-      const H = p.zabierz ? await Bsw_nastepca(ctx, p) : null;
-      return PatientClinicalWriteValue(PatientClinicalOperationAccount,H ? { dalej: H } : null);
+      const n = p.zabierz ? await Bsw_nastepca(ctx, p) : null;
+      return PatientClinicalWriteValue(PatientClinicalOperationAccount,n ? { dalej: n.H, chwila: n.chwila || (nagrobek && nagrobek.deletedAtISO) || null } : null);
     }
     rekF = {
       patientId: F, headerCipher: p.naglowek, createdAtISO: p.F.createdAtISO || teraz,
@@ -4618,7 +4736,7 @@ async function Bsw_doF(p, teraz, ctx, g, opcje) {const PatientClinicalOperationA
     }
   }
   const rek = await Bsw_rekordW3(p.F, p.S, p.szyfr, teraz, g);
-  if (p.nastepca) Object.assign(rek, Bsw_poScaleniu(rek, F));
+  if (p.nastepca) Object.assign(rek, Bsw_poScaleniu(rek, F, p.chwilaNastepcy));
   Bses_pilnuj(opcje); // P-CHMURA-OPIS: rekord W3 (odczyt i szyfr) w sesji scalania — zapis bez await przed nim
   await I().putSnapshotForUser(b, PatientClinicalWriteValue(b,Object.assign(rek, Bm1(p.S))));
   if (p.zabierz) Bsw_wersjeF(ctx, p.zrodlo || F).push(p.S.snapshotId);
@@ -4653,14 +4771,16 @@ async function Bsw_bezSladu(ctx, p) {
 // 'zabierz', karty F nie ma, a jej nagrobek zapisano po decyzji: karta, pod ktora leza teraz wersje F (Bsw_wersjeF) —
 // swiezy odczyt, pierwsza istniejaca karta inna niz F i G. „Scal pacjentow” F -> H w innej karcie przegladarki przenioslo
 // je pod H; dotad wersja 'zabierz' lezala juz pod F i szla razem z nimi, a bez tego zostawala pod G i znikala z nia na
-// wszystkich urzadzeniach. Bez takiej karty (F usunieta, jej wersje znikly) — null.
+// wszystkich urzadzeniach. Bez takiej karty (F usunieta, jej wersje znikly) — null. Od E3-PR0e2b zwraca { H, chwila }:
+// chwila przypisania znalezionej wersji-siostry (Bsw_chwilaPrzypisania, z tego samego odczytu; '' — bez pola), czyli
+// to samo przypisanie co pozostalych wersji przeniesionych tamtym scaleniem.
 async function Bsw_nastepca(ctx, p) {
   const ids = Bsw_wersjeF(ctx, p.zrodlo || p.F.patientId);
   for (let k = 0; k < ids.length; k += 1) {
     const w = await Bsw_wersjaLokalna(ctx, ids[k]);
     const H = w && w.patientId;
     if (!H || H === p.F.patientId || H === p.G) continue;
-    if (await I().getPatientForUser(b, H)) return H;
+    if (await I().getPatientForUser(b, H)) return { H: H, chwila: Bsw_chwilaPrzypisania(w) };
   }
   return null;
 }
@@ -6423,6 +6543,10 @@ function Bsl_koszZLadunku(ctx, F) {
 // scalona dalej (w N) — bez zmian, wpis zostaje (ograniczenie). Strona tutejsza (to urzadzenie samo zmienilo wersje
 // w karcie z N i dostaje nagrobek tej karty razem z wpisem kosza w jednym ladunku — pelna kopia, typowo najpierw
 // pobranie): Bsw_przezyteRetencji, ta sama karta wpisu.
+// E3-PR0e2b (decyzja wlasciciela z 2026-11-25): do karty wpisu prowadza dwie drogi — karta z ladunku w N (tutaj, bez
+// warunku chwili przypisania: karta i tak znika) i karta z ladunku spoza N (Bsw_decyzja, 'doWpisu'), tylko gdy wpis
+// kosza zna pozniejsza chwile przypisania wersji do karty niz ladunek (Bsw_wpisZnaKarte) — inaczej karta z ladunku
+// wygrywa ze swoim nagrobkiem i wersja zostaje w niej, jak dotad (D-4 A).
 async function Bsw_zKartyZNagrobkiem(ctx, F, opcje) {
   const wersje = Array.isArray(F.snapshots) ? F.snapshots : [];
   for (let i = 0; i < wersje.length; i += 1) {
@@ -6967,7 +7091,8 @@ const Bev_POLA_KARTY = Object.freeze(['patientId', 'header', 'snapshots', 'creat
 // assignedAtISO — chwila przypisania wersji do karty, tylko gdy jest (E3-PR0e2a, Bev_wersja); obce pola wersji i seq
 // dalej odrzucane.
 const Bev_POLA_WERSJI = Object.freeze(['snapshotId', 'savedAtISO', 'rev', 'updatedAtISO', 'payload', 'assignedAtISO']);
-const Bev_POLA_KOSZA = Object.freeze(['patientId', 'snapshotId', 'deletedAtISO', 'savedAtISO', 'rev', 'updatedAtISO', 'seq',
+// assignedAtISO — chwila przypisania wersji do karty wpisu, tylko gdy jest (E3-PR0e2b, Bev_wpisKosza).
+const Bev_POLA_KOSZA = Object.freeze(['assignedAtISO', 'patientId', 'snapshotId', 'deletedAtISO', 'savedAtISO', 'rev', 'updatedAtISO', 'seq',
   'powod', 'koszISO', 'przycietoISO', 'revPary', 'zmianaISO', 'gwiazdka', 'payload', 'visitIdentity']);
 // Identyfikator urzadzenia w kopercie: 8 znakow bez mylacych (l, o, 0, 1) albo null.
 const Bev_DEV = /^[a-km-np-z2-9]{8}$/;
@@ -7321,6 +7446,7 @@ async function Bev_wpisKosza(c, e) {
     if (typeof e.przycietoISO === 'string' && e.przycietoISO) w.przycietoISO = e.przycietoISO;
     if (Array.isArray(e.revPary) && e.revPary.length) w.revPary = e.revPary;
   }
+  Object.assign(w, Bsw_przypisanie(e)); // E3-PR0e2b: chwila przypisania wersji do karty wpisu, tylko gdy jest
   if (typeof e.zmianaISO === 'string' && e.zmianaISO) w.zmianaISO = e.zmianaISO;
   const gwiazdka = Bgw_zWpisu(e);
   if (gwiazdka) w.gwiazdka = gwiazdka;
@@ -7878,7 +8004,13 @@ async function Bev_echo(k, przed, po) {
 // osobna regula ze stanu po scaleniu nizej, ta sama lista kol.kosz.
 const Bev_ECHO_ZAWSZE_KOSZA = Object.freeze(['visitIdentity', 'payload.visit']);
 // Sciezki zdejmowane w kanonie wpisu: opis zalezny od kolejnosci scalen (D7), seq i postac gwiazdki w tresci (R4n).
-const Bev_KANON_KOSZA = Object.freeze(['rev', 'updatedAtISO', 'zmianaISO', 'koszISO', 'revPary', 'seq',
+// Od E3-PR0e2b takze chwila przypisania wersji do karty wpisu (jak Bev_ECHO_POMIJANE wersji): sama nie wywoluje
+// odeslania wpisu. Zbieznosc pola daje polkrata kosza (Bpk_karta): pole idzie ze skladnikiem karty wpisu
+// z najpozniejszym usunieciem, a przy tej samej karcie i tej samej chwili usuniecia — pozniejsze z obu. Pozniejszy
+// nagrobek tej samej karty bez pola (wpis retencji — przyciecie pola nie kopiuje — albo zapis starszej karty
+// przegladarki) zabiera pole z wpisu: wpis zbiega sie bez niego, a dla tej wersji poprawka po koszu w starej karcie
+// nie wraca do karty scalonej (Bsw_wpisZnaKarte) — stara karta wraca jak dotad, nic nie ginie.
+const Bev_KANON_KOSZA = Object.freeze(['assignedAtISO', 'rev', 'updatedAtISO', 'zmianaISO', 'koszISO', 'revPary', 'seq',
   'payload._pinned', 'payload._pinnedState']);
 // Wpisy Kosza z ladunku: snapshotId -> kopie elementow snapshotTombstones[] w kolejnosci ladunku (funkcja czysta).
 function Bev_kandydaciKosza(t) {
@@ -13296,7 +13428,7 @@ const Bpb_IMPORT=Object.freeze({});async function ns(t,e,Bpb_o){const PatientCli
    rzetelnym dolnym oszacowaniem rozjazdu, a ujemny jest zaszumiony i nie alarmuje.
    Szczesliwie dodatni kierunek to ten grozny: nadawca ma zegar do przodu wzgledem naszego. */
 function Gcs(t,e){var n=typeof t=="string"&&t?Date.parse(t):NaN;if(!isFinite(n)||!isFinite(e))return null;var r=n-e,o=6e4;return{offsetMs:r,thresholdMs:o,warn:r>o,otherExportedAtISO:t}}
-function Gz(t,e,n){const r=Math.round(de/864e5),o=Gy(t,n),a=Gy(e,n),i=typeof o=="number"&&o>r,c=typeof a=="number"&&a>r;return{thresholdDays:r,localLastMergeAtISO:typeof t=="string"&&t?t:null,localDays:o,localStale:i,remoteLastMergeAtISO:typeof e=="string"&&e?e:null,remoteDays:a,remoteStale:c,warn:i||c}}async function Gm(){if(!T())return null;return Gz(await Gw(),null,Date.now())}async function is(){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);PatientClinicalGuard();if(!T())throw new Error("VildaVault.exportSyncPayload: vault nie jest odblokowany.");const t=await I().listPatientsForUser(b),e=[];for(let p=0;p<t.length;p+=1){const w=t[p],h=await G(w.headerCipher.iv,w.headerCipher.data),O=await I().listSnapshotsForUser(b,w.patientId),u=[];for(let f=0;f<O.length;f+=1){const m=O[f],E=await Bvisit_read(await G(m.payloadCipher.iv,m.payloadCipher.data),w.patientId,m);u.push({snapshotId:m.snapshotId,savedAtISO:m.savedAtISO,rev:mt(m),updatedAtISO:typeof m.updatedAtISO=="string"&&m.updatedAtISO?m.updatedAtISO:null,payload:E,...Bsw_przypisanie(m)})}u.sort(function(f,m){return PatientClinicalWriteValue(PatientClinicalOperationAccount,f.savedAtISO>m.savedAtISO?1:f.savedAtISO<m.savedAtISO?-1:0)}),e.push({patientId:w.patientId,header:h,snapshots:u,createdAtISO:w.createdAtISO,lastSavedAtISO:w.lastSavedAtISO,snapshotCount:w.snapshotCount})}let n=[];try{const p=I();if(p&&typeof p.listTombstonesForUser=="function"&&(n=await p.listTombstonesForUser(b),typeof p.removeTombstoneForUser=="function"&&n.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<n.length;O++){const u=n[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeTombstoneForUser(b,PatientClinicalWriteValue(b,u.patientId)):h.push(u)}n=h}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);n=[]}let r=[],o=[];try{const p=await I().getUserMeta(b);if(p&&Array.isArray(p.passkeys)&&(r=p.passkeys.map(function(w){return PatientClinicalWriteValue(PatientClinicalOperationAccount,{credentialId:w.credentialId,deviceLabel:w.deviceLabel,createdAtISO:w.createdAtISO,roaming:w.roaming===!0})})),p&&Array.isArray(p.passkeyTombstones)){const w=new Date(Date.now()-de).toISOString();o=p.passkeyTombstones.filter(function(h){return PatientClinicalWriteValue(PatientClinicalOperationAccount,h&&h.credentialId&&h.deletedAtISO&&h.deletedAtISO>=w)})}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let a={};try{const p=await I().getUserMeta(b);p&&typeof p.userPreferences=="object"&&p.userPreferences&&(a=p.userPreferences)}catch(p){PatientClinicalRethrow(p);}let s=[],i=[];try{const p=I();if(p&&typeof p.listNotesForUser=="function"){const w=await p.listNotesForUser(b);for(let h=0;h<w.length;h+=1){const O=await nn(w[h]);s.push(O)}}if(p&&typeof p.listNoteTombstonesForUser=="function"&&(i=await p.listNoteTombstonesForUser(b),typeof p.removeNoteTombstoneForUser=="function"&&i.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<i.length;O+=1){const u=i[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeNoteTombstoneForUser(b,PatientClinicalWriteValue(b,u.id)):h.push(u)}i=h}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);s=[],i=[]}let c=[],l=[];try{const p=I();if(p&&typeof p.listPatientNotesForUser=="function"){const w=await p.listPatientNotesForUser(b);for(let h=0;h<w.length;h+=1){/* P-NOTATKI-1 (G12): jak wyzej — uszkodzona notatka zostaje na urzadzeniu zamiast jechac jako atrapa. */try{await G(w[h].bodyCipher.iv,w[h].bodyCipher.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);continue}const O=await Ft(w[h]);c.push(O)}}if(p&&typeof p.listPatientNoteTombstonesForUser=="function"&&(l=await p.listPatientNoteTombstonesForUser(b),typeof p.removePatientNoteTombstoneForUser=="function"&&l.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<l.length;O+=1){const u=l[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientNoteTombstoneForUser(b,PatientClinicalWriteValue(b,u.id)):h.push(u)}l=h}}catch(CareMvpExportError){PatientClinicalRethrow(CareMvpExportError);CareMvpRethrowLineage(CareMvpExportError);c=[],l=[]}let y=[],d=[];try{const p=I();if(p&&typeof p.listPatientListsForUser=="function"){const w=await p.listPatientListsForUser(b);for(let h=0;h<w.length;h+=1)y.push(await Re(w[h]))}if(p&&typeof p.listPatientListTombstonesForUser=="function"&&(d=await p.listPatientListTombstonesForUser(b),typeof p.removePatientListTombstoneForUser=="function"&&d.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<d.length;O+=1){const u=d[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientListTombstoneForUser(b,PatientClinicalWriteValue(b,u.id)):h.push(u)}d=h}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);y=[],d=[]}const Gp=await Gw();return PatientClinicalWriteValue(PatientClinicalOperationAccount,{schemaVersion:at,userId:b,label:st,exportedAtISO:new Date().toISOString(),lastMergeAtISO:Gp,credential:await Gc5(),patients:e,tombstones:Array.isArray(n)?n:[],passkeys:r,passkeyTombstones:o,userPreferences:a,notes:Array.isArray(s)?s:[],noteTombstones:Array.isArray(i)?i:[],patientNotes:Array.isArray(c)?c:[],patientNoteTombstones:Array.isArray(l)?l:[],patientLists:Array.isArray(y)?y:[],patientListTombstones:Array.isArray(d)?d:[],snapshotTombstones:await Bkz_eksport()})}async function cs(t){if(!T())throw new Error("VildaVault.buildNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getPatientNoteForUser(b,t);if(!e)return null;/* P-NOTATKI-1 (G12): notatka, ktorej nie da sie odszyfrowac, nie wychodzi z urzadzenia jako „(blad odczytu)" — nadpisalaby czytelna tresc na drugim urzadzeniu. Ta sama bramka, co w bibliotece szablonow (Qb0). */try{await G(e.bodyCipher.iv,e.bodyCipher.data)}catch{return null}const n=await Ft(e);return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[n],patientNoteTombstones:[]})}async function Qb0(t){if(!T())throw new Error("VildaVault.buildLibraryNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getNoteForUser(b,t);if(!e||!e.noteCipher)return null;try{await G(e.noteCipher.iv,e.noteCipher.data)}catch{return null}const n=await nn(e);if(!n||!n.id||!n.updatedAtISO)return null;return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[n],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function Qb1(t,e){if(!T())throw new Error("VildaVault.buildLibraryNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[{id:t,deletedAtISO:n}],patientNotes:[],patientNoteTombstones:[]})}async function us(t,e){if(!T())throw new Error("VildaVault.buildTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await Bsw_deltaNagrobka(t,{schemaVersion:at,patients:[],tombstones:[{patientId:t,deletedAtISO:n}],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function ls(t,e){if(!T())throw new Error("VildaVault.buildNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();/* P-NOTATKI-ZA-KARTA (D-21 A): delta niesie nagrobek tak, jak lezy w sklepie (rev i pole deletedWithPatient) — bez tego drugie urzadzenie dostawalo nagrobek bez pola i kasowalo notatki, zanim przyszedl pelny ladunek. Brak rekordu: postac dotychczasowa. */let Qz={id:t,deletedAtISO:n};try{const Qx=await Bnp_nagrobek(I(),t);Qx&&Qx.deletedAtISO&&(Qz={id:t,deletedAtISO:Qx.deletedAtISO},typeof Qx.rev=="number"&&isFinite(Qx.rev)&&Qx.rev>0&&(Qz.rev=Qx.rev),Bnp_pole(Qx)&&(Qz.deletedWithPatient=Bnp_pole(Qx)))}catch{}return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[Qz]})}async function ds(t){if(!T())throw new Error("VildaVault.buildPatientDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().listPatientsForUser(b);let n=null;for(let i=0;i<e.length;i+=1)if(e[i]&&e[i].patientId===t){n=e[i];break}if(!n||!n.headerCipher)return null;const r=await G(n.headerCipher.iv,n.headerCipher.data),o=await I().listSnapshotsForUser(b,t),a=[];for(let i=0;i<o.length;i+=1){const c=o[i],l=await Bvisit_read(await G(c.payloadCipher.iv,c.payloadCipher.data),t,c);a.push({snapshotId:c.snapshotId,savedAtISO:c.savedAtISO,rev:mt(c),updatedAtISO:typeof c.updatedAtISO=="string"&&c.updatedAtISO?c.updatedAtISO:null,payload:l,...Bsw_przypisanie(c)})}a.sort(function(i,c){return i.savedAtISO>c.savedAtISO?1:i.savedAtISO<c.savedAtISO?-1:0});const s={schemaVersion:at,patients:[{patientId:n.patientId,header:r,snapshots:a,createdAtISO:n.createdAtISO,lastSavedAtISO:n.lastSavedAtISO,snapshotCount:n.snapshotCount}],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]};return await V(s)}async function ps(t){if(!T()||!t||typeof t.iv!="string"||typeof t.data!="string")return null;const Bses_d=Bses_opcje(null);let e=null;try{e=await G(t.iv,t.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);return null}if(Bses_zmieniona(Bses_d))throw Bses_delta(Bses_blad());if(!e||typeof e!="object")return null;try{return await Le(e)}catch(Bses_x){PatientClinicalRethrow(Bses_x);throw Bses_delta(Bses_x)}}const Qe0=[];function Qe1(t){typeof t=="function"&&Qe0.push(t)}function Qe2(t){Bem_hak("onCredentialChanged",t);Qe0.forEach(function(e){try{e(t)}catch{}})}function Gc2(t){const e=t&&typeof t.passwordKdfIterations=="number"&&isFinite(t.passwordKdfIterations)&&t.passwordKdfIterations>0?Math.round(t.passwordKdfIterations):null;return e||(t?t.kdfIterations:null)}function Gc3(t){const e=new Date().toISOString(),n=t&&typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!n||e>n)return e;const r=Date.parse(n);return Number.isFinite(r)?new Date(r+1).toISOString():e}async function Gc4(t,e,n,r,o){try{const a=L(),s=await a.deriveKey(t,e,n),i=new Uint8Array(await a.decryptBytes(s,r.iv,r.data)),c=new Uint8Array(o);if(i.length!==c.length)return!1;let l=0;for(let y=0;y<i.length;y+=1)l|=i[y]^c[y];return l===0}catch{return!1}}async function Gc5(){try{const t=await I().getUserMeta(b);if(!t)return null;const e=typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!e)return null;const n=t.encryptedMasterByPassword;if(typeof t.passwordSalt!="string"||!t.passwordSalt||!n||typeof n.iv!="string"||typeof n.data!="string")return null;const r=Gc2(t);return typeof r!="number"||!isFinite(r)||r<=0?null:{passwordSalt:t.passwordSalt,kdfIterations:r,encryptedMasterByPassword:{iv:n.iv,data:n.data},updatedAtISO:e}}catch{return null}}async function Gc1(t,Bses_o){if(!t||typeof t!="object")return!1;const e=typeof t.updatedAtISO=="string"&&t.updatedAtISO?t.updatedAtISO:null,n=typeof t.passwordSalt=="string"&&t.passwordSalt?t.passwordSalt:null,r=t.encryptedMasterByPassword,o=r&&typeof r=="object"&&typeof r.iv=="string"&&r.iv&&typeof r.data=="string"&&r.data?{iv:r.iv,data:r.data}:null,a=typeof t.kdfIterations=="number"&&isFinite(t.kdfIterations)&&t.kdfIterations>0?Math.round(t.kdfIterations):null;if(!e||!n||!o||!a)return!1;if(!await Bmk_zmien(b,function(s){if(!s)return null;const i=typeof s.passwordUpdatedAtISO=="string"&&s.passwordUpdatedAtISO?s.passwordUpdatedAtISO:null;if(i&&!(e>i))return null;if(s.passwordSalt===n&&s.encryptedMasterByPassword&&s.encryptedMasterByPassword.iv===o.iv&&s.encryptedMasterByPassword.data===o.data&&Gc2(s)===a)return null;return Object.assign({},s,{passwordSalt:n,passwordKdfIterations:a,encryptedMasterByPassword:o,passwordUpdatedAtISO:e})},Bses_o))return!1;if(Bses_zmieniona(Bses_o))return!0;try{v.VildaPersistence&&typeof v.VildaPersistence.writePreferenceRaw=="function"&&v.VildaPersistence.writePreferenceRaw("PASSWORD_CHANGED_REMOTELY_AT",e,{force:!0})}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}return Qe2({action:"password-changed-remotely",updatedAtISO:e}),!0}async function Le(t,e){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);PatientClinicalGuard();if(!T())throw new Error("VildaVault.mergeSyncPayload: vault nie jest odblokowany.");/* P-SESJA-ZAPISU (przeglad 4, ADW4-1): import karty (ns) podaje opcje z polem Bpb_imp (znacznik importu) i Bses_s — scalanie importu z sesja wolajacego; sam znacznik (ss) — sesja z wejscia Le, jak dotad. */const Bses_imp=e===Bpb_IMPORT||!!(e&&e.Bpb_imp===Bpb_IMPORT),Bses_zew=Bses_imp&&e!==Bpb_IMPORT?e.Bses_s:null;e=Bses_opcje(Bses_imp?null:e);if(Bses_zew)e.Bses_s=Bses_zew;if(!t||typeof t!="object")throw new Error("VildaVault.mergeSyncPayload: nieprawid\u0142owy format danych.");Bem_zChmury(t);if(PatientPortablePayload(t))await PatientPortableModules();CareMvpPreflightPayload(t);const n=e&&typeof e.onProgress=="function"?e.onProgress:null;function r(P,F,j){if(n)try{n({phase:P,current:F,total:j})}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}}const Gp=await Gw(),Gq=t&&typeof t.lastMergeAtISO=="string"&&t.lastMergeAtISO?t.lastMergeAtISO:null,o=Array.isArray(t.patients)?t.patients:[],a=await I().listPatientsForUser(b);const Bkz_S=await Bkz_scalStart(t);r("patients-start",0,o.length);const i=new Date().toISOString();let c=0,l=0,y=0,d=0,p=0,w=0;const h=I(),O=h&&typeof h.listTombstonesForUser=="function"&&typeof h.putTombstoneForUser=="function"&&typeof h.removeTombstoneForUser=="function",u=Array.isArray(t.tombstones)?t.tombstones:[],f=O?await h.listTombstonesForUser(b):[],m=Object.create(null);function E(P,F){!P||!F||(!m[P]||F>m[P])&&(m[P]=F)}u.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)}),f.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)});const _=Object.create(null);function A(P,F){!P||!F||(!_[P]||F>_[P])&&(_[P]=F)}a.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)}),o.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)});/* P-KOSZ-PO-KLUCZU: karty ze znanym nagrobkiem pacjenta (ladunek i tutejsze) — tylko taka karta jest starym duplikatem, z ktorego wpis kosza innej karty zabiera ostatnia wersje (Bkz_obceKarty). */Bkz_S.Bkz_nagrKart=new Set(Object.keys(m));const N=new Set;Object.keys(m).forEach(function(P){const F=_[P]||null;(!F||m[P]>=F)&&N.add(P)});Bkz_S.Bsw_N=N;/* P-KOSZ-PO-KLUCZU (np-ret-A1): chwile nagrobkow kart dla Bsw_przezyteRetencji — tylko gdy karty z N znikaja (magazyn nagrobkow, poza importem). */Bkz_S.Bsw_m=O&&!Bses_imp?m:null;Bkz_S.Bsw_pusto=!a.length;for(let P=0;P<o.length;P++){r("patients",P+1,o.length);const F=o[P];if(!F||!F.patientId||!F.header)continue;if(N.has(F.patientId)){Bsl_koszZLadunku(Bkz_S,F);if(!Bses_imp)await Bsw_zKartyZNagrobkiem(Bkz_S,F,e);continue}const j=(Array.isArray(F.snapshots)?F.snapshots:[]).filter(function(x){return PatientClinicalWriteValue(PatientClinicalOperationAccount,x&&x.snapshotId)}),W=V(F.header),X=j.map(function(x){return PatientClinicalWriteValue(PatientClinicalOperationAccount,V(x.payload||{}))}),K=await Promise.all([W].concat(X)),H=K[0],R=K.slice(1);const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);y+=Bsl_w.dodane,d+=Bsl_w.pominiete,p+=Bsl_w.zmienione,Bsl_w.usuniety||(Bsl_w.nowy?l++:c++)}const Bsw_f=await Bsl_przeniesWersje(Bkz_S,i,e);l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;if(O){const P=Array.from(N);for(let F=0;F<P.length;F++){const j=P[F];w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)}for(let F=0;F<f.length;F++){const j=f[F];j&&j.patientId&&!N.has(j.patientId)&&await Bsl_zdejmijNagrobek(j.patientId,j.deletedAtISO,e)}}Bem_przegrane(t,N,e);let Bkz_n=0;try{Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"||Bkz_e.code==="VISIT_IDENTITY_CONFLICT"||Bkz_e.code==="INVALID_VISIT_IDENTITY"))throw Bkz_e;try{console.warn("[vault] kosz zapisow: scalanie nagrobkow",Bkz_e)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}}/* P-KOSZ-PO-KLUCZU: karty-duplikaty, ktore zniknely z ostatnia wersja w koszu innej karty, licza sie jak usuniete (vilda:sync-merged odswieza liste pacjentow). */w+=Bkz_S.Bkz_kartyUsuniete||0;let C=0,Q=0;try{const P=Array.isArray(t.passkeys)?t.passkeys:[],F=Array.isArray(t.passkeyTombstones)?t.passkeyTombstones:[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return PatientClinicalWriteValue(PatientClinicalOperationAccount,null);C=0,Q=0;let W=Array.isArray(j.passkeys)?j.passkeys.slice():[],X=Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.slice():[];const K=Object.create(null);X.forEach(function(U){U&&U.credentialId&&(K[U.credentialId]=U.deletedAtISO||"")}),F.forEach(function(U){if(!U||!U.credentialId)return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);const S=K[U.credentialId]||"";(!S||U.deletedAtISO&&U.deletedAtISO>S)&&(K[U.credentialId]=U.deletedAtISO||"")});const H=new Date(Date.now()-de).toISOString(),R=[];Object.keys(K).forEach(function(U){const S=K[U];S&&S>=H&&R.push({credentialId:U,deletedAtISO:S})});const x=new Set(R.map(function(U){return PatientClinicalWriteValue(PatientClinicalOperationAccount,U.credentialId)})),Y=W.length;W=W.filter(function(U){return PatientClinicalWriteValue(PatientClinicalOperationAccount,!x.has(U.credentialId))}),Q=Y-W.length;const nt=new Set(W.map(function(U){return PatientClinicalWriteValue(PatientClinicalOperationAccount,U.credentialId)}));P.forEach(function(U){!U||!U.credentialId||nt.has(U.credentialId)||x.has(U.credentialId)||(W.push({credentialId:U.credentialId,deviceLabel:U.deviceLabel||"(inne urz\u0105dzenie)",createdAtISO:U.createdAtISO||new Date().toISOString(),roaming:U.roaming===!0}),C++)});return PatientClinicalWriteValue(PatientClinicalOperationAccount,C>0||Q>0||R.length!==(Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.length:0)?Object.assign({},j,{passkeys:W,passkeyTombstones:R}):null)},PatientClinicalOptions(e,b));Bmk_w&&await ln(b)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let J=0;try{const P=t&&typeof t.userPreferences=="object"&&t.userPreferences||{},F=Object.keys(P);if(F.length>0){const Bmk_ap=[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return PatientClinicalWriteValue(PatientClinicalOperationAccount,null);J=0,Bmk_ap.length=0;const W=j.userPreferences&&typeof j.userPreferences=="object"?Object.assign({},j.userPreferences):{};let X=!1;for(let K=0;K<F.length;K++){const H=F[K],R=P[H];if(!R||typeof R!="object"||!R.updatedAtISO)continue;const x=W[H];/* P-HISTORIA-ZWIJANA (uwaga Codex do #479): advHistoryCollapsed to mapa per pacjent ({id:{z:1|deleted,updatedAtISO}}) - scalana per wpis jak wlsched/wllists, zeby zmiany roznych pacjentow na dwoch urzadzeniach offline nie nadpisywaly sie nawzajem; wynik trafia tez do lokalnej preferencji (applyPreferenceFromCloud), bo ta preferencja zyje w VildaPersistence, nie tylko w sejfie. */if(H==="wlsched"||H==="wllists"||H==="advHistoryCollapsed"){const Az=Ak(x,R);Az&&(W[H]=Az,X=!0,J++),Az&&H==="advHistoryCollapsed"&&Bmk_ap.push([H,Az.value]);continue}if(!x||!x.updatedAtISO||R.updatedAtISO>x.updatedAtISO){W[H]={value:String(R.value),updatedAtISO:R.updatedAtISO},X=!0,J++,Bmk_ap.push([H,R.value])}}return PatientClinicalWriteValue(PatientClinicalOperationAccount,X?Object.assign({},j,{userPreferences:W}):null)},PatientClinicalOptions(e,b));Bmk_w&&Bmk_ap.forEach(function(Bmk_p){try{v.VildaPersistence&&typeof v.VildaPersistence.applyPreferenceFromCloud=="function"&&v.VildaPersistence.applyPreferenceFromCloud(Bmk_p[0],Bmk_p[1])}catch(Y){PatientClinicalRethrow(Y);}})}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let $=0,tt=0,wt=0;try{const P=I();if(P&&typeof P.listNotesForUser=="function"&&typeof P.putNoteForUser=="function"&&typeof P.removeNoteForUser=="function"){let x=function(S,g){!S||!g||(!R[S]||g>R[S])&&(R[S]=g)},nt=function(S,g){!S||!g||(!Y[S]||g>Y[S])&&(Y[S]=g)};const j=Array.isArray(t.notes)?t.notes:[],W=Array.isArray(t.noteTombstones)?t.noteTombstones:[],X=await P.listNotesForUser(b),K=typeof P.listNoteTombstonesForUser=="function"?await P.listNoteTombstonesForUser(b):[],H=Object.create(null);X.forEach(function(S){S&&S.id&&(H[S.id]=S)});const R=Object.create(null);W.forEach(function(S){S&&x(S.id,S.deletedAtISO)}),K.forEach(function(S){S&&x(S.id,S.deletedAtISO)});const Y=Object.create(null);X.forEach(function(S){S&&nt(S.id,S.updatedAtISO)}),j.forEach(function(S){S&&nt(S.id,S.updatedAtISO)});const U=new Set;Object.keys(R).forEach(function(S){const g=Y[S]||null;(!g||R[S]>=g)&&U.add(S)});for(let S=0;S<j.length;S+=1){const g=j[S];if(!g||!g.id||!g.updatedAtISO||U.has(g.id))continue;const M=H[g.id];if(!(!M||!M.updatedAtISO||g.updatedAtISO>M.updatedAtISO))continue;await Ac("lib:"+g.id,async function(){Bses_pilnuj(e);let Qm0=M;try{Qm0=await P.getNoteForUser(b,g.id)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}if(Qm0&&Qm0.updatedAtISO&&!(g.updatedAtISO>Qm0.updatedAtISO))return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);const et={title:Z(typeof g.title=="string"?g.title:""),category:Mn(g.category),body:Z(typeof g.body=="string"?g.body:""),pinned:g.pinned===!0,order:Number.isFinite(g.order)?g.order:0},_t=await V(et);await P.putNoteForUser(b,PatientClinicalWriteValue(b,{id:g.id,noteCipher:_t,createdAtISO:g.createdAtISO||g.updatedAtISO,updatedAtISO:g.updatedAtISO})),Qm0?tt++:$++})}if(typeof P.putNoteTombstoneForUser=="function"){const S=Array.from(U);for(let g=0;g<S.length;g+=1){const M=S[g];await Ac("lib:"+M,async function(){Bses_pilnuj(e);let Qm1;try{Qm1=await P.getNoteForUser(b,M)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);Qm1=H[M]||null}Qm1&&(await P.removeNoteForUser(b,PatientClinicalWriteValue(b,M)),wt++),await P.putNoteTombstoneForUser(b,PatientClinicalWriteValue(b,{id:M,deletedAtISO:R[M]}))})}if(typeof P.removeNoteTombstoneForUser=="function")for(let g=0;g<K.length;g+=1){const M=K[g];Bses_pilnuj(e),M&&M.id&&!U.has(M.id)&&await P.removeNoteTombstoneForUser(b,PatientClinicalWriteValue(b,M.id))}}}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let Et=0,Nt=0,Tt=0;/* P-NOTATKI-2 (G14, decyzja wlasciciela D10): scalanie z innego urzadzenia nie zglaszalo zadnej
+function Gz(t,e,n){const r=Math.round(de/864e5),o=Gy(t,n),a=Gy(e,n),i=typeof o=="number"&&o>r,c=typeof a=="number"&&a>r;return{thresholdDays:r,localLastMergeAtISO:typeof t=="string"&&t?t:null,localDays:o,localStale:i,remoteLastMergeAtISO:typeof e=="string"&&e?e:null,remoteDays:a,remoteStale:c,warn:i||c}}async function Gm(){if(!T())return null;return Gz(await Gw(),null,Date.now())}async function is(){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);PatientClinicalGuard();if(!T())throw new Error("VildaVault.exportSyncPayload: vault nie jest odblokowany.");const t=await I().listPatientsForUser(b),e=[];for(let p=0;p<t.length;p+=1){const w=t[p],h=await G(w.headerCipher.iv,w.headerCipher.data),O=await I().listSnapshotsForUser(b,w.patientId),u=[];for(let f=0;f<O.length;f+=1){const m=O[f],E=await Bvisit_read(await G(m.payloadCipher.iv,m.payloadCipher.data),w.patientId,m);u.push({snapshotId:m.snapshotId,savedAtISO:m.savedAtISO,rev:mt(m),updatedAtISO:typeof m.updatedAtISO=="string"&&m.updatedAtISO?m.updatedAtISO:null,payload:E,...Bsw_przypisanie(m)})}u.sort(function(f,m){return PatientClinicalWriteValue(PatientClinicalOperationAccount,f.savedAtISO>m.savedAtISO?1:f.savedAtISO<m.savedAtISO?-1:0)}),e.push({patientId:w.patientId,header:h,snapshots:u,createdAtISO:w.createdAtISO,lastSavedAtISO:w.lastSavedAtISO,snapshotCount:w.snapshotCount})}let n=[];try{const p=I();if(p&&typeof p.listTombstonesForUser=="function"&&(n=await p.listTombstonesForUser(b),typeof p.removeTombstoneForUser=="function"&&n.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<n.length;O++){const u=n[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeTombstoneForUser(b,PatientClinicalWriteValue(b,u.patientId)):h.push(u)}n=h}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);n=[]}let r=[],o=[];try{const p=await I().getUserMeta(b);if(p&&Array.isArray(p.passkeys)&&(r=p.passkeys.map(function(w){return PatientClinicalWriteValue(PatientClinicalOperationAccount,{credentialId:w.credentialId,deviceLabel:w.deviceLabel,createdAtISO:w.createdAtISO,roaming:w.roaming===!0})})),p&&Array.isArray(p.passkeyTombstones)){const w=new Date(Date.now()-de).toISOString();o=p.passkeyTombstones.filter(function(h){return PatientClinicalWriteValue(PatientClinicalOperationAccount,h&&h.credentialId&&h.deletedAtISO&&h.deletedAtISO>=w)})}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let a={};try{const p=await I().getUserMeta(b);p&&typeof p.userPreferences=="object"&&p.userPreferences&&(a=p.userPreferences)}catch(p){PatientClinicalRethrow(p);}let s=[],i=[];try{const p=I();if(p&&typeof p.listNotesForUser=="function"){const w=await p.listNotesForUser(b);for(let h=0;h<w.length;h+=1){const O=await nn(w[h]);s.push(O)}}if(p&&typeof p.listNoteTombstonesForUser=="function"&&(i=await p.listNoteTombstonesForUser(b),typeof p.removeNoteTombstoneForUser=="function"&&i.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<i.length;O+=1){const u=i[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removeNoteTombstoneForUser(b,PatientClinicalWriteValue(b,u.id)):h.push(u)}i=h}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);s=[],i=[]}let c=[],l=[];try{const p=I();if(p&&typeof p.listPatientNotesForUser=="function"){const w=await p.listPatientNotesForUser(b);for(let h=0;h<w.length;h+=1){/* P-NOTATKI-1 (G12): jak wyzej — uszkodzona notatka zostaje na urzadzeniu zamiast jechac jako atrapa. */try{await G(w[h].bodyCipher.iv,w[h].bodyCipher.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);continue}const O=await Ft(w[h]);c.push(O)}}if(p&&typeof p.listPatientNoteTombstonesForUser=="function"&&(l=await p.listPatientNoteTombstonesForUser(b),typeof p.removePatientNoteTombstoneForUser=="function"&&l.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<l.length;O+=1){const u=l[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientNoteTombstoneForUser(b,PatientClinicalWriteValue(b,u.id)):h.push(u)}l=h}}catch(CareMvpExportError){PatientClinicalRethrow(CareMvpExportError);CareMvpRethrowLineage(CareMvpExportError);c=[],l=[]}let y=[],d=[];try{const p=I();if(p&&typeof p.listPatientListsForUser=="function"){const w=await p.listPatientListsForUser(b);for(let h=0;h<w.length;h+=1)y.push(await Re(w[h]))}if(p&&typeof p.listPatientListTombstonesForUser=="function"&&(d=await p.listPatientListTombstonesForUser(b),typeof p.removePatientListTombstoneForUser=="function"&&d.length)){const w=new Date(Date.now()-de).toISOString(),h=[];for(let O=0;O<d.length;O+=1){const u=d[O];u&&u.deletedAtISO&&u.deletedAtISO<w?await p.removePatientListTombstoneForUser(b,PatientClinicalWriteValue(b,u.id)):h.push(u)}d=h}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);y=[],d=[]}const Gp=await Gw();return PatientClinicalWriteValue(PatientClinicalOperationAccount,{schemaVersion:at,userId:b,label:st,exportedAtISO:new Date().toISOString(),lastMergeAtISO:Gp,credential:await Gc5(),patients:e,tombstones:Array.isArray(n)?n:[],passkeys:r,passkeyTombstones:o,userPreferences:a,notes:Array.isArray(s)?s:[],noteTombstones:Array.isArray(i)?i:[],patientNotes:Array.isArray(c)?c:[],patientNoteTombstones:Array.isArray(l)?l:[],patientLists:Array.isArray(y)?y:[],patientListTombstones:Array.isArray(d)?d:[],snapshotTombstones:await Bkz_eksport()})}async function cs(t){if(!T())throw new Error("VildaVault.buildNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getPatientNoteForUser(b,t);if(!e)return null;/* P-NOTATKI-1 (G12): notatka, ktorej nie da sie odszyfrowac, nie wychodzi z urzadzenia jako „(blad odczytu)" — nadpisalaby czytelna tresc na drugim urzadzeniu. Ta sama bramka, co w bibliotece szablonow (Qb0). */try{await G(e.bodyCipher.iv,e.bodyCipher.data)}catch{return null}const n=await Ft(e);return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[n],patientNoteTombstones:[]})}async function Qb0(t){if(!T())throw new Error("VildaVault.buildLibraryNoteDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().getNoteForUser(b,t);if(!e||!e.noteCipher)return null;try{await G(e.noteCipher.iv,e.noteCipher.data)}catch{return null}const n=await nn(e);if(!n||!n.id||!n.updatedAtISO)return null;return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[n],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function Qb1(t,e){if(!T())throw new Error("VildaVault.buildLibraryNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[{id:t,deletedAtISO:n}],patientNotes:[],patientNoteTombstones:[]})}async function us(t,e){if(!T())throw new Error("VildaVault.buildTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();return await Bsw_deltaNagrobka(t,{schemaVersion:at,patients:[],tombstones:[{patientId:t,deletedAtISO:n}],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]})}async function ls(t,e){if(!T())throw new Error("VildaVault.buildNoteTombstoneDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const n=typeof e=="string"&&e?e:new Date().toISOString();/* P-NOTATKI-ZA-KARTA (D-21 A): delta niesie nagrobek tak, jak lezy w sklepie (rev i pole deletedWithPatient) — bez tego drugie urzadzenie dostawalo nagrobek bez pola i kasowalo notatki, zanim przyszedl pelny ladunek. Brak rekordu: postac dotychczasowa. */let Qz={id:t,deletedAtISO:n};try{const Qx=await Bnp_nagrobek(I(),t);Qx&&Qx.deletedAtISO&&(Qz={id:t,deletedAtISO:Qx.deletedAtISO},typeof Qx.rev=="number"&&isFinite(Qx.rev)&&Qx.rev>0&&(Qz.rev=Qx.rev),Bnp_pole(Qx)&&(Qz.deletedWithPatient=Bnp_pole(Qx)))}catch{}return await V({schemaVersion:at,patients:[],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[Qz]})}async function ds(t){if(!T())throw new Error("VildaVault.buildPatientDelta: vault nie jest odblokowany.");if(typeof t!="string"||!t)return null;const e=await I().listPatientsForUser(b);let n=null;for(let i=0;i<e.length;i+=1)if(e[i]&&e[i].patientId===t){n=e[i];break}if(!n||!n.headerCipher)return null;const r=await G(n.headerCipher.iv,n.headerCipher.data),o=await I().listSnapshotsForUser(b,t),a=[];for(let i=0;i<o.length;i+=1){const c=o[i],l=await Bvisit_read(await G(c.payloadCipher.iv,c.payloadCipher.data),t,c);a.push({snapshotId:c.snapshotId,savedAtISO:c.savedAtISO,rev:mt(c),updatedAtISO:typeof c.updatedAtISO=="string"&&c.updatedAtISO?c.updatedAtISO:null,payload:l,...Bsw_przypisanie(c)})}a.sort(function(i,c){return i.savedAtISO>c.savedAtISO?1:i.savedAtISO<c.savedAtISO?-1:0});const s={schemaVersion:at,patients:[{patientId:n.patientId,header:r,snapshots:a,createdAtISO:n.createdAtISO,lastSavedAtISO:n.lastSavedAtISO,snapshotCount:n.snapshotCount}],tombstones:[],passkeys:[],passkeyTombstones:[],userPreferences:{},notes:[],noteTombstones:[],patientNotes:[],patientNoteTombstones:[]};return await V(s)}async function ps(t){if(!T()||!t||typeof t.iv!="string"||typeof t.data!="string")return null;const Bses_d=Bses_opcje(null);let e=null;try{e=await G(t.iv,t.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);return null}if(Bses_zmieniona(Bses_d))throw Bses_delta(Bses_blad());if(!e||typeof e!="object")return null;try{return await Le(e)}catch(Bses_x){PatientClinicalRethrow(Bses_x);throw Bses_delta(Bses_x)}}const Qe0=[];function Qe1(t){typeof t=="function"&&Qe0.push(t)}function Qe2(t){Bem_hak("onCredentialChanged",t);Qe0.forEach(function(e){try{e(t)}catch{}})}function Gc2(t){const e=t&&typeof t.passwordKdfIterations=="number"&&isFinite(t.passwordKdfIterations)&&t.passwordKdfIterations>0?Math.round(t.passwordKdfIterations):null;return e||(t?t.kdfIterations:null)}function Gc3(t){const e=new Date().toISOString(),n=t&&typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!n||e>n)return e;const r=Date.parse(n);return Number.isFinite(r)?new Date(r+1).toISOString():e}async function Gc4(t,e,n,r,o){try{const a=L(),s=await a.deriveKey(t,e,n),i=new Uint8Array(await a.decryptBytes(s,r.iv,r.data)),c=new Uint8Array(o);if(i.length!==c.length)return!1;let l=0;for(let y=0;y<i.length;y+=1)l|=i[y]^c[y];return l===0}catch{return!1}}async function Gc5(){try{const t=await I().getUserMeta(b);if(!t)return null;const e=typeof t.passwordUpdatedAtISO=="string"&&t.passwordUpdatedAtISO?t.passwordUpdatedAtISO:null;if(!e)return null;const n=t.encryptedMasterByPassword;if(typeof t.passwordSalt!="string"||!t.passwordSalt||!n||typeof n.iv!="string"||typeof n.data!="string")return null;const r=Gc2(t);return typeof r!="number"||!isFinite(r)||r<=0?null:{passwordSalt:t.passwordSalt,kdfIterations:r,encryptedMasterByPassword:{iv:n.iv,data:n.data},updatedAtISO:e}}catch{return null}}async function Gc1(t,Bses_o){if(!t||typeof t!="object")return!1;const e=typeof t.updatedAtISO=="string"&&t.updatedAtISO?t.updatedAtISO:null,n=typeof t.passwordSalt=="string"&&t.passwordSalt?t.passwordSalt:null,r=t.encryptedMasterByPassword,o=r&&typeof r=="object"&&typeof r.iv=="string"&&r.iv&&typeof r.data=="string"&&r.data?{iv:r.iv,data:r.data}:null,a=typeof t.kdfIterations=="number"&&isFinite(t.kdfIterations)&&t.kdfIterations>0?Math.round(t.kdfIterations):null;if(!e||!n||!o||!a)return!1;if(!await Bmk_zmien(b,function(s){if(!s)return null;const i=typeof s.passwordUpdatedAtISO=="string"&&s.passwordUpdatedAtISO?s.passwordUpdatedAtISO:null;if(i&&!(e>i))return null;if(s.passwordSalt===n&&s.encryptedMasterByPassword&&s.encryptedMasterByPassword.iv===o.iv&&s.encryptedMasterByPassword.data===o.data&&Gc2(s)===a)return null;return Object.assign({},s,{passwordSalt:n,passwordKdfIterations:a,encryptedMasterByPassword:o,passwordUpdatedAtISO:e})},Bses_o))return!1;if(Bses_zmieniona(Bses_o))return!0;try{v.VildaPersistence&&typeof v.VildaPersistence.writePreferenceRaw=="function"&&v.VildaPersistence.writePreferenceRaw("PASSWORD_CHANGED_REMOTELY_AT",e,{force:!0})}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}return Qe2({action:"password-changed-remotely",updatedAtISO:e}),!0}async function Le(t,e){const PatientClinicalOperationAccount=b;PatientClinicalGuard(PatientClinicalOperationAccount);PatientClinicalGuard();if(!T())throw new Error("VildaVault.mergeSyncPayload: vault nie jest odblokowany.");/* P-SESJA-ZAPISU (przeglad 4, ADW4-1): import karty (ns) podaje opcje z polem Bpb_imp (znacznik importu) i Bses_s — scalanie importu z sesja wolajacego; sam znacznik (ss) — sesja z wejscia Le, jak dotad. */const Bses_imp=e===Bpb_IMPORT||!!(e&&e.Bpb_imp===Bpb_IMPORT),Bses_zew=Bses_imp&&e!==Bpb_IMPORT?e.Bses_s:null;e=Bses_opcje(Bses_imp?null:e);if(Bses_zew)e.Bses_s=Bses_zew;if(!t||typeof t!="object")throw new Error("VildaVault.mergeSyncPayload: nieprawid\u0142owy format danych.");Bem_zChmury(t);if(PatientPortablePayload(t))await PatientPortableModules();CareMvpPreflightPayload(t);const n=e&&typeof e.onProgress=="function"?e.onProgress:null;function r(P,F,j){if(n)try{n({phase:P,current:F,total:j})}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}}const Gp=await Gw(),Gq=t&&typeof t.lastMergeAtISO=="string"&&t.lastMergeAtISO?t.lastMergeAtISO:null,o=Array.isArray(t.patients)?t.patients:[],a=await I().listPatientsForUser(b);const Bkz_S=await Bkz_scalStart(t);r("patients-start",0,o.length);const i=new Date().toISOString();let c=0,l=0,y=0,d=0,p=0,w=0;const h=I(),O=h&&typeof h.listTombstonesForUser=="function"&&typeof h.putTombstoneForUser=="function"&&typeof h.removeTombstoneForUser=="function",u=Array.isArray(t.tombstones)?t.tombstones:[],f=O?await h.listTombstonesForUser(b):[],m=Object.create(null);function E(P,F){!P||!F||(!m[P]||F>m[P])&&(m[P]=F)}u.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)}),f.forEach(function(P){P&&E(P.patientId,P.deletedAtISO)});const _=Object.create(null);function A(P,F){!P||!F||(!_[P]||F>_[P])&&(_[P]=F)}a.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)}),o.forEach(function(P){P&&A(P.patientId,P.lastSavedAtISO)});/* P-KOSZ-PO-KLUCZU: karty ze znanym nagrobkiem pacjenta (ladunek i tutejsze) — tylko taka karta jest starym duplikatem, z ktorego wpis kosza innej karty zabiera ostatnia wersje (Bkz_obceKarty). */Bkz_S.Bkz_nagrKart=new Set(Object.keys(m));const N=new Set;Object.keys(m).forEach(function(P){const F=_[P]||null;(!F||m[P]>=F)&&N.add(P)});Bkz_S.Bsw_N=N;/* P-KOSZ-PO-KLUCZU (np-ret-A1): chwile nagrobkow kart dla Bsw_przezyteRetencji — tylko gdy karty z N znikaja (magazyn nagrobkow, poza importem). */Bkz_S.Bsw_m=O&&!Bses_imp?m:null;Bkz_S.Bsw_pusto=!a.length;for(let P=0;P<o.length;P++){r("patients",P+1,o.length);const F=o[P];if(!F||!F.patientId||!F.header)continue;if(N.has(F.patientId)){Bsl_koszZLadunku(Bkz_S,F);if(!Bses_imp)await Bsw_zKartyZNagrobkiem(Bkz_S,F,e);continue}const j=(Array.isArray(F.snapshots)?F.snapshots:[]).filter(function(x){return PatientClinicalWriteValue(PatientClinicalOperationAccount,x&&x.snapshotId)}),W=V(F.header),X=j.map(function(x){return PatientClinicalWriteValue(PatientClinicalOperationAccount,V(x.payload||{}))}),K=await Promise.all([W].concat(X)),H=K[0],R=K.slice(1);const Bsl_w=await Bsl_scalPacjenta(F,j,H,R,Bkz_S,i,e);y+=Bsl_w.dodane,d+=Bsl_w.pominiete,p+=Bsl_w.zmienione,Bsl_w.usuniety||(Bsl_w.nowy?l++:c++)}const Bsw_f=await Bsl_przeniesWersje(Bkz_S,i,e);l+=Bsw_f.dodane,w+=Bsw_f.usuniete;y+=Bsw_f.zabrane;/* E3-PR0e2b: decyzja 'tresc' (poprawka albo gwiazdka wersji przeniesionej „Scal pacjentow”, zrobiona w starej karcie bez wiedzy o scaleniu, trafia do karty scalonej) zmienia wersje tej karty — liczy sie jak zmieniona wersja (updatedSnapshotCount), wiec integracja odswieza liste i otwarta karte (vilda:sync-merged) takze po samej delcie albo kopercie. */p+=Bsw_f.poprawione;if(O){const P=Array.from(N);for(let F=0;F<P.length;F++){const j=P[F];w+=await Bsl_usunPacjenta(j,m[j],e,Bses_imp?null:Bkz_S)}for(let F=0;F<f.length;F++){const j=f[F];j&&j.patientId&&!N.has(j.patientId)&&await Bsl_zdejmijNagrobek(j.patientId,j.deletedAtISO,e)}}Bem_przegrane(t,N,e);let Bkz_n=0;try{Bkz_n=Bses_imp?0:await Bkz_scalKoniec(Bkz_S,e)}catch(Bkz_e){PatientClinicalRethrow(Bkz_e);if(Bkz_e&&(Bkz_e.vildaMergeBusy||Bkz_e.code==="SESSION_CHANGED"||Bkz_e.code==="VISIT_IDENTITY_CONFLICT"||Bkz_e.code==="INVALID_VISIT_IDENTITY"))throw Bkz_e;try{console.warn("[vault] kosz zapisow: scalanie nagrobkow",Bkz_e)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}}/* P-KOSZ-PO-KLUCZU: karty-duplikaty, ktore zniknely z ostatnia wersja w koszu innej karty, licza sie jak usuniete (vilda:sync-merged odswieza liste pacjentow). */w+=Bkz_S.Bkz_kartyUsuniete||0;let C=0,Q=0;try{const P=Array.isArray(t.passkeys)?t.passkeys:[],F=Array.isArray(t.passkeyTombstones)?t.passkeyTombstones:[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return PatientClinicalWriteValue(PatientClinicalOperationAccount,null);C=0,Q=0;let W=Array.isArray(j.passkeys)?j.passkeys.slice():[],X=Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.slice():[];const K=Object.create(null);X.forEach(function(U){U&&U.credentialId&&(K[U.credentialId]=U.deletedAtISO||"")}),F.forEach(function(U){if(!U||!U.credentialId)return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);const S=K[U.credentialId]||"";(!S||U.deletedAtISO&&U.deletedAtISO>S)&&(K[U.credentialId]=U.deletedAtISO||"")});const H=new Date(Date.now()-de).toISOString(),R=[];Object.keys(K).forEach(function(U){const S=K[U];S&&S>=H&&R.push({credentialId:U,deletedAtISO:S})});const x=new Set(R.map(function(U){return PatientClinicalWriteValue(PatientClinicalOperationAccount,U.credentialId)})),Y=W.length;W=W.filter(function(U){return PatientClinicalWriteValue(PatientClinicalOperationAccount,!x.has(U.credentialId))}),Q=Y-W.length;const nt=new Set(W.map(function(U){return PatientClinicalWriteValue(PatientClinicalOperationAccount,U.credentialId)}));P.forEach(function(U){!U||!U.credentialId||nt.has(U.credentialId)||x.has(U.credentialId)||(W.push({credentialId:U.credentialId,deviceLabel:U.deviceLabel||"(inne urz\u0105dzenie)",createdAtISO:U.createdAtISO||new Date().toISOString(),roaming:U.roaming===!0}),C++)});return PatientClinicalWriteValue(PatientClinicalOperationAccount,C>0||Q>0||R.length!==(Array.isArray(j.passkeyTombstones)?j.passkeyTombstones.length:0)?Object.assign({},j,{passkeys:W,passkeyTombstones:R}):null)},PatientClinicalOptions(e,b));Bmk_w&&await ln(b)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let J=0;try{const P=t&&typeof t.userPreferences=="object"&&t.userPreferences||{},F=Object.keys(P);if(F.length>0){const Bmk_ap=[],Bmk_w=await Bmk_zmien(b,function(j){if(!j)return PatientClinicalWriteValue(PatientClinicalOperationAccount,null);J=0,Bmk_ap.length=0;const W=j.userPreferences&&typeof j.userPreferences=="object"?Object.assign({},j.userPreferences):{};let X=!1;for(let K=0;K<F.length;K++){const H=F[K],R=P[H];if(!R||typeof R!="object"||!R.updatedAtISO)continue;const x=W[H];/* P-HISTORIA-ZWIJANA (uwaga Codex do #479): advHistoryCollapsed to mapa per pacjent ({id:{z:1|deleted,updatedAtISO}}) - scalana per wpis jak wlsched/wllists, zeby zmiany roznych pacjentow na dwoch urzadzeniach offline nie nadpisywaly sie nawzajem; wynik trafia tez do lokalnej preferencji (applyPreferenceFromCloud), bo ta preferencja zyje w VildaPersistence, nie tylko w sejfie. */if(H==="wlsched"||H==="wllists"||H==="advHistoryCollapsed"){const Az=Ak(x,R);Az&&(W[H]=Az,X=!0,J++),Az&&H==="advHistoryCollapsed"&&Bmk_ap.push([H,Az.value]);continue}if(!x||!x.updatedAtISO||R.updatedAtISO>x.updatedAtISO){W[H]={value:String(R.value),updatedAtISO:R.updatedAtISO},X=!0,J++,Bmk_ap.push([H,R.value])}}return PatientClinicalWriteValue(PatientClinicalOperationAccount,X?Object.assign({},j,{userPreferences:W}):null)},PatientClinicalOptions(e,b));Bmk_w&&Bmk_ap.forEach(function(Bmk_p){try{v.VildaPersistence&&typeof v.VildaPersistence.applyPreferenceFromCloud=="function"&&v.VildaPersistence.applyPreferenceFromCloud(Bmk_p[0],Bmk_p[1])}catch(Y){PatientClinicalRethrow(Y);}})}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let $=0,tt=0,wt=0;try{const P=I();if(P&&typeof P.listNotesForUser=="function"&&typeof P.putNoteForUser=="function"&&typeof P.removeNoteForUser=="function"){let x=function(S,g){!S||!g||(!R[S]||g>R[S])&&(R[S]=g)},nt=function(S,g){!S||!g||(!Y[S]||g>Y[S])&&(Y[S]=g)};const j=Array.isArray(t.notes)?t.notes:[],W=Array.isArray(t.noteTombstones)?t.noteTombstones:[],X=await P.listNotesForUser(b),K=typeof P.listNoteTombstonesForUser=="function"?await P.listNoteTombstonesForUser(b):[],H=Object.create(null);X.forEach(function(S){S&&S.id&&(H[S.id]=S)});const R=Object.create(null);W.forEach(function(S){S&&x(S.id,S.deletedAtISO)}),K.forEach(function(S){S&&x(S.id,S.deletedAtISO)});const Y=Object.create(null);X.forEach(function(S){S&&nt(S.id,S.updatedAtISO)}),j.forEach(function(S){S&&nt(S.id,S.updatedAtISO)});const U=new Set;Object.keys(R).forEach(function(S){const g=Y[S]||null;(!g||R[S]>=g)&&U.add(S)});for(let S=0;S<j.length;S+=1){const g=j[S];if(!g||!g.id||!g.updatedAtISO||U.has(g.id))continue;const M=H[g.id];if(!(!M||!M.updatedAtISO||g.updatedAtISO>M.updatedAtISO))continue;await Ac("lib:"+g.id,async function(){Bses_pilnuj(e);let Qm0=M;try{Qm0=await P.getNoteForUser(b,g.id)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}if(Qm0&&Qm0.updatedAtISO&&!(g.updatedAtISO>Qm0.updatedAtISO))return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);const et={title:Z(typeof g.title=="string"?g.title:""),category:Mn(g.category),body:Z(typeof g.body=="string"?g.body:""),pinned:g.pinned===!0,order:Number.isFinite(g.order)?g.order:0},_t=await V(et);await P.putNoteForUser(b,PatientClinicalWriteValue(b,{id:g.id,noteCipher:_t,createdAtISO:g.createdAtISO||g.updatedAtISO,updatedAtISO:g.updatedAtISO})),Qm0?tt++:$++})}if(typeof P.putNoteTombstoneForUser=="function"){const S=Array.from(U);for(let g=0;g<S.length;g+=1){const M=S[g];await Ac("lib:"+M,async function(){Bses_pilnuj(e);let Qm1;try{Qm1=await P.getNoteForUser(b,M)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);Qm1=H[M]||null}Qm1&&(await P.removeNoteForUser(b,PatientClinicalWriteValue(b,M)),wt++),await P.putNoteTombstoneForUser(b,PatientClinicalWriteValue(b,{id:M,deletedAtISO:R[M]}))})}if(typeof P.removeNoteTombstoneForUser=="function")for(let g=0;g<K.length;g+=1){const M=K[g];Bses_pilnuj(e),M&&M.id&&!U.has(M.id)&&await P.removeNoteTombstoneForUser(b,PatientClinicalWriteValue(b,M.id))}}}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}let Et=0,Nt=0,Tt=0;/* P-NOTATKI-2 (G14, decyzja wlasciciela D10): scalanie z innego urzadzenia nie zglaszalo zadnej
    zmiany notatki pacjenta (qr wolane bylo tylko przy zapisie i kasowaniu na TYM urzadzeniu).
    Otwarty edytor nie mial jak sie dowiedziec, ze jego notatka zmienila sie w miedzyczasie. */
 var Qch=[];try{const P=I();if(P&&typeof P.listPatientNotesForUser=="function"&&typeof P.putPatientNoteForUser=="function"&&typeof P.removePatientNoteForUser=="function"){let x=function(S,g){!S||!g||(!R[S]||g>R[S])&&(R[S]=g)},nt=function(S,g){!S||!g||(!Y[S]||g>Y[S])&&(Y[S]=g)};const j=Array.isArray(t.patientNotes)?t.patientNotes:[],W=Array.isArray(t.patientNoteTombstones)?t.patientNoteTombstones:[],X=await P.listPatientNotesForUser(b),K=typeof P.listPatientNoteTombstonesForUser=="function"?await P.listPatientNoteTombstonesForUser(b):[],H=Object.create(null);X.forEach(function(S){S&&S.id&&(H[S.id]=S)});/* P-NOTATKI-1 (G5, 2026-09-18): zbior pacjentow z nagrobkiem (lokalnych i z ladunku) — notatka scalonego duplikatu nie moze wrocic pod usuniete zrodlo tylko dlatego, ze drugie urzadzenie edytowalo ja rownolegle. */const Qpt=new Set;try{if(typeof P.listTombstonesForUser=="function"){const Qtl=await P.listTombstonesForUser(b);for(let Qi=0;Qi<Qtl.length;Qi+=1){const Qe=Qtl[Qi];Qe&&Qe.patientId&&Qpt.add(Qe.patientId)}}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}try{const Qti=Array.isArray(t.tombstones)?t.tombstones:[];for(let Qi=0;Qi<Qti.length;Qi+=1){const Qe=Qti[Qi];Qe&&Qe.patientId&&Qpt.add(Qe.patientId)}}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}const R=Object.create(null);W.forEach(function(S){S&&x(S.id,S.deletedAtISO)}),K.forEach(function(S){S&&x(S.id,S.deletedAtISO)});const Y=Object.create(null);X.forEach(function(S){S&&nt(S.id,S.updatedAtISO)}),j.forEach(function(S){S&&nt(S.id,S.updatedAtISO)});/* P-NOTATKI-1 (G6): najwyzszy znany rev per notatka — nagrobek go niesie dalej. */const Qrev=Object.create(null),Qrv=function(S,g){!S||typeof g!="number"||!isFinite(g)||(!Qrev[S]||g>Qrev[S])&&(Qrev[S]=g)};W.forEach(function(S){S&&Qrv(S.id,S.rev)}),K.forEach(function(S){S&&Qrv(S.id,S.rev)}),X.forEach(function(S){S&&Qrv(S.id,S.rev)}),/* E2-PR3c3 (decyzja 5): takze notatki z ladunku — nagrobek, ktory z nimi wygrywa, niesie ich rev („Zostaw notatke” startuje od niego). */j.forEach(function(S){S&&Qrv(S.id,S.rev)});/* P-NOTATKI-ZA-KARTA (D-21 A): krata kopii nagrobka (Bnp_zlacz) i decyzja po fazie kart (Bnp_stan). Karta pacjenta z pola czytana leniwie, tylko dla kandydatow (R >= Y, jest wersja, jest pole, brak recznego usuniecia M >= Y; przeglad 1: takze Y w pasmie ratunku albo zwyciezca sprzed usuniecia, oba przy polu), raz na pacjenta. RATUNEK i CZEKA nie trafiaja do U: wersja z ladunku wchodzi zwykla regula. *//* E3-PR0b2b (P-NOTATKA-POZNIEJSZA): tutejsze plany z kontekstem tylko w tresci — dla Bnp_zwyciezcy, jak pod blokada (tylko notatki z nagrobkiem, przy ktorych dawna i nowa regula sie roznia). */const Qnp_plW=await Bnp_planyTutaj(X,j,Object.keys(R));Bses_pilnuj(e);const U=new Set,Qkn=Bnp_zlacz(W.concat(K)),Qwy=Bnp_zwyciezcy(X,j,Qnp_plW),Qkr=Object.create(null),Qrt=new Set,Qcz=new Set,Qdn=new Set;/* E2-PR3c4 (decyzja 6): karta notatki, gdy wersja tutejsza i z ladunku leza pod roznymi kartami — karta martwa: nagrobek znany tu albo z ladunku (Qpt) i brak karty po fazie kart (odczyt leniwy, raz na pacjenta; blad odczytu = karta zywa); dokladnie jedna martwa — druga; pelny remis — mniejszy patientId; inaczej karta zwyciezcy tresci. Zastepuje G5 (zostawial tutejsza karte, gdy karta z ladunku miala nagrobek, takze gdy tutejsza zginela). */const Qmk=Object.create(null),Qmart=async function(Qq){if(!Qq||!Qpt.has(Qq))return!1;if(!(Qq in Qmk)){let Qk;try{Qk=await P.getPatientForUser(b,Qq)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);Qk={}}Qmk[Qq]=!Qk}return Qmk[Qq]},Qwl=async function(Qg,Qm,Qw,Qr){if(typeof Qm!="string"||!Qm||Qg===Qm)return Qg;const Qdg=await Qmart(Qg),Qdm=await Qmart(Qm);if(Qdg&&!Qdm)return Qm;if(Qdm&&!Qdg)return Qg;if(Qr)return Qg<Qm?Qg:Qm;return Qw?Qg:Qm};for(const S of Object.keys(R)){const g=Y[S]||null;let Qs=Bnp_stan(Qkn[S],g,void 0,Qwy[S]);if(Qs==="karta"){const Qp=Qkn[S].pole.patientId;Qp in Qkr||(Qkr[Qp]=await Bnp_karta(P,Qp));Qs=Bnp_stan(Qkn[S],g,Qkr[Qp],Qwy[S])}Qs==="ratunek"?Qrt.add(S):Qs==="czeka"?Qcz.add(S):Qs!=="notatka"&&U.add(S)}for(let S=0;S<j.length;S+=1){const g=j[S];if(!g||!g.id||!g.updatedAtISO||U.has(g.id)||typeof g.patientId!="string"||!g.patientId.length)continue;const Ej=H[g.id],Ev=Ej&&typeof Ej.rev=="number"&&isFinite(Ej.rev)?Ej.rev:0,Ew=typeof g.rev=="number"&&isFinite(g.rev)?g.rev:0,Ex=g.updatedAtISO||"",Ey=Ej&&Ej.updatedAtISO||"";const CareMvpMayMerge=g.category==="care-plan"&&g.careContext&&g.careContext.role==="plan";/* E3-PR0b2b (P-NOTATKA-POZNIEJSZA): pod blokade idzie para, ktora przyjelaby ktorakolwiek regula — nowa (Bnp_nowsza) albo dawna (plan opieki z kontekstem tylko w tutejszej tresci; rozstrzyga odczyt pod blokada). */if(!Bnp_nowsza(g,Ej)&&!Bnp_staraRegula(g,Ej)&&!CareMvpMayMerge&&!CareMvpSyncHydrationCandidate(Ej,g)&&!TreatmentSyncHydrationCandidate(Ej,g)){if(Ej&&typeof Ej.patientId=="string"&&Ej.patientId&&Ej.patientId!==g.patientId&&await Qwl(g.patientId,Ej.patientId,!1,Ew===Ev&&Ex===Ey)===g.patientId&&await Bnp_zmienKarte(P,g,Ej,g.patientId,e)){Qch.push({id:g.id,patientId:g.patientId,action:"merge"});Nt++;Qdn.add(g.id)}if(await Bnp_tutejszaWygrywa(P,g,Ej,e)){Qch.push({id:g.id,patientId:Ej.patientId,action:"merge"});Qdn.has(g.id)||(Nt++,Qdn.add(g.id))}continue}await Ac(g.id,async function(){Bses_pilnuj(e);let Ek=Ej;try{Ek=await P.getPatientNoteForUser(b,g.id)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);}if(Ej&&!Ek)return PatientClinicalWriteValue(PatientClinicalOperationAccount,undefined);const M=Ek||null,rt=M&&typeof M.rev=="number"&&isFinite(M.rev)?M.rev:0,et=typeof g.rev=="number"&&isFinite(g.rev)?g.rev:0,_t=g.updatedAtISO||"",ce=M&&M.updatedAtISO||"";/* E3-PR0b2b (P-NOTATKA-POZNIEJSZA): plan opieki z kontekstem tylko w tutejszej tresci idzie dawna regula (predykat symetryczny). Tresc odszyfrowana przed decyzja tylko wtedy, gdy od tego zalezy wynik (dawna i nowa regula sie roznia, zadna strona nie jest planem z metadanych); wynik i blad odczytu przejmuje odszyfrowanie nizej (bez drugiego). Qnp_plT: true/false, null — nie czytano. */let Qnp_z=null,Qnp_zb=null,Qnp_zj=!1,Qnp_plT=null;if(M&&!Bnp_planOpieki(g)&&!Bnp_planOpieki(M)&&Bnp_nowsza(g,M)!==Bnp_staraRegula(g,M)){Qnp_zj=!0;try{Qnp_z=await G(M.bodyCipher.iv,M.bodyCipher.data)}catch(PatientClinicalCaught){PatientClinicalRethrow(PatientClinicalCaught);Qnp_zb=PatientClinicalCaught}Bses_pilnuj(e);Qnp_plT=!!Qnp_z&&typeof Qnp_z.careContext=="object"&&Qnp_z.careContext!==null}const CareMvpIncomingWins=Bnp_nowsza(g,M,Qnp_plT);if(!CareMvpIncomingWins&&CareMvpSyncHydrationCandidate(M,g)){
