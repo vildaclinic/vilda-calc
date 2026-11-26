@@ -4773,7 +4773,7 @@ function CarePatientRender(){
   if(!module||typeof module.mount!=="function"){oe(CarePatientHost);CarePatientHost.appendChild(e("p",{class:"vilda-patient-empty-msg",text:"Plany opieki są niedostępne. Odśwież aplikację."}));return}
   if(CarePatientView){CarePatientView.refresh();return}
   if(carePatientMount)carePatientMount.destroy();
-  CarePatientView=module.mount(CarePatientHost,{full:true,patientId:t,vault:o,captureVisitBinding:HomeInline&&HomeInline.captureVisitBinding||
+  CarePatientView=module.mount(CarePatientHost,{full:true,patientOverview:HomeInline?.workspaceHeader===true,patientId:t,vault:o,captureVisitBinding:HomeInline&&HomeInline.captureVisitBinding||
   (HomePatientRequested&&i.__VILDA_HOME_GABINET_PREVIEW__===true?function(patientId){
     if(patientId!==t)return null;
     if(!HomePatientIsCurrent())return{blocked:true};
