@@ -357,8 +357,8 @@
   function mount(host, options) {
     options = options || {};
     var remindersLayout = options.remindersLayout === true;
-    var patientOverview = options.patientOverview === true && options.full && !!options.patientId && !remindersLayout;
     if (!host || !host.ownerDocument) throw new Error('Brak miejsca na widok planów opieki.');
+    var patientOverview = host.dataset.carePlanLayout === 'patient-overview' && options.full && !!options.patientId && !remindersLayout;
     var doc = host.ownerDocument, vault = options.vault || win.VildaVault, destroyed = false, sequence = 0, refreshTimer = null;
     var account = vault && vault.getCurrentUser && vault.getCurrentUser(), accountId = account && account.userId;
     var state = { plans: [], patients: [], names: new Map(), selected: options.planId || null, filter: 'all', query: '', loading: false, busy: false, editing: false, detail: typeof options.detail === 'boolean' ? options.detail : !!(options.full && options.planId), stale: false, loaded: false, stagedCapability: null };
