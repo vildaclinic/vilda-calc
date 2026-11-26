@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.603';
+const SW_VERSION = '1.1.604';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -1987,9 +1987,11 @@ const CORE_SHELL_URLS = [
   '/vilda_home_reminders.js?v=2',
   '/vilda_home_reminders.js?v=3',
   '/vilda_home_reminders.js?v=4',
+  '/vilda_home_reminders.js?v=5',
   '/vilda_home_reminders.css?v=1',
   '/vilda_home_reminders.css?v=2',
   '/vilda_home_reminders.css?v=3',
+  '/vilda_home_reminders.css?v=4',
   '/vilda_home_reminders_runtime.js?v=1',
   '/vilda_home_reminders_runtime.js?v=2',
   '/vilda_home_reminders_runtime.js?v=3',
@@ -7374,8 +7376,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-e88b31ad7521.json",
-  "sha256": "e88b31ad75219cc9a5a5c4cafd3a313f9d48fd54b00d82e311455bbf82c841fb",
+  "url": "/runtime/visit-ui-precache/precache-b5d7f67e8f79.json",
+  "sha256": "b5d7f67e8f797ac11996813c53cc8d2da3e0102e979713d593ca14d86cbb8c9c",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7526,12 +7528,12 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "44b6ab42116551ab3653822508b01140d11851a380d36d211c3ce9cc94bb3886"
     },
     {
-      "url": "/vilda_home_reminders.js?v=4",
-      "sha256": "cfa25ffb9517488c18237727188bc5f3c2b5e5b42af83509c207dece52d26438"
+      "url": "/vilda_home_reminders.js?v=5",
+      "sha256": "bd829c811dfc43f2886ed763049b78c7f463c5e1f3705103a0c61a565dc01d4c"
     },
     {
-      "url": "/vilda_home_reminders.css?v=3",
-      "sha256": "5c3f6de60f2d90e9cec2fa9c94f4ef66cc368fe6485799cca0f8d84be6ae6d49"
+      "url": "/vilda_home_reminders.css?v=4",
+      "sha256": "d8afd060c10bbe3dfd23b2c8629b6bb7478d2a3af2c0d52d3e26028b9b54ee1a"
     },
     {
       "url": "/vilda_home_reminders_runtime.js?v=3",

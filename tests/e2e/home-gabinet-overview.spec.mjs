@@ -524,6 +524,9 @@ test('patient Overview reminders keep their complete actions and native dates at
         category: 'reminder-contact', dueDateISO: day, dueTime: '09:30', body: 'Fikcyjne ustalenia kontroli.' });
       rows.push({ id: result.id, title, date: day.split('-').reverse().join('.') });
     }
+    const done = new Date(); done.setDate(done.getDate() - 3);
+    await window.VildaVault.savePatientNote({ patientId: ids.a, title: 'Fikcyjna wykonana sprawa',
+      category: 'reminder-task', dueDateISO: done.toLocaleDateString('sv-SE'), completedAtISO: done.toISOString() });
     await window.VildaVault.savePatientNote({ patientId: ids.b, title: 'Fikcyjne przypomnienie innego pacjenta',
       category: 'reminder-contact', dueDateISO: new Date().toLocaleDateString('sv-SE') });
     return rows;
@@ -532,7 +535,7 @@ test('patient Overview reminders keep their complete actions and native dates at
   const slot = frame.locator('#vhomePatientRemindersSlot');
   const card = slot.locator('.vhome-reminders-card');
   const add = slot.getByRole('button', { name: 'Dodaj przypomnienie', exact: true });
-  const all = slot.getByRole('button', { name: 'Wszystkie przypomnienia', exact: true });
+  const history = slot.getByRole('button', { name: 'Historia przypomnień', exact: true });
   const dialog = page.locator('dialog.vhome-reminders-dialog');
   const stored = () => frame.evaluate(async patientId => ({
     patient: await window.VildaVault.getPatient(patientId),
@@ -554,7 +557,7 @@ test('patient Overview reminders keep their complete actions and native dates at
     await selectReminders(width);
     await frame.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
     await expect(add).toBeEnabled();
-    await expect(add).toHaveText('Dodaj przypomnienie', { useInnerText: true });
+    await expect(add).toHaveAccessibleName('Dodaj przypomnienie');
     await expect(add.locator('svg')).toHaveCount(1);
     await expect.poll(() => frame.evaluate(() => {
       const button = document.querySelector('#vhomePatientRemindersSlot .vb22-primary-create');
@@ -565,16 +568,21 @@ test('patient Overview reminders keep their complete actions and native dates at
       const icon = svg.getBoundingClientRect();
       const range = document.createRange(); range.selectNodeContents(label);
       const text = range.getBoundingClientRect();
-      return box.left >= card.left && box.right <= card.right && box.left >= 0 && box.right <= innerWidth &&
+      const labelFits = text.width > 0
+        ? text.left >= box.left && text.right <= box.right && text.top >= box.top && text.bottom <= box.bottom
+        : getComputedStyle(button, '::after').content === '"Dodaj"';
+      return labelFits && box.left >= card.left && box.right <= card.right && box.left >= 0 && box.right <= innerWidth &&
         box.top >= 0 && box.bottom <= innerHeight && icon.width > 0 && icon.height > 0 &&
-        [icon, text].every(rect => rect.left >= box.left && rect.right <= box.right && rect.top >= box.top && rect.bottom <= box.bottom);
+        icon.left >= box.left && icon.right <= box.right && icon.top >= box.top && icon.bottom <= box.bottom;
     })).toBe(true);
     await expect(slot.locator('.vhome-reminders-date')).toHaveCount(0);
     await expect(slot.locator('.vhome-reminders-entry')).toHaveCount(3);
+    await expect(slot.locator('.vhome-reminders-period')).toHaveText(['Po terminie', 'Dziś', 'Nadchodzące']);
     for (const note of notes) await expect(slot.locator(`[data-note-id="${note.id}"]`)).toHaveAccessibleName(new RegExp(note.date));
     await expect(slot.locator(`[data-note-id="${notes[0].id}"] .vb22-row-date`)).toHaveText(notes[0].date + ' · 09:30');
     await expect(slot.locator(`[data-note-id="${notes[0].id}"] .vild-rem-when`)).toHaveText('2 dni po terminie');
-    await expect(slot.locator(`[data-note-id="${notes[2].id}"] .vild-rem-when`)).toHaveText('Zaplanowane');
+    await expect(slot.locator(`[data-note-id="${notes[1].id}"] .vb22-row-date`)).toHaveText('09:30');
+    await expect(slot.locator(`[data-note-id="${notes[2].id}"] .vild-rem-when`)).toBeHidden();
     await expect.poll(() => card.evaluate(node => {
       const box = node.getBoundingClientRect();
       return node.isConnected && box.width > 0 && document.documentElement.scrollWidth <= innerWidth && node.scrollWidth <= node.clientWidth &&
@@ -583,17 +591,24 @@ test('patient Overview reminders keep their complete actions and native dates at
         });
     })).toBe(true);
     if (width !== 320) await card.screenshot({ path: test.info().outputPath(`patient-reminders-${width}.png`) });
-    await all.click();
+    await history.click();
     await expect(dialog).toBeVisible();
     await expect(frame.locator('dialog.vhome-reminders-dialog')).toHaveCount(0);
-    await expect(dialog.locator('.vhome-reminders-full-entry')).toHaveCount(3);
+    await expect(dialog.getByRole('tab', { name: 'Historia', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(dialog.locator('.vhome-reminders-full-entry')).toHaveCount(1);
+    await expect(dialog).toContainText('Fikcyjna wykonana sprawa');
     await expect(dialog).not.toContainText('Fikcyjne przypomnienie innego pacjenta');
     await dialog.getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
     await expect(dialog).toBeHidden();
   }
   await slot.locator(`[data-note-id="${notes[2].id}"]`).click();
   await expect(dialog.locator(`[data-note-id="${notes[2].id}"]`)).toHaveAttribute('aria-current', 'true');
-  await expect(dialog.locator(`[data-note-id="${notes[2].id}"]`)).toHaveAccessibleName(new RegExp(notes[2].date + '.*Zaplanowane'));
+  await expect(dialog.locator(`[data-note-id="${notes[2].id}"]`)).toHaveAttribute('aria-label', new RegExp(notes[2].date + '.*Zaplanowane'));
+  await expect(dialog).toHaveClass(/vhome-reminders-patient-dialog/);
+  const detail = dialog.locator('.vb22-layout > .vb22-detail');
+  await expect(detail).toBeVisible();
+  await expect(detail.locator('.vb22-detail-title')).toHaveText(notes[2].title);
+  await expect(dialog.locator('.vb22-layout > .vb22-list-pane')).toBeHidden();
   await dialog.getByRole('button', { name: 'Zamknij Przypomnienia', exact: true }).click();
   async function cancelNewReminder() {
     await add.click({ timeout: 10_000 });
