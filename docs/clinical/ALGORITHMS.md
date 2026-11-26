@@ -32807,7 +32807,7 @@ otwarciu pacjenta i podstawa następnego zapisu — zostaje głową scalenia.
   Tak samo poprawka starej karty wchłonięta do karty scalonej, którą wcześniej usunięto na innym urządzeniu: w części
   kolejek ginie, bo chwila zapisu karty scalonej nie rośnie. Przyczyna: nagrobek scalenia nie niesie celu. Kierunki
   (do decyzji): cel scalenia w nagrobku (zmiana formatu), wnioskowanie w scalaniu, chwila zapisu karty przy przyjęciu
-  późniejszej treści. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: zmiana w karcie podnosi teraz jej chwilę zapisu (decyzja D-4 A), a odbiorca zawsze bierze późniejszą z dwóch; cel scalenia w nagrobku — bez zmian.)* Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany). *(Aktualizacja 2026-11-15, E3-PR0a: decyzja właściciela 9a — naprawa w osobnym PR etapu E3-PR0 (w planie E3-PR0f): wersja nieznana urządzeniu scalającemu trafia do karty scalonej i jest odsyłana, z koperty `ptomb` z kartą docelową (E2-PR3c1); zmiana reguły synchronizacji z akceptacją przy PR. Do tego czasu zasada: „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w sieci po ostatnich zmianach. W teście A ≡ B jawny wyjątek wyroczni „E1/E1b (utrata wersji nieznanej scalającemu)” — wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0a, niżej.)*
+  późniejszej treści. *(Aktualizacja 2026-10-20, P-ZMIANA-W-KARCIE: zmiana w karcie podnosi teraz jej chwilę zapisu (decyzja D-4 A), a odbiorca zawsze bierze późniejszą z dwóch; cel scalenia w nagrobku — bez zmian.)* Zegar urządzenia decyduje też o treści wersji pod dwiema kartami (chwila zmiany). *(Aktualizacja 2026-11-15, E3-PR0a: decyzja właściciela 9a — naprawa w osobnym PR etapu E3-PR0 (w planie E3-PR0f): wersja nieznana urządzeniu scalającemu trafia do karty scalonej i jest odsyłana, z koperty `ptomb` z kartą docelową (E2-PR3c1); zmiana reguły synchronizacji z akceptacją przy PR. Do tego czasu zasada: „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w sieci po ostatnich zmianach. W teście A ≡ B jawny wyjątek wyroczni „E1/E1b (utrata wersji nieznanej scalającemu)” — wpis P-ZBIEZNOSC-ZDARZEN, E3-PR0a, niżej.)* *(2026-11-26: E3-PR0f wstrzymane decyzją właściciela, bez terminu — utrata zostaje, zasada „Scal pacjentów” dopiero wtedy, gdy każde urządzenie było w sieci po ostatnich zmianach, obowiązuje dalej; stan i wyniki diagnozy — `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 6, blok „Stan na 2026-11-26: E3-PR0 wstrzymane po E3-PR0e2b”.)*
 - **Poprawka bieżącego pomiaru starej karty po łańcuchu scaleń** zostaje w dawnej wersji w historii karty scalonej;
   bieżąca wersja (głowa scalenia) pokazuje wartość sprzed poprawki (123 zamiast 124 cm), a następny zapis buduje się na
   niej. Po jednym scaleniu X wraca z poprawką jako duplikat. Domknięcie (do decyzji): poprawiony wiersz w bieżącej
@@ -49769,7 +49769,8 @@ E3-PR0e2b w komentarzu); `fragmentSHA256` bez zmian. `node tools/treatment-sync-
 `check_clinical_workspace_backup_boundary.mjs` — zielone. `vilda_sync.js` bez zmian. Sejf się zmienił — przy następnej
 pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifest.json` na `audyt`.
 
-**Ograniczenia.**
+**Ograniczenia.** *(2026-11-26: zapowiedzi „E3-PR0f” niżej są wstrzymane decyzją właściciela, bez terminu —
+`docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 6, blok „Stan na 2026-11-26: E3-PR0 wstrzymane po E3-PR0e2b”.)*
 - **Notatka dopisana w starej karcie obok poprawki, gwiazdki albo „Przywróć” wizyty przeniesionej** (także wizyty
   leżącej w Koszu karty scalonej) zostaje zapisana bez widocznej karty — jak dziś sama notatka (P6). Przykład
   (fikcyjny, z pytania 7): „Pacjent Testowy 1”, o 8:01 komputer scala duplikat z właściwą kartą, o 8:10 telefon bez
@@ -49807,7 +49808,8 @@ pracy w `vilda-source` weź nową bazę z `runtime/clinical-workspace-v1/manifes
 
 **Do akceptacji właściciela przy PR** (rozstrzygnięcia spoza projektu i decyzji, wariant najbezpieczniejszy dla danych).
 Rekomendacja przy każdym punkcie: przyjąć.
-1. **DO POTWIERDZENIA PRZED SCALENIEM: „Przywróć” wizyty przeniesionej w starej karcie i notatka w tej samej karcie.**
+1. **„Przywróć” wizyty przeniesionej w starej karcie i notatka w tej samej karcie.** *(2026-11-26: przyjęte — właściciel
+   scalił vildaclinic/vilda-calc#1085 z polecanym wariantem „ta sama sytuacja co 1a, wydać bez zmian”.)*
    Przykład (fikcyjny): „Pacjent Testowy 5”; o 7:55 telefon bez sieci daje do Kosza wizytę z 3 marca
    w duplikacie, o 8:01 komputer (bez wiedzy o tym Koszu) scala karty — wizyta przechodzi do właściwej karty, o 8:10
    telefon w duplikacie robi „Przywróć” tej wizyty i dopisuje notatkę. Dotąd duplikat wracał z wizytą i widoczną
@@ -49835,7 +49837,8 @@ Rekomendacja przy każdym punkcie: przyjąć.
    duplikacie (ziarno 15 fuzz) — zostawione bez zmian, z propozycją osobnego zadania („Ograniczenia”).
 10. **Polityka prywatności bez zmiany tekstu**; zdanie z wpisu E3-PR0e2a — na życzenie.
 11. **Czas pliku A ≡ B w CI** może przekroczyć cel ok. 180 s (lokalnie 165,8–199,7 s); jeśli przekroczy — skrócić zestaw
-    CI (np. o jedno ziarno profilu podstawowego, długie przebiegi zostają ręczne) albo przyjąć ok. 200 s.
+    CI (np. o jedno ziarno profilu podstawowego, długie przebiegi zostają ręczne) albo przyjąć ok. 200 s. *(2026-11-26:
+    w CI na vildaclinic/vilda-calc#1085 plik trwał 99,4 s — cel spełniony.)*
 12. **Alerty CodeQL** o zapisie identyfikatora karty w pamięci przeglądarki (opisane przy vildaclinic/vilda-calc#1053,
     miejsca spoza tego PR) mogą wrócić, bo PR zmienia długie wiersze `vilda_vault.js` — nie są skutkiem tego PR.
 Przyjęte wcześniej (2026-11-25): decyzja 1a — notatka obok poprawki albo gwiazdki wizyty przeniesionej zapisana bez
@@ -49847,7 +49850,9 @@ reguła Kosza w tym wydaniu (wariant „osobne wydanie” niepotrzebny).
   także notatka obok „Przywróć”), cel scalenia w nagrobku (wpis Kosza w duplikacie, karta wpisu scalona dalej Q → R),
   wizyta nieznana urządzeniu scalającemu, „Usuń pacjenta” karty scalonej przed dotarciem poprawki (także przy regule
   2b), ostrzeżenie w oknie „Usuń pacjenta” zwróconej starej karty; pozostałe wejścia z wpisów E3-PR0e1 i E3-PR0e3 bez
-  zmian.
+  zmian. *(2026-11-26: E3-PR0f i dalsze PR etapu (E3-PR0g, E3-PR0h, E3-PR0i) wstrzymane decyzją właściciela — bez
+  kodu; stan, wyniki diagnozy i pytania bez decyzji — `docs/SYNC_PRZYROSTOWA_PLAN.md`, rozdział 6, blok „Stan na
+  2026-11-26: E3-PR0 wstrzymane po E3-PR0e2b”.)*
 - **E3-PR0h** — licznik kart opróżnionych w teście A ≡ B (karty opróżnione częściej, bo wersje przechodzą do karty
   scalonej: profil pełny 1–20 38 wobec 31 na bazie, 21–40 34 wobec 32).
 - **E3-PR0i** — odsyłanie dla wszystkich: urządzenie, które poprawiło wizytę, dostaje ją pod kartą scaloną po samych
