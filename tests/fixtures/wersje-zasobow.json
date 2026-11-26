@@ -1660,12 +1660,12 @@
   "sha256": "7a697f863018945ff93d1f86ee020c436edfd604811b741dccc5b855a375b097"
  },
  "vilda_home_reminders.css": {
-  "v": 3,
-  "sha256": "5c3f6de60f2d90e9cec2fa9c94f4ef66cc368fe6485799cca0f8d84be6ae6d49"
+  "v": 4,
+  "sha256": "ff037c20c56ea08d6e740406168c5b1842dac021558495078d5dbaec04b282af"
  },
  "vilda_home_reminders.js": {
-  "v": 4,
-  "sha256": "cfa25ffb9517488c18237727188bc5f3c2b5e5b42af83509c207dece52d26438"
+  "v": 5,
+  "sha256": "bd829c811dfc43f2886ed763049b78c7f463c5e1f3705103a0c61a565dc01d4c"
  },
  "vilda_home_reminders_runtime.js": {
   "v": 3,

@@ -5,6 +5,7 @@
   'use strict';
   if (!w || w.VildaHomeRemindersPresentation) return;
   var instances = new WeakMap(), serial = 0;
+  var periodLabels = { overdue: 'Po terminie', today: 'Dziś', future: 'Nadchodzące' };
   var inactive = Object.freeze({ render: function () { return false; }, onDialog: function () { return function () {}; }, destroy: function () {} });
 
   function decorate(options) {
@@ -14,6 +15,7 @@
     if (instances.has(root)) return instances.get(root);
     var d = root.ownerDocument, host = options.host || root, full = options.full === true;
     var overview = !full && w.__VILDA_HOME_GABINET_PREVIEW__ === true && w.VildaHomeRemindersRuntime?.ownsOverviewHost(host) === true;
+    var patientDialog = false, detailObserver = null;
     var stopped = false, bindings = [], classes = [], attributes = [], created = [], restoreRows = [], children = [];
     var originalTabs = null, tabButtons = [], count = null, footerLabel = null, id = 'vhome-reminders-' + (++serial);
     function make(tag, cls, text) {
@@ -33,9 +35,9 @@
       if (!attributes.some(function (entry) { return entry[0] === element && entry[1] === name; })) attributes.push([element, name, element.getAttribute(name)]);
       if (value == null) element.removeAttribute(name); else element.setAttribute(name, value);
     }
-    function listen(element, type, listener) {
-      if (!element) return; element.addEventListener(type, listener);
-      bindings.push(function () { element.removeEventListener(type, listener); });
+    function listen(element, type, listener, capture) {
+      if (!element) return; element.addEventListener(type, listener, capture);
+      bindings.push(function () { element.removeEventListener(type, listener, capture); });
     }
     function clearRows() {
       restoreRows.splice(0).reverse().forEach(function (restore) { restore(); });
@@ -80,7 +82,8 @@
       tabButtons.forEach(function (button) {
         var key = button.dataset.homeReminderTab, selected = snapshot.activeTab === key;
         var original = key === 'active' ? nodes.activeTab : key === 'plans' ? nodes.plansTab : null;
-        button.hidden = !!(original && original.hidden); button.disabled = !!(snapshot.busy || snapshot.editing || original && original.disabled);
+        button.hidden = !!(original && original.hidden) || patientDialog && key === 'plans' && !selected;
+        button.disabled = !!(snapshot.busy || snapshot.editing || original && original.disabled);
         button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1;
       });
       if (!tabButtons.some(function (button) { return button.tabIndex === 0 && !button.hidden; })) {
@@ -90,9 +93,10 @@
       var panel = snapshot.activeTab === 'plans' ? nodes.careHost : nodes.layout;
       if (panel && selected) { attribute(panel, 'role', 'tabpanel'); attribute(panel, 'aria-labelledby', selected.id); }
     }
-    function previewRow(entry, showPatientName) {
+    function previewRow(entry, showPatientName, groupLabel) {
       if (!entry || !entry.node) return null;
       var button = entry.node, article = make('article', 'vhome-reminders-entry');
+      if (groupLabel) article.appendChild(make('h3', 'vhome-reminders-period vb22-private-content', groupLabel));
       var date = null;
       if (!overview) {
         var parts = entry.dateParts || {};
@@ -106,9 +110,14 @@
       var patientOrigin = patient && { parent: patient.parentNode, next: patient.nextSibling };
       var titleOrigin = title && { parent: title.parentNode, next: title.nextSibling };
       if (patient) { context.appendChild(patient); patient.classList.toggle('vhome-reminders-patient-omitted', showPatientName === false); }
-      if (entry.sourceLabel) context.appendChild(source);
-      if (context.childNodes.length) button.appendChild(context);
-      if (title) { button.insertBefore(title, button.firstChild); button.insertBefore(context, title.nextSibling); }
+      var distinctSource = entry.sourceLabel && (!overview || entry.sourceLabel !== 'Sprawa do wykonania' &&
+        entry.sourceLabel.trim() !== title?.textContent.trim());
+      if (distinctSource) context.appendChild(source);
+      if (title) button.insertBefore(title, button.firstChild);
+      if (context.childNodes.length) button.insertBefore(context, title ? title.nextSibling : null);
+      var due = overview && button.dataset.period === 'today' && button.querySelector('.vb22-row-date');
+      var dueLabel = due && due.textContent;
+      if (due) due.textContent = dueLabel.replace(/^Dziś(?: · )?/, '');
       button.classList.add('vhome-reminders-entry-open'); article.appendChild(button);
       restoreRows.push(function () {
         if (patient && patientOrigin.parent) {
@@ -117,6 +126,7 @@
         }
         if (title && titleOrigin.parent) titleOrigin.parent.insertBefore(title, titleOrigin.next && titleOrigin.next.parentNode === titleOrigin.parent ? titleOrigin.next : null);
         source.textContent = ''; context.remove();
+        if (due) due.textContent = dueLabel;
         if (date) { date.textContent = ''; date.removeAttribute('title'); }
         button.classList.remove('vhome-reminders-entry-open');
         if (article.parentNode === nodes.list) nodes.list.insertBefore(button, article);
@@ -149,9 +159,41 @@
         article.remove();
       }); return article;
     }
-    function nativeMessages(value) {
+    function usesPatientDetail() {
+      return patientDialog && root.dataset.homeRemindersPhase !== 'error' && root.classList.contains('vb22-show-detail') &&
+        root.classList.contains('vhome-reminders-list-view') &&
+        !['vhome-reminders-editing', 'vhome-reminders-inline-editing', 'vhome-reminders-detached-detail', 'vb22-plans']
+          .some(function (name) { return root.classList.contains(name); });
+    }
+    function syncDetailStatus() {
+      if (!current() || !patientDialog || !nodes.detail) return;
+      var meta = nodes.detail.querySelector(':scope > .vb22-meta');
+      if (!meta) return;
+      var badge = meta.querySelector('.vhome-reminders-detail-status');
+      var original = usesPatientDetail() && nodes.list.querySelector('.vb22-row[aria-current="true"] .vild-rem-when');
+      if (!original || original.textContent === 'Zaplanowane') {
+        if (badge) badge.remove();
+        return;
+      }
+      var className = original.className + ' vhome-reminders-detail-status';
+      if (!badge) {
+        meta.appendChild(make('span', className, original.textContent));
+      } else {
+        if (badge.className !== className) badge.className = className;
+        if (badge.textContent !== original.textContent) badge.textContent = original.textContent;
+      }
+    }
+    function nativeMessages(value, compactEmptyFrom) {
       var list = Array.isArray(value) ? value : [], appended = 0;
-      list.forEach(function (node) { if (node && [1, 3, 11].includes(node.nodeType)) { nodes.list.appendChild(node); appended += 1; } });
+      list.forEach(function (node) {
+        if (!node || ![1, 3, 11].includes(node.nodeType)) return;
+        if (usesPatientDetail() && nodes.detail && node.parentNode === nodes.detail) { appended += 1; return; }
+        if (compactEmptyFrom && node.tagName === 'P' && node.classList.contains('vb22-empty') && node.textContent === compactEmptyFrom) {
+          node.textContent = 'Brak aktywnych przypomnień.';
+          restoreRows.push(function () { node.textContent = compactEmptyFrom; });
+        }
+        nodes.list.appendChild(node); appended += 1;
+      });
       return appended;
     }
     function updateFooter() {
@@ -170,6 +212,14 @@
       root.classList.toggle('vhome-reminders-busy', !!snapshot.busy); root.classList.toggle('vhome-reminders-editing', !!snapshot.editing);
       root.classList.toggle('vhome-reminders-inline-editing', snapshot.inlineFormEditing === true);
       root.classList.toggle('vhome-reminders-detached-detail', snapshot.detachedDetailVisible === true);
+      patientDialog = full && w.__VILDA_HOME_GABINET_PREVIEW__ === true && snapshot.showPatientName === false &&
+        typeof snapshot.contextLabel === 'string' && !!snapshot.contextLabel.trim();
+      root.classList.toggle('vhome-reminders-patient-dialog', patientDialog);
+      if (patientDialog && !detailObserver && nodes.detail && typeof w.MutationObserver === 'function') {
+        // Native row selection can render the shared detail without rebuilding the list.
+        detailObserver = new w.MutationObserver(syncDetailStatus);
+        detailObserver.observe(nodes.detail, { childList: true, subtree: true });
+      }
       if (count) count.textContent = snapshot.total == null ? '' : String(snapshot.total);
       if (nodes.subtitle && typeof snapshot.contextLabel === 'string') {
         nodes.subtitle.textContent = snapshot.contextLabel; attribute(nodes.subtitle, 'data-home-reminders-context', '');
@@ -184,16 +234,21 @@
       if (full && entries.some(function (entry) { return !entry || !entry.detailNode; })) { clearRows(); root.classList.remove('vhome-reminders-list-view'); return true; }
       clearRows(); nodes.list.replaceChildren();
       var asFullList = full && Array.isArray(snapshot.entries); root.classList.toggle('vhome-reminders-list-view', asFullList);
-      var suppliedMessages = nativeMessages(snapshot.feedbackNodes);
+      var suppliedMessages = nativeMessages(snapshot.feedbackNodes), previousPeriod;
       (full || overview ? entries : entries.slice(0, 2)).forEach(function (entry) {
-        var row = full ? fullRow(entry, snapshot.showPatientName) : previewRow(entry, snapshot.showPatientName);
-        if (row) nodes.list.appendChild(row);
+        var period = overview && entry?.node?.dataset?.period;
+        var groupLabel = period && period !== previousPeriod ? periodLabels[period] : null;
+        var row = full ? fullRow(entry, snapshot.showPatientName) : previewRow(entry, snapshot.showPatientName, groupLabel);
+        if (row) { previousPeriod = period; nodes.list.appendChild(row); }
       });
-      suppliedMessages += nativeMessages(snapshot.tailNodes);
-      if (!entries.length && snapshot.phase === 'ready' && snapshot.total === 0 && !suppliedMessages && snapshot.emptyText) {
-        var empty = make('p', 'vhome-reminders-empty', snapshot.emptyText); empty.setAttribute('role', 'status'); nodes.list.appendChild(empty);
+      var isEmpty = !entries.length && snapshot.phase === 'ready' && snapshot.total === 0;
+      suppliedMessages += nativeMessages(snapshot.tailNodes, overview && isEmpty && snapshot.emptyText);
+      if (isEmpty && !suppliedMessages && snapshot.emptyText) {
+        var empty = make('p', 'vhome-reminders-empty', overview ? 'Brak aktywnych przypomnień.' : snapshot.emptyText);
+        empty.setAttribute('role', 'status'); nodes.list.appendChild(empty);
         restoreRows.push(function () { empty.textContent = ''; empty.remove(); });
       }
+      if (patientDialog) syncDetailStatus();
       attribute(nodes.list, 'aria-busy', String(snapshot.phase === 'loading'));
       if (overview && snapshot.phase === 'ready') w.VildaHomePatient?.applyInlineReminderFocus?.(host);
       return true;
@@ -207,13 +262,15 @@
     }
     function destroy() {
       if (stopped) return; stopped = true;
+      if (detailObserver) detailObserver.disconnect();
+      nodes.detail?.querySelector('.vhome-reminders-detail-status')?.remove();
       bindings.splice(0).forEach(function (unbind) { unbind(); }); children.splice(0).forEach(function (release) { release(); }); clearRows();
       if (originalTabs && nodes.tabs) nodes.tabs.replaceChildren.apply(nodes.tabs, originalTabs);
       if (footerLabel) footerLabel.node.replaceChildren.apply(footerLabel.node, footerLabel.children);
       created.forEach(function (node) { node.textContent = ''; node.remove(); });
       attributes.reverse().forEach(function (entry) { if (entry[2] == null) entry[0].removeAttribute(entry[1]); else entry[0].setAttribute(entry[1], entry[2]); });
       classes.reverse().forEach(function (entry) { entry[0].classList.remove(entry[1]); });
-      root.classList.remove('vhome-reminders-compact', 'vhome-reminders-busy', 'vhome-reminders-editing', 'vhome-reminders-inline-editing', 'vhome-reminders-detached-detail', 'vhome-reminders-list-view');
+      root.classList.remove('vhome-reminders-compact', 'vhome-reminders-busy', 'vhome-reminders-editing', 'vhome-reminders-inline-editing', 'vhome-reminders-detached-detail', 'vhome-reminders-list-view', 'vhome-reminders-patient-dialog');
       host.classList.remove('vhome-reminders-compact'); delete root.dataset.homeRemindersPhase;
       instances.delete(root); options = null; commands = null; nodes = null; tabButtons = []; originalTabs = null; footerLabel = null;
     }
@@ -240,8 +297,14 @@
       else if (nodes.tools) nodes.tools.insertBefore(count, nodes.tools.firstChild);
       var all = nodes.allButton || nodes.footer && nodes.footer.querySelector('.vild-rem-all');
       if (all) {
-        footerLabel = { node: all, children: Array.from(all.childNodes), label: d.createTextNode('Wszystkie przypomnienia') };
-        attribute(all, 'aria-label', 'Wszystkie przypomnienia');
+        var opensHistory = overview && typeof commands.openAll === 'function';
+        var label = opensHistory ? 'Historia przypomnień' : 'Wszystkie przypomnienia';
+        footerLabel = { node: all, children: Array.from(all.childNodes), label: d.createTextNode(label) };
+        attribute(all, 'aria-label', label);
+        if (opensHistory) listen(all, 'click', function (event) {
+          event.stopImmediatePropagation();
+          if (current()) commands.openAll({ history: true });
+        }, true);
         var arrow = d.createElementNS('http://www.w3.org/2000/svg', 'svg'), path = d.createElementNS('http://www.w3.org/2000/svg', 'path');
         arrow.setAttribute('viewBox', '0 0 24 24'); arrow.setAttribute('aria-hidden', 'true'); arrow.setAttribute('focusable', 'false');
         path.setAttribute('d', 'M5 12h14m-6-6 6 6-6 6'); arrow.appendChild(path); footerLabel.arrow = arrow; updateFooter();
