@@ -162,7 +162,13 @@ async function setup(page, { shell = false, patient, ds = false } = {}) {
           if (!ownerValid(draft)) {
             var currentOwner = owner(), expectedOwner = JSON.parse(draft.ownerKey);
             var changedOwner = Object.keys(expectedOwner).filter(key => JSON.stringify(expectedOwner[key]) !== JSON.stringify(currentOwner?.[key]));
-            console.log('[diet state] owner ' + JSON.stringify({ present: !!currentOwner, changedOwner }));
+            console.log('[diet state] owner ' + JSON.stringify({ present: !!currentOwner, changedOwner,
+              unlocked: w.VildaVault?.isUnlocked(), boot: w.VildaAuthUI?.isBootReady(), access: w.VildaProAccess?.hasAccess(),
+              restoring: !!w.__vildaPersistRestoring, mirroring: !!w.__vildaLustroWpis,
+              mainRestore: w.VildaDataImportExport?.isMainSessionRestorePending(),
+              autosaveSuppressed: w.VildaPersistence?.isAutosaveSuppressed(),
+              clearing: w.VildaPersistence?.isClearInProgress?.() || Number(w.__vildaPersistClearUntil || 0) > Date.now(),
+              stale: w.VildaPanelPacjent?.nieaktualny() }));
             return false;
           }
           if (draft.applying) return true;
