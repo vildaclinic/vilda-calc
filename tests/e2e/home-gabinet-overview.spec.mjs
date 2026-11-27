@@ -1927,6 +1927,14 @@ test('saved Gabinet measurements keep Growth and clinical tools read-only until 
   await expect(readonlyGrowth.getByRole('button', { name: '+ Dodaj pomiar', exact: true })).toBeDisabled();
   await expect(readonlyGrowth.locator('.vhome-growth-remove:enabled')).toHaveCount(0);
   await expect(readonlyGrowth.locator('.vhome-dialog-apply')).toBeHidden();
+  await readonlyGrowth.getByRole('tab', { name: 'Analiza', exact: true }).click();
+  const metrics = readonlyGrowth.locator('[data-growth-metric]');
+  await expect(metrics).toHaveCount(3);
+  for (const metric of await metrics.all()) await expect(metric).toHaveCSS('backdrop-filter', 'none');
+  const weight = metrics.and(readonlyGrowth.getByRole('button', { name: 'Waga', exact: true }));
+  await weight.click();
+  await expect(weight).toHaveAttribute('aria-pressed', 'true');
+  await expect(readonlyGrowth.locator('.vhome-a2-reading')).toContainText('46 kg');
   await readonlyGrowth.locator('.vhome-dialog-cancel').click();
   for (const id of ['whr', 'respiration']) {
     const { dialog, fields } = await tool(id);
