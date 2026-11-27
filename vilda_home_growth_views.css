@@ -447,6 +447,8 @@ html.vilda-home-workspace #vhomeGrowthDialog .vhome-a2-metric-trigger {
   border-radius: inherit;
   background: transparent !important;
   box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
   cursor: pointer;
 }
 #vhomeGrowthDialog .vhome-a2-analysis :is(button, summary, .vhome-a2-dot, .vtap-tb, .vhome-a2-point-list):focus-visible {
