@@ -10,7 +10,8 @@
   // native path before the shell or its panes check ownership of the visit.
   const filename = document.currentScript?.dataset.previewDocument;
   const segment = window.location.pathname.split('/').pop();
-  if (filename && (segment === filename.slice(0, -5) || (filename === 'index.html' && segment === ''))) {
+  const usesSiteAlias = filename && (segment === filename.slice(0, -5) || (filename === 'index.html' && segment === ''));
+  if (usesSiteAlias) {
     const address = new URL(window.location.href);
     address.pathname = address.pathname.slice(0, address.pathname.lastIndexOf('/') + 1) + filename;
     window.history.replaceState(window.history.state, '', address.href);
@@ -33,7 +34,8 @@
     if (typeof route === 'string') {
       const target = new URL(window.location.href);
       target.searchParams.delete('embedded');
-      const shell = new URL('app.html#/' + route, target);
+      // Another HTTP redirect on reload would discard the pane target in history.state.
+      const shell = new URL((usesSiteAlias ? 'app' : 'app.html') + '#/' + route, target);
       const state = { shellView: route };
       if (target.search || target.hash) state.homePreviewPaneTarget = target.pathname + target.search + target.hash;
       window.history.replaceState(state, '', shell.href);

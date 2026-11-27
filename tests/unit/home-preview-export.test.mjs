@@ -277,6 +277,21 @@ test.each([
   }
 });
 
+test('keeps the target of a direct module opened through the Sites alias', () => {
+  const location = new URL('https://preview.example.invalid/test/docpro?source=test#measurement');
+  const reload = vi.fn();
+  const replaceState = vi.fn((state, title, address) => { location.href = address; });
+  const window = {
+    document: { currentScript: { dataset: { previewDocument: 'docpro.html' } }, readyState: 'loading' },
+    location: Object.assign(location, { reload }),
+    history: { state: null, replaceState },
+  };
+  vm.runInNewContext(RUNTIME_SOURCE, { window, URL });
+  expect(replaceState).toHaveBeenLastCalledWith({ shellView: 'docpro', homePreviewPaneTarget: '/test/docpro.html?source=test#measurement' },
+    '', 'https://preview.example.invalid/test/app#/docpro');
+  expect(reload).toHaveBeenCalledOnce();
+});
+
 test.each([
   ['terminarz.html', 'terminarz', undefined],
   ['terminarz.html?embedded=1#vilda-event=fikcyjny', 'terminarz', '/test/terminarz.html#vilda-event=fikcyjny'],
