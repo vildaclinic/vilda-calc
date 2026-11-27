@@ -447,7 +447,7 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect(window.VildaHomePreview.getState().status).toBe('starting');
     finishRead.resolve();
     expect((await previewFinished(window)).status).toBe('ready');
-    expect((await vault.listPatients()).map(patient => patient.header.name)).toContain('Demonstracyjna Klara');
+    expect((await vault.listPatients()).map(patient => patient.header.name)).toEqual(expect.arrayContaining(['Demonstracyjna Klara', 'Demonstracyjna Ewa']));
   });
 
   test('simultaneous first Gabinet tabs seed the fictional visits, appointments, reminders and plans only once', async () => {
@@ -457,11 +457,17 @@ describe('fictional preview patient selection remains inside the native vault', 
     const tabs = [0, 1].map(() => bootPreview({ vault, storage, locks, gabinet: true }));
     expect((await Promise.all(tabs.map(tab => previewFinished(tab.window)))).map(state => state.status)).toEqual(['ready', 'ready']);
     const patients = await vault.listPatients();
-    expect(patients).toHaveLength(2);
+    expect(patients).toHaveLength(3);
     const original = patients.find(patient => patient.header.name === 'Przykładowy Antoni');
     expect(original.snapshotCount).toBe(1);
     const sample = patients.find(patient => patient.header.name === 'Demonstracyjna Klara');
     expect(sample.snapshotCount).toBe(5);
+    const dietSample = patients.find(patient => patient.header.name === 'Demonstracyjna Ewa');
+    expect(dietSample.snapshotCount).toBe(1);
+    expect(await vault.getPatientVisits(dietSample.patientId)).toMatchObject([{
+      origin: 'explicit', revisionCount: 1, clinicalDateISO: '2026-11-03',
+      payload: { user: { firstName: 'Ewa', sex: 'F', age: 35, height: 164, weight: 66 } },
+    }]);
     const now = new Date();
     const localDay = date => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
     const day = localDay(now);
@@ -507,7 +513,7 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect(second.calls).toMatchObject({ applied: [], collected: 0, patientCards: [] });
     expect(await vault.getPatient(original.patientId)).toEqual(originalRecord);
     const patients = await vault.listPatients();
-    expect(patients).toHaveLength(2);
+    expect(patients).toHaveLength(3);
     const sample = patients.find(patient => patient.header.name === 'Demonstracyjna Klara');
     const visits = await vault.getPatientVisits(sample.patientId);
     expect(visits).toHaveLength(5);
@@ -524,6 +530,45 @@ describe('fictional preview patient selection remains inside the native vault', 
     expect((await previewFinished(third.window)).status).toBe('ready');
     expect(await vault.getPatient(sample.patientId)).toBeNull();
     expect(await vault.getPatient(original.patientId)).toEqual(originalRecord);
+  });
+
+  test('a returning Gabinet account adds the diet sample once and leaves edited or removed records alone', async () => {
+    const { vault, storage } = await nativePreviewVault();
+    const original = await vault.savePatient({ name: 'Przykładowy Antoni', user: { firstName: 'Antoni', lastName: 'Przykładowy' } }, { dedup: false });
+    const history = await vault.savePatient({ name: 'Demonstracyjna Klara', user: { firstName: 'Klara', lastName: 'Demonstracyjna' } }, { dedup: false });
+    const existing = await Promise.all([original, history].map(patient => vault.getPatient(patient.patientId)));
+    const userId = vault.getCurrentUser().userId;
+    const key = 'vilda-home-preview-diet-sample-v1:' + userId;
+    for (const key of ['vilda-home-preview-visit-sample-v1:', 'vilda-home-preview-gabinet-sample-v1:']) storage.setItem(key + userId, 'done');
+    const settings = { storage, gabinet: true, sessionEntries: { vildaCurrentPatientId: history.patientId } };
+    const first = bootPreview({ ...settings, vault: { ...vault, savePatient: async (...args) => {
+      await vault.savePatient(...args);
+      throw new Error('Fictional interruption after diet write');
+    } } });
+    expect((await previewFinished(first.window)).error).toBe('Fictional interruption after diet write');
+    expect(storage.getItem(key)).toBeNull();
+    const ewa = (await vault.listPatients()).find(patient => patient.header.name === 'Demonstracyjna Ewa');
+    expect(ewa.snapshotCount).toBe(1);
+
+    const savePatient = vi.fn(vault.savePatient);
+    const resume = () => previewFinished(bootPreview({ ...settings, vault: { ...vault, savePatient } }).window);
+    expect((await resume()).status).toBe('ready');
+    expect(storage.getItem(key)).toBe('done');
+    expect(savePatient).not.toHaveBeenCalled();
+
+    const [{ payload }] = await vault.getPatientVisits(ewa.patientId);
+    await vault.savePatient({ ...payload, user: { ...payload.user, weight: 65 } }, { patientId: ewa.patientId, dedup: false });
+    const edited = await vault.getPatient(ewa.patientId);
+    storage.removeItem(key);
+    expect((await resume()).status).toBe('ready');
+    expect(await vault.getPatient(ewa.patientId)).toEqual(edited);
+    expect(savePatient).not.toHaveBeenCalled();
+
+    await vault.removePatient(ewa.patientId);
+    storage.removeItem(key);
+    expect((await resume()).status).toBe('ready');
+    expect(await vault.getPatient(ewa.patientId)).toBeNull();
+    expect(await Promise.all([original, history].map(patient => vault.getPatient(patient.patientId)))).toEqual(existing);
   });
 
   test('legacy patient ID is removed only for the verified fictional account without replacing the session', async () => {

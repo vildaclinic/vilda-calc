@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.607';
+const SW_VERSION = '1.1.608';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2178,11 +2178,13 @@ const CORE_SHELL_URLS = [
   '/vilda_home_diet.js?v=2',
   '/vilda_home_diet.js?v=3',
   '/vilda_home_diet.js?v=4',
+  '/vilda_home_diet.js?v=5',
   '/vilda_home_diet_bmi.css?v=1',
   '/vilda_home_diet.css?v=1',
   '/vilda_home_diet.css?v=2',
   '/vilda_home_diet.css?v=3',
   '/vilda_home_diet.css?v=4',
+  '/vilda_home_diet.css?v=5',
   '/vilda_sga_birth_results.css?v=1',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
@@ -5489,6 +5491,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_bmi_journey.js?v=27',
   '/vilda_bmi_journey.js?v=28',
   '/vilda_bmi_journey.js?v=29',
+  '/vilda_bmi_journey.js?v=30',
   '/vilda_diet_recommendations.js?v=23',
   '/vilda_diet_recommendations.js?v=24',
   '/vilda_diet_recommendations.js?v=25',
@@ -7388,8 +7391,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-5449a760a723.json",
-  "sha256": "5449a760a723a094b865b13e2b23e01631900776f85f9aec2e5fbde89b5832da",
+  "url": "/runtime/visit-ui-precache/precache-c98bf0d93555.json",
+  "sha256": "c98bf0d93555f0944cdae74d9db2b54914dd07dfd9440c13f96dc0bc8049ce1e",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7468,16 +7471,16 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "98450e3b86a5aaf3f377ff3ef55882475112329036abf0d66e8e9eff4c24de20"
     },
     {
-      "url": "/vilda_home_diet.js?v=4",
-      "sha256": "7564285b44e4704d789e19576b5e5834fe3f70daa4230887b4cb1578b66f0727"
+      "url": "/vilda_home_diet.js?v=5",
+      "sha256": "897294f5655604b97f739b783d2cd2f526c623f75b27e860729d9eae1c71a86e"
     },
     {
       "url": "/vilda_home_diet_bmi.css?v=1",
       "sha256": "b0e200f45ae28d4bf016b2e8a1d3de3a58b3d0f6da5b6beea6c88297c0b6af33"
     },
     {
-      "url": "/vilda_home_diet.css?v=4",
-      "sha256": "ce29c1ac7ed0c2546ee308e5bc73c48d0721cd32a5ab37be1440c9ae5b83f450"
+      "url": "/vilda_home_diet.css?v=5",
+      "sha256": "643d268f7d40ed4db1f289924e2cbcf5e83884e27d8d967fdf3296905598f927"
     },
     {
       "url": "/vilda_home_dialog_history.js?v=1",

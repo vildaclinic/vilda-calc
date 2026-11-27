@@ -330,6 +330,41 @@
     storage.setItem(key, 'done');
   }
 
+  async function ensureDietExample(owner, userId, isCurrent) {
+    const vault = owner.VildaVault, storage = window.localStorage;
+    const key = 'vilda-home-preview-diet-sample-v1:' + userId;
+    if (storage.getItem(key) === 'done') return;
+    const patientId = 'e781e1f2-c28f-4342-a55b-f41907afc53a';
+    const session = vault.captureSyncOperationSession();
+    const current = () => isCurrent() && ownedFictionalAccount() && ownerWindow() === owner;
+    function check() {
+      vault.assertSyncOperationSession(session);
+      if (!current()) throw new Error('Konto podglądu zmieniło się podczas uruchamiania.');
+    }
+    check();
+    const saved = await vault.getPatient(patientId, { strict: true, isCurrent: current });
+    check();
+    // An existing record also covers a retry after the native save completed.
+    if (!saved && owner.sessionStorage.getItem('vildaCurrentPatientId') !== patientId) {
+      const day = '2026-11-03';
+      const payload = {
+        version: 1, name: 'Demonstracyjna Ewa',
+        user: { lastName: 'Demonstracyjna', firstName: 'Ewa', sex: 'F', age: 35, ageMonths: 0,
+          height: 164, weight: 66, dobISO: '1991-11-03', measuredAtISO: day },
+        zscore: { resultsMode: true, dataSource: 'OLAF' },
+        visit: { version: 1, origin: 'explicit', visitId: '6e00ce22-5393-4e0f-889f-2cf3479213ba',
+          patientId, clinicalDateISO: day, createdAtISO: day + 'T10:00:00.000Z' },
+      };
+      try { await vault.savePatient(payload, { patientId, dedup: false }); }
+      catch (error) {
+        check();
+        if (error?.code !== 'PATIENT_DELETED') throw error;
+      }
+    }
+    check();
+    storage.setItem(key, 'done');
+  }
+
   function localDay(date) {
     return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
   }
@@ -515,6 +550,7 @@
           const fixture = patients.length ? patients.find(patient => patient.header?.name === EXAMPLE_PATIENT_NAME) : example;
           await ensureHistoryExample(owner, marker.userId, isCurrent);
           await ensureGabinetExample(owner, marker.userId, isCurrent, fixture?.patientId);
+          await ensureDietExample(owner, marker.userId, isCurrent);
         }
         return example.patientId;
       };

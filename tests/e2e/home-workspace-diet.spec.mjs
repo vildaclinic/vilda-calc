@@ -10,7 +10,7 @@ test.setTimeout(240_000);
 const IDS = ['palFactor', 'dietLevel', 'customGoalKg', 'reduceToggle', 'stabilizationToggle', 'growthEndedFlag',
   'nutritionNormsFlag', 'vitDSuppFlag', 'hydrationFlag', 'journeyFlag', 'peerMassFlag', 'alcoholFlag'];
 const draft = (dialog, id) => dialog.locator(`[data-home-diet-field="${id}"]`);
-const apply = dialog => dialog.getByRole('button', { name: 'Zastosuj założenia', exact: true });
+const apply = dialog => dialog.getByRole('button', { name: /^(Zastosuj założenia|Zastosuj dane)$/ });
 const prepare = dialog => dialog.getByRole('button', { name: 'Przygotuj zalecenia', exact: true });
 const copy = dialog => dialog.getByRole('button', { name: 'Kopiuj zalecenia', exact: true });
 const pdf = dialog => dialog.getByRole('button', { name: 'Raport PDF dla pacjenta', exact: true });
@@ -20,6 +20,38 @@ const reportBody = dialog => dialog.locator('#vhomeDietEnergy');
 const impact = dialog => dialog.locator('.vhome-diet-impact');
 const movements = dialog => dialog.locator('[data-home-diet-journey="move"]');
 const close = dialog => dialog.locator('.vhome-dialog-close').click();
+const homeResult = frame => frame.locator('#vhomeDietCard');
+const planEnergy = dialog => dialog.locator('#vhomeDietPlanEnergy');
+
+async function nativeMaintenanceEnergy(frame, { pal, targetKg } = {}) {
+  return frame.evaluate(({ pal, targetKg }) => {
+    const value = id => document.getElementById(id).value;
+    const result = energyBuildPlanReductionState({
+      ageYears: getAgeDecimal(), ageMonthsOpt: Number(value('ageMonths')) || 0,
+      sex: value('sex'), weightKg: Number(value('weight')), heightCm: Number(value('height')),
+      palInput: pal ?? value('palFactor'), customGoalKg: targetKg ?? null,
+      history: window.intakeHistory ?? null, intakeKcalPerDay: window.intakeEstimatedKcalPerDay ?? null,
+      renderRisk: false,
+    });
+    return {
+      estimate: Math.round(result.teeBaselineKcal / 100) * 100,
+      limit: result.diets.find(diet => diet.key === 'light')?.gornaKcal ?? null,
+    };
+  }, { pal, targetKg });
+}
+
+async function expectDailyEnergy(host, kcal, limit = false) {
+  expect(kcal).toBeGreaterThan(0);
+  const display = host.locator('.vhome-diet-energy-number strong');
+  await expect(display).toBeVisible();
+  await expect(display).toHaveText(limit ? /^≤/ : /^ok\./);
+  await expect.poll(async () => Number((await display.textContent()).replace(/\D/g, ''))).toBe(kcal);
+}
+
+function maintenanceReference(kcal) {
+  const grouped = String(kcal).replace(/\B(?=(\d{3})+(?!\d))/g, '\\s*');
+  return new RegExp('Na utrzymanie ok\\.\\s*' + grouped + '\\s*kcal/dzień');
+}
 
 async function showReport(dialog) {
   await reportTab(dialog).click();
@@ -479,7 +511,7 @@ for (const { title, patient, ds } of [
   { title: 'adult underweight', patient: fictionalPatient({ firstName: 'Przyrost', age: 35, sex: 'F', height: 165, weight: 45 }), ds: false },
 ]) {
   test(`home diet: ${title} retains native availability and avoids a stale reduction journey`, async ({ page }) => {
-    const { frame } = await setup(page, { patient, ds });
+    const { frame, id } = await setup(page, { patient, ds });
     const native = await frame.evaluate(() => ({
       available: document.getElementById('dietRecommendationsBtn').style.display !== 'none',
       road: document.getElementById('toNormInfo').textContent,
@@ -500,6 +532,58 @@ for (const { title, patient, ds } of [
       expect(await dialog.locator('.vhome-diet-native-plan').textContent()).toBe(nativePlan);
     }
     if (native.strategyHidden) await expect(draft(dialog, 'strategy')).toBeHidden();
+    if (title === 'normal adult') {
+      const home = homeResult(frame), energy = planEnergy(dialog), pal = draft(dialog, 'palFactor');
+      const original = await nativeMaintenanceEnergy(frame), before = await snapshot(frame, id);
+      await expect(home).toHaveAttribute('data-bmi-normal', /.*/);
+      await expect(dialog).toHaveAttribute('data-bmi-normal', /.*/);
+      await expect(energy.locator('.vhome-diet-bmi-status')).toContainText('BMI w normie');
+      await expect(energy).toContainText('Szacowane zapotrzebowanie');
+      await expect(dialog.getByRole('tabpanel', { name: 'Plan żywieniowy' })).toContainText('Utrzymanie masy ciała');
+      await expect(draft(dialog, 'goal')).toBeHidden();
+      await expect(apply(dialog)).toBeDisabled();
+      await expectDailyEnergy(home, original.estimate);
+      await expectDailyEnergy(energy, original.estimate);
+
+      const originalPal = await frame.locator('#palFactor').inputValue();
+      const changedPal = originalPal === '1.8' ? '1.4' : '1.8';
+      const changed = await nativeMaintenanceEnergy(frame, { pal: changedPal });
+      expect(changed.estimate).not.toBe(original.estimate);
+      await pal.selectOption(changedPal);
+      await expect(energy).toContainText('Podgląd');
+      await expectDailyEnergy(energy, changed.estimate);
+      await expectDailyEnergy(home, original.estimate);
+      await expect(frame.locator('#palFactor')).toHaveValue(originalPal);
+      expect(await snapshot(frame, id)).toEqual(before);
+      await showReport(dialog);
+      await expect(prepare(dialog)).toBeDisabled();
+      await expectExportsBlocked(dialog);
+      await planTab(dialog).click();
+      // Make the native intake calculation pending during Apply, with real historical rows.
+      const intakeRowsAfterApply = await apply(dialog).evaluate(button => {
+        document.getElementById('palFactor').addEventListener('change', () => {
+          VildaEstimatedIntakeRuntime.clearEstimatedIntakeWindowState();
+          debouncedIntakeCalc();
+        }, { once: true });
+        button.click();
+        return window.intakeHistory?.length ?? 0;
+      });
+      expect(intakeRowsAfterApply).toBeGreaterThan(1);
+      await expect(dialog).toBeVisible();
+      await expect(frame.locator('#palFactor')).toHaveValue(changedPal);
+      await expectDailyEnergy(energy, changed.estimate);
+      await expectDailyEnergy(home, changed.estimate);
+      await expect(apply(dialog)).toBeDisabled();
+      await expect(pal).toHaveValue(changedPal);
+      await expect.poll(() => frame.evaluate(() => {
+        const plan = VildaPersistence.readMainSession()?.plan;
+        return [plan?.palFactor, plan?.palWybrany];
+      })).toEqual([Number(changedPal), true]);
+      expect((await snapshot(frame, id)).versions).toBe(before.versions);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expectDailyEnergy(energy, changed.estimate);
+      expect(await dialog.evaluate(node => node.scrollWidth)).toBeLessThanOrEqual(await dialog.evaluate(node => node.clientWidth));
+    }
     const report = await prepareReport(dialog);
     await expectNativeReport(frame, report);
     await expect(report.locator('.vhome-diet-native-energy')).not.toContainText('Musisz zredukować');
@@ -513,9 +597,24 @@ for (const { title, patient, ds } of [
 test('home diet: an eligible custom goal remains a draft until Apply and then uses the native target and recommendations', async ({ page }) => {
   const patient = fictionalPatient({ firstName: 'CelWlasny', age: 35, sex: 'F', height: 164, weight: 66 });
   const { frame, id } = await setup(page, { patient }), before = await snapshot(frame, id), dialog = await show(frame);
+  const home = homeResult(frame), energy = planEnergy(dialog);
+  const pal = draft(dialog, 'palFactor'), changedPal = before.controls.palFactor.value === '1.8' ? '1.4' : '1.8';
+  const maintain = await nativeMaintenanceEnergy(frame), custom = await nativeMaintenanceEnergy(frame, { pal: changedPal, targetKg: 62 });
+  await expect(energy).toContainText('Szacowane zapotrzebowanie');
+  await expectDailyEnergy(energy, maintain.estimate);
   await expect(draft(dialog, 'goal')).toBeVisible();
+  await expect(draft(dialog, 'goal')).toHaveValue('maintain');
   await draft(dialog, 'goal').selectOption('custom');
+  await draft(dialog, 'customGoalKg').fill('66');
+  await expect(apply(dialog)).toBeDisabled();
+  await expect(energy).not.toContainText('≤');
+  expect(await snapshot(frame, id)).toEqual(before);
+  await pal.selectOption(changedPal);
   await draft(dialog, 'customGoalKg').fill('62');
+  await expect(energy).toContainText('Kaloryczność dla celu własnego');
+  await expect(energy).toContainText(maintenanceReference(custom.estimate));
+  await expectDailyEnergy(energy, custom.limit, true);
+  await expectDailyEnergy(home, maintain.estimate);
   expect(await snapshot(frame, id)).toEqual(before);
   await showReport(dialog);
   await expect(prepare(dialog)).toBeDisabled();
@@ -524,9 +623,13 @@ test('home diet: an eligible custom goal remains a draft until Apply and then us
   await apply(dialog).click();
   await expect(dialog).toBeVisible();
   await expect(frame.locator('#customGoalKg')).toHaveValue('62');
+  await expect(frame.locator('#palFactor')).toHaveValue(changedPal);
   await expect.poll(() => frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().plan.customGoalKg)).toBe(62);
   await expect(frame.locator('#toNormInfo')).toContainText('Cel własny');
   await expectNativePlan(frame, dialog);
+  await expect(home).toContainText(/Cel uzgodniony z pacjent(?:em|ką)/);
+  await expectDailyEnergy(home, custom.limit, true);
+  await expect(energy).toContainText(maintenanceReference(custom.estimate));
   await expect(dialog.locator('#vhomeDietPlanSummary')).toContainText(/62(?:[,.]0)?\s*kg/);
   expect((await snapshot(frame, id)).versions).toBe(before.versions);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
@@ -541,13 +644,53 @@ test('home diet: an eligible custom goal remains a draft until Apply and then us
   await expect(frame.locator('#customGoalKg')).toHaveValue('');
   await expect(frame.locator('#bmiJourneyMount')).toHaveCount(0);
   await expect(impact(dialog)).toBeHidden();
-  await expect(dialog.locator('#vhomeDietPlanEnergy')).not.toContainText('Cel własny');
+  await expect(energy).toContainText('Szacowane zapotrzebowanie');
+  await expect(energy).not.toContainText('Cel własny');
+  await expectDailyEnergy(energy, custom.estimate);
   await showReport(dialog);
   await expectExportsBlocked(dialog);
   await expect(reportBody(dialog).locator('.vhome-diet-native-energy')).toHaveCount(0);
   await expectNativeReport(frame, await prepareReport(dialog));
   expect((await snapshot(frame, id)).versions).toBe(before.versions);
   await expectOriginalNodes(frame);
+});
+
+test('home diet: a saved normal BMI in a growing child shows native maintenance read-only', async ({ page }) => {
+  await watchClipboard(page);
+  const { frame } = await prepareGabinet(page);
+  const payload = fictionalPatient({ firstName: 'NormaDziecka', age: 12, sex: 'F', height: 154, weight: 41.8 });
+  payload.user = { ...payload.user, dobISO: '2014-03-12', measuredAtISO: '2026-10-12', ageMonths: 7 };
+  payload.advanced.data.currentAgeMonths = 151;
+  const id = await frame.evaluate(async value => {
+    const id = crypto.randomUUID();
+    value.visit = VildaVisitContext.create({ patientId: id, clinicalDateISO: value.user.measuredAtISO });
+    await VildaVault.savePatient(value, { patientId: id, dedup: false });
+    return id;
+  }, payload);
+  await readyForPatient(frame);
+  await choosePatient(frame, 'NormaDziecka');
+  await frame.locator('#vhomeGabinetAnalysisTab').click();
+  await frame.evaluate(() => VildaPatientReportLoader.ensure());
+  await watchNativeReport(frame);
+  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('browse');
+  const before = await snapshot(frame, id), original = await nativeMaintenanceEnergy(frame);
+  const home = homeResult(frame), dialog = await show(frame), energy = planEnergy(dialog);
+  await expect(home).toHaveAttribute('data-bmi-normal', /.*/);
+  await expect(dialog.locator('#vhomeDietContext')).toContainText('Zapisana wizyta');
+  await expect(energy.locator('.vhome-diet-bmi-status')).toContainText('BMI w normie dla wieku i płci');
+  await expect(dialog.getByRole('tabpanel', { name: 'Plan żywieniowy' })).toContainText('Żywienie wspierające wzrastanie');
+  await expectDailyEnergy(home, original.estimate);
+  await expectDailyEnergy(energy, original.estimate);
+  await expect(draft(dialog, 'palFactor')).toBeVisible();
+  await expect(draft(dialog, 'palFactor')).toBeDisabled();
+  await expect(draft(dialog, 'goal')).toBeHidden();
+  await expect(draft(dialog, 'dietLevel')).toBeHidden();
+  await expect(impact(dialog)).toBeHidden();
+  await expect(apply(dialog)).toBeHidden();
+  await expectNativeReport(frame, await prepareReport(dialog));
+  await close(dialog);
+  expect(await snapshot(frame, id)).toEqual(before);
+  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
 });
 
 test('home diet: ending and reopening growth eligibility applies the adolescent goal and clears it in native state', async ({ page }) => {
