@@ -37,6 +37,7 @@ async function showClinical(dialog) {
   const editor = dialog.locator('[data-growth-forecast-editor]');
   const summary = editor.getByText('Dojrzewanie i wywiad', { exact: true });
   if (!(await editor.locator('details').evaluate(details => details.open))) await summary.click();
+  await expect(editor.locator('details[open]')).toBeVisible();
   return editor;
 }
 const field = (dialog, id) => dialog.locator(`[data-growth-field="${id}"]`);
@@ -327,7 +328,8 @@ test('home growth: reported patient measurements remain native read-only copies 
 
 test('home growth: stale load, changed patient and locked vault cannot apply an old draft', async ({ page }) => {
   const { frame, id, ids } = await setup(page);
-  const dialog = await show(frame); await field(dialog, 'advTesticularVolume').selectOption('gt6');
+  const dialog = await show(frame);
+  await field(await showClinical(dialog), 'advTesticularVolume').selectOption('gt6');
   // Simulate an in-flight same-patient restore with the real importer. A user
   // cannot click the patient picker underneath an open modal dialog.
   await frame.evaluate(() => VildaDataImportExport.applyLoadedData(VildaPersistence.readMainSession(), { isSessionRestore: true }));
@@ -338,7 +340,8 @@ test('home growth: stale load, changed patient and locked vault cannot apply an 
   await frame.evaluate(next => sessionStorage.setItem('vildaCurrentPatientId', next), ids.b);
   await expect(dialog).toBeHidden(); await expect(frame.locator('#advMotherHeight')).toHaveValue('165');
   await loadPatient(frame, id, 'restore');
-  await show(frame); await field(dialog, 'advTesticularVolume').selectOption('gt6');
+  await show(frame);
+  await field(await showClinical(dialog), 'advTesticularVolume').selectOption('gt6');
   await frame.evaluate(() => VildaVault.lock()); await expect(dialog).toBeHidden();
   // Native Lock clears clinical controls. The discarded draft must not put
   // its value back into the now-locked document.
@@ -364,7 +367,9 @@ test('home growth: mobile uses shared geometry, readable fields, compact card an
   expect(Math.abs(geometry.height - geometry.contentHeight)).toBeLessThan(2);
   const dialog = await show(frame);
   await expect(page.locator('#mobileBottomDock')).toHaveCSS('visibility', 'hidden');
-  await expect(field(dialog, 'advTesticularVolume')).toHaveCSS('font-size', '16px');
+  const volume = field(await showClinical(dialog), 'advTesticularVolume');
+  await expect(volume).toBeVisible();
+  await expect(volume).toHaveCSS('font-size', '16px');
   for (const name of ['Analiza', 'Prognozy', 'Dane i pomiary']) {
     await dialog.getByRole('tab', { name, exact: true }).click();
     const geometry = await dialog.evaluate(node => {
@@ -381,7 +386,8 @@ test('home growth: mobile uses shared geometry, readable fields, compact card an
 
 test('home growth: a synchronous owner change during fact authorization cannot write the old draft', async ({ page }) => {
   const { frame, ids } = await setup(page);
-  const dialog = await show(frame); await field(dialog, 'advTesticularVolume').selectOption('gt6');
+  const dialog = await show(frame);
+  await field(await showClinical(dialog), 'advTesticularVolume').selectOption('gt6');
   await frame.evaluate(next => {
     const unsubscribe = VildaPubertyAssessmentState.subscribe(reason => {
       if (reason !== 'edit') return;
@@ -398,7 +404,9 @@ test('home growth: new anonymous measurement retains explicit advanced values af
   const { frame } = await setup(page);
   await frame.evaluate(() => clearAllData()); await expect(frame.locator('#vhomeGrowthExpand')).toBeEnabled();
   for (const [id, value] of Object.entries({ age: '13', height: '158', weight: '46' })) await frame.locator('#' + id).fill(value);
-  const dialog = await show(frame); await field(dialog, 'advTesticularVolume').selectOption('lt4');
+  const dialog = await show(frame);
+  await field(await showClinical(dialog), 'advTesticularVolume').selectOption('lt4');
+  await dialog.getByRole('tab', { name: 'Dane i pomiary', exact: true }).click();
   await field(dialog, 'advMotherHeight').fill('167'); await apply(dialog).click();
   await expect.poll(() => frame.evaluate(() => VildaPersistence.readMainSession()?.advanced?.testicularVolume)).toBe('lt4');
   await page.reload({ waitUntil: 'load' });
