@@ -190,23 +190,9 @@
     var source = w.VildaDsSource?.getState?.();
     return !!(patient && source?.patientId === patient && source.status === 'ready' && source.population === 'DS');
   }
-  function appendManualDownSyndromeAction(panel) {
-    if (!w.VildaHomeTools?.canOpenDownSyndrome?.()) return;
-    var button = el('button', 'vhome-growth-secondary', 'Obliczenia dla dzieci z zespołem Downa');
-    button.type = 'button';
-    button.setAttribute('aria-haspopup', 'dialog');
-    button.addEventListener('click', function () {
-      if (stillOwned() && !dirty() && !hasConfirmedDownSyndrome()) w.VildaHomeTools.openDownSyndrome(button);
-    });
-    panel.appendChild(button);
-  }
   function appendDownSyndromeAnalysis(panel) {
     var api = w.VildaDownSyndrome;
-    if (!api?.buildResultsHtml) return;
-    if (!hasConfirmedDownSyndrome()) {
-      appendManualDownSyndromeAction(panel);
-      return;
-    }
+    if (!api?.buildResultsHtml || !hasConfirmedDownSyndrome()) return;
     var result = api.buildResultsHtml();
     var section = el('section', 'vhome-growth-ds');
     var box = el('div', 'result-box');
@@ -227,6 +213,18 @@
   }
   function sameTrajectory(saved, native) {
     if (!native) return false;
+    // The plot uses the original measurements, which can differ even when
+    // the rounded values in the two rendered summaries are identical.
+    var savedView = saved.getAttribute('data-vhome-trajectory');
+    var currentView = native.closest('[data-vhome-trajectory]')?.getAttribute('data-vhome-trajectory');
+    if (savedView && currentView) {
+      try {
+        var savedPoints = JSON.parse(savedView).points, currentPoints = JSON.parse(currentView).points;
+        if (savedPoints.length !== currentPoints.length || !savedPoints.every(function (point, index) {
+          return ['ageMonths', 'height', 'weight', 'bmi'].every(function (field) { return point[field] === currentPoints[index][field]; });
+        })) return false;
+      } catch (_) { return false; }
+    }
     // Compare the shared renderer's results and context before substituting the
     // form's trajectory. The opening state of the details is a UI preference.
     return ['.vtap-meta', '.vtap-cards', '.vtap-tempo', '.vtap-row', '.vtap-det'].every(function (selector) {
@@ -234,23 +232,43 @@
     });
   }
   function renderResults(tab) {
-    var panel = byId('vhomeGrowthPanel-' + tab); if (!panel) return;
+    var panel = byId('vhomeGrowthPanel-' + tab);
+    if (tab === 'methods') panel = panel?.querySelector('[data-growth-results]');
+    if (!panel) return;
     disposeResultView(); panel.replaceChildren();
     var hasChanges = dirty(), isFresh = fresh(), native = byId('advResults');
     var saved = tab === 'analysis' && draft.trajectory;
     draft.showingSavedTrajectory = !!(!hasChanges && saved &&
       (!isFresh || !sameTrajectory(saved, native?.querySelector('.adv-growth-result-block--trajectory .vtap'))));
     if (draft.showingSavedTrajectory) {
+      panel.appendChild(el('p', 'vhome-dialog-context', 'Trajektoria z zapisanych pomiarów w Karcie pacjenta'));
+      resultView = w.VildaHomeGrowthViews?.render({ panel: panel, saved: saved, tab: 'analysis', copy: resultCopy,
+        metric: selectedMetric, onMetric: function (name) { selectedMetric = name; } });
+      if (resultView) return;
       var report = resultCopy(saved);
       report.hidden = false;
       report.querySelector('.vtap-main').open = true;
-      panel.append(el('p', 'vhome-dialog-context', 'Trajektoria z zapisanych pomiarów w Karcie pacjenta'), report);
+      panel.appendChild(report);
       return;
     }
     if (hasChanges || !isFresh) {
       panel.appendChild(el('p', 'vhome-growth-empty', hasChanges
         ? 'Masz niezastosowane dane. Zastosuj je, aby zobaczyć aktualną analizę i prognozy.'
         : 'Uzupełnij bieżący pomiar i dane w zakładce „Dane i pomiary”, aby zobaczyć aktualne wyniki.'));
+      if (tab === 'analysis') {
+        var clinicalEdited = hasChanges && fields.slice(3).some(function (entry) {
+          return (!entry[2] || entry[2] === value('sex')) && draft.values[entry[0]] !== value(entry[0]);
+        });
+        var action = el('button', 'vhome-a2-link', clinicalEdited ? 'Wróć do wywiadu w Prognozach'
+          : hasChanges ? 'Wróć do edycji danych' : 'Przejdź do danych i pomiarów');
+        action.type = 'button';
+        action.addEventListener('click', function () {
+          selectTab(clinicalEdited ? 'methods' : 'data', true);
+          var editor = clinicalEdited && dialog.querySelector('[data-growth-forecast-editor] details');
+          if (editor) { editor.open = true; editor.querySelector('summary').focus(); }
+        });
+        panel.appendChild(action);
+      }
       if (tab === 'analysis' && !hasChanges) appendDownSyndromeAnalysis(panel);
       return;
     }
@@ -326,6 +344,7 @@
     var changed = dirty();
     dialog.querySelector('.vhome-dialog-apply').disabled = !changed;
     setText(byId('vhomeGrowthDraftStatus'), savedResult ? '' : measurementsReadOnly() ? 'Odczyt zapisanych pomiarów.' : changed ? 'Masz niezastosowane dane.' : 'Wspólne pomiary · zmiany pozostają szkicem do zatwierdzenia.');
+    dialog.querySelector('.vhome-growth-documents').hidden = savedResult;
     dialog.querySelectorAll('[data-growth-document]').forEach(function (button) {
       button.hidden = savedResult; button.disabled = savedResult || changed || !fresh();
     });
@@ -333,6 +352,11 @@
       var row = draft.rows.find(function (r) { return r.key === button.dataset.growthGh; });
       var nativeButton = row?.node?.querySelector('.gh-z-wiersza-btn');
       button.disabled = changed || !(row?.protected || !measurementsReadOnly() && nativeButton && !nativeButton.disabled);
+      button.title = changed ? 'Najpierw zastosuj zmiany pomiarów.' : '';
+    });
+    dialog.querySelectorAll('[data-growth-point-analysis]').forEach(function (button) {
+      if (changed && button.getAttribute('aria-expanded') === 'true') closePointAnalysis(button);
+      button.disabled = changed;
       button.title = changed ? 'Najpierw zastosuj zmiany pomiarów.' : '';
     });
   }
@@ -389,14 +413,58 @@
       + (patientCount ? ' · ' + patientCount : '');
     byId('vhomeGrowthRowsEmpty').hidden = draft.rows.length > 0 || reported.length > 0;
   }
+  function closePointAnalysis(button) {
+    var panel = byId(button.getAttribute('aria-controls'));
+    panel.hidden = true;
+    panel.replaceChildren();
+    button.textContent = 'Analiza punktu';
+    button.setAttribute('aria-expanded', 'false');
+  }
+  function appendPointAnalysis(row, actions, cell) {
+    var native = row.node?.querySelector('.adv-analyze-btn');
+    if (!native || native.parentElement.hidden || native.parentElement.style.display === 'none'
+      || typeof w.buildHistoricalPointAnalysis !== 'function' || !w.VildaHtml?.setTrustedHtml) return;
+
+    var button = el('button', 'vhome-growth-text-action', 'Analiza punktu');
+    var panel = el('div', 'adv-history-analysis-panel vhome-growth-point-analysis');
+    button.type = 'button';
+    button.dataset.growthPointAnalysis = '';
+    panel.id = 'vhomeGrowthPointAnalysis-' + row.key;
+    panel.hidden = true;
+    button.setAttribute('aria-controls', panel.id);
+    button.setAttribute('aria-expanded', 'false');
+    actions.appendChild(button);
+    cell.appendChild(panel);
+
+    button.addEventListener('click', function () {
+      if (!panel.hidden) { closePointAnalysis(button); return; }
+      if (dirty() || !row.node.isConnected || !draft?.rows.includes(row) || !stillOwned()) return;
+      var result = w.buildHistoricalPointAnalysis(row.node);
+      if (result) {
+        w.VildaHtml.setTrustedHtml(panel, result.html, { context: 'home-growth:point-analysis' });
+        panel.querySelector('.adv-copy-analysis-btn')?.addEventListener('click', function () {
+          if (dirty() || !row.node.isConnected || !stillOwned()) return;
+          w.copyAdvancedGrowthHistoryText(result.text).then(
+            function () { w.showAdvancedGrowthHistoryToast('Skopiowano analizę punktu.'); },
+            function () { w.showAdvancedGrowthHistoryToast('Nie udało się skopiować analizy punktu.'); }
+          );
+        });
+      } else panel.textContent = 'Brak danych do analizy tego pomiaru.';
+      panel.hidden = false;
+      button.textContent = 'Ukryj analizę';
+      button.setAttribute('aria-expanded', 'true');
+    });
+  }
+
+  var historyLabelLayout = 'inline';
   function renderRows() {
     var host = byId('vhomeGrowthRows'); host.replaceChildren();
-    var table = el('table', 'vhome-growth-table'), head = el('thead'), header = el('tr'), body = el('tbody');
-    var columns = el('colgroup');
-    ['vhome-growth-col-age', '', '', '', 'vhome-growth-col-actions'].forEach(function (cls) { columns.appendChild(el('col', cls)); });
+    var table = el('table', 'vhome-growth-table'), head = el('thead'), header = el('tr');
+    table.setAttribute('role', 'table');
+    table.setAttribute('aria-labelledby', 'vhomeGrowthHistoryTitle');
     ['Wiek · lata / mies.', 'Wzrost · cm', 'Masa · kg', 'Wiek kostny · lata', 'Akcje'].forEach(function (text) {
       var th = el('th', '', text); th.scope = 'col'; header.appendChild(th);
-    }); head.appendChild(header); table.append(columns, head, body); host.appendChild(table);
+    }); head.appendChild(header); table.appendChild(head); host.appendChild(table);
     if (w.VildaGhPunktZWiersza) w.VildaGhPunktZWiersza.odswiez();
     // Display newest first; retain the canonical array and node order for Apply.
     var ordered = draft.rows.slice().sort(function (a, b) {
@@ -404,13 +472,17 @@
       return (Number(b.values[0]) * 12 + Number(b.values[1])) - (Number(a.values[0]) * 12 + Number(a.values[1]));
     });
     ordered.forEach(function (row) {
+      var body = el('tbody', 'vhome-growth-entry'); body.setAttribute('role', 'rowgroup');
+      table.appendChild(body);
       var node = el('tr', 'vhome-growth-history-row'); node.dataset.growthRow = row.key;
+      node.setAttribute('role', 'row');
       node.dataset.growthSourceIndex = String(draft.rows.indexOf(row));
-      var ageCell = el('td', 'vhome-growth-age'), agePair = el('div', 'vhome-growth-age-pair');
+      var ageCell = el('td', 'vhome-growth-age'), agePair = el('div', 'vhome-growth-age-pair'); ageCell.setAttribute('role', 'cell');
       ageCell.append(el('span', 'vhome-growth-history-title', 'Wiek'), agePair); node.appendChild(ageCell);
       historyFields.forEach(function (entry, index) {
         var original = row.node ? row.node.querySelector(entry[0]) : draft.template.querySelector(entry[0]);
-        var cell = index < 2 ? agePair : el('td'); if (index >= 2) node.appendChild(cell);
+        var cell = index < 2 ? agePair : el('td');
+        if (index >= 2) { cell.setAttribute('role', 'cell'); node.appendChild(cell); }
         var label = inputCopy(original, entry[1], cell, row.values[index], function (next) { row.values[index] = next; }, row.protected);
         label.classList.add('vhome-growth-history-label');
         // Every row carries its own visible field names and units. The two age
@@ -424,41 +496,62 @@
         inputInitials.set(control, row.node ? original.value : index === 1 ? '0' : '');
       });
       var actions = el('td', 'vhome-growth-row-remove');
+      actions.setAttribute('role', 'cell');
       var remove = el('button', 'vhome-growth-remove', '×'); remove.type = 'button'; remove.disabled = row.protected || measurementsReadOnly();
       remove.setAttribute('aria-label', 'Usuń pomiar'); remove.title = row.protected ? 'Punkt GH jest edytowany w DocPro.' : 'Usuń pomiar';
       remove.addEventListener('click', function () { draft.rows = draft.rows.filter(function (item) { return item !== row; }); renderRows(); refreshFooter(); });
       actions.appendChild(remove); node.appendChild(actions); body.appendChild(node);
       var tools = el('tr', 'vhome-growth-row-tools'), cell = el('td'), line = el('div', 'vhome-growth-row-origin'); cell.colSpan = 5;
-      line.appendChild(el('span', row.protected ? 'vhome-growth-gh-badge' : '', row.protected
-        ? row.node.querySelector('.gh-z-wiersza-etykieta')?.textContent || 'Punkt terapii GH' : 'Pomiar historyczny'));
+      tools.setAttribute('role', 'row'); cell.setAttribute('role', 'cell');
+      cell.appendChild(line);
+      if (row.protected) line.appendChild(el('span', 'vhome-growth-gh-badge',
+        row.node.querySelector('.gh-z-wiersza-etykieta')?.textContent || 'Punkt terapii GH'));
+      appendPointAnalysis(row, line, cell);
       var nativeButton = row.node?.querySelector('.gh-z-wiersza-btn');
       if (row.protected || nativeButton) {
-        var gh = el('button', 'vhome-growth-text-action', row.protected ? 'Zobacz punkt w DocPro ↗' : '＋ Zapisz jako punkt leczenia GH'); gh.type = 'button';
+        var gh = el('button', 'vhome-growth-text-action', row.protected ? 'Zobacz w DocPro' : 'Dodaj punkt GH'); gh.type = 'button';
         gh.dataset.growthGh = row.key; gh.disabled = dirty() || !row.protected && nativeButton.disabled;
         gh.addEventListener('click', function () { if (row.protected) openGhPoint(row); else openGh(row); }); line.appendChild(gh);
       }
-      cell.appendChild(line); tools.appendChild(cell); body.appendChild(tools);
+      if (line.childElementCount) { tools.appendChild(cell); body.appendChild(tools); }
     });
     byId('vhomeGrowthRowsEmpty').hidden = draft.rows.length > 0; table.hidden = !draft.rows.length;
     renderReportedHistory(true);
   }
-  function fold(title, entries, parent) {
-    var details = el('details', 'vhome-growth-fold'), summary = el('summary', '', title), grid = el('div', 'vhome-growth-fields');
-    details.append(summary, grid); entries.forEach(function (entry) { dataField(entry, grid); });
-    if (grid.children.length) parent.appendChild(details);
+  function renderForecastEditor(editor) {
+    var details = el('details', 'vhome-growth-fold vhome-growth-clinical');
+    details.open = editor.querySelector('details')?.open === true;
+    details.appendChild(el('summary', '', 'Dojrzewanie i wywiad'));
+    [['Warunki interpretacji', fields.slice(3, 6)], ['Przebieg dojrzewania i leczenie', fields.slice(6)]].forEach(function (group) {
+      var section = el('section', 'vhome-growth-clinical-section'), grid = el('div', 'vhome-growth-fields');
+      group[1].forEach(function (entry) { dataField(entry, grid); });
+      if (!grid.childElementCount) return;
+      section.append(el('h4', '', group[0]), grid); details.appendChild(section);
+    });
+    editor.replaceChildren(details);
   }
   function renderData(panel) {
     var family = section('Dane rodzinne i wiek kostny', panel), familyGrid = el('div', 'vhome-growth-fields vhome-growth-family-fields'); family.appendChild(familyGrid);
     family.classList.add('vhome-growth-family'); fields.slice(0, 3).forEach(function (entry) { dataField(entry, familyGrid); });
     var history = section('Historyczne pomiary', panel); history.classList.add('vhome-growth-history');
+    history.dataset.growthLabelLayout = historyLabelLayout;
     var add = el('button', 'vhome-growth-secondary vhome-growth-add', '+ Dodaj pomiar'); add.type = 'button'; add.dataset.growthAdd = '';
     var heading = history.querySelector('h3'), top = el('div', 'vhome-growth-history-heading'), title = el('div', 'vhome-growth-history-heading-title');
-    var symbol = el('span', 'vhome-growth-history-symbol'), icon = d.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true');
-    var path = d.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', 'M5 3h14v18H5zM9 7h6M9 11h6M9 15h6'); icon.appendChild(path); symbol.appendChild(icon);
+    heading.id = 'vhomeGrowthHistoryTitle';
     var count = el('p', 'vhome-growth-history-count'); count.id = 'vhomeGrowthHistoryCount';
-    heading.replaceWith(top); title.append(heading, count); var label = el('div', 'vhome-growth-history-heading-label'); label.append(symbol, title); top.append(label, add);
-    history.appendChild(el('p', 'vhome-growth-current-measurement', 'Bieżący pomiar: ' + value('height') + ' cm · ' + value('weight') + ' kg · z formularza głównego'));
+    heading.replaceWith(top); title.append(heading, count); top.append(title, add);
+    var current = el('p', 'vhome-growth-current-measurement');
+    var measurement = [['height', 'cm'], ['weight', 'kg']].map(function (entry) {
+      var raw = value(entry[0]); return raw ? raw.replace('.', ',') + ' ' + entry[1] : '';
+    }).filter(Boolean).join(' · ');
+    current.append(el('strong', '', 'Bieżąca wizyta'), el('span', '', measurement || 'Brak pomiarów'));
+    history.appendChild(current);
+    var labels = el('label', 'vhome-growth-label-layout', 'Etykiety pól');
+    var labelSelect = el('select'); labelSelect.dataset.growthHistoryLabelLayout = '';
+    [['stack', 'Pod sobą'], ['inline', 'W jednej linii']].forEach(function (entry) {
+      var option = el('option', '', entry[1]); option.value = entry[0]; labelSelect.appendChild(option);
+    });
+    labelSelect.value = historyLabelLayout; labels.appendChild(labelSelect); history.appendChild(labels);
     var list = el('div', 'vhome-growth-table-wrap'); list.id = 'vhomeGrowthRows'; history.appendChild(list);
     var empty = el('p', 'vhome-growth-empty', 'Brak wcześniejszych pomiarów.'); empty.id = 'vhomeGrowthRowsEmpty'; history.appendChild(empty);
     var reported = el('div', 'vhome-growth-reported-history'); reported.dataset.growthReportedHistory = ''; reported.hidden = true;
@@ -472,8 +565,6 @@
       list.querySelector('[data-growth-row="' + row.key + '"] input').focus();
     });
     renderRows();
-    fold('Warunki interpretacji', fields.slice(3, 6), panel);
-    fold('Początek dojrzewania i wywiad', fields.slice(6), panel);
   }
   function ghInputs() {
     return ghView ? JSON.stringify(Array.from(ghView.host.querySelectorAll('input,select')).map(function (node) {
@@ -533,6 +624,7 @@
     draft.initial = JSON.stringify([values, history.map(function (r) { return [r.key, r.values]; })]);
     draft.fingerprint = JSON.stringify(current);
     var panel = byId('vhomeGrowthPanel-data'); panel.replaceChildren(); renderData(panel);
+    renderForecastEditor(dialog.querySelector('[data-growth-forecast-editor]'));
     dialog.querySelector('.vhome-growth-tabs').hidden = false;
     dialog.querySelector('.vhome-growth-documents').hidden = false;
     selectTab('data', true); schedule();
@@ -606,7 +698,13 @@
     var invalid = controls.find(function (control) {
       return !control.disabled && control.value !== inputInitials.get(control) && !control.checkValidity();
     });
-    if (invalid) { selectTab('data'); invalid.reportValidity(); return; }
+    if (invalid) {
+      var clinical = invalid.closest('.vhome-growth-clinical');
+      selectTab(clinical ? 'methods' : 'data');
+      if (clinical) clinical.open = true;
+      invalid.reportValidity();
+      return;
+    }
     if (!prepareAnonymousApplyVisit(draft)) { close(true); return; }
     var item = draft, oldRows = rows(), notifications = [];
     var factsChanged = fields.some(function (entry) {
@@ -704,8 +802,15 @@
       panel.setAttribute('role', 'tabpanel'); panel.setAttribute('aria-labelledby', 'vhomeGrowthTab-' + name); body.appendChild(panel);
     });
     renderData(byId('vhomeGrowthPanel-data'));
+    var forecastResults = el('div'), forecastEditor = el('div');
+    forecastResults.dataset.growthResults = ''; forecastEditor.dataset.growthForecastEditor = '';
+    byId('vhomeGrowthPanel-methods').append(forecastResults, forecastEditor);
+    renderForecastEditor(forecastEditor);
     var status = el('p', 'vhome-growth-draft-status'); status.id = 'vhomeGrowthDraftStatus'; status.setAttribute('role', 'status'); body.appendChild(status);
     var documents = el('div', 'vhome-growth-documents');
+    var documentsTitle = el('h3', '', 'Siatki i raport'); documentsTitle.id = 'vhomeGrowthDocumentsTitle';
+    documents.setAttribute('role', 'region'); documents.setAttribute('aria-labelledby', documentsTitle.id);
+    documents.appendChild(documentsTitle);
     [['Generuj siatki', 'charts'], ['Raport wzrastania', 'report']].forEach(function (entry) {
       var button = el('button', 'vhome-growth-secondary', entry[0]); button.type = 'button'; button.dataset.growthDocument = entry[1];
       button.addEventListener('click', function () {
@@ -738,6 +843,11 @@
       readinessTimer = w.setTimeout(refreshReadiness, until > Date.now() ? until - Date.now() + 1 : 250);
     }
   }
+  function renderCardValue(strong, text, unit) {
+    if (strong.textContent === text + unit) return;
+    strong.replaceChildren(d.createTextNode(text));
+    if (unit) strong.appendChild(el('small', '', unit));
+  }
   function renderCard() {
     renderFrame = 0; if (!started) return;
     if (!historyTemplate && rows()[0]) historyTemplate = rows()[0].cloneNode(true);
@@ -745,14 +855,16 @@
     var grid = byId('vhomeMainCards'), heading = byId('vhomeAnalysisHeading');
     if (grid && heading) heading.hidden = grid.hidden = Array.from(grid.children).every(function (node) { return node.hidden; });
     var valid = fresh(), data = valid ? w.advancedGrowthData : null;
-    [['velocity', data?.growthVelocity, 'cm/rok'], ['mph', data?.targetHeight, 'cm'],
-      ['bone', data?.boneAgeMonths == null ? null : data.boneAgeMonths / 12, 'lat']].forEach(function (entry) {
-      var strong = byId('vhomeGrowth-' + entry[0]), text = format(entry[1]) + (number(entry[1]) ? ' ' + entry[2] : '');
-      if (strong.textContent !== text) {
-        strong.replaceChildren(d.createTextNode(format(entry[1])));
-        if (number(entry[1])) strong.appendChild(el('small', '', ' ' + entry[2]));
-      }
+    [['velocity', data?.growthVelocity, ' cm/rok'], ['mph', data?.targetHeight, ' cm']].forEach(function (entry) {
+      renderCardValue(byId('vhomeGrowth-' + entry[0]), format(entry[1]), number(entry[1]) ? entry[2] : '');
     });
+    var hero = valid ? byId('advResults').querySelector('.vgcc-hero') : null;
+    var headline = hero?.querySelector('.vgcc-hero-big')?.textContent.trim() || '—';
+    var method = hero?.querySelector('.vgcc-hero-cap')?.textContent.trim() || 'Brak aktualnej prognozy';
+    var unit = headline.endsWith(' cm') ? ' cm' : '';
+    var forecast = byId('vhomeGrowth-forecast');
+    renderCardValue(forecast, unit ? headline.slice(0, -unit.length) : headline, unit);
+    setText(forecast.nextElementSibling, method);
     refreshReadiness();
   }
   function schedule() { if (!renderFrame) renderFrame = w.requestAnimationFrame(renderCard); }
@@ -773,14 +885,15 @@
     expand.addEventListener('click', function () { open('analysis'); }); header.append(heading, expand); card.appendChild(header);
     var summary = el('div', 'vhome-growth-summary');
     [['velocity', 'Tempo wzrastania', 'Z historii pomiarów'], ['mph', 'Potencjał genetyczny · MPH', 'Z danych rodzinnych'],
-      ['bone', 'Wiek kostny', 'Badanie tej wizyty']].forEach(function (entry) {
+      ['forecast', 'Prognoza wzrostu ostatecznego', 'Brak aktualnej prognozy']].forEach(function (entry) {
       var item = el('div', ''); item.appendChild(el('span', '', entry[1])); var strong = el('strong', '', '—'); strong.id = 'vhomeGrowth-' + entry[0];
       item.append(strong, el('small', '', entry[2])); summary.appendChild(item);
     }); card.appendChild(summary);
-    var bottom = el('div', 'vhome-growth-bottom'); bottom.appendChild(el('p', '', 'Historia pomiarów i dane rodzinne w jednym oknie.'));
+    var bottom = el('div', 'vhome-growth-bottom');
     var actions = el('div', 'vhome-growth-entry-actions');
-    [['data', 'Pomiary i obliczenia ↗'], ['analysis', 'Analiza trajektorii ↗']].forEach(function (entry) {
+    [['data', 'Pomiary i obliczenia'], ['analysis', 'Analiza trajektorii']].forEach(function (entry) {
       var button = el('button', 'vhome-growth-secondary', entry[1]); button.type = 'button'; button.dataset.growthOpen = entry[0];
+      button.setAttribute('aria-haspopup', 'dialog');
       button.addEventListener('click', function () { open(entry[0]); }); actions.appendChild(button);
     }); bottom.appendChild(actions); card.appendChild(bottom);
     var label = el('div', 'vhome-analysis-heading'); label.id = 'vhomeAnalysisHeading';
@@ -812,6 +925,11 @@
         }
         event.stopImmediatePropagation();
         if (!stillOwned()) { close(true); return; }
+        if (event.target.matches('[data-growth-history-label-layout]')) {
+          historyLabelLayout = event.target.value === 'stack' ? 'stack' : 'inline';
+          event.target.closest('.vhome-growth-history').dataset.growthLabelLayout = historyLabelLayout;
+          return;
+        }
         var change = inputChanges.get(event.target);
         if (change && !measurementsReadOnly()) { change(event.target.value); refreshFooter(); }
       }, true);
