@@ -25,9 +25,11 @@
   function trajectoryModel(node) {
     try { return JSON.parse(node.getAttribute('data-vhome-trajectory')); } catch (_) { return null; }
   }
-  function drawRawChart(host, series, unit) {
+  function pointLabel(point, unit) {
+    return fmt(point.ageMonths / 12) + ' lat · ' + fmt(point.value) + (unit ? ' ' + unit : '');
+  }
+  function drawRawChart(host, points, unit) {
     host.replaceChildren();
-    var points = series.filter(function (p) { return finite(p.ageMonths) && finite(p.value); });
     if (!points.length) { host.appendChild(el('p', 'vhome-growth-empty', 'Brak wpisanych pomiarów dla tej serii.')); return; }
     var width = Math.max(235, host.clientWidth || 500), height = 220, left = 46, right = width - 16, top = 24, bottom = 178;
     var values = points.map(function (p) { return p.value; }), ages = points.map(function (p) { return p.ageMonths; });
@@ -49,8 +51,8 @@
     svg.appendChild(svgNode('path', { d: line + ' L' + right + ' ' + bottom + ' L' + left + ' ' + bottom + ' Z', class: 'vhome-a2-area' }));
     svg.appendChild(svgNode('path', { d: line, class: 'vhome-a2-line' }));
     points.forEach(function (p) {
-      var pos = xy(p), point = svgNode('circle', { cx: pos[0], cy: pos[1], r: p.isCurrent ? 5 : 3.5, class: 'vhome-a2-dot', tabindex: '0',
-        'aria-label': fmt(p.ageMonths / 12) + ' lat · ' + fmt(p.value) + (unit ? ' ' + unit : '') });
+      var pos = xy(p), point = svgNode('circle', { cx: pos[0], cy: pos[1], r: p.highlighted ? 5 : 3.5,
+        class: 'vhome-a2-dot' + (p.highlighted ? ' vhome-a2-current-dot' : ''), tabindex: '0', 'aria-label': p.label });
       var title = svgNode('title'); title.textContent = point.getAttribute('aria-label'); point.appendChild(title); svg.appendChild(point);
     }); host.appendChild(svg);
   }
@@ -92,57 +94,221 @@
     if (bottom.children.length) card.appendChild(bottom);
     return card;
   }
+  function text(node) { return node?.textContent.replace(/\s+/g, ' ').trim() || ''; }
+
+  function contextRow(list, label, value, notes) {
+    var details = (notes || []).filter(Boolean);
+    if (!value && !details.length) return;
+    var row = el('div', 'vhome-a2-context-row');
+    row.appendChild(el('dt', '', label));
+    if (value) row.appendChild(el('dd', 'vhome-a2-context-value', value));
+    details.forEach(function (note) {
+      var item = el('dd', 'vhome-a2-context-note');
+      if (typeof note === 'string') item.textContent = note;
+      else item.appendChild(note.cloneNode(true));
+      row.appendChild(item);
+    });
+    list.appendChild(row);
+  }
+
+  function buildAnalysisContext(options, native, delta, periodsTitle, periodsTable) {
+    var context = el('section', 'vhome-a2-panel vhome-a2-context');
+    var slots = el('div', 'vhome-a2-context-slots');
+    var stats = text(options.native?.querySelector('.vgcc-stats .vu'));
+    var statsParts = stats.match(/^(.+?) \(([^()]*)\)$/);
+    var recent = statsParts?.[1] || stats, period = statsParts?.[2] || '';
+    var tempo = native.querySelector('.vtap-tempo'), sds = native.querySelector('.vtap-hvc');
+    var tempoValue = text(tempo?.querySelector('.v')), tempoPeriod = text(tempo?.querySelector('.mut'));
+    var verdict = tempo?.querySelector('.vtap-chip'), qualification = text(tempo?.querySelector('.note'));
+    var pace = el('dl', 'vhome-a2-context-rows');
+    if (recent && recent === tempoValue && (!period || !tempoPeriod || period === tempoPeriod)) {
+      contextRow(pace, 'Ostatni okres', recent, [period || tempoPeriod, verdict, qualification]);
+    } else {
+      contextRow(pace, 'Ostatni okres', recent, [period]);
+      contextRow(pace, 'Ocena tempa', tempoValue, [tempoPeriod, verdict, qualification]);
+    }
+    var sdsResult = sds?.querySelector('.big');
+    contextRow(pace, 'SDS tempa', [text(sdsResult?.firstChild), text(sdsResult?.querySelector('.d'))].filter(Boolean).join(' · '), [
+      text(sds?.querySelector('.sub')), text(sds?.querySelector('.vtap-hv-src')), text(sds?.querySelector('.vdt')),
+    ]);
+    if (pace.children.length) {
+      var paceSection = el('section', 'vhome-a2-growth-tempo');
+      paceSection.append(el(options.native ? 'h5' : 'h4', '', 'Tempo wzrastania'), pace);
+      slots.appendChild(paceSection);
+    }
+
+    if (options.native) {
+      var family = el('section', 'vhome-a2-growth-family'), familyRows = el('dl', 'vhome-a2-context-rows');
+      var mph = options.native.querySelector('.vgcc-mph');
+      contextRow(familyRows, 'Potencjał genetyczny (MPH)', text(mph?.querySelector('b')), [text(mph?.querySelector('.vgcc-mph-cent'))]);
+      if (delta) contextRow(familyRows, 'hSDS − mpSDS', text(delta).slice(text(delta.querySelector('strong')).length).trim());
+      var boneAge = options.data.boneAgeMonths;
+      contextRow(familyRows, 'Wiek kostny', finite(boneAge) ? fmt(boneAge / 12) + ' lat' : '—');
+      family.append(el('h5', '', 'Potencjał rodzinny i wiek kostny'), familyRows);
+      var target = options.native.querySelector('.vgcc-target');
+      if (target) family.appendChild(options.copy(target));
+      slots.appendChild(family);
+    }
+    if (periodsTitle && periodsTable) {
+      var label = text(periodsTitle);
+      var periods = el('section', 'vhome-a2-growth-periods'), table = options.copy(periodsTable);
+      table.setAttribute('aria-label', label);
+      periods.append(el('h5', '', label), table);
+      slots.appendChild(periods);
+    }
+
+    if (!slots.children.length) return null;
+    if (options.native) context.appendChild(el('h4', '', 'Tempo i potencjał rodzinny'));
+    context.appendChild(slots);
+    if (options.onData) {
+      var dataLink = el('button', 'vhome-a2-link', 'Przejdź do danych i pomiarów');
+      dataLink.type = 'button';
+      dataLink.addEventListener('click', options.onData);
+      context.appendChild(dataLink);
+    }
+    return context;
+  }
+
+  function analysisIntervals(options, native, cards, displayedWarnings) {
+    var body = el('div', 'vtap vhome-a2-intervals');
+    var segmentDetails = native.querySelector('.vtap-det');
+    var sourceTable = segmentDetails?.querySelector('.vtap-tb');
+    if (sourceTable) {
+      var table = options.copy(sourceTable), label = text(segmentDetails.querySelector('summary'));
+      table.tabIndex = 0;
+      table.setAttribute('role', 'region');
+      table.setAttribute('aria-label', label);
+      body.append(el('h5', '', label), table);
+    } else if (segmentDetails) {
+      body.appendChild(options.copy(segmentDetails));
+    }
+
+    var notes = el('div', 'vhome-a2-segment-notes');
+    cards.forEach(function (card, index) {
+      var endpoints = text(card.querySelector('.sub')).split(' · SDS ')[1];
+      var qualifiers = Array.from(card.querySelectorAll('.vtap-pac-l, .vtap-seg')).filter(function (note) {
+        return displayedWarnings.get(index) !== text(note);
+      });
+      if (!endpoints && !qualifiers.length) return;
+      var item = el('section');
+      item.appendChild(el('h5', '', text(card.querySelector('.nm'))));
+      if (endpoints) item.appendChild(el('p', '', 'SDS w całym okresie · ' + endpoints));
+      qualifiers.forEach(function (note) { item.appendChild(options.copy(note)); });
+      notes.appendChild(item);
+    });
+    if (notes.children.length) body.appendChild(notes);
+    Array.from(native.children).forEach(function (node) {
+      if (node.matches('summary, .vtap-meta, .vtap-cards, .vtap-tempo, .vtap-det, .vtap-flag, .vtap-row:has(.vtap-chip.vw)')) return;
+      body.appendChild(options.copy(node));
+    });
+    return body.children.length ? details('Odcinki i warunki oceny', body) : null;
+  }
+
   function analysis(options) {
-    var source = options.native.querySelector('.adv-growth-result-block--trajectory'), model = source && trajectoryModel(source);
+    var source = options.saved || options.native?.querySelector('.adv-growth-result-block--trajectory');
+    var model = source && trajectoryModel(source);
     if (!model || !Array.isArray(model.metrics)) return false;
+    var native = source.querySelector('.vtap-main');
+    if (!native) return false;
     var root = el('div', 'vhome-a2 vhome-a2-analysis');
     root.appendChild(heading('Analiza trajektorii'));
-    var meta = source.querySelector('.vtap-meta'); if (meta) root.appendChild(options.copy(meta));
+    var meta = native.querySelector('.vtap-meta');
+    if (meta) {
+      var metaCopy = options.copy(meta);
+      metaCopy.querySelectorAll('.vtap-mchip .k').forEach(function (label) {
+        label.textContent = label.textContent.replace(/^(?:🧬|💉|⬇️?)\s*/u, '');
+      });
+      root.appendChild(metaCopy);
+    }
+    native.querySelectorAll(':scope > .vtap-flag, :scope > .vtap-row:has(.vtap-chip.vw)').forEach(function (node) {
+      var warning = options.copy(node);
+      warning.classList.add('vhome-a2-warning');
+      root.appendChild(warning);
+    });
+    var extras = el('div', 'vhome-a2-native-extras'), delta, periodsTitle, periodsTable;
+    Array.from(options.native?.children || []).forEach(function (node) {
+      if (node.matches('.vgcc, .adv-growth-result-block--trajectory')) return;
+      if (node.matches('.velocity-periods-title')) periodsTitle = node;
+      else if (node.matches('.velocity-periods-table')) periodsTable = node;
+      else if (/^hSDS\s*[-−]\s*mpSDS:$/i.test(text(node.querySelector(':scope > strong')))) delta = node;
+      else if (node.matches('[style*="--danger"]') || node.querySelector('a')) root.appendChild(options.copy(node));
+      else extras.appendChild(options.copy(node));
+    });
+
     var dashboard = el('div', 'vhome-a2-dashboard'), plot = el('section', 'vhome-a2-panel vhome-a2-plot');
-    var plotHeader = el('div', 'vhome-a2-plot-heading'), titles = el('div'); titles.append(el('h4', '', 'Przebieg pomiarów'), el('p', '', 'Wartości pomiarów w czasie')); plotHeader.appendChild(titles);
-    var switches = el('div', 'vhome-a2-metric-switch'); switches.setAttribute('role', 'group'); switches.setAttribute('aria-label', 'Pomiar na wykresie');
+    var plotTitle = el('h4', 'vhome-a2-plot-heading');
+    var reading = el('p', 'vhome-a2-reading'), currentReading = el('span');
+    var readingLabel = options.saved ? 'Ostatni zapisany pomiar' : 'Bieżąca wizyta';
+    reading.append(el('strong', '', readingLabel), currentReading);
     var host = el('div', 'vhome-a2-chart');
-    var selected = options.metric || 'height';
+    host.id = 'vhomeGrowthAnalysisChart';
+    var pointList = el('ol', 'vhome-a2-point-list');
+    pointList.tabIndex = 0;
+    var pointDetails = el('details', 'vhome-a2-point-values');
+    pointDetails.append(el('summary', '', 'Wartości punktów'), pointList);
+    plot.append(plotTitle, reading, host, el('p', 'vhome-a2-plot-caption', 'Wykres wartości pomiarów. Siatki centylowe są dostępne osobno.'), pointDetails);
+    var cards = el('div', 'vhome-a2-metrics');
+    cards.setAttribute('role', 'group');
+    cards.setAttribute('aria-label', 'Parametr na wykresie');
+    var nativeCards = Array.from(native.querySelectorAll('.vtap-cards > .vtap-card:not(.vtap-hvc)'));
+    var metricIndices = new Map(model.metrics.map(function (item, index) { return [item.metric, index]; }));
+    var buttons = new Map(), displayedWarnings = new Map();
+    var selected = options.metric || 'height', renderedWidth;
     function draw() {
       if (!root.isConnected) return;
-      var series = model.metrics.find(function (item) { return item.metric === selected; });
-      var raw = (model.points || []).map(function (point) { return { ageMonths: point.ageMonths, value: point[selected], isCurrent: point.isCurrent }; });
-      drawRawChart(host, raw, series ? series.unit || series.title : selected === 'height' ? 'cm' : selected === 'weight' ? 'kg' : 'BMI');
+      renderedWidth = host.clientWidth;
+      var series = model.metrics[metricIndices.get(selected)];
+      var unit = series ? series.unit || series.title : selected === 'height' ? 'cm' : selected === 'weight' ? 'kg' : 'BMI';
+      var points = (model.points || []).filter(function (point) { return finite(point.ageMonths) && finite(point[selected]); })
+        .map(function (point) { return { ageMonths: point.ageMonths, value: point[selected], isCurrent: point.isCurrent }; });
+      var currentPoint = options.saved ? points[points.length - 1] : points.find(function (point) { return point.isCurrent; });
+      points.forEach(function (point) {
+        point.highlighted = point === currentPoint;
+        point.label = (point.highlighted ? readingLabel + ' · ' : '') + pointLabel(point, unit);
+      });
+      drawRawChart(host, points, unit);
+      currentReading.textContent = currentPoint ? pointLabel(currentPoint, unit) : 'Brak pomiaru w tej serii';
+      pointDetails.hidden = !points.length;
+      pointList.replaceChildren(...points.map(function (point) { return el('li', '', point.label); }));
     }
     [['height', 'Wzrost'], ['weight', 'Masa'], ['bmi', 'BMI']].forEach(function (item) {
-      var button = el('button', '', item[1]); button.type = 'button'; button.dataset.growthMetric = item[0];
-      button.setAttribute('aria-pressed', String(selected === item[0]));
+      var index = metricIndices.get(item[0]), cardSource = nativeCards[index];
+      var card = cardSource ? compactMetricCard(options, cardSource, model.metrics[index]) : el('div', 'vtap-card vhome-a2-metric-card');
+      if (!cardSource) card.append(el('span', 'nm', item[1]), el('p', 'sub', 'Brak podsumowania dla tego parametru'));
+      var name = text(card.querySelector('.nm')) || item[1];
+      var earlier = card.querySelector('.vtap-seg');
+      if (earlier) displayedWarnings.set(index, text(earlier));
+      var button = el('button', 'vhome-a2-metric-trigger');
+      button.type = 'button';
+      button.dataset.growthMetric = item[0];
+      button.setAttribute('aria-controls', host.id);
+      button.setAttribute('aria-label', name);
+      var active = selected === item[0];
+      button.setAttribute('aria-pressed', String(active));
+      if (active) plotTitle.textContent = 'Przebieg pomiarów · ' + name;
       button.addEventListener('click', function () {
-        selected = item[0]; options.onMetric(selected);
-        switches.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.growthMetric === selected)); }); draw();
-      }); switches.appendChild(button);
-    }); plotHeader.appendChild(switches); plot.append(plotHeader, host, el('p', 'vhome-a2-caption', 'Wyróżniony punkt: bieżąca wizyta. Wykres wartości nie jest siatką centylową.'));
-    var cards = el('div', 'vhome-a2-metrics');
-    var nativeCards = Array.from(source.querySelectorAll('.vtap-cards > .vtap-card'));
-    nativeCards.filter(function (node) { return !node.classList.contains('vtap-hvc'); }).forEach(function (node, index) {
-      cards.appendChild(compactMetricCard(options, node, model.metrics[index]));
+        if (selected === item[0]) return;
+        selected = item[0];
+        options.onMetric(selected);
+        buttons.forEach(function (control, key) { control.setAttribute('aria-pressed', String(key === selected)); });
+        plotTitle.textContent = 'Przebieg pomiarów · ' + name;
+        draw();
+      });
+      buttons.set(item[0], button);
+      card.appendChild(button);
+      cards.appendChild(card);
     });
-    dashboard.append(plot, cards); root.appendChild(dashboard);
-    var context = el('section', 'vhome-a2-panel vhome-a2-context'); context.appendChild(el('h4', '', 'Tempo i potencjał rodzinny'));
-    var slots = el('div', 'vhome-a2-context-slots');
-    ['.vgcc-stats', '.vgcc-mph'].forEach(function (selector) { var node = options.native.querySelector(selector); if (node) slots.appendChild(options.copy(node)); });
-    var bone = el('div', 'vhome-a2-bone'); bone.append(el('span', '', 'Wiek kostny'), el('strong', '', finite(options.data.boneAgeMonths) ? fmt(options.data.boneAgeMonths / 12) + ' lat' : '—')); slots.appendChild(bone);
-    var target = options.native.querySelector('.vgcc-target');
-    if (target) { var targetCopy = options.copy(target); targetCopy.classList.add('vhome-a2-wide-context'); slots.appendChild(targetCopy); }
-    nativeCards.filter(function (node) { return node.classList.contains('vtap-hvc'); }).forEach(function (node) { var copy = options.copy(node); copy.classList.add('vhome-a2-wide-context'); slots.appendChild(copy); });
-    context.appendChild(slots); var dataLink = el('button', 'vhome-a2-link', 'Przejdź do danych i pomiarów ↗'); dataLink.type = 'button'; dataLink.addEventListener('click', options.onData); context.appendChild(dataLink); root.appendChild(context);
-    var nativeDetails = options.copy(source); root.appendChild(details('Szczegóły odcinków i warunki oceny', nativeDetails));
-    var extras = el('div', 'vhome-a2-native-extras');
-    Array.from(options.native.children).forEach(function (node) {
-      if (node.matches('.vgcc, .adv-growth-result-block--trajectory')) return;
-      var copy = options.copy(node);
-      // Preserve native alerts, consultation actions and qualifiers visibly.
-      if (node.matches('[style*="--danger"]') || node.querySelector('a')) root.insertBefore(copy, dashboard);
-      else extras.appendChild(copy);
-    }); if (extras.children.length) root.appendChild(extras);
+    dashboard.append(el('h4', '', 'Wyniki pomiarów'), cards, plot);
+    root.appendChild(dashboard);
+    var intervals = analysisIntervals(options, native, nativeCards, displayedWarnings);
+    if (intervals) root.appendChild(intervals);
+    var context = buildAnalysisContext(options, native, delta, periodsTitle, periodsTable);
+    if (context) root.appendChild(context);
+    if (extras.children.length) root.appendChild(extras);
     options.panel.appendChild(root);
-    if (w.VildaTrajectoryAnalysis) w.VildaTrajectoryAnalysis.wirePanelToggle(nativeDetails);
-    var observer = new w.ResizeObserver(draw); observer.observe(plot); w.requestAnimationFrame(draw);
+    var observer = new w.ResizeObserver(function () { if (host.clientWidth !== renderedWidth) draw(); });
+    observer.observe(host);
+    draw();
     return { dispose: function () { observer.disconnect(); } };
   }
   function normalized(text) { return String(text || '').replace(/[–—−]/g, '-').replace(/\s+/g, ' ').trim().toLowerCase(); }
@@ -155,26 +321,70 @@
       return { method: method, value: value, low: error == null ? value : value - error, high: error == null ? value : value + error, error: error };
     });
   }
+  function forecastContextRow(rows, label, result, note) {
+    if (!result) return;
+    var row = el('div', 'vhome-a2-forecast-row');
+    var detail = el('dd');
+    detail.appendChild(el('strong', '', result));
+    if (note) detail.appendChild(el('span', '', note));
+    row.append(el('dt', '', label), detail); rows.appendChild(row);
+  }
+  function forecastContext(card, data) {
+    var context = el('aside', 'vhome-a2-forecast-context');
+    var rows = el('dl', 'vhome-a2-forecast-rows');
+    var mph = card.querySelector('.vgcc-mph');
+    if (mph) {
+      forecastContextRow(rows, 'Potencjał genetyczny wzrostu (MPH)', mph.querySelector('b')?.textContent,
+        mph.querySelector('.vgcc-mph-cent')?.textContent);
+      mph.remove();
+    }
+    var tempo = card.querySelector('.vgcc-stats');
+    if (tempo) {
+      var text = tempo.querySelector('.vu')?.textContent.trim() || '';
+      var parts = text.match(/^(.+?)\s*\(([^)]+)\)$/);
+      forecastContextRow(rows, 'Tempo wzrastania', parts ? parts[1] : text, parts?.[2]);
+      tempo.remove();
+    }
+    context.appendChild(el('h4', '', 'Kontekst prognozy'));
+    if (rows.childElementCount) context.appendChild(rows);
+    var target = card.querySelector('.vgcc-target');
+    if (target) context.appendChild(target);
+    var age = finite(data.currentAgeMonths) ? fmt(data.currentAgeMonths / 12) : '—';
+    var bone = finite(data.boneAgeMonths) ? fmt(data.boneAgeMonths / 12) : '—';
+    context.appendChild(el('p', 'vhome-a2-bone', 'Wiek metrykalny / kostny: ' + age + ' / ' + bone + ' lat'));
+    return context;
+  }
   function forecasts(options) {
     var source = options.native.querySelector('.vgcc'); if (!source) return false;
-    var root = el('div', 'vhome-a2 vhome-a2-forecasts'); root.appendChild(heading('Prognozy wzrostu ostatecznego', 'Konsensus, porównanie metod i warunki wiarygodności'));
+    var root = el('div', 'vhome-a2 vhome-a2-forecasts'); root.appendChild(heading('Prognozy wzrostu ostatecznego'));
     var card = options.copy(source), hero = card.querySelector('.vgcc-hero'), methods = card.querySelector('.vgcc-methods');
     if (hero) {
-      var top = el('div', 'vhome-a2-forecast-top'), context = el('aside', 'vhome-a2-panel vhome-a2-forecast-context'); context.appendChild(el('h4', '', 'Kontekst prognozy'));
-      card.insertBefore(top, hero); top.append(hero, context);
-      ['.vgcc-mph', '.vgcc-target', '.vgcc-stats'].forEach(function (selector) { var node = card.querySelector(selector); if (node) context.appendChild(node); });
-      var age = el('p', 'vhome-a2-bone', 'Wiek metrykalny / kostny: ' + fmt(options.data.currentAgeMonths / 12) + ' / ' + (finite(options.data.boneAgeMonths) ? fmt(options.data.boneAgeMonths / 12) : '—') + ' lat'); context.appendChild(age);
+      var top = el('div', 'vhome-a2-forecast-top');
+      card.insertBefore(top, hero); top.append(hero, forecastContext(card, options.data));
+      var conditions = card.querySelectorAll(':scope > .vgcc-hint, :scope > .vgcc-det');
+      if (conditions.length) {
+        var interpretation = el('section', 'vhome-a2-forecast-conditions');
+        interpretation.append(el('h4', '', 'Warunki interpretacji'), ...conditions);
+        top.after(interpretation);
+      }
     }
     var prediction = options.data.finalHeightPrediction, ranges = rangeData(prediction);
     if (methods) {
       var label = el('h4', 'vhome-a2-methods-title', 'Porównanie prognoz'); methods.before(label);
       var bars = Array.from(methods.querySelectorAll('.vgcc-row')).map(function (row) {
         var name = row.querySelector('.vgcc-nm');
-        var item = ranges.find(function (range) { return name && normalized(name.textContent).includes(normalized(range.method.label)); });
+        if (!name) return null;
+        var item = ranges.find(function (range) { return normalized(name.textContent).includes(normalized(range.method.label)); });
+        if (row.lastElementChild !== name) row.lastElementChild.classList.add('vhome-a2-method-value');
+        var status = row.classList.contains('is-excl') ? 'Poza konsensusem' : row.classList.contains('is-pref') ? 'Preferowana' : '';
+        if (status && !name.querySelector('.vgcc-tag')) {
+          var label = el('div'); name.replaceWith(label);
+          label.append(name, el('span', 'vhome-a2-method-status', status));
+        }
         if (item && !row.querySelector('.vgcc-pm')?.textContent.includes('±'))
           item = Object.assign({}, item, { error: null, low: item.value, high: item.value });
         return { row: row, item: item };
-      }).filter(function (item) { return item.item; });
+      }).filter(function (entry) { return entry?.item; });
       var min = bars.length ? Math.floor(Math.min.apply(null, bars.map(function (b) { return b.item.low; })) / 5) * 5 : null;
       var max = bars.length ? Math.ceil(Math.max.apply(null, bars.map(function (b) { return b.item.high; })) / 5) * 5 : null;
       if (prediction?.source === 'consensus' && finite(prediction.cm) && finite(min) && finite(max)) {
@@ -200,8 +410,8 @@
         });
         var axis = el('div', 'vhome-a2-range-axis'); [min, (min + max) / 2, max].forEach(function (value) { axis.appendChild(el('span', '', fmt(value, 0) + ' cm')); });
         var axisRow = el('div', 'vhome-a2-axis-row'); axisRow.append(el('span'), axis, el('span')); methods.appendChild(axisRow);
+        methods.after(el('p', 'vhome-a2-caption', 'Odcinki przedstawiają przybliżone błędy poszczególnych metod, nie przedział ufności konsensusu. Opis ograniczeń i wartości obciętych pozostaje przy wyniku.'));
       }
-      var note = el('p', 'vhome-a2-caption', 'Odcinki przedstawiają przybliżone błędy poszczególnych metod, nie przedział ufności konsensusu. Opis ograniczeń i wartości obciętych pozostaje przy wyniku.'); methods.after(note);
     }
     root.appendChild(card); options.panel.appendChild(root); return { dispose: function () {} };
   }

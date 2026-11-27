@@ -551,23 +551,77 @@ html.vilda-home-workspace .vhome-perinatal-clear { width: auto; margin: var(--sp
 .vilda-home-workspace .vhome-analysis-heading { display: flex; justify-content: space-between; gap: var(--space-12px); margin: var(--space-20px) 0 var(--space-12px); color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .vilda-home-workspace .vhome-main-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16px); margin: 0 0 var(--space-20px); }
 .vilda-home-workspace :is(.vhome-main-cards, .vhome-analysis-heading)[hidden] { display: none; }
-.vilda-home-workspace .vhome-growth-card { box-sizing: border-box; display: flex; flex-direction: column; min-width: 0; height: 352px; padding: 0; border: var(--border-hairline) solid var(--line); border-radius: var(--radius-11); background: var(--card); overflow: hidden; }
+.vilda-home-workspace .vhome-growth-card {
+  --growth-card-accent: #006b73;
+  --growth-card-ink: #254752;
+  --growth-card-muted: #425e65;
+  --growth-card-line: #d4e5e5;
+  container: growth-summary / inline-size;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  min-width: 0;
+  gap: var(--space-14px);
+  padding: var(--space-16px);
+  border: var(--border-hairline) solid var(--growth-card-line);
+  border-radius: var(--radius-11);
+  background: #fff;
+  color: var(--growth-card-ink);
+}
 .vilda-home-workspace .vhome-growth-card[hidden] { display: none; }
-.vilda-home-workspace .vhome-growth-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12px); flex: 0 0 80px; padding: var(--space-14px) var(--space-20px); box-sizing: border-box; }
-.vilda-home-workspace .vhome-growth-heading h2 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.4; text-align: left; }
-html.vilda-home-workspace .vhome-growth-expand { flex: 0 0 44px; width: 44px; min-height: 44px; margin: 0; padding: 0; border: 0 !important; background: transparent !important; color: var(--primary) !important; box-shadow: none !important; font-size: 26px; }
-.vilda-home-workspace .vhome-growth-expand svg { display: block; width: 18px; height: 18px; margin: auto; fill: none; stroke: var(--primary); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.vilda-home-workspace .vhome-growth-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-12px); padding: var(--space-8px) var(--space-20px) var(--space-18px); }
-.vilda-home-workspace .vhome-growth-summary > div { min-width: 0; }
-.vilda-home-workspace .vhome-growth-summary span { display: block; min-height: 42px; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
-.vilda-home-workspace .vhome-growth-summary strong { display: block; margin: var(--space-10px) 0 var(--space-6px); font-size: 25px; font-weight: 550; line-height: 1.3; font-variant-numeric: tabular-nums; }
-.vilda-home-workspace .vhome-growth-summary strong small { font-size: 13px; font-weight: 400; }
-.vilda-home-workspace .vhome-growth-summary > div > small { display: block; color: var(--text-muted); font-size: 12px; line-height: 1.55; }
-.vilda-home-workspace .vhome-growth-bottom { margin: auto var(--space-20px) 0; padding: var(--space-12px) 0 var(--space-16px); border-top: var(--border-hairline) solid var(--line); }
-.vilda-home-workspace .vhome-growth-bottom p { margin: 0 0 var(--space-8px); color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.vilda-home-workspace .vhome-growth-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-10px); }
+.vilda-home-workspace .vhome-growth-heading h2 { min-width: 0; margin: 0; color: var(--growth-card-ink); font-size: 18px; font-weight: 650; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
+html.vilda-home-workspace .vhome-growth-expand { display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; border: 0 !important; border-radius: 7px !important; background: transparent !important; color: var(--growth-card-accent) !important; box-shadow: none !important; }
+.vilda-home-workspace .vhome-growth-expand svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.vilda-home-workspace .vhome-growth-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto auto auto; gap: var(--space-4px) var(--space-8px); }
+.vilda-home-workspace .vhome-growth-summary > div {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: minmax(2.8em, auto) auto auto;
+  grid-template-rows: subgrid;
+  align-content: start;
+  min-width: 0;
+  gap: var(--space-4px);
+  padding: var(--space-10px);
+  border: var(--border-hairline) solid var(--growth-card-line);
+  border-radius: 7px;
+  background: #f4fafa;
+}
+.vilda-home-workspace .vhome-growth-summary > div > span { color: var(--growth-card-ink); font-size: 14px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.vilda-home-workspace .vhome-growth-summary strong { margin: 0; color: var(--growth-card-accent); font-size: 24px; font-weight: 650; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.vilda-home-workspace .vhome-growth-summary strong small { color: var(--growth-card-muted); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.vilda-home-workspace .vhome-growth-summary > div > small { color: var(--growth-card-muted); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
 .vilda-home-workspace .vhome-growth-entry-actions,
 .vilda-home-workspace .vhome-growth-documents { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-10px); }
 html.vilda-home-workspace .vhome-growth-secondary { box-sizing: border-box; min-width: 0; width: 100%; min-height: 48px; margin: 0; padding: var(--space-8px) var(--space-10px); border: var(--border-hairline) solid var(--line) !important; border-radius: var(--radius-8) !important; background: var(--card) !important; color: var(--primary) !important; box-shadow: none !important; font-size: 15px; font-weight: 500; line-height: 1.45; }
+.vilda-home-workspace .vhome-growth-entry-actions { gap: var(--space-8px); }
+html.vilda-home-workspace .vhome-growth-entry-actions button {
+  min-height: 44px;
+  border-color: #bed6d7 !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  color: var(--growth-card-accent) !important;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+html.vilda-home-workspace .vhome-growth-entry-actions [data-growth-open="data"] {
+  border-color: var(--growth-card-accent) !important;
+  background: var(--growth-card-accent) !important;
+  color: #fff !important;
+}
+html.vilda-home-workspace .vhome-growth-card button:focus-visible { outline: var(--border-emphasis) solid var(--growth-card-accent); outline-offset: 2px; }
+@container growth-summary (max-width: 400px) {
+  .vilda-home-workspace .vhome-growth-summary { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; row-gap: var(--space-8px); }
+  .vilda-home-workspace .vhome-growth-summary > div { grid-row: auto; grid-template-columns: minmax(0, 1fr) max-content; grid-template-rows: auto; align-items: baseline; gap: 2px var(--space-10px); }
+  .vilda-home-workspace .vhome-growth-summary > div > strong { grid-column: 2; grid-row: 1; }
+  .vilda-home-workspace .vhome-growth-summary > div > small { grid-column: 1 / -1; }
+}
+@container growth-summary (max-width: 225px) {
+  .vilda-home-workspace .vhome-growth-entry-actions { grid-template-columns: minmax(0, 1fr); }
+}
 .vilda-home-workspace #vhomeGrowthDialog .vhome-dialog-body { font-size: 16px; line-height: 1.65; }
 .vilda-home-workspace .vhome-growth-tabs { position: sticky; top: 0; z-index: 2; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: var(--space-20px); padding: 5px; border: var(--border-hairline) solid var(--line); border-radius: var(--radius-10); background: var(--bg); }
 html.vilda-home-workspace .vhome-growth-tabs button { min-width: 0; min-height: 46px; width: 100%; margin: 0; padding: var(--space-8px); border: var(--border-hairline) solid transparent !important; border-radius: var(--radius-8) !important; background: transparent !important; color: var(--text-muted) !important; box-shadow: none !important; font-size: 15px; line-height: 1.45; }
@@ -598,6 +652,22 @@ html.vilda-home-workspace .vhome-growth-remove { min-height: 46px; align-self: e
 @media (max-width: 850px) {
   .vilda-home-workspace .vhome-main-cards { grid-template-columns: minmax(0, 1fr); }
 }
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])):has(> #vhomeDietCard:not([hidden])) {
+  grid-auto-rows: 1fr;
+}
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])):has(> #vhomeDietCard:not([hidden])) > :is(#vhomeGrowthCard, #vhomeDietCard) {
+  align-self: stretch;
+  height: auto;
+  min-height: 296px;
+  max-height: none;
+}
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeDietCard:not([hidden])) .vhome-growth-bottom { margin-block-start: auto; }
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])) #vhomeDietCard .vhome-diet-heading { flex-basis: auto; padding: var(--space-16px) var(--space-16px) var(--space-8px); }
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])) #vhomeDietCard .vhome-diet-content { padding: 0 var(--space-16px) var(--space-16px); }
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])) #vhomeDietCard :is(.vhome-diet-note, .vhome-diet-road-summary) { display: block; overflow: visible; overflow-wrap: anywhere; }
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])) #vhomeDietCard .vhome-diet-note { margin-block-end: var(--space-10px); }
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])) #vhomeDietCard .vhome-diet-action { height: auto; min-height: 44px; padding-block: var(--space-8px); }
+html.vilda-home-workspace:not(.vhome-device-compact) #vhomeMainCards:has(> #vhomeGrowthCard:not([hidden])) #vhomeDietCard .vhome-diet-road-preview { margin-block-start: var(--space-10px); padding-block-start: var(--space-8px); }
 @media (max-width: 680px) {
   .vilda-home-workspace .vhome-growth-fields { grid-template-columns: minmax(0, 1fr); gap: var(--space-16px); }
   .vilda-home-workspace .vhome-growth-history-row { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: var(--space-12px); }
@@ -606,12 +676,6 @@ html.vilda-home-workspace .vhome-growth-remove { min-height: 46px; align-self: e
 @media (max-width: 600px) {
   .vilda-home-workspace .vhome-analysis-heading > span:last-child { display: none; }
   .vilda-home-workspace .vhome-main-cards { margin-block: var(--space-12px); }
-  .vilda-home-workspace .vhome-growth-heading { padding: var(--space-12px) var(--space-14px); }
-  .vilda-home-workspace .vhome-growth-heading h2 { font-size: 16px; }
-  .vilda-home-workspace .vhome-growth-summary { padding: var(--space-8px) var(--space-14px) var(--space-14px); gap: var(--space-10px); }
-  .vilda-home-workspace .vhome-growth-summary span { font-size: 13px; }
-  .vilda-home-workspace .vhome-growth-summary strong { font-size: 22px; }
-  .vilda-home-workspace .vhome-growth-bottom { margin-inline: var(--space-14px); }
 }
 
 /* Native documentation forms keep their actors inside the shared frame. */
@@ -636,9 +700,6 @@ html.vilda-home-workspace dialog.vhome-patient-native-dialog.clcr-record-dialog 
    space actually available to the iframe. Desktop cards stay equal beside the
    shell sidebars; tablet/phone cards use only the height their content needs. */
 .vilda-home-workspace.vhome-device-compact .vhome-main-cards { align-items: start; }
-.vilda-home-workspace.vhome-device-compact .vhome-growth-card { height: auto; min-height: 0; max-height: none; align-self: start; }
-.vilda-home-workspace.vhome-device-compact .vhome-growth-heading { flex-basis: auto; min-height: 0; padding-block: var(--space-10px); }
-.vilda-home-workspace.vhome-device-compact .vhome-growth-bottom { margin-top: 0; }
 
 /* This projection replaces classified results until the user chooses a
    reference sex. A select immediately controls visibility, including restore. */

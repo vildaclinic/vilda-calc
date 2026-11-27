@@ -1608,20 +1608,20 @@
   "sha256": "5431612983afe25230f97f966eed4507d98eb8800e1ff1d19effcd59adf0e49d"
  },
  "vilda_home_growth.js": {
-  "v": 10,
-  "sha256": "146813912c26f50d7ac277980c93adab51a2bf35cf806810ee035a71ce5cb038"
+  "v": 11,
+  "sha256": "415306883f5adff23a8d92fb24541ab60479cb97fc7c827912fd5ca7e1d25fc6"
  },
  "vilda_home_growth_charts.js": {
   "v": 3,
   "sha256": "6a439006491f7e14371dc2babdcce54bb46c1c71b5cc7883b1b88a1f5707e9ab"
  },
  "vilda_home_growth_views.css": {
-  "v": 8,
-  "sha256": "1a8636c05c2fd21d20d2bc70e67ad7a9fba2d0e1c0566b0d443279675a6b97e8"
+  "v": 9,
+  "sha256": "50c5abbed798dd9c7f3b909a3c9738b07da8fe151f24805e61d7841ad6263ac7"
  },
  "vilda_home_growth_views.js": {
-  "v": 6,
-  "sha256": "b493788b8b2a6e64ddd960f36802b4a85ef132550ea539812ab52d2ff9eb19ef"
+  "v": 7,
+  "sha256": "93966c8a581a034a0829c9b938b3471a3370f3dc72ad1d6c1d76f8910c5499fc"
  },
  "vilda_home_patient.css": {
   "v": 2,
@@ -1676,8 +1676,8 @@
   "sha256": "d71163fb58ffd4d4d0783a6ed407f545d526458e15f773e6b62087297b91efea"
  },
  "vilda_home_tools.js": {
-  "v": 6,
-  "sha256": "9fbc72d08282f3765210735bdede1ce57b74511d467b353ab2379817472d95b7"
+  "v": 7,
+  "sha256": "29260bdbd568e01138124dd9c5db9b4f2303afdd77bf1545d803d8e669312d53"
  },
  "vilda_home_tools_anthropometry.js": {
   "v": 2,
@@ -1732,8 +1732,8 @@
   "sha256": "7491fdab089ace8791d1aa62093c83ee61a452d4806ea1e7d163e86bd77e09cb"
  },
  "vilda_home_workspace.css": {
-  "v": 9,
-  "sha256": "ba1458c81acb45d2554722ce88de25e8d821231ae226a2f120045c67cc770217"
+  "v": 10,
+  "sha256": "638dd43072dfb6c1a7b221fb9aed008884a068296cdd53b5a20e3733c306a645"
  },
  "vilda_home_workspace.js": {
   "v": 10,
@@ -2256,8 +2256,8 @@
   "sha256": "872eda8f28b9c101af73ddecb52ad605d15678a0d1e168745be89ef558fb470e"
  },
  "vilda_trajectory_analysis.js": {
-  "v": 50,
-  "sha256": "4f286c497c73096e91d4a0b6a457d77d0ceb059de3a28cb20273f7b0187520bd"
+  "v": 51,
+  "sha256": "1d6622ffab74c74aec1259b037af925de492b9509e15a2df7bd9ffca2c891962"
  },
  "vilda_tw2_prediction.js": {
   "v": 4,

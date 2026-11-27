@@ -415,8 +415,7 @@
       summaryActions.hidden = summaryActions.parentElement.dataset.isChild !== 'true';
       chartButton.disabled = !w.VildaHomeGrowth?.canOpenCharts?.('pdf');
     }
-    const growth = byId('vhomeGrowthCard');
-    downShortcut.hidden = !!(growth && !growth.hidden) || !canOpenDownSyndrome();
+    downShortcut.hidden = !canOpenDownSyndrome();
     if (summaryReminder) {
       const content = doctorResults() && legacyReminder.style.display !== 'none' ? legacyReminder.textContent : '';
       summaryReminder.hidden = !content;

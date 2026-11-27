@@ -2089,6 +2089,20 @@
     }
   }
 
+  // Metadane widoku Start pochodzą z tego samego modelu co jego treść.
+  // Są dostępne tylko w DOM, bez kontekstu oceny ani identyfikatorów pacjenta.
+  function workspaceTrajectoryView(model) {
+    if (w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true) return '';
+    return JSON.stringify({
+      version: model.version, source: model.source, sex: model.sex,
+      points: (model.points || []).map(function (p) {
+        return { ageMonths: p.ageMonths, ageYears: p.ageYears, height: p.height,
+          weight: p.weight, bmi: p.bmi, isCurrent: p.isCurrent };
+      }), metrics: model.metrics, velocity: model.velocity,
+      delayedPuberty: model.delayedPuberty
+    });
+  }
+
   // Panel trajektorii dla karty „Zaawansowane obliczenia wzrostowe" (hybryda zaakceptowana
   // 2026-08-08): ten sam renderer co w Karcie pacjenta, opakowany w blok wynikowy karty;
   // flaga pozostaje w banerze karty (hideRedFlag), stan zwijania wspólny (domyślnie rozwinięty).
@@ -2099,20 +2113,8 @@
       hideRedFlag: o.hideRedFlag != null ? o.hideRedFlag : true
     });
     if (!html) return '';
-    // Opt-in Start uses the exact model which produced this presentation.
-    // Metadata is ephemeral DOM output, never a patient-store field. In
-    // particular, do not expose the assessment/account context here.
-    var view = '';
-    if (w.__VILDA_HOME_WORKSPACE_PREVIEW__ === true && model) {
-      view = ' data-vhome-trajectory="' + esc(JSON.stringify({
-        version: model.version, source: model.source, sex: model.sex,
-        points: (model.points || []).map(function (p) {
-          return { ageMonths: p.ageMonths, ageYears: p.ageYears, height: p.height,
-            weight: p.weight, bmi: p.bmi, isCurrent: p.isCurrent };
-        }), metrics: model.metrics, velocity: model.velocity,
-        delayedPuberty: model.delayedPuberty
-      })) + '"';
-    }
+    var viewModel = workspaceTrajectoryView(model);
+    var view = viewModel ? ' data-vhome-trajectory="' + esc(viewModel) + '"' : '';
     return '<div class="adv-growth-result-block adv-growth-result-block--trajectory"' + view + '><div class="vtap">' + html + '</div></div>';
   }
 
@@ -2131,6 +2133,8 @@
       var host = doc.createElement('div');
       host.className = 'vtap';
       host.innerHTML = html;
+      var viewModel = workspaceTrajectoryView(model);
+      if (viewModel) host.setAttribute('data-vhome-trajectory', viewModel);
       var beforeSel = (opts && opts.before) || '.vilda-cmp-panel';
       var ref = null;
       try { ref = container.querySelector(beforeSel); } catch (e1) { ref = null; }

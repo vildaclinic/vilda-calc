@@ -13,7 +13,7 @@ async function open(frame, tool) {
   return { dialog, draft: dialog.frameLocator('iframe[data-home-tool-draft]') };
 }
 
-test('WHR, WFH and both DS entry points preserve native calculations and commits', async ({ page }) => {
+test('WHR, WFH, the DS tool and patient-specific DS analysis preserve native calculations and commits', async ({ page }) => {
   await page.addInitScript(() => { window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true; });
   await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   const { frame, ids } = await createFictionalVault(page, { shell: true, waitForAccountReadyBeforeReload: true });
@@ -49,12 +49,17 @@ test('WHR, WFH and both DS entry points preserve native calculations and commits
   const dsHead = dsDraft.getByRole('spinbutton', { name: 'Obwód głowy · cm', exact: true });
   const dsResults = dsDraft.locator('.vhome-tool-result .result-box');
   const growthDialog = frame.locator('#vhomeGrowthDialog');
-  const manualDs = frame.locator('#vhomeGrowthPanel-analysis').getByRole('button', { name: 'Obliczenia dla dzieci z zespołem Downa' });
+  const toolsToggle = frame.locator('#vhomeOtherToolsToggle');
+  const manualDs = frame.locator('#vhomeOtherToolsPanel').getByRole('button', { name: 'Obliczenia dla dzieci z zespołem Downa', exact: true });
   await expect(dsSection).toBeHidden();
   await frame.locator('#vhomeGrowthExpand').click();
+  await expect(growthDialog).toBeVisible();
+  await expect(growthDialog.getByRole('button', { name: 'Obliczenia dla dzieci z zespołem Downa', exact: true })).toHaveCount(0);
+  await growthDialog.getByRole('button', { name: /^(Zamknij|Anuluj)$/ }).click();
+  await expect(growthDialog).toBeHidden();
+  if (await toolsToggle.getAttribute('aria-expanded') === 'false') await toolsToggle.click();
   await manualDs.click();
   await expect(dsDialog).toBeVisible();
-  await expect(growthDialog).toHaveJSProperty('open', true);
   await expect(dsResults.first()).toContainText('Zemel');
   await dsHead.fill('49');
   await expect(dsResults.nth(1)).toContainText('49,0 cm');
@@ -68,29 +73,26 @@ test('WHR, WFH and both DS entry points preserve native calculations and commits
   await manualDs.click();
   await frame.evaluate(() => history.back());
   await expect(dsDialog).toBeHidden();
-  await expect(growthDialog).toHaveJSProperty('open', true);
+  await expect(toolsToggle).toHaveAttribute('aria-expanded', 'true');
   await expect(manualDs).toBeFocused();
   await manualDs.click();
   await dsHead.fill('49');
   await apply(dsDialog);
   await expect(dsDialog).toBeHidden();
-  await expect(growthDialog).toHaveJSProperty('open', true);
+  await expect(manualDs).toBeFocused();
   await expect(frame.locator('#headCircumDS')).toHaveValue('49');
   await expect(frame.locator('#headCircumResultDS')).toContainText('49,0 cm');
   await expect(frame.locator('#headCircumference')).toHaveValue('');
   await expect(dsSection).toBeHidden();
   expect(await frame.evaluate(() => VildaDsSource.getState().population)).toBe('OGOLNA');
-  await growthDialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
-  await expect(growthDialog).toBeHidden();
 
   await loadPatient(frame, adult, 'restore');
   await readyForPatient(frame);
   await expect(growthDialog).toBeHidden();
   await expect(frame.locator('#vhomeGrowthCard')).toBeHidden();
   await expect(dsSection).toBeHidden();
-  const toolsToggle = frame.locator('#vhomeOtherToolsToggle');
   if (await toolsToggle.getAttribute('aria-expanded') === 'false') await toolsToggle.click();
-  await frame.locator('[data-home-down-syndrome]').click();
+  await manualDs.click();
   await expect(dsDialog).toBeVisible();
   await expect(dsResults.first()).toContainText('Zemel');
   await expect(dsResults.first()).toContainText('BMI');
