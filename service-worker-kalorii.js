@@ -19,7 +19,7 @@
  *   bo i tak chcemy zwracać HTML z cache natychmiast.
  */
 
-const SW_VERSION = '1.1.606';
+const SW_VERSION = '1.1.607';
 const CACHE_PREFIX = 'pwa-kalorii';
 const SHELL_CACHE = `${CACHE_PREFIX}-shell-v${SW_VERSION}`;
 const RUNTIME_CACHE = `${CACHE_PREFIX}-runtime`;
@@ -2177,10 +2177,12 @@ const CORE_SHELL_URLS = [
   '/vilda_home_diet.js?v=1',
   '/vilda_home_diet.js?v=2',
   '/vilda_home_diet.js?v=3',
+  '/vilda_home_diet.js?v=4',
   '/vilda_home_diet_bmi.css?v=1',
   '/vilda_home_diet.css?v=1',
   '/vilda_home_diet.css?v=2',
   '/vilda_home_diet.css?v=3',
+  '/vilda_home_diet.css?v=4',
   '/vilda_sga_birth_results.css?v=1',
   '/qrcode.min.js?v=1',
   '/vilda_chrome.js?v=8',
@@ -5239,6 +5241,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_plan_ui.js?v=45',
   '/vilda_diet_plan_ui.js?v=46',
   '/vilda_diet_plan_ui.js?v=47',
+  '/vilda_diet_plan_ui.js?v=48',
   '/vilda_diet_recommendations.js?v=27',
   '/vilda_diet_recommendations.js?v=28',
   '/vilda_diet_recommendations.js?v=29',
@@ -5284,6 +5287,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_diet_recommendations.js?v=69',
   '/vilda_diet_recommendations.js?v=70',
   '/vilda_diet_recommendations.js?v=71',
+  '/vilda_diet_recommendations.js?v=72',
   '/vilda_auth_ui.js?v=432',
   '/vilda_auth_ui.js?v=433',
   '/vilda_auth_ui.js?v=434',
@@ -5484,6 +5488,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_bmi_journey.js?v=26',
   '/vilda_bmi_journey.js?v=27',
   '/vilda_bmi_journey.js?v=28',
+  '/vilda_bmi_journey.js?v=29',
   '/vilda_diet_recommendations.js?v=23',
   '/vilda_diet_recommendations.js?v=24',
   '/vilda_diet_recommendations.js?v=25',
@@ -7383,8 +7388,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-05b7fee6ec1b.json",
-  "sha256": "05b7fee6ec1b10b02fabad1d186be348d601fbbf32ad53bd13cdcfc584359588",
+  "url": "/runtime/visit-ui-precache/precache-ed77ce56fb0d.json",
+  "sha256": "ed77ce56fb0d5798211343810ae6ecf1fe4ae06f1909957705213875d1e52801",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7463,16 +7468,16 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
       "sha256": "98450e3b86a5aaf3f377ff3ef55882475112329036abf0d66e8e9eff4c24de20"
     },
     {
-      "url": "/vilda_home_diet.js?v=3",
-      "sha256": "134f266578ff34e2318fd6f8faf9c77a4c5490cb7a9719947bc693bd6bc086fb"
+      "url": "/vilda_home_diet.js?v=4",
+      "sha256": "cf5d9c398a003c64a2c2e90b70aeab24ac3ee0eebf7ae94f7f36153f760c9d5d"
     },
     {
       "url": "/vilda_home_diet_bmi.css?v=1",
       "sha256": "b0e200f45ae28d4bf016b2e8a1d3de3a58b3d0f6da5b6beea6c88297c0b6af33"
     },
     {
-      "url": "/vilda_home_diet.css?v=3",
-      "sha256": "f86330f1d9c02c8fb8bce3dfc0c7dd73543128d9552a15086cc12bc54b401fc5"
+      "url": "/vilda_home_diet.css?v=4",
+      "sha256": "ce29c1ac7ed0c2546ee308e5bc73c48d0721cd32a5ab37be1440c9ae5b83f450"
     },
     {
       "url": "/vilda_home_dialog_history.js?v=1",

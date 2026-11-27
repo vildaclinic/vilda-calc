@@ -1196,8 +1196,8 @@
   "sha256": "2a42d9388b57fad1b30dc1caf8ee3e7de2074f551cb53f4bcd5376fcb784ecf0"
  },
  "vilda_bmi_journey.js": {
-  "v": 28,
-  "sha256": "8755d9d0107606617e45faafda4d2898f15c0ad29ad853c2f44c90e87d308c55"
+  "v": 29,
+  "sha256": "d33f181cc5d8719c163886f1b75602e707d004e5a6c931d8da1d5c5ab68d50ea"
  },
  "vilda_bone_age.js": {
   "v": 2,
@@ -1328,12 +1328,12 @@
   "sha256": "6d2d092fa0d89192d439d517952ee480719902923b8c50262cb88284786cbcb3"
  },
  "vilda_diet_plan_ui.js": {
-  "v": 47,
-  "sha256": "03924f25e0cc76b8f7076034d1d39449b1100f6ff1358809d9afd44e8c8c0298"
+  "v": 48,
+  "sha256": "8e5ff8bd3f5bebe73a773408f3dbaa2ed2e1a942725196105c4e309d9ea4b651"
  },
  "vilda_diet_recommendations.js": {
-  "v": 71,
-  "sha256": "2cc3cbb5d99f64002b0c31a6be84518e0cdbffa1b808ee221baf35b6174184c5"
+  "v": 72,
+  "sha256": "7dab5de444b39167a8568fce1e5274a403b1b967f83e3c31cc717a44500dfe34"
  },
  "vilda_dob_age.js": {
   "v": 14,
@@ -1572,12 +1572,12 @@
   "sha256": "27ab28f4fa35dd32e129dbf737ddf801c40e27dd1b4bc045063fffd7ac9d6767"
  },
  "vilda_home_diet.css": {
-  "v": 3,
-  "sha256": "f86330f1d9c02c8fb8bce3dfc0c7dd73543128d9552a15086cc12bc54b401fc5"
+  "v": 4,
+  "sha256": "ce29c1ac7ed0c2546ee308e5bc73c48d0721cd32a5ab37be1440c9ae5b83f450"
  },
  "vilda_home_diet.js": {
-  "v": 3,
-  "sha256": "134f266578ff34e2318fd6f8faf9c77a4c5490cb7a9719947bc693bd6bc086fb"
+  "v": 4,
+  "sha256": "cf5d9c398a003c64a2c2e90b70aeab24ac3ee0eebf7ae94f7f36153f760c9d5d"
  },
  "vilda_home_diet_bmi.css": {
   "v": 1,
