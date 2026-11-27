@@ -602,21 +602,27 @@
       if (valid()) field.dispatchEvent(new w.Event('change', { bubbles: true }));
     }
     function update() { if (valid() && typeof w.update === 'function') w.update(); }
+    function selectNativeGoal(key) {
+      if (goal() === key) return true;
+      var actor = Array.from(byId('customGoalWrap').querySelectorAll('[data-cel-wlasny-choice]'))
+        .find(node => node.dataset.celWlasnyChoice === key && !node.disabled);
+      if (!actor || !valid()) return false;
+      actor.click(); return valid();
+    }
     try {
+      // Utrzymanie clears the native target. Take that route while the goal
+      // is still eligible, before changing the growth flag may hide its actor.
+      if (desiredGoal === 'maintain' && !selectNativeGoal('maintain')) return;
       var inputs = changed.filter(id => id !== 'customGoalKg' && id !== 'dietLevel');
       inputs.forEach(write);
       if (changed.includes('palFactor')) w.__vildaPlanPalTouched = true;
       if (changed.includes('reduceToggle') || changed.includes('stabilizationToggle')) w.__vildaDietStrategyTouched = true;
       inputs.forEach(notify); update(); if (!valid()) return;
       // Growth status can unlock a previously disabled native custom-goal actor.
-      if (goal() !== desiredGoal) {
-        var actor = Array.from(byId('customGoalWrap').querySelectorAll('[data-cel-wlasny-choice]'))
-          .find(node => node.dataset.celWlasnyChoice === desiredGoal && !node.disabled);
-        if (actor) actor.click();
-      }
-      if (!valid()) return;
-      if (desiredGoal === 'custom' && goal() === 'custom' && value('customGoalKg') !== values.customGoalKg) {
-        write('customGoalKg'); notify('customGoalKg'); update(); if (!valid()) return;
+      if (desiredGoal === 'custom') {
+        if (!selectNativeGoal('custom')) return;
+        if (value('customGoalKg') !== values.customGoalKg) { write('customGoalKg'); notify('customGoalKg'); }
+        update(); if (!valid()) return;
       }
       if (changed.includes('dietLevel')) {
         var road = nativeRoad();

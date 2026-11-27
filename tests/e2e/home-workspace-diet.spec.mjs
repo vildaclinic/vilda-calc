@@ -263,7 +263,10 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await header.getByRole('button', { name: 'Opcje', exact: true }).click();
   await header.getByRole('button', { name: /^Edytuj wizytę z / }).click();
-  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('edit');
+  await frame.waitForFunction(id => {
+    const visit = VildaHomeEncounter.state(id);
+    return visit.mode === 'edit' && !visit.busy;
+  }, id, { timeout: 20_000 });
   const editable = await show(frame);
   await expect(draft(editable, 'palFactor')).toBeEnabled();
   await expect(apply(editable)).toBeVisible();
@@ -529,6 +532,51 @@ test('home diet: an eligible custom goal remains a draft until Apply and then us
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
   const report = await prepareReport(dialog);
   await expectNativeReport(frame, report);
+
+  await planTab(dialog).click();
+  await draft(dialog, 'goal').selectOption('maintain');
+  await expect(frame.locator('#customGoalKg')).toHaveValue('62');
+  await apply(dialog).click();
+  await expect(dialog).toBeVisible();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('');
+  await expect(frame.locator('#bmiJourneyMount')).toHaveCount(0);
+  await expect(impact(dialog)).toBeHidden();
+  await expect(dialog.locator('#vhomeDietPlanEnergy')).not.toContainText('Cel własny');
+  await showReport(dialog);
+  await expectExportsBlocked(dialog);
+  await expect(reportBody(dialog).locator('.vhome-diet-native-energy')).toHaveCount(0);
+  await expectNativeReport(frame, await prepareReport(dialog));
+  expect((await snapshot(frame, id)).versions).toBe(before.versions);
+  await expectOriginalNodes(frame);
+});
+
+test('home diet: ending and reopening growth eligibility applies the adolescent goal and clears it in native state', async ({ page }) => {
+  const patient = fictionalPatient({ firstName: 'Nastolatka', age: 17, sex: 'F', height: 165, weight: 62.7 });
+  const { frame, id } = await setup(page, { patient }), dialog = await show(frame);
+  const before = await snapshot(frame, id);
+  const growth = draft(dialog, 'growthEndedFlag'), goal = draft(dialog, 'goal');
+  await expect(growth).not.toBeChecked();
+  await growth.check();
+  await goal.selectOption('custom');
+  await draft(dialog, 'customGoalKg').fill('57.7');
+  expect(await snapshot(frame, id)).toEqual(before);
+  await apply(dialog).click();
+  await expect(frame.locator('#growthEndedFlag')).toBeChecked();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('57.7');
+  await expect(frame.locator('#toNormInfo')).toContainText('Cel własny');
+  await expectNativePlan(frame, dialog);
+
+  await goal.selectOption('maintain');
+  await growth.uncheck();
+  await expect(frame.locator('#growthEndedFlag')).toBeChecked();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('57.7');
+  await apply(dialog).click();
+  await expect(dialog).toBeVisible();
+  await expect(frame.locator('#growthEndedFlag')).not.toBeChecked();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('');
+  await expect(frame.locator('#bmiJourneyMount')).toHaveCount(0);
+  await expect(impact(dialog)).toBeHidden();
+  expect((await snapshot(frame, id)).versions).toBe(before.versions);
   await expectOriginalNodes(frame);
 });
 

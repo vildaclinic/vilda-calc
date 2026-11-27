@@ -7388,8 +7388,8 @@ const CLINICAL_WORKSPACE_PRECACHE_PACK = Object.freeze({
 
 // BEGIN VISIT UI PACK CONFIG
 const VISIT_UI_PRECACHE_PACK = Object.freeze({
-  "url": "/runtime/visit-ui-precache/precache-ed77ce56fb0d.json",
-  "sha256": "ed77ce56fb0d5798211343810ae6ecf1fe4ae06f1909957705213875d1e52801",
+  "url": "/runtime/visit-ui-precache/precache-0b9455fa70fa.json",
+  "sha256": "0b9455fa70fae24411a33c7f47f24233168b56d459a63c61abdee92b634f4b4f",
   "files": [
     {
       "url": "/vilda_ui_intents.js?v=2",
@@ -7469,7 +7469,7 @@ const VISIT_UI_PRECACHE_PACK = Object.freeze({
     },
     {
       "url": "/vilda_home_diet.js?v=4",
-      "sha256": "cf5d9c398a003c64a2c2e90b70aeab24ac3ee0eebf7ae94f7f36153f760c9d5d"
+      "sha256": "7b910c7bc627ae1bf1549d60e0eda108023d9a6b72d247e8d856f3b075f87894"
     },
     {
       "url": "/vilda_home_diet_bmi.css?v=1",
