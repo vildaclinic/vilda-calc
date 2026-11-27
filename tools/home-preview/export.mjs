@@ -47,13 +47,14 @@ export function isPreviewAsset(relative) {
   return ASSET_EXTENSIONS.has(path.extname(relative).toLowerCase()) && !EXCLUDED_ROOT.test(relative);
 }
 
-export function isolateDocument(source, buildId) {
+export function isolateDocument(source, buildId, relative) {
   if (!/<head\b[^>]*>/i.test(source)) throw new Error('Preview HTML must have an explicit head.');
   const injection = '\n<meta charset="utf-8">\n'
     + '<meta http-equiv="Content-Security-Policy" content="' + PREVIEW_CSP + '">\n'
     + '<meta name="robots" content="noindex,nofollow">\n'
     + '<link rel="stylesheet" href="vilda_home_preview.css?v=' + buildId + '">\n'
-    + '<script src="vilda_home_preview.js?v=' + buildId + '"></script>\n';
+    + '<script src="vilda_home_preview.js?v=' + buildId + '" data-preview-document="'
+    + encodeURIComponent(path.basename(relative)) + '"></script>\n';
   return source.replace(/<head\b[^>]*>/i, match => match + injection)
     // Remote fonts are presentation-only. System fallbacks keep this preview
     // independent of third-party requests; clinical scripts remain untouched.
@@ -171,7 +172,7 @@ export async function exportPreview({ source = DEFAULT_SOURCE, output }) {
     if (!relative.startsWith('runtime/') && ['.js', '.html'].includes(path.extname(relative))) {
       let text = isolateText(bytes.toString('utf8'));
       if (relative === 'subskrypcja.html') text = demoAccessDocument(text);
-      if (relative.endsWith('.html')) text = isolateDocument(text, buildId);
+      if (relative.endsWith('.html')) text = isolateDocument(text, buildId, relative);
       if (relative === 'service-worker-kalorii.js') text = isolateWorker(text, buildId);
       result = Buffer.from(text);
     }

@@ -116,6 +116,7 @@ describe('separate homepage preview export', () => {
       const html = await readFile(path.join(fixture.output, name), 'utf8');
       expect(html.indexOf("connect-src 'self'")).toBeLessThan(html.indexOf('<script'));
       expect(html.match(/<script[^>]+src="([^"]+)"/)[1]).toMatch(/^vilda_home_preview\.js\?v=[0-9a-f]+$/);
+      expect(html.match(/<script[^>]+>/)[0]).toContain(`data-preview-document="${name}"`);
       expect(html).toContain("frame-src 'self' blob:");
       expect(html).toContain("form-action 'self'");
     }
@@ -211,7 +212,7 @@ describe('separate homepage preview export', () => {
   });
 
   test('rejects unsupported document and worker contracts instead of publishing partially isolated output', () => {
-    expect(() => isolateDocument('<script>oldStartup()</script>', 'abc')).toThrow(/explicit head/);
+    expect(() => isolateDocument('<script>oldStartup()</script>', 'abc', 'index.html')).toThrow(/explicit head/);
     expect(() => isolateWorker('unknown worker format', '0123456789abcdefabcd')).toThrow(/Unknown service-worker/);
     expect(isolateText("'https://vilda-sync.maciej-4b9.workers.dev' 'wss://vilda-sync.maciej-4b9.workers.dev'"))
       .toBe("'https://vilda-preview-disabled.invalid' 'wss://vilda-preview-disabled.invalid'");
@@ -251,6 +252,30 @@ describe('separate homepage preview export', () => {
 const ACCOUNT_KEY = 'vilda-home-preview-fictional-account-v1';
 const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
 const RUNTIME_SOURCE = await readFile(new URL('../../tools/home-preview/runtime.js', import.meta.url), 'utf8');
+
+test.each([
+  ['app.html', '/test/app#/start', '/test/app.html#/start'],
+  ['index.html', '/test/?embedded=1#pomiar', '/test/index.html?embedded=1#pomiar'],
+  ['docpro.html', '/test/docpro?embedded=1', '/test/docpro.html?embedded=1'],
+  ['index.html', '/test/index.html?embedded=1', null],
+  ['docpro.html', '/test/inny?embedded=1', null],
+])('restores the matching native pathname for %s served at %s', (filename, path, expected) => {
+  const origin = 'https://preview.example.invalid';
+  const location = new URL(path, origin);
+  const state = { shellView: 'start' };
+  const replaceState = vi.fn();
+  const window = {
+    document: { currentScript: { dataset: { previewDocument: filename } }, readyState: 'loading', addEventListener() {} },
+    location,
+    history: { state, replaceState },
+  };
+  vm.runInNewContext(RUNTIME_SOURCE, { window, URL });
+  if (expected) {
+    expect(replaceState).toHaveBeenCalledExactlyOnceWith(state, '', origin + expected);
+  } else {
+    expect(replaceState).not.toHaveBeenCalled();
+  }
+});
 
 test.each([
   ['terminarz.html', 'terminarz', undefined],
