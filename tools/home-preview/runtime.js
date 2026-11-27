@@ -6,6 +6,16 @@
   'use strict';
   if (window.location.hostname === 'vildaclinic.github.io' || /(?:^|\.)wagaiwzrost\.pl$/i.test(window.location.hostname)) return;
   const document = window.document;
+  // Sites serves HTML from extensionless URLs. Restore the exported document's
+  // native path before the shell or its panes check ownership of the visit.
+  const filename = document.currentScript?.dataset.previewDocument;
+  const segment = window.location.pathname.split('/').pop();
+  const usesSiteAlias = filename && (segment === filename.slice(0, -5) || (filename === 'index.html' && segment === ''));
+  if (usesSiteAlias) {
+    const address = new URL(window.location.href);
+    address.pathname = address.pathname.slice(0, address.pathname.lastIndexOf('/') + 1) + filename;
+    window.history.replaceState(window.history.state, '', address.href);
+  }
   const ACCOUNT_KEY = 'vilda-home-preview-fictional-account-v1';
   const PASSWORD = 'FictionalOnly#VildaPreview2026!';
   const ACCOUNT_LABEL = 'Podgląd — wyłącznie fikcyjni pacjenci';
@@ -24,7 +34,8 @@
     if (typeof route === 'string') {
       const target = new URL(window.location.href);
       target.searchParams.delete('embedded');
-      const shell = new URL('app.html#/' + route, target);
+      // Another HTTP redirect on reload would discard the pane target in history.state.
+      const shell = new URL((usesSiteAlias ? 'app' : 'app.html') + '#/' + route, target);
       const state = { shellView: route };
       if (target.search || target.hash) state.homePreviewPaneTarget = target.pathname + target.search + target.hash;
       window.history.replaceState(state, '', shell.href);
