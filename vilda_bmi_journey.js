@@ -64,27 +64,32 @@
   function timeToNormStab(ctx) {
     if (!ctx.planDziecko || typeof w.energySimulateMonthsToBmiTarget !== 'function') return null;
     try {
-      var geEl = d.getElementById('growthEndedFlag');
       var sim = w.energySimulateMonthsToBmiTarget({
         ageYears: ctx.ageYears, ageMonthsOpt: 0, sex: ctx.sex,
         weightKg: ctx.weightKg, heightCm: ctx.heightCm,
         weeklyLossKg: 0, target: 'norm',
-        growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
+        growthEnded: journeyGrowthEnded(ctx.ageYears)
       });
       /* P-DIETA-B8: cały wynik symulacji (S2, flagi, siatka) — zdania składa silnik (energyOpisWzrastania, energyZdanieStab…) */
       return sim ? { months: sim.months, growthAware: !!sim.growthAware, annualGrowthCm: sim.annualGrowthCm, sim: sim } : null;
     } catch (err) { return null; }
   }
-  function timeToNorm(ctx, weeklyLossKg) {
+  function journeyGrowthEnded(ageYears, selection) {
+    if (!(ageYears >= 10)) return false;
+    if (selection !== undefined) return selection === true;
+    var flag = d.getElementById('growthEndedFlag');
+    return !!(flag && flag.checked);
+  }
+
+  function timeToNorm(ctx, weeklyLossKg, growthEnded) {
     if (!(weeklyLossKg > 0) || !(ctx.kgToLose > 0)) return null;
     if (typeof w.energySimulateMonthsToBmiTarget === 'function') {
       try {
-        var geEl = d.getElementById('growthEndedFlag');
         var sim = w.energySimulateMonthsToBmiTarget({
           ageYears: ctx.ageYears, ageMonthsOpt: 0, sex: ctx.sex,
           weightKg: ctx.weightKg, heightCm: ctx.heightCm,
           weeklyLossKg: weeklyLossKg, target: ctx.customGoal && fin(ctx.targetBmi) ? ctx.targetBmi : 'norm',
-          growthEnded: !!(geEl && geEl.checked && ctx.ageYears >= 10)
+          growthEnded: journeyGrowthEnded(ctx.ageYears, growthEnded)
         });
         if (sim && sim.months != null) {
           /* rata X: przyrost masy ze wzrastania (kg/mies.) z tej samej symulacji — do dopisku w linijce o wzrastaniu */
@@ -126,21 +131,19 @@
   }
 
   // Diety z produkcyjnego silnika Planu odchudzania (deficyty, minima kaloryczne, dziecko/dorosły).
-  function resolveDiets(ctx) {
-    if (typeof w.energyBuildPlanReductionState !== 'function') return [];
+  function resolvePlan(ctx, options) {
+    if (typeof w.energyBuildPlanReductionState !== 'function') return null;
     try {
       var palEl = d.getElementById('palFactor');
-      var st = w.energyBuildPlanReductionState({
+      return w.energyBuildPlanReductionState(Object.assign({
         ageYears: ctx.ageYears,
         ageMonthsOpt: 0,
         sex: ctx.sex,
         weightKg: ctx.weightKg,
         heightCm: ctx.heightCm,
         palInput: palEl ? palEl.value : null
-      });
-      lastEngineState = st || null;
-      return st && Array.isArray(st.diets) ? st.diets : [];
-    } catch (err) { lastEngineState = null; return []; }
+      }, options)) || null;
+    } catch (err) { return null; }
   }
   function moveKcalWeek(moveId, weightKg) {
     if (typeof w.activityGetDefinition !== 'function' || typeof w.activityBurnPerMinuteKcal !== 'function') return 0;
@@ -167,14 +170,8 @@
     for (var i = 0; i < (diets || []).length; i += 1) if (diets[i] && diets[i].zalecana) return diets[i].key;
     return ctx && ctx.planDziecko ? 'light' : 'moderate';
   }
-  function computeModel(ctx) {
-    var diets = resolveDiets(ctx);
+  function computeReductionModel(ctx, diets, dietKey, moves, growthEnded) {
     var dietAvailable = diets.length > 0;
-    // Fuzja kart, etap 1: jeden wybór diety w aplikacji — źródłem prawdy jest
-    // select #dietLevel karty „Plan odchudzania"; localStorage tylko jako
-    // fallback, gdy selectu nie ma na stronie.
-    var dietSel = d.getElementById('dietLevel');
-    var dietKey = dietSel && dietSel.value ? dietSel.value : state.dietKey;
     var found = null;
     for (var i = 0; i < diets.length; i += 1) if (diets[i].key === dietKey) found = diets[i];
     if (!found) {
@@ -191,7 +188,7 @@
     }
     var moveWeek = 0;
     for (var k = 0; k < MOVES.length; k += 1) {
-      if (state.moves[MOVES[k].id]) {
+      if (moves[MOVES[k].id]) {
         var kcal = moveKcalWeek(MOVES[k].id, ctx.weightKg);
         if (kcal > 0) {
           moveWeek += kcal;
@@ -201,23 +198,8 @@
     }
     var totalWeek = deficitDay * 7 + moveWeek;
     var kk = kcalPerKg();
-    var comboT = totalWeek > 0 ? timeToNorm(ctx, totalWeek / kk) : null;
-    var dietT = dietOn && deficitDay > 0 ? timeToNorm(ctx, deficitDay * 7 / kk) : null;
-    var strategy = ctx.planDziecko && lastEngineState && lastEngineState.childObesityPlan && typeof w.energyResolveStrategyFromDom === 'function'
-      ? w.energyResolveStrategyFromDom(lastEngineState, { ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm })
-      : 'reduction';
-    if (strategy === 'stabilization' && fin(lastEngineState && lastEngineState.maintenanceKcal)) {
-      var stabT = timeToNormStab(ctx);
-      return {
-        diets: diets, dietAvailable: dietAvailable, dietOn: false, dietKey: dietKey, found: null,
-        rows: [], moveWeek: 0, totalWeek: 0,
-        monthsCombo: stabT ? stabT.months : null, monthsDiet: null,
-        growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null, sim: stabT ? stabT.sim : null,
-        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, maintenanceGornaKcal: lastEngineState.maintenanceGornaKcal, targetWeightKg: lastEngineState.targetWeightKg,
-        // P-DIETA rata G1a: stabilizacja przy tempie wzrastania poniżej normy (alarm modelu tempa)
-        tempoAlarm: (function () { try { var o = typeof w.energyChildGrowthOutlook === 'function' ? w.energyChildGrowthOutlook({ ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm }) : null; return !!(o && o.tempoAlarm); } catch (e) { return false; } })()
-      };
-    }
+    var comboT = totalWeek > 0 ? timeToNorm(ctx, totalWeek / kk, growthEnded) : null;
+    var dietT = dietOn && deficitDay > 0 ? timeToNorm(ctx, deficitDay * 7 / kk, growthEnded) : null;
     return {
       stabMode: false,
       diets: diets, dietAvailable: dietAvailable, dietOn: dietOn, dietKey: dietKey,
@@ -232,6 +214,35 @@
     };
   }
 
+  function computeModel(ctx) {
+    lastEngineState = resolvePlan(ctx);
+    var diets = lastEngineState && Array.isArray(lastEngineState.diets) ? lastEngineState.diets : [];
+    // Select #dietLevel is authoritative when present.
+    var dietSel = d.getElementById('dietLevel');
+    var dietKey = dietSel && dietSel.value ? dietSel.value : state.dietKey;
+    var reduction = computeReductionModel(ctx, diets, dietKey, state.moves);
+    var strategy = ctx.planDziecko && lastEngineState && lastEngineState.childObesityPlan && typeof w.energyResolveStrategyFromDom === 'function'
+      ? w.energyResolveStrategyFromDom(lastEngineState, { ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm })
+      : 'reduction';
+    if (strategy === 'stabilization' && fin(lastEngineState && lastEngineState.maintenanceKcal)) {
+      var stabT = timeToNormStab(ctx);
+      return {
+        diets: diets, dietAvailable: reduction.dietAvailable, dietOn: false, dietKey: reduction.dietKey, found: null,
+        rows: [], moveWeek: 0, totalWeek: 0,
+        monthsCombo: stabT ? stabT.months : null, monthsDiet: null,
+        growthAware: !!(stabT && stabT.growthAware), annualGrowthCm: stabT ? stabT.annualGrowthCm : null, sim: stabT ? stabT.sim : null,
+        stabMode: true, maintenanceKcal: lastEngineState.maintenanceKcal, maintenanceGornaKcal: lastEngineState.maintenanceGornaKcal, targetWeightKg: lastEngineState.targetWeightKg,
+        // P-DIETA rata G1a: stabilizacja przy tempie wzrastania poniżej normy (alarm modelu tempa)
+        tempoAlarm: (function () { try { var o = typeof w.energyChildGrowthOutlook === 'function' ? w.energyChildGrowthOutlook({ ageYears: ctx.ageYears, sex: ctx.sex, heightCm: ctx.heightCm }) : null; return !!(o && o.tempoAlarm); } catch (e) { return false; } })()
+      };
+    }
+    return reduction;
+  }
+
+  function formatWeeklyContribution(kcalWeek, kk) {
+    return { energy: '≈ ' + fmtInt(kcalWeek), mass: '−' + fmt(kcalWeek * 52 / 12 / kk, 2) };
+  }
+
   function renderRows(model) {
     if (!model.rows.length) {
       return '<tr class="bmi-journey-placeholder"><td colspan="3">Zaznacz dietę lub aktywność, żeby zobaczyć wkład w cel.</td></tr>';
@@ -240,11 +251,11 @@
     var html = '';
     for (var i = 0; i < model.rows.length; i += 1) {
       var r = model.rows[i];
-      html += '<tr><td>' + esc(r.name) + '</td><td>≈ ' + fmtInt(r.kcalWeek) + '</td><td>−'
-        + fmt(r.kcalWeek * 52 / 12 / kk, 2) + '</td></tr>';
+      var contribution = formatWeeklyContribution(r.kcalWeek, kk);
+      html += '<tr><td>' + esc(r.name) + '</td><td>' + contribution.energy + '</td><td>' + contribution.mass + '</td></tr>';
     }
-    html += '<tr class="bmi-journey-sum"><td>Razem</td><td>≈ ' + fmtInt(model.totalWeek) + '</td><td>−'
-      + fmt(model.totalWeek * 52 / 12 / kk, 2) + '</td></tr>';
+    var total = formatWeeklyContribution(model.totalWeek, kk);
+    html += '<tr class="bmi-journey-sum"><td>Razem</td><td>' + total.energy + '</td><td>' + total.mass + '</td></tr>';
     return html;
   }
 
@@ -288,18 +299,31 @@
 
   // Segment diety: wszystkie poziomy z konfiguracji silnika; poziom wycięty
   // przez minimum kaloryczne jest wyszarzony z podpisem „niedostępna".
-  function dietSegment(model) {
+  function dietChoices(diets, engine) {
     var cfg = w.DIET_LEVELS && typeof w.DIET_LEVELS === 'object' ? w.DIET_LEVELS : null;
-    if (!cfg) return '';
+    if (!cfg) return [];
+    return Object.keys(cfg).map(function (key) {
+      var available = diets.find(function (diet) { return diet.key === key; });
+      return {
+        key: key,
+        label: cfg[key].label,
+        disabled: !available,
+        reason: available ? null : engine?.dietUnavailable?.[key] || 'poniżej minimum kalorycznego dla tego pacjenta',
+        detail: available ? '−' + fmtInt(available.deficit) + '\u202Fkcal/d' : 'niedostępna'
+      };
+    });
+  }
+
+  function dietSegment(model) {
+    var choices = dietChoices(model.diets, lastEngineState);
+    if (!choices.length) return '';
     var html = '<span class="bmi-journey-lbl">Dieta</span><div class="bmi-journey-seg" role="group" aria-label="Rodzaj diety">';
-    Object.keys(cfg).forEach(function (key) {
-      var av = null;
-      for (var i = 0; i < model.diets.length; i += 1) if (model.diets[i].key === key) av = model.diets[i];
-      html += '<button type="button" data-journey="diet" data-key="' + esc(key) + '"'
-        + ' aria-pressed="' + (key === model.dietKey ? 'true' : 'false') + '"'
-        + (av ? '' : ' disabled title="' + esc(lastEngineState && lastEngineState.dietUnavailable && lastEngineState.dietUnavailable[key] ? lastEngineState.dietUnavailable[key] : 'poniżej minimum kalorycznego dla tego pacjenta') + '"') + '>'
-        + esc(cfg[key].label)
-        + '<span class="bmi-journey-sub">' + (av ? '\u2212' + fmtInt(av.deficit) + '\u202Fkcal/d' : 'niedostępna') + '</span></button>';
+    choices.forEach(function (choice) {
+      html += '<button type="button" data-journey="diet" data-key="' + esc(choice.key) + '"'
+        + ' aria-pressed="' + (choice.key === model.dietKey ? 'true' : 'false') + '"'
+        + (choice.disabled ? ' disabled title="' + esc(choice.reason) + '"' : '') + '>'
+        + esc(choice.label)
+        + '<span class="bmi-journey-sub">' + choice.detail + '</span></button>';
     });
     return html + '</div>';
   }
@@ -713,11 +737,130 @@
     };
   }
 
+  function previewStabilizationDisabled(ageYears, growthEnded) {
+    var toggle = d.getElementById('stabilizationToggle');
+    if (!toggle || growthEnded) return true;
+    if (!journeyGrowthEnded(ageYears)) return toggle.disabled;
+
+    // A checked growth flag hides the native options without refreshing eligibility.
+    // Re-evaluate that guard when the draft clears the flag.
+    var growth = w.advancedGrowthData;
+    var hasPrediction = growth && (
+      (growth.targetHeight != null && !isNaN(parseFloat(growth.targetHeight)))
+      || (fin(growth.finalHeightPrediction?.cm) && growth.finalHeightPrediction.cm > 0)
+    );
+    if (!hasPrediction) return false;
+    if (typeof w.isStabilizationPossibleForCurrentData !== 'function'
+      || typeof w.vildaTekstAlarmuTempaStabilizacji !== 'function') return true;
+    return !w.isStabilizationPossibleForCurrentData() && !w.vildaTekstAlarmuTempaStabilizacji(growth);
+  }
+
+  function previewPlan(options) {
+    var result = {
+      strategy: null, dietKey: null, diets: [], moves: [], impact: null,
+      customGoalAvailable: false, customGoalVisible: false, customGoalActive: false,
+      customGoalHint: '', customGoalMinKg: null, customGoalMaxKg: null, stabilizationAvailable: false
+    };
+    var draft = options || {};
+    if (typeof w.vildaGetMainAnthroValidationSnapshot !== 'function'
+      || typeof w.vildaUpdatePrepBmiDorosly !== 'function'
+      || typeof w.distanceToNormalBMI !== 'function' || typeof w.BMI !== 'function'
+      || typeof w.energyResolveStrategy !== 'function' || !fin(w.ENERGY_ADULT_START_AGE)
+      || typeof ADULT_BMI !== 'object' || !fin(ADULT_BMI.OVER)
+      || (typeof w.anorexiaRiskAdjust === 'function' && typeof w.VildaAnorexiaRisk?.previewRiskAdjustment !== 'function')) return result;
+
+    var measurements = w.vildaGetMainAnthroValidationSnapshot();
+    var sex = d.getElementById('sex')?.value;
+    if (!measurements?.complete || (sex !== 'M' && sex !== 'F')) return result;
+    var ageYears = measurements.age.value;
+    var ctx = {
+      ageYears: ageYears, sex: sex,
+      weightKg: measurements.weight.value, heightCm: measurements.height.value,
+      planDziecko: ageYears < w.ENERGY_ADULT_START_AGE
+    };
+
+    var growthEnded = journeyGrowthEnded(ageYears, draft.growthEnded);
+    var customSelected = draft.goal === 'custom';
+    var targetKg = customSelected ? Number(String(draft.customGoalKg ?? '').replace(',', '.')) : null;
+    var inputs = {
+      palInput: draft.pal ?? d.getElementById('palFactor')?.value,
+      customGoalKg: fin(targetKg) && targetKg > 0 ? targetKg : null,
+      growthEnded: growthEnded, renderRisk: false
+    };
+    var engine = resolvePlan(ctx, inputs);
+    if (!engine || !Array.isArray(engine.diets)) return result;
+    var stabDisabled = !ctx.planDziecko || previewStabilizationDisabled(ageYears, growthEnded);
+    result.stabilizationAvailable = !stabDisabled && !!engine.childObesityPlan;
+    var outlook = engine.childObesityPlan && typeof w.energyChildGrowthOutlook === 'function'
+      ? w.energyChildGrowthOutlook(ctx) : null;
+    var nativeStrategyTouched = draft.strategy == null && w.__vildaDietStrategyTouched === true;
+    result.strategy = w.energyResolveStrategy({
+      state: engine, ageYears: ageYears, growthEnded: growthEnded, stabDisabled: stabDisabled, outlook: outlook,
+      reduceChecked: draft.strategy === 'reduction' || (nativeStrategyTouched && !!d.getElementById('reduceToggle')?.checked),
+      stabChecked: !!engine.childObesityPlan && (draft.strategy === 'stabilization'
+        || (nativeStrategyTouched && !!d.getElementById('stabilizationToggle')?.checked))
+    });
+
+    var normal = w.vildaUpdatePrepBmiDorosly(ageYears) && w.BMI(ctx.weightKg, ctx.heightCm) < ADULT_BMI.OVER
+      ? null : w.distanceToNormalBMI(ctx.weightKg, ctx.heightCm, ageYears, sex);
+    if (!normal && ageYears >= w.ENERGY_CUSTOM_GOAL?.teenAgeFrom) {
+      // The native normalization card guards custom goals with the visit's risk inputs.
+      // Journey itself uses the base plan above for profile deficits once a goal has qualified.
+      var custom = resolvePlan(ctx, Object.assign({}, inputs, {
+        ageMonthsOpt: parseFloat(d.getElementById('ageMonths')?.value) || 0,
+        history: w.intakeHistory || null,
+        intakeKcalPerDay: w.intakeEstimatedKcalPerDay || null
+      }))?.customGoal;
+      if (custom) {
+        result.customGoalAvailable = !!custom.available;
+        result.customGoalVisible = result.customGoalAvailable || custom.reason === 'ryzyko'
+          || (!!custom.teen && (custom.reason === 'wzrastanie' || custom.reason === 'bmi-ponizej'));
+        result.customGoalActive = !!custom.active;
+        result.customGoalMinKg = custom.minTargetKg ?? null;
+        result.customGoalMaxKg = custom.maxTargetKg ?? null;
+        if (result.customGoalVisible && typeof w.energyCustomGoalHint === 'function') result.customGoalHint = w.energyCustomGoalHint(custom);
+        if (custom.active) {
+          ctx.customGoal = true;
+          ctx.targetBmi = custom.targetBmi;
+          ctx.kgToLose = custom.kgToTarget;
+        }
+      }
+    }
+
+    if (normal && !customSelected) ctx.kgToLose = normal.kgToLose;
+    if (ageYears < 5 || !(ctx.kgToLose > 0) || result.strategy !== 'reduction') return result;
+    var dietSelect = d.getElementById('dietLevel');
+    var dietKey = draft.dietKey ?? (dietSelect?.value || state.dietKey);
+    var moves = draft.moves || state.moves;
+    var model = computeReductionModel(ctx, engine.diets, dietKey, moves, growthEnded);
+    result.dietKey = model.dietKey;
+    result.diets = dietChoices(model.diets, engine);
+    result.moves = MOVES.map(function (move) {
+      return { key: move.id, label: plainLabel(move.row), selected: !!moves[move.id] };
+    });
+    if (!model.found) return result;
+
+    var kk = kcalPerKg();
+    result.impact = {
+      withoutMovement: model.monthsDiet == null ? null : monthsShort(model.monthsDiet),
+      withMovement: !model.moveWeek || model.monthsCombo == null ? null : monthsShort(model.monthsCombo),
+      rows: model.rows.map(function (row) {
+        return Object.assign({ label: plainLabel(row.name) }, formatWeeklyContribution(row.kcalWeek, kk));
+      }),
+      total: formatWeeklyContribution(model.totalWeek, kk),
+      movementEnergy: formatWeeklyContribution(model.moveWeek, kk).energy
+    };
+    return result;
+  }
+
+  function plainLabel(label) { return label.replace(/^[^\p{L}\d]+/u, ''); }
+
   w.VildaBmiJourney = {
     VERSION: VERSION,
     mount: mount,
     refresh: rerender,
     getPdfModel: getPdfModel,
-    getSnapshot: getSnapshot
+    getSnapshot: getSnapshot,
+    previewPlan: previewPlan
   };
 })(typeof window !== 'undefined' ? window : globalThis, typeof document !== 'undefined' ? document : null);

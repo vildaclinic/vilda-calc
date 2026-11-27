@@ -10,16 +10,16 @@
 }
 
 #vhomeDietCard,
-#vhomeDietDialog,
-#vhomeDietReportDialog {
+#vhomeDietDialog {
   --vhome-diet-surface: #fff;
   --vhome-diet-ink: #31545e;
-  --vhome-diet-muted: #617986;
+  --vhome-diet-muted: #425e65;
   --vhome-diet-line: #dbe7e8;
-  --vhome-diet-accent: var(--primary);
+  --vhome-diet-accent: #006b73;
   --vhome-diet-soft: #f6f8f9;
   --vhome-diet-teal-pale: #edf8f6;
   --vhome-diet-teal-line: #cce4e6;
+  --vhome-diet-result-stripe: #70aaa8;
   font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--vhome-diet-ink);
   background: var(--vhome-diet-surface);
@@ -30,9 +30,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: 352px;
-  min-height: 352px;
-  max-height: 352px;
+  min-height: 296px;
   margin: 0;
   padding: 0;
   border: var(--border-hairline) solid var(--vhome-diet-line);
@@ -43,8 +41,7 @@
 
 #vhomeDietCard[hidden],
 #vhomeDietCard [hidden],
-#vhomeDietDialog [hidden],
-#vhomeDietReportDialog [hidden] {
+#vhomeDietDialog [hidden] {
   display: none !important;
 }
 
@@ -53,10 +50,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex: 0 0 80px;
-  min-height: 0;
+  flex: 0 0 auto;
   gap: var(--space-12px);
-  padding: var(--space-14px) var(--space-20px);
+  padding: var(--space-16px) var(--space-16px) var(--space-8px);
 }
 
 #vhomeDietCard .vhome-diet-heading h2 {
@@ -105,7 +101,103 @@ html.vilda-home-workspace #vhomeDietCard .vhome-diet-expand {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 0 var(--space-20px) var(--space-16px);
+  gap: var(--space-14px);
+  padding: 0 var(--space-16px) var(--space-16px);
+  container-type: inline-size;
+}
+
+#vhomeDietCard :is(.vhome-diet-home-result, .vhome-diet-home-empty) {
+  display: grid;
+  min-width: 0;
+  min-height: 136px;
+  margin: 0;
+  border: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-9);
+  overflow-wrap: anywhere;
+}
+
+#vhomeDietCard .vhome-diet-home-result {
+  grid-template-columns: minmax(0, 1.16fr) minmax(0, 1fr);
+  grid-template-rows: repeat(2, auto);
+  column-gap: var(--space-14px);
+  padding: var(--space-8px);
+}
+
+#vhomeDietCard .vhome-diet-home-result > div {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  gap: 2px;
+  padding: var(--space-4px) 0;
+}
+
+#vhomeDietCard .vhome-diet-home-result > div + div + div {
+  border-top: var(--border-hairline) solid var(--vhome-diet-line);
+}
+
+#vhomeDietCard .vhome-diet-home-result > .vhome-diet-home-energy {
+  grid-row: 1 / -1;
+  gap: var(--space-4px);
+  padding: var(--space-12px) var(--space-14px);
+  border-inline-start: var(--border-pro) solid var(--vhome-diet-result-stripe);
+  border-radius: var(--radius-6);
+  background: var(--vhome-diet-teal-pale);
+}
+
+#vhomeDietCard .vhome-diet-home-result dt {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+#vhomeDietCard .vhome-diet-home-result dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+#vhomeDietCard .vhome-diet-home-result dd small {
+  display: block;
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+#vhomeDietCard .vhome-diet-home-energy dt + dd {
+  color: var(--vhome-diet-accent);
+  font-size: clamp(24px, 2.6vw, 33px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+#vhomeDietCard .vhome-diet-home-energy .vhome-diet-energy-number > span {
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#vhomeDietCard .vhome-diet-home-empty {
+  align-content: center;
+  gap: var(--space-4px);
+  padding: var(--space-16px);
+  border-inline-start: var(--border-pro) solid var(--vhome-diet-result-stripe);
+  background: var(--vhome-diet-teal-pale);
+  color: var(--vhome-diet-ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+#vhomeDietCard .vhome-diet-home-empty :is(h3, p) {
+  margin: 0;
+}
+
+#vhomeDietCard .vhome-diet-home-empty h3 {
+  font-size: 17px;
+  font-weight: 650;
+  text-align: left;
 }
 
 #vhomeDietCard .vhome-diet-note {
@@ -124,7 +216,7 @@ html.vilda-home-workspace #vhomeDietCard .vhome-diet-expand {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   flex-shrink: 0;
-  gap: var(--space-10px);
+  gap: var(--space-8px);
   margin-top: auto;
 }
 
@@ -132,94 +224,39 @@ html.vilda-home-workspace #vhomeDietCard .vhome-diet-action {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8px);
+  justify-content: center;
   width: 100%;
   min-width: 0;
-  height: 56px;
-  min-height: 56px;
+  min-height: 44px;
   margin: 0;
-  padding: var(--space-10px) var(--space-12px);
-  border: var(--border-hairline) solid #d9e6e8 !important;
+  padding: var(--space-8px) var(--space-10px);
+  border: var(--border-hairline) solid var(--vhome-diet-teal-line) !important;
   border-radius: var(--radius-8) !important;
-  background: #fbfdfd !important;
+  background: var(--vhome-diet-surface) !important;
   color: var(--vhome-diet-accent) !important;
   box-shadow: none !important;
   font-size: 14px;
-  font-weight: 500;
-  line-height: 1.5;
-  text-align: left;
+  font-weight: 650;
+  line-height: 1.35;
+  text-align: center;
   overflow-wrap: anywhere;
 }
 
-#vhomeDietCard .vhome-diet-action > strong {
-  font: inherit;
+html.vilda-home-workspace #vhomeDietCard .vhome-diet-action[data-home-diet-open=energy] {
+  border-color: var(--vhome-diet-accent) !important;
+  background: var(--vhome-diet-accent) !important;
+  color: #fff !important;
 }
 
-#vhomeDietCard .vhome-diet-action > [aria-hidden=true] {
-  flex-shrink: 0;
-}
-
-#vhomeDietCard .vhome-diet-road-preview {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  flex-shrink: 0;
-  column-gap: var(--space-10px);
-  min-width: 0;
-  margin-top: var(--space-12px);
-  padding-top: var(--space-10px);
-  border-top: var(--border-hairline) solid var(--vhome-diet-line);
-}
-
-#vhomeDietCard .vhome-diet-road-preview h3 {
-  min-width: 0;
-  margin: 0;
-  color: var(--vhome-diet-ink);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.5;
-  text-align: left;
-}
-
-html.vilda-home-workspace #vhomeDietCard .vhome-diet-road-preview button {
-  width: auto;
-  min-height: 44px;
-  margin: 0;
-  padding: var(--space-6px) 0;
-  border: 0 !important;
-  background: transparent !important;
-  color: var(--vhome-diet-accent) !important;
-  box-shadow: none !important;
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: nowrap;
-}
-
-#vhomeDietCard .vhome-diet-road-summary {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  grid-column: 1 / -1;
-  margin: var(--space-4px) 0 0;
-  color: var(--vhome-diet-muted);
-  font-size: 13px;
-  line-height: 1.65;
-  overflow: hidden;
-}
-
-#vhomeDietDialog :is(.vhome-dialog-heading, .vhome-dialog-footer),
-#vhomeDietReportDialog :is(.vhome-dialog-heading, .vhome-dialog-footer) {
+#vhomeDietDialog :is(.vhome-dialog-heading, .vhome-dialog-footer) {
   background: var(--vhome-diet-surface);
 }
 
-#vhomeDietDialog .vhome-dialog-heading h2,
-#vhomeDietReportDialog .vhome-dialog-heading h2 {
+#vhomeDietDialog .vhome-dialog-heading h2 {
   color: var(--vhome-diet-ink);
 }
 
-#vhomeDietDialog .vhome-dialog-body,
-#vhomeDietReportDialog .vhome-dialog-body {
+#vhomeDietDialog .vhome-dialog-body {
   color: var(--vhome-diet-ink);
   font-size: 15px;
   line-height: 1.7;
@@ -229,19 +266,7 @@ html.vilda-home-workspace #vhomeDietCard .vhome-diet-road-preview button {
   background: var(--vhome-diet-soft);
 }
 
-#vhomeDietReportDialog .vhome-dialog-body {
-  background: var(--vhome-diet-surface);
-}
-
-#vhomeDietDialog .vhome-dialog-context,
-#vhomeDietReportDialog .vhome-dialog-context {
-  color: var(--vhome-diet-muted);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-html.vilda-home-workspace #vhomeDietDialog .vhome-dialog-cancel,
-html.vilda-home-workspace #vhomeDietReportDialog .vhome-dialog-cancel {
+html.vilda-home-workspace #vhomeDietDialog .vhome-dialog-cancel {
   border-color: var(--vhome-diet-line) !important;
   background: var(--vhome-diet-surface) !important;
   color: var(--vhome-diet-ink) !important;
@@ -276,21 +301,6 @@ html.vilda-home-workspace #vhomeDietReportDialog .vhome-dialog-cancel {
   font-weight: 600;
   line-height: 1.4;
   text-align: left;
-}
-
-#vhomeDietDialog .vhome-diet-section-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 29px;
-  width: 29px;
-  height: 29px;
-  border-radius: var(--radius-8);
-  background: #e9f4f4;
-  color: var(--vhome-diet-accent);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
 }
 
 #vhomeDietDialog .vhome-diet-section > p {
@@ -346,14 +356,7 @@ html.vilda-home-workspace #vhomeDietReportDialog .vhome-dialog-cancel {
   padding-right: 28px;
 }
 
-#vhomeDietDialog .vhome-diet-check:not(label),
-#vhomeDietDialog .vhome-diet-options-body {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-12px);
-}
-
-#vhomeDietDialog :is(.vhome-diet-check label, label.vhome-diet-check) {
+#vhomeDietDialog label.vhome-diet-check {
   box-sizing: border-box;
   display: flex;
   align-items: flex-start;
@@ -381,58 +384,6 @@ html.vilda-home-workspace #vhomeDietReportDialog .vhome-dialog-cancel {
   accent-color: var(--vhome-diet-accent);
 }
 
-#vhomeDietDialog .vhome-diet-options {
-  padding: 0;
-}
-
-#vhomeDietDialog .vhome-diet-options-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-12px);
-  min-height: 48px;
-  padding: var(--space-16px) var(--space-18px);
-  color: var(--vhome-diet-ink);
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.4;
-  list-style: none;
-  cursor: pointer;
-}
-
-#vhomeDietDialog .vhome-diet-options-summary::-webkit-details-marker {
-  display: none;
-}
-
-#vhomeDietDialog .vhome-diet-options-summary::after {
-  content: "+";
-  flex-shrink: 0;
-  color: var(--vhome-diet-accent);
-  font-size: 22px;
-  font-weight: 400;
-  line-height: 1;
-}
-
-#vhomeDietDialog .vhome-diet-options[open] > .vhome-diet-options-summary {
-  border-bottom: var(--border-hairline) solid var(--vhome-diet-line);
-}
-
-#vhomeDietDialog .vhome-diet-options[open] > .vhome-diet-options-summary::after {
-  content: "−";
-}
-
-#vhomeDietDialog .vhome-diet-options-count {
-  flex-shrink: 0;
-  margin-left: auto;
-  color: var(--vhome-diet-muted);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.4;
-}
-
-#vhomeDietDialog .vhome-diet-options-body {
-  padding: var(--space-16px) var(--space-18px);
-}
-
 html.vilda-home-workspace #vhomeDietDialog .vhome-diet-action {
   box-sizing: border-box;
   width: 100%;
@@ -458,98 +409,10 @@ html.vilda-home-workspace #vhomeDietDialog [data-home-diet-action=generate] {
   color: #fff !important;
 }
 
-html.vilda-home-workspace #vhomeDietDialog .vhome-diet-moves .vhome-diet-action[aria-pressed=true] {
-  border-color: var(--vhome-diet-accent) !important;
-  background: var(--vhome-diet-teal-pale) !important;
-}
-
-#vhomeDietDialog .vhome-diet-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: stretch;
-  gap: var(--space-10px);
-}
-
-#vhomeDietDialog :is(.vhome-diet-note, .vhome-diet-draft-status) {
+#vhomeDietDialog .vhome-diet-note {
   color: var(--vhome-diet-muted);
   font-size: 14px;
   line-height: 1.65;
-}
-
-#vhomeDietDialog .vhome-diet-draft-status {
-  margin: var(--space-18px) 0 0;
-}
-
-#vhomeDietDialog .vhome-diet-native-warning {
-  margin-top: var(--space-14px);
-  font-size: 14px;
-  line-height: 1.65;
-}
-
-#vhomeDietDialog .vhome-diet-road {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: start;
-  gap: var(--space-12px);
-  min-width: 0;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief > * {
-  grid-column: 1 / -1;
-  min-width: 0;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief > :is(.bmi-journey-hero, .bmi-journey-goalbox, .bmi-journey-kcal) {
-  box-sizing: border-box;
-  grid-column: auto;
-  align-self: stretch;
-  margin: 0;
-  padding: var(--space-14px);
-  border: var(--border-hairline) solid var(--vhome-diet-line);
-  border-radius: var(--radius-10);
-  text-align: left;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief > :is(.bmi-journey-hero, .bmi-journey-goalbox) {
-  background: #f7fafb;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief.vhome-diet-native-road :is(.bmi-journey-heron, .bmi-journey-kcaln) {
-  font-size: 24px;
-  line-height: 1.3;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief .bmi-journey-g1 {
-  font-size: 16px;
-  line-height: 1.45;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief .bmi-journey-g1 b {
-  font-size: 16px;
-  line-height: 1.45;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief > :is(.bmi-journey-growth, .bmi-journey-pal-note) {
-  margin: 0;
-  text-align: left;
-}
-
-#vhomeDietDialog .vhome-diet-road-brief > .bmi-journey-kontrola {
-  margin: 0;
-}
-
-#vhomeDietDialog .vhome-diet-road > h4 {
-  margin: var(--space-18px) 0 var(--space-10px);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.5;
-  text-align: left;
 }
 
 #vhomeDietDialog .vhome-diet-moves {
@@ -659,186 +522,7 @@ html.vilda-home-workspace #vhomeDietDialog .vhome-diet-moves .vhome-diet-action[
   line-height: 1.4;
 }
 
-#vhomeDietDialog .vhome-diet-road-brief > [data-home-diet-projection=disclaimer] {
-  display: block;
-  font-size: 14px;
-  line-height: 1.65;
-}
-
-#vhomeDietDialog .vhome-diet-plan {
-  display: grid;
-  gap: var(--space-16px);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-#vhomeDietDialog .vhome-diet-plan-leading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-14px);
-  min-width: 0;
-  padding: var(--space-14px) var(--space-16px);
-  border: var(--border-hairline) solid var(--vhome-diet-teal-line);
-  border-radius: var(--radius-10);
-  background: var(--vhome-diet-teal-pale);
-}
-
-#vhomeDietDialog .vhome-diet-plan-leading > div {
-  min-width: 0;
-}
-
-#vhomeDietDialog .vhome-diet-plan-strategy {
-  display: block;
-  margin: 0;
-  color: var(--vhome-diet-ink);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-#vhomeDietDialog .vhome-diet-plan-state {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  max-width: 100%;
-  padding: 5px 9px;
-  border: var(--border-hairline) solid #bddcde;
-  border-radius: 7px;
-  background: var(--vhome-diet-surface);
-  color: var(--vhome-diet-accent);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-#vhomeDietDialog .vhome-diet-plan-results {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-10px);
-  min-width: 0;
-}
-
-#vhomeDietDialog .vhome-diet-plan-result {
-  min-width: 0;
-  padding: var(--space-14px);
-  border: var(--border-hairline) solid var(--vhome-diet-line);
-  border-radius: var(--radius-10);
-  background: var(--vhome-diet-surface);
-}
-
-#vhomeDietDialog .vhome-diet-plan-label {
-  display: block;
-  margin-bottom: var(--space-6px);
-  color: var(--vhome-diet-muted);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.4;
-}
-
-#vhomeDietDialog .vhome-diet-plan-value {
-  display: block;
-  color: var(--vhome-diet-ink);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-#vhomeDietDialog .vhome-diet-plan-note {
-  display: block;
-  margin-top: 3px;
-  color: var(--vhome-diet-muted);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-#vhomeDietDialog .vhome-diet-plan-facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  border: var(--border-hairline) solid var(--vhome-diet-line);
-  border-radius: var(--radius-10);
-  background: var(--vhome-diet-surface);
-}
-
-#vhomeDietDialog .vhome-diet-plan-facts > div {
-  min-width: 0;
-  padding: var(--space-12px) var(--space-14px);
-  border-bottom: var(--border-hairline) solid var(--vhome-diet-line);
-}
-
-#vhomeDietDialog .vhome-diet-plan-facts > div:nth-child(odd) {
-  border-right: var(--border-hairline) solid var(--vhome-diet-line);
-}
-
-#vhomeDietDialog .vhome-diet-plan-facts > div:nth-last-child(-n+2) {
-  border-bottom: 0;
-}
-
-#vhomeDietDialog .vhome-diet-plan-facts dt {
-  color: var(--vhome-diet-muted);
-  font-size: 14px;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
-#vhomeDietDialog .vhome-diet-plan-facts dd {
-  margin: var(--space-4px) 0 0;
-  color: var(--vhome-diet-ink);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-#vhomeDietDialog .vhome-diet-plan-scope {
-  margin: 0;
-  padding: var(--space-12px) var(--space-14px);
-  border: var(--border-hairline) solid var(--vhome-diet-line);
-  border-radius: var(--radius-10);
-  background: var(--vhome-diet-soft);
-  color: var(--vhome-diet-muted);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-/* A1 keeps native wording and clinical tones inside its own compact cells. */
-#vhomeDietDialog .vhome-diet-plan :is(.bmi-journey-hero, .bmi-journey-goalbox, .bmi-journey-kcal, .bmi-journey-kontrola) {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  text-align: left;
-}
-
-#vhomeDietDialog .vhome-diet-plan :is(.bmi-journey-heron, .bmi-journey-kcaln, .bmi-journey-g1, .bmi-journey-g1 b) {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.45;
-}
-
-#vhomeDietDialog .vhome-diet-plan :is(.bmi-journey-herocap, .bmi-journey-g2, .bmi-journey-g3, .bmi-journey-g4, .bmi-journey-src, .bmi-journey-kcalu, .bmi-journey-kcalcap, .bmi-journey-kontrola, .bmi-journey-growth) {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.5;
-}
-
-#vhomeDietDialog .vhome-diet-plan > .bmi-journey-growth {
-  margin: 0;
-  text-align: left;
-}
-
-#vhomeDietDialog :is(.vhome-diet-native-result, .vhome-diet-native-plan) {
+#vhomeDietDialog .vhome-diet-native-plan {
   min-width: 0;
   max-width: 100%;
   font-size: 15px;
@@ -846,7 +530,6 @@ html.vilda-home-workspace #vhomeDietDialog .vhome-diet-moves .vhome-diet-action[
   overflow-wrap: anywhere;
 }
 
-#vhomeDietDialog .vhome-diet-native-result > summary,
 #vhomeDietDialog .vhome-diet-native-plan-details > summary {
   min-height: 44px;
   padding-block: var(--space-10px);
@@ -878,7 +561,7 @@ html.vilda-home-workspace #vhomeDietDialog .vhome-diet-moves .vhome-diet-action[
 
 /* Read-only native recommendation preview. These selectors never reach the
  * PDF render host, whose layout and document stylesheet remain unchanged. */
-#vhomeDietReportDialog .vhome-diet-native-energy {
+#vhomeDietDialog .vhome-diet-native-energy {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -889,22 +572,22 @@ html.vilda-home-workspace #vhomeDietDialog .vhome-diet-moves .vhome-diet-action[
   overflow-wrap: anywhere;
 }
 
-#vhomeDietReportDialog .vhome-diet-native-energy :is(h2, h3, h4) {
+#vhomeDietDialog .vhome-diet-native-energy :is(h2, h3, h4) {
   color: inherit;
   font-size: 17px;
   line-height: 1.5;
   text-align: left;
 }
 
-#vhomeDietReportDialog .vhome-diet-native-energy :is(ol, ul) {
-  padding-left: 22px;
+#vhomeDietDialog .vhome-diet-native-energy :is(ol, ul) {
+  padding-inline-start: 22px;
 }
 
-#vhomeDietReportDialog .vhome-diet-native-energy li {
+#vhomeDietDialog .vhome-diet-native-energy li {
   margin-block: var(--space-8px);
 }
 
-#vhomeDietReportDialog .vhome-diet-native-energy .diet-energy-output {
+#vhomeDietDialog .vhome-diet-native-energy .diet-energy-output {
   margin: 0;
   padding: 0;
   border: 0 !important;
@@ -912,35 +595,519 @@ html.vilda-home-workspace #vhomeDietDialog .vhome-diet-moves .vhome-diet-action[
   box-shadow: none !important;
 }
 
-#vhomeDietReportDialog .vhome-diet-native-energy .diet-energy-output-head {
+#vhomeDietDialog .vhome-diet-native-energy .diet-energy-output-head {
   margin: 0 0 var(--space-14px);
   padding: 0 0 var(--space-12px);
   border-bottom: var(--border-hairline) solid var(--vhome-diet-line);
 }
 
-#vhomeDietReportDialog .vhome-diet-native-energy .diet-energy-output-head h3 {
+#vhomeDietDialog .vhome-diet-native-energy .diet-energy-output-head h3 {
   color: var(--vhome-diet-ink) !important;
   font-size: 17px;
 }
 
-#vhomeDietReportDialog .vhome-diet-native-energy .result-box {
+#vhomeDietDialog .vhome-diet-native-energy .result-box {
   font-size: 15px;
   line-height: 1.7;
   text-align: left;
 }
 
-html.vilda-home-workspace :is(#vhomeDietCard, #vhomeDietDialog, #vhomeDietReportDialog) button:disabled {
+html.vilda-home-workspace :is(#vhomeDietCard, #vhomeDietDialog) button:disabled {
   opacity: var(--opacity-disabled-label);
   cursor: not-allowed;
 }
 
-html.vilda-home-workspace :is(#vhomeDietCard, #vhomeDietDialog, #vhomeDietReportDialog) :is(button, input, select, summary):focus-visible {
+html.vilda-home-workspace :is(#vhomeDietCard, #vhomeDietDialog) :is(button, input, select, summary):focus-visible {
   outline: var(--border-emphasis) solid var(--vhome-diet-accent);
   outline-offset: 2px;
 }
 
 #vhomeDietDialog .vhome-diet-field :is(input, select):focus-visible {
   outline-offset: -2px;
+}
+
+#vhomeDietDialog.vhome-diet-workspace {
+  width: min(1080px, calc(100vw - 32px));
+  height: min(790px, calc(var(--vhome-dialog-viewport-height, 100dvh) - 32px));
+  container: vhome-diet-workspace / inline-size;
+}
+
+#vhomeDietDialog.vhome-diet-workspace > .vhome-dialog-heading {
+  padding: var(--space-18px) 22px var(--space-14px);
+  border-bottom: 0;
+}
+
+#vhomeDietDialog.vhome-diet-workspace > .vhome-dialog-heading h2 {
+  font-size: clamp(20px, 2.5vw, 25px);
+  line-height: 1.25;
+}
+
+#vhomeDietDialog.vhome-diet-workspace > .vhome-dialog-heading :is(.vhome-dialog-context, .vhome-diet-context) {
+  margin: var(--space-4px) 0 0;
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+html.vilda-home-workspace #vhomeDietDialog.vhome-diet-workspace .vhome-dialog-close {
+  flex-basis: 44px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+
+#vhomeDietDialog.vhome-diet-workspace > .vhome-dialog-body {
+  padding: var(--space-18px);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#vhomeDietDialog .vhome-diet-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-4px);
+  padding: 0 22px;
+  border-bottom: var(--border-hairline) solid var(--vhome-diet-line);
+  background: var(--vhome-diet-surface);
+}
+
+html.vilda-home-workspace #vhomeDietDialog .vhome-diet-tabs [role=tab] {
+  width: auto;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-8px) var(--space-14px);
+  border: 0 !important;
+  border-bottom: var(--border-pro) solid transparent !important;
+  border-radius: var(--radius-6) var(--radius-6) 0 0 !important;
+  background: var(--vhome-diet-surface) !important;
+  color: var(--vhome-diet-muted) !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+html.vilda-home-workspace #vhomeDietDialog .vhome-diet-tabs [role=tab]:hover {
+  background: var(--vhome-diet-soft) !important;
+}
+
+html.vilda-home-workspace #vhomeDietDialog .vhome-diet-tabs [aria-selected=true] {
+  border-bottom-color: var(--vhome-diet-accent) !important;
+  background: var(--vhome-diet-teal-pale) !important;
+  color: var(--vhome-diet-accent) !important;
+}
+
+#vhomeDietDialog :is(.vhome-diet-tab-panel, .vhome-diet-document-paper) {
+  min-width: 0;
+}
+
+#vhomeDietDialog .vhome-diet-tab-panel:focus-visible,
+html.vilda-home-workspace #vhomeDietDialog .vhome-diet-tabs [role=tab]:focus-visible {
+  outline: var(--border-emphasis) solid var(--vhome-diet-accent);
+  outline-offset: -2px;
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--space-12px);
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-report-grid {
+  grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr);
+  align-items: start;
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-section {
+  padding: var(--space-16px);
+  border-radius: var(--radius-9);
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-section > h3 {
+  margin-bottom: var(--space-12px);
+  font-weight: 650;
+}
+
+#vhomeDietDialog .vhome-diet-energy-result {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  min-height: 105px;
+  gap: var(--space-4px);
+  padding: var(--space-12px) var(--space-14px);
+  border-inline-start: var(--border-pro) solid var(--vhome-diet-result-stripe);
+  border-radius: var(--radius-6);
+  background: var(--vhome-diet-teal-pale);
+}
+
+#vhomeDietDialog .vhome-diet-energy-result[data-state=pending] {
+  border-color: #b58549;
+  background: #fbf5ea;
+}
+
+#vhomeDietDialog .vhome-diet-energy-result[data-state=empty] {
+  border-color: var(--vhome-diet-line);
+  background: var(--vhome-diet-soft);
+}
+
+#vhomeDietDialog .vhome-diet-energy-result:empty {
+  display: none;
+}
+
+#vhomeDietDialog .vhome-diet-energy-result :is(h4, p) {
+  margin: 0;
+  text-align: left;
+}
+
+#vhomeDietDialog .vhome-diet-energy-result h4 {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+:is(#vhomeDietCard, #vhomeDietDialog) .vhome-diet-energy-number {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-6px);
+}
+
+#vhomeDietDialog .vhome-diet-energy-result .vhome-diet-energy-number > strong {
+  color: var(--vhome-diet-accent);
+  font-size: clamp(28px, 4vw, 41px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.12;
+}
+
+#vhomeDietDialog .vhome-diet-energy-result .vhome-diet-energy-number > span {
+  color: var(--vhome-diet-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+#vhomeDietDialog .vhome-diet-measurements {
+  margin-top: var(--space-14px);
+}
+
+#vhomeDietDialog :is(.vhome-diet-measurements, .vhome-diet-impact) h4 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+#vhomeDietDialog .vhome-diet-measurements dl,
+#vhomeDietDialog .vhome-diet-followup dl,
+#vhomeDietDialog .vhome-diet-saved-facts,
+#vhomeDietDialog .vhome-diet-impact-comparison {
+  display: grid;
+  gap: var(--space-8px);
+  margin: var(--space-8px) 0 0;
+}
+
+#vhomeDietDialog .vhome-diet-measurements dl {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+#vhomeDietDialog :is(.vhome-diet-measurements, .vhome-diet-followup) dl > div,
+#vhomeDietDialog .vhome-diet-saved-facts > div,
+#vhomeDietDialog .vhome-diet-impact-comparison > div {
+  min-width: 0;
+  padding: var(--space-6px) var(--space-8px);
+  border: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-6);
+}
+
+#vhomeDietDialog :is(.vhome-diet-measurements, .vhome-diet-followup, .vhome-diet-saved-facts, .vhome-diet-impact-comparison) dt {
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+#vhomeDietDialog :is(.vhome-diet-measurements, .vhome-diet-followup, .vhome-diet-saved-facts, .vhome-diet-impact-comparison) dd {
+  margin: var(--space-4px) 0 0;
+  color: var(--vhome-diet-ink);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+#vhomeDietDialog :is(.vhome-diet-measurements, .vhome-diet-followup, .vhome-diet-check) small {
+  display: block;
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+#vhomeDietDialog :is(.vhome-diet-fields, .vhome-diet-check) small:empty {
+  display: none;
+}
+
+#vhomeDietDialog .vhome-diet-impact {
+  margin-top: var(--space-14px);
+  padding-top: var(--space-12px);
+  border-top: var(--border-hairline) solid var(--vhome-diet-line);
+}
+
+#vhomeDietDialog .vhome-diet-impact-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4px) var(--space-8px);
+}
+
+#vhomeDietDialog .vhome-diet-preview-state {
+  color: #79551f;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+#vhomeDietDialog .vhome-diet-impact-comparison {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+}
+
+#vhomeDietDialog .vhome-diet-impact-comparison > div + div {
+  background: var(--vhome-diet-soft);
+}
+
+#vhomeDietDialog .vhome-diet-impact-comparison dd {
+  color: var(--vhome-diet-accent);
+  font-size: 16px;
+}
+
+#vhomeDietDialog .vhome-diet-impact p {
+  margin: var(--space-6px) 0 0;
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+#vhomeDietDialog :is(.vhome-diet-impact, .vhome-diet-movement, .vhome-diet-followup) summary {
+  min-height: 44px;
+  padding: var(--space-10px) 0;
+  color: var(--vhome-diet-accent);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+#vhomeDietDialog .vhome-diet-impact-table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+#vhomeDietDialog .vhome-diet-impact-table :is(th, td) {
+  padding: var(--space-6px) var(--space-4px);
+  border: 0;
+  border-bottom: var(--border-hairline) solid var(--vhome-diet-line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  vertical-align: top;
+}
+
+#vhomeDietDialog .vhome-diet-impact-table :is(th, td):not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+#vhomeDietDialog .vhome-diet-impact-table thead {
+  color: var(--vhome-diet-muted);
+  font-weight: 650;
+}
+
+#vhomeDietDialog .vhome-diet-impact-table tbody th {
+  font-weight: 500;
+}
+
+#vhomeDietDialog .vhome-diet-impact-table tbody tr {
+  background: transparent;
+}
+
+#vhomeDietDialog .vhome-diet-impact-table :is(tfoot, .bmi-journey-sum) {
+  background: var(--vhome-diet-soft);
+  font-weight: 650;
+}
+
+#vhomeDietDialog.vhome-diet-workspace :is(.vhome-diet-fields, .vhome-diet-options-body, .vhome-diet-moves) {
+  gap: var(--space-8px);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-field :is(input, select) {
+  min-height: 44px;
+  padding-block: var(--space-6px);
+  border-radius: var(--radius-6);
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-field select:disabled {
+  background: var(--vhome-diet-soft);
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-field small {
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+#vhomeDietDialog .vhome-diet-movement {
+  min-width: 0;
+  margin-top: var(--space-8px);
+  border: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-6);
+}
+
+#vhomeDietDialog .vhome-diet-movement summary {
+  padding-inline: var(--space-10px);
+}
+
+#vhomeDietDialog .vhome-diet-movement summary span {
+  float: right;
+  max-width: 56%;
+  margin-inline-start: var(--space-6px);
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+
+#vhomeDietDialog .vhome-diet-movement summary::after {
+  display: block;
+  clear: both;
+  content: "";
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-moves {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0 var(--space-6px) var(--space-6px);
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-moves label.vhome-diet-check {
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-6px);
+  border-radius: var(--radius-6);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+#vhomeDietDialog .vhome-diet-moves input[type=checkbox] {
+  margin: 0;
+}
+
+#vhomeDietDialog .vhome-diet-moves label > span {
+  min-width: 0;
+}
+
+#vhomeDietDialog .vhome-diet-moves label:has(input:checked) {
+  border-color: var(--vhome-diet-teal-line);
+  background: var(--vhome-diet-teal-pale);
+}
+
+html.vilda-home-workspace #vhomeDietDialog .vhome-diet-impact-jump {
+  display: none;
+}
+
+#vhomeDietDialog .vhome-diet-plan-actions,
+#vhomeDietDialog .vhome-diet-document .vhome-diet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-8px);
+  margin-top: var(--space-12px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+html.vilda-home-workspace #vhomeDietDialog.vhome-diet-workspace :is(.vhome-diet-action, .vhome-diet-plan-actions button) {
+  width: auto;
+  min-height: 44px;
+  padding: var(--space-8px) var(--space-10px);
+  border-radius: var(--radius-8) !important;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+html.vilda-home-workspace #vhomeDietDialog.vhome-diet-workspace :is([data-home-diet-action=prepare], [data-home-diet-action=copy], .vhome-dialog-apply) {
+  border-color: var(--vhome-diet-accent) !important;
+  background: var(--vhome-diet-accent) !important;
+  color: #fff !important;
+}
+
+html.vilda-home-workspace #vhomeDietDialog.vhome-diet-workspace :is(.vhome-diet-action, .vhome-diet-plan-actions button):disabled,
+html.vilda-home-workspace #vhomeDietCard .vhome-diet-action:disabled {
+  border-color: var(--vhome-diet-line) !important;
+  background: var(--vhome-diet-soft) !important;
+  color: var(--vhome-diet-muted) !important;
+  opacity: 1;
+}
+
+#vhomeDietDialog .vhome-diet-followup {
+  grid-column: 1 / -1;
+}
+
+#vhomeDietDialog .vhome-diet-followup dl {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr));
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-followup #vhomeDietRoadResult {
+  padding: 0;
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-options-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4px);
+  margin-top: var(--space-8px);
+  padding: 0;
+}
+
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-options label.vhome-diet-check,
+#vhomeDietDialog.vhome-diet-workspace .vhome-diet-assumptions > label.vhome-diet-check {
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-6px) 0;
+  border: 0;
+}
+
+#vhomeDietDialog .vhome-diet-options > .vhome-diet-action {
+  margin-top: var(--space-12px);
+}
+
+#vhomeDietDialog .vhome-diet-document-paper {
+  padding: var(--space-14px);
+  border: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-8);
+  overflow-wrap: anywhere;
+}
+
+#vhomeDietDialog .vhome-diet-document .vhome-diet-note:empty {
+  display: none;
+}
+
+#vhomeDietDialog #vhomeDietReportMessage:not(:empty) {
+  min-height: 96px;
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-6);
+  background: var(--vhome-diet-soft);
 }
 
 .vilda-home-workspace.vhome-device-compact #vhomeDietCard.vhome-diet-card {
@@ -956,8 +1123,78 @@ html.vilda-home-workspace :is(#vhomeDietCard, #vhomeDietDialog, #vhomeDietReport
 .vhome-device-compact #vhomeDietCard .vhome-diet-content {
   flex: 0 0 auto;
 }
-.vhome-device-compact #vhomeDietCard .vhome-diet-links {
-  margin-top: 0;
+
+@container (max-width: 380px) {
+  #vhomeDietCard .vhome-diet-home-result {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    row-gap: var(--space-4px);
+  }
+  #vhomeDietCard .vhome-diet-home-result > .vhome-diet-home-energy {
+    grid-row: auto;
+  }
+  #vhomeDietCard .vhome-diet-home-result > div:not(.vhome-diet-home-energy) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px var(--space-8px);
+  }
+  #vhomeDietCard .vhome-diet-home-result > div:not(.vhome-diet-home-energy) dd {
+    text-align: right;
+  }
+}
+
+@container (max-width: 308px) {
+  #vhomeDietCard .vhome-diet-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container vhome-diet-workspace (max-width: 960px) {
+  #vhomeDietDialog.vhome-diet-workspace .vhome-diet-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container vhome-diet-workspace (max-width: 700px) {
+  #vhomeDietDialog.vhome-diet-workspace > .vhome-dialog-heading {
+    padding: var(--space-14px) var(--space-16px) var(--space-12px);
+  }
+  #vhomeDietDialog .vhome-diet-tabs {
+    padding-inline: var(--space-16px);
+  }
+  html.vilda-home-workspace #vhomeDietDialog .vhome-diet-tabs [role=tab] {
+    flex: 1;
+    padding-inline: var(--space-8px);
+    font-size: 13px;
+  }
+  #vhomeDietDialog.vhome-diet-workspace > .vhome-dialog-body,
+  #vhomeDietDialog.vhome-diet-workspace .vhome-diet-section {
+    padding: var(--space-12px);
+  }
+  #vhomeDietDialog.vhome-diet-workspace .vhome-diet-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html.vilda-home-workspace #vhomeDietDialog .vhome-diet-impact-jump {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin: 0 var(--space-6px);
+    padding: var(--space-6px);
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--vhome-diet-accent) !important;
+    box-shadow: none !important;
+    font-size: 13px;
+    font-weight: 650;
+  }
+}
+
+@container vhome-diet-workspace (max-width: 360px) {
+  #vhomeDietDialog .vhome-diet-measurements dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #vhomeDietDialog :is(.vhome-diet-plan-actions, .vhome-diet-actions) > button {
+    flex: 1 1 auto;
+  }
 }
 
 @media (max-width: 850px) {
@@ -966,104 +1203,26 @@ html.vilda-home-workspace :is(#vhomeDietCard, #vhomeDietDialog, #vhomeDietReport
   }
 }
 
-@media (max-width: 680px) {
-  #vhomeDietDialog .vhome-diet-road-brief,
-  #vhomeDietDialog .vhome-diet-fields,
-  #vhomeDietDialog .vhome-diet-check:not(label),
-  #vhomeDietDialog .vhome-diet-options-body,
-  #vhomeDietDialog .vhome-diet-plan-results,
-  #vhomeDietDialog .vhome-diet-actions {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  #vhomeDietDialog .vhome-diet-section {
-    padding: var(--space-16px);
-  }
-  #vhomeDietDialog .vhome-diet-options {
-    padding: 0;
-  }
-  #vhomeDietDialog .vhome-diet-options-summary {
-    flex-wrap: wrap;
-    padding: var(--space-14px) var(--space-16px);
-    font-size: 16px;
-  }
-  #vhomeDietDialog .vhome-diet-options-count {
-    font-size: 14px;
-  }
-  #vhomeDietDialog .vhome-diet-options-body {
-    padding: var(--space-16px);
-  }
-  #vhomeDietDialog .vhome-diet-moves {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  #vhomeDietDialog .vhome-diet-plan {
-    gap: var(--space-14px);
-  }
-  #vhomeDietDialog .vhome-diet-plan-leading {
-    flex-direction: column;
-    gap: var(--space-10px);
-    padding: var(--space-12px);
-  }
-  #vhomeDietDialog .vhome-diet-plan-result {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: center;
-    gap: var(--space-10px);
-    min-height: 54px;
-    padding: var(--space-10px) var(--space-12px);
-  }
-  #vhomeDietDialog .vhome-diet-plan-result .vhome-diet-plan-label {
-    margin-bottom: 0;
-  }
-  #vhomeDietDialog .vhome-diet-plan-result .vhome-diet-plan-value {
-    text-align: right;
-  }
-  #vhomeDietDialog .vhome-diet-plan-result .vhome-diet-plan-note {
-    grid-column: 1 / -1;
-    margin-top: 0;
-  }
-  #vhomeDietDialog .vhome-diet-plan-facts > div {
-    padding: 11px var(--space-12px);
-  }
-  #vhomeDietDialog .vhome-diet-plan-scope {
-    padding: 11px var(--space-12px);
-  }
-}
-
 @media (max-width: 600px) {
   #vhomeDietCard .vhome-diet-heading {
-    padding-inline: 17px;
+    padding-inline: var(--space-12px);
   }
   #vhomeDietCard .vhome-diet-heading h2 {
     font-size: 16px;
   }
   #vhomeDietCard .vhome-diet-content {
-    padding-inline: 17px;
-  }
-  #vhomeDietCard .vhome-diet-links {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
-  }
-  html.vilda-home-workspace #vhomeDietCard .vhome-diet-action {
-    height: 52px;
-    min-height: 52px;
-    font-size: 15px;
+    padding: 0 var(--space-12px) var(--space-12px);
   }
   #vhomeDietDialog .vhome-diet-native-road .bmi-journey-table :is(th, td) {
     padding-inline: 5px !important;
   }
 }
 
-@media (max-width: 360px) {
-  #vhomeDietDialog .vhome-diet-plan-facts {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  #vhomeDietDialog .vhome-diet-plan-facts > div:nth-child(odd) {
-    border-right: 0;
-  }
-  #vhomeDietDialog .vhome-diet-plan-facts > div:nth-last-child(2) {
-    border-bottom: var(--border-hairline) solid var(--vhome-diet-line);
-  }
-  #vhomeDietDialog .vhome-diet-options-count {
-    flex-shrink: 1;
+@media (max-width: 480px) {
+  #vhomeDietDialog.vhome-diet-workspace {
+    width: 100vw;
+    height: var(--vhome-dialog-viewport-height, 100dvh);
+    border: 0;
+    border-radius: 0;
   }
 }

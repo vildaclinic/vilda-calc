@@ -11,82 +11,91 @@ const IDS = ['palFactor', 'dietLevel', 'customGoalKg', 'reduceToggle', 'stabiliz
   'nutritionNormsFlag', 'vitDSuppFlag', 'hydrationFlag', 'journeyFlag', 'peerMassFlag', 'alcoholFlag'];
 const draft = (dialog, id) => dialog.locator(`[data-home-diet-field="${id}"]`);
 const apply = dialog => dialog.getByRole('button', { name: 'Zastosuj założenia', exact: true });
-const generate = dialog => dialog.getByRole('button', { name: 'Generuj i skopiuj zalecenia', exact: true });
+const prepare = dialog => dialog.getByRole('button', { name: 'Przygotuj zalecenia', exact: true });
+const copy = dialog => dialog.getByRole('button', { name: 'Kopiuj zalecenia', exact: true });
 const pdf = dialog => dialog.getByRole('button', { name: 'Raport PDF dla pacjenta', exact: true });
-const preview = dialog => dialog.locator('[data-home-diet-action="preview"]');
+const planTab = dialog => dialog.getByRole('tab', { name: 'Plan żywieniowy', exact: true });
+const reportTab = dialog => dialog.getByRole('tab', { name: 'Zalecenia dla pacjenta', exact: true });
+const reportBody = dialog => dialog.locator('#vhomeDietEnergy');
+const impact = dialog => dialog.locator('.vhome-diet-impact');
+const movements = dialog => dialog.locator('[data-home-diet-journey="move"]');
+const close = dialog => dialog.locator('.vhome-dialog-close').click();
 
-async function openReport(frame, dialog) {
-  await expect(preview(dialog)).toBeEnabled();
-  await preview(dialog).click();
-  const report = frame.getByRole('dialog', { name: 'Podgląd zaleceń', exact: true });
+async function showReport(dialog) {
+  await reportTab(dialog).click();
+  await expect(reportTab(dialog)).toHaveAttribute('aria-selected', 'true');
+}
+
+async function expectExportsBlocked(dialog) {
+  for (const action of [copy(dialog), pdf(dialog)]) {
+    expect(await action.isVisible() && await action.isEnabled()).toBe(false);
+  }
+}
+
+async function prepareReport(dialog) {
+  await showReport(dialog);
+  await expect(prepare(dialog)).toBeEnabled();
+  await prepare(dialog).click();
+  const report = reportBody(dialog);
   await expect(report).toBeVisible();
   await expect(report.locator('.vhome-diet-native-energy')).toBeVisible();
-  await expect(report.locator('input:enabled, select:enabled, textarea:enabled, button[data-diet-copy-result], [data-diet-report-direct]')).toHaveCount(0);
-  await expect(report.locator('.vhome-diet-native-energy button:enabled')).toHaveCount(0);
+  await expect(report.locator('input, select, textarea, button:enabled, [data-diet-copy-result], [data-diet-report-direct]')).toHaveCount(0);
+  expect(await dialog.evaluate(node => node.ownerDocument.querySelectorAll('dialog[open]').length)).toBe(1);
   return report;
 }
 
-async function openRoadDetails(dialog) {
-  const details = dialog.locator('.vhome-diet-road-details');
+async function openMovementPicker(dialog) {
+  const details = dialog.locator('.vhome-diet-movement');
   if (!await details.evaluate(node => node.open)) await details.locator(':scope > summary').click();
-  await expect(details.locator(':scope > summary')).toHaveText('Pełne obliczenia i uwagi');
-  await expect(dialog.locator('#vhomeDietRoadResult')).toBeVisible();
+  await expect(movements(dialog).first()).toBeVisible();
 }
 
-async function openDocumentFlags(dialog) {
-  const details = dialog.locator('.vhome-diet-options');
-  if (!await details.evaluate(node => node.open)) await details.locator(':scope > summary').click();
-  await expect(details).toHaveAttribute('open', '');
+async function openMovementDetails(dialog) {
+  const heading = impact(dialog).getByText('Tygodniowy wkład diety i ruchu', { exact: true });
+  const details = heading.locator('..');
+  if (!await details.evaluate(node => node.open)) await heading.click();
+  await expect(impact(dialog).locator('.vhome-diet-impact-table')).toBeVisible();
 }
 
-async function expectNativeSummary(frame, dialog) {
-  const summary = dialog.locator('#vhomeDietPlanSummary.vhome-diet-plan');
-  await expect(summary).toBeVisible();
-  await expect(summary.locator('input, select, textarea, button, [data-journey], [data-diet-strategy-choice], [data-diet-goal-choice]')).toHaveCount(0);
-  for (const key of ['strategy', 'scope']) {
-    await expect(summary.locator(`[data-home-diet-summary="${key}"]`)).toHaveCount(1);
-  }
-  const hasNativeJourney = await frame.evaluate(() => !!document.querySelector('#bmiJourneyMount .bmi-journey-goalbox')
-    && !document.getElementById('toNormCard').hidden && getComputedStyle(document.getElementById('toNormCard')).display !== 'none');
-  if (hasNativeJourney) {
-    for (const key of ['current', 'goal', 'forecast', 'pal', 'diet', 'movement', 'energy', 'control']) {
-      await expect(summary.locator(`[data-home-diet-summary="${key}"]`)).toHaveCount(1);
-    }
-    for (const [key, selectors] of [
-      ['goal', ['.bmi-journey-goalbox']],
-      ['forecast', ['.bmi-journey-hero']],
-      ['energy', ['.bmi-journey-kcal']],
-      ['control', ['.bmi-journey-kontrola']],
-    ]) {
-      for (const selector of selectors) {
-        // Complete source blocks retain units, ≤, custom-goal and growth
-        // qualifications, stabilization language and control thresholds.
-        const source = frame.locator('#bmiJourneyMount ' + selector);
-        const expected = key === 'goal' ? await source.evaluateAll(nodes => nodes.map(node => {
-          const copy = node.cloneNode(true);
-          // Native intermediate milestones remain in full calculations;
-          // the compact goal preserves the treatment goal and its basis.
-          copy.querySelectorAll('.bmi-journey-g4').forEach(part => part.remove());
-          return copy.textContent;
-        })) : await source.allTextContents();
-        expect(await summary.locator(`[data-home-diet-summary="${key}"] ${selector}`).allTextContents()).toEqual(expected);
-      }
-    }
-    expect(await summary.locator('.bmi-journey-growth').allTextContents())
-      .toEqual(await frame.locator('#bmiJourneyMount .bmi-journey-growth').allTextContents());
-    expect(await summary.locator('.energy-mode-badge-row').allTextContents())
-      .toEqual(await frame.locator('#bmiJourneyMount .energy-mode-badge-row').allTextContents());
-    const current = summary.locator('[data-home-diet-summary="current"]');
-    if (await current.locator('[data-home-diet-projection="current"]').count()) {
-      expect(await current.textContent()).toBe(await frame.locator('#bmiJourneyMount .bmi-journey-g3 b').first().textContent());
-    } else {
-      await expect(current).toHaveText(await frame.locator('#weight').inputValue() + ' kg');
-    }
-    expect(await summary.locator('[data-home-diet-summary="pal"] > span').textContent())
-      .toBe(await frame.locator('#palFactor option:checked').textContent());
-  } else {
-    await expect(summary.locator('.bmi-journey-goalbox, .bmi-journey-hero, .bmi-journey-kcal, .bmi-journey-kontrola')).toHaveCount(0);
-  }
+async function expectNativePlan(frame, dialog) {
+  const summary = dialog.locator('#vhomeDietPlanSummary');
+  await expect(summary.locator('input:enabled, select:enabled, textarea:enabled, button:enabled, [data-journey], [data-diet-strategy-choice], [data-diet-goal-choice]')).toHaveCount(0);
+  const journey = await frame.evaluate(() => {
+    const mount = document.querySelector('#bmiJourneyMount');
+    const card = document.querySelector('#toNormCard');
+    if (!mount || !card || card.hidden || getComputedStyle(card).display === 'none') return null;
+    return {
+      energy: mount.querySelector('.bmi-journey-kcaln')?.textContent.trim(),
+      goal: mount.querySelector('.bmi-journey-g3 b:last-child')?.textContent.trim(),
+      control: mount.querySelector('.bmi-journey-kontrola')?.textContent.trim(),
+    };
+  });
+  if (journey?.energy) await expect(dialog.locator('#vhomeDietPlanEnergy')).toContainText(journey.energy);
+  if (journey?.goal) await expect(summary.locator('[data-home-diet-projection="goal"]')).toContainText(journey.goal);
+  if (journey?.control) await expect(summary.locator('[data-home-diet-projection="control"]')).toHaveText(journey.control);
+  if (!journey) await expect(impact(dialog)).toBeHidden();
+}
+
+async function watchNativeReport(frame) {
+  await frame.evaluate(() => {
+    const prepareHomeReport = VildaDietRecommendations.prepareHomeReport;
+    window.__homeDietPrepared = null;
+    VildaDietRecommendations.prepareHomeReport = function (scope, host) {
+      const prepared = prepareHomeReport.call(this, scope, host);
+      window.__homeDietPrepared = { scope, output: prepared };
+      return prepared;
+    };
+  });
+}
+
+async function expectNativeReport(frame, report) {
+  const native = await frame.evaluate(() => {
+    const result = window.__homeDietPrepared?.output;
+    const doc = new DOMParser().parseFromString(result?.htmlOutput || '', 'text/html');
+    return doc.body.textContent.trim();
+  });
+  expect(native).not.toBe('');
+  expect((await report.locator('.vhome-diet-native-energy').textContent()).trim()).toBe(native);
 }
 
 async function settled(frame) {
@@ -94,14 +103,18 @@ async function settled(frame) {
     && !VildaDataImportExport.isMainSessionRestorePending() && !VildaDobAge.restorePending());
 }
 
-async function setup(page, { shell = false, patient, ds = false } = {}) {
+async function watchClipboard(page) {
   await page.addInitScript(() => {
-    window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true;
     window.__homeDietClipboard = [];
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
       writeText: async text => { window.__homeDietClipboard.push(String(text)); },
     } });
   });
+}
+
+async function setup(page, { shell = false, patient, ds = false } = {}) {
+  await page.addInitScript(() => { window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true; });
+  await watchClipboard(page);
   await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   const fixture = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload: true });
   const payload = patient || fictionalPatient({ firstName: 'Dietetyczny', age: 13, sex: 'M', height: 155, weight: 75 });
@@ -120,6 +133,7 @@ async function setup(page, { shell = false, patient, ds = false } = {}) {
   });
   await fixture.frame.waitForFunction(() => !!window.VildaHomeDiet && !!window.VildaDietRecommendations);
   await expect(fixture.frame.locator('#vhomeDietCard')).toBeVisible();
+  await watchNativeReport(fixture.frame);
   await fixture.frame.evaluate(ids => {
     window.__homeDietClipboard = [];
     window.__homeDietNodes = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
@@ -143,6 +157,7 @@ async function snapshot(frame, id) {
       palTouched: window.__vildaPlanPalTouched === true, dietTouched: window.__vildaDietLevelTouched === true,
       strategyTouched: window.__vildaDietStrategyTouched === true, goalChoice: window.__vildaDietGoalChoice ?? null,
       journey: localStorage.getItem('vildaBmiJourneyState'),
+      legacyReport: document.getElementById('dietEnergyResult')?.textContent,
       versions: (await VildaVault.getPatient(id)).snapshotCount,
     };
   }, { id, ids: IDS });
@@ -154,6 +169,7 @@ async function expectOriginalNodes(frame) {
 }
 
 test('home diet: Gabinet browse preserves the stored plan and editing a saved visit restores Apply', async ({ page }) => {
+  await watchClipboard(page);
   const { frame } = await prepareGabinet(page);
   const payload = fictionalPatient({ firstName: 'Dietetyczny', age: 13, sex: 'M', height: 155, weight: 75 });
   payload.plan = { palFactor: 1.4, palWybrany: true, dietLevel: 'light', dietaWybrana: true };
@@ -168,6 +184,7 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
   const header = frame.locator('#vhomeGabinetHeader');
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await frame.evaluate(() => VildaPatientReportLoader.ensure());
+  await watchNativeReport(frame);
   await expect(frame.locator('#vhomeDietCard')).toBeVisible();
   await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('browse');
   await expect(frame.locator('#palFactor')).toHaveValue('1.4');
@@ -175,32 +192,34 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
   const saved = () => frame.evaluate(id => VildaVault.getPatient(id).then(patient => patient.snapshots), id);
   const storedBefore = await saved(), before = await snapshot(frame, id);
   const readonly = await show(frame);
-  for (const control of await readonly.locator('[data-home-diet-field]').all()) await expect(control).not.toBeEditable();
+  const readonlyPlan = readonly.getByRole('tabpanel', { name: 'Plan żywieniowy' });
+  for (const control of await readonlyPlan.locator('[data-home-diet-field]').all()) await expect(control).not.toBeEditable();
   expect(await apply(readonly).isVisible() && await apply(readonly).isEnabled()).toBe(false);
-  await expect(readonly.locator('#vhomeDietPlanSummary')).toBeVisible();
-  await expect(readonly.locator('#vhomeDietPlanSummary')).toContainText(/1[,.]4/);
-  await expect(generate(readonly)).toBeEnabled();
-  await generate(readonly).click();
-  const report = await openReport(frame, readonly);
-  expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
-  await report.getByRole('button', { name: 'Wróć do planu', exact: true }).click();
+  await expect(draft(readonly, 'palFactor')).toHaveValue('1.4');
+  await expect(draft(readonly, 'dietLevel')).toHaveValue('light');
+  const report = await prepareReport(readonly);
+  await expectNativeReport(frame, report);
+  await planTab(readonly).click();
   await expect(report).toBeHidden();
+  await expect(readonly).toBeVisible();
+  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
   await page.keyboard.press('Escape');
   await expect(readonly).toBeHidden();
   await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('diet-'));
   expect(await snapshot(frame, id)).toEqual(before);
   expect(await saved()).toEqual(storedBefore);
 
-  // An unsaved legacy checkbox must not reuse the already generated report.
-  const hydration = await frame.locator('#hydrationFlag').isChecked();
-  await frame.evaluate(value => { document.getElementById('hydrationFlag').checked = !value; }, hydration);
+  // A changed native plan must not be mistaken for the saved visit.
+  const pal = await frame.locator('#palFactor').inputValue();
+  await frame.evaluate(() => { document.getElementById('palFactor').value = '1.6'; });
   const fallback = await show(frame);
   await expect(fallback.locator('#vhomeDietPlanSummary')).toContainText(/1[,.]4/);
-  await expect(fallback.locator('#vhomeDietPlanSummary')).toContainText('Wariant diety · lekka');
-  await expect(generate(fallback)).toBeHidden();
+  await expect(fallback.locator('#vhomeDietPlanSummary dd').getByText('lekka', { exact: true })).toBeVisible();
+  await showReport(fallback);
+  expect(await prepare(fallback).isVisible() && await prepare(fallback).isEnabled()).toBe(false);
   await page.keyboard.press('Escape');
   await expect(fallback).toBeHidden();
-  await frame.evaluate(value => { document.getElementById('hydrationFlag').checked = value; }, hydration);
+  await frame.evaluate(value => { document.getElementById('palFactor').value = value; }, pal);
   await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('diet-'));
   expect(await snapshot(frame, id)).toEqual(before);
   expect(await saved()).toEqual(storedBefore);
@@ -215,10 +234,12 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
   }
   await openDocument('[data-patient-documents-diet]');
   await expect(readonly).toBeVisible();
-  await expect(readonly.locator('#vhomeDietPlanSummary')).toContainText(/Wariant diety\s*lekka/);
-  await expect(readonly.locator('[data-home-diet-field]:enabled')).toHaveCount(0);
+  await planTab(readonly).click();
+  await expect(draft(readonly, 'dietLevel')).toHaveValue('light');
+  await expect(readonly.getByRole('tabpanel', { name: 'Plan żywieniowy' }).locator('[data-home-diet-field]:enabled')).toHaveCount(0);
   await expect(apply(readonly)).toBeHidden();
-  await expect(generate(readonly)).toBeEnabled();
+  await showReport(readonly);
+  await expect(prepare(readonly)).toBeEnabled();
   await page.keyboard.press('Escape');
   await expect(readonly).toBeHidden();
   await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('diet-'));
@@ -242,7 +263,10 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
   await header.getByRole('tab', { name: 'Analiza', exact: true }).click();
   await header.getByRole('button', { name: 'Opcje', exact: true }).click();
   await header.getByRole('button', { name: /^Edytuj wizytę z / }).click();
-  await expect.poll(() => frame.evaluate(id => VildaHomeEncounter.state(id).mode, id)).toBe('edit');
+  await frame.waitForFunction(id => {
+    const visit = VildaHomeEncounter.state(id);
+    return visit.mode === 'edit' && !visit.busy;
+  }, id, { timeout: 20_000 });
   const editable = await show(frame);
   await expect(draft(editable, 'palFactor')).toBeEnabled();
   await expect(apply(editable)).toBeVisible();
@@ -253,38 +277,44 @@ test('home diet: Gabinet browse preserves the stored plan and editing a saved vi
   expect(await saved()).toEqual(storedBefore);
 });
 
-test('home diet: isolated assumptions and movement drafts cancel without clinical, storage or clipboard writes', async ({ page }) => {
+test('home diet: isolated assumption and movement drafts can revert or close without native writes', async ({ page }) => {
   const { frame, id } = await setup(page);
   const before = await snapshot(frame, id), cardBefore = await frame.locator('#vhomeDietCard').boundingBox();
-  const dialog = await show(frame, 'road');
-  expect(await dialog.locator('.vhome-diet-grid').evaluate(grid => Array.from(grid.children).map(node =>
-    ['assumptions', 'road', 'options', 'plan-section', 'document'].find(key => node.classList.contains('vhome-diet-' + key))))
-  ).toEqual(['assumptions', 'road', 'options', 'plan-section', 'document']);
-  await expect(dialog.locator('.vhome-diet-road-details')).not.toHaveAttribute('open', '');
-  await expect(dialog.locator('.vhome-diet-options')).not.toHaveAttribute('open', '');
+  const dialog = await show(frame);
+  const card = frame.locator('#vhomeDietCard');
+  await expect(card.locator('[data-home-diet-open]')).toHaveCount(2);
+  await expect(card.locator('[data-home-diet-open="energy"]')).toHaveAccessibleName('Otwórz plan żywieniowy');
+  await expect(card.locator('[data-home-diet-open="road"]')).toHaveCount(0);
+  await expect(planTab(dialog)).toHaveAttribute('aria-selected', 'true');
   await expect(draft(dialog, 'nutritionNormsFlag')).toBeHidden();
-  await expect(preview(dialog)).toBeDisabled();
-  await expectNativeSummary(frame, dialog);
-  await openRoadDetails(dialog); await dialog.locator('.vhome-diet-road-details > summary').click();
-  await openDocumentFlags(dialog); await dialog.locator('.vhome-diet-options > summary').click();
-  await expect(dialog.locator('input[id], input[name], select[id], select[name]')).toHaveCount(0);
+  await expectNativePlan(frame, dialog);
+  await openMovementDetails(dialog);
   await expectOriginalNodes(frame);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
   expect(await snapshot(frame, id)).toEqual(before);
-  await dialog.locator('[data-home-diet-journey="move"]').first().click();
+
+  await openMovementPicker(dialog);
+  await movements(dialog).first().click();
   await draft(dialog, 'palFactor').selectOption('1.8');
-  await frame.evaluate(() => VildaHomeDiet.open('report'));
+  await showReport(dialog);
+  await expect(draft(dialog, 'palFactor')).toBeHidden();
+  await expect(prepare(dialog)).toBeDisabled();
+  await expectExportsBlocked(dialog);
+  await expect(reportBody(dialog).locator('.vhome-diet-native-energy')).toBeHidden();
+  await planTab(dialog).click();
   await expect(draft(dialog, 'palFactor')).toHaveValue('1.8');
-  await expect(generate(dialog)).toBeDisabled();
-  await expect(pdf(dialog)).toBeDisabled();
-  await expect(preview(dialog)).toBeDisabled();
-  await expect(dialog.locator('.vhome-diet-native-energy')).toBeHidden();
-  await expect(dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road')).toBeHidden();
-  await expect(dialog.locator('#vhomeDietPlanSummary .bmi-journey-goalbox, #vhomeDietPlanSummary .bmi-journey-hero, #vhomeDietPlanSummary .bmi-journey-kcal, #vhomeDietPlanSummary .bmi-journey-kontrola')).toHaveCount(0);
-  await expect(dialog.locator('#vhomeDietPlanSummary [data-home-diet-projection], #vhomeDietRoadBrief [data-home-diet-projection]')).toHaveCount(0);
+  await expect(dialog.locator('#vhomeDietPlanEnergy')).toHaveAttribute('data-state', 'pending');
   expect(await snapshot(frame, id)).toEqual(before);
+
+  await dialog.getByRole('button', { name: 'Cofnij zmiany', exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await expect(draft(dialog, 'palFactor')).toHaveValue(before.controls.palFactor.value);
+  await expectNativePlan(frame, dialog);
+  expect(await snapshot(frame, id)).toEqual(before);
+
+  await draft(dialog, 'palFactor').selectOption('1.8');
   page.once('dialog', confirmation => confirmation.accept());
-  await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await close(dialog);
   await expect(dialog).toBeHidden();
   expect(await snapshot(frame, id)).toEqual(before);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
@@ -314,7 +344,7 @@ test('home diet: explicit Apply updates original PAL and diet once, preserves th
   expect(after.versions).toBe(before.versions);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
   await expectOriginalNodes(frame);
-  await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await close(dialog);
   await page.reload({ waitUntil: 'load' });
   const restored = await shellFrame(page); await readyForPatient(restored); await settled(restored);
   await restored.evaluate(() => VildaPatientReportLoader.ensure());
@@ -325,70 +355,80 @@ test('home diet: explicit Apply updates original PAL and diet once, preserves th
   await expect(draft(restored.locator('#vhomeDietDialog'), 'dietLevel')).toHaveValue('light');
 });
 
-test('home diet: road uses native movement actions and complete clinical output, and generation copies only on explicit click', async ({ page }) => {
-  const { frame, id } = await setup(page), dialog = await show(frame, 'road');
-  const move = dialog.locator('[data-home-diet-journey="move"]').first(), key = await move.getAttribute('data-key');
-  const before = await frame.evaluate(() => ({ state: VildaBmiJourney.getSnapshot().state, stored: localStorage.getItem('vildaBmiJourneyState') }));
-  await move.click();
-  expect(await frame.evaluate(() => ({ state: VildaBmiJourney.getSnapshot().state, stored: localStorage.getItem('vildaBmiJourneyState') }))).toEqual(before);
-  await apply(dialog).click();
-  await expect.poll(() => frame.evaluate(key => VildaBmiJourney.getSnapshot().state.moves[key], key)).toBe(!before.state.moves[key]);
-  await expectNativeSummary(frame, dialog);
-  await openRoadDetails(dialog);
-  const clinicalParts = ['.bmi-journey-hero', '.bmi-journey-goalbox', '.bmi-journey-kcal', '.bmi-journey-growth', '.bmi-journey-kontrola', '.bmi-journey-warn', '.bmi-journey-table',
-    '.bmi-journey-pal-note', '.bmi-journey-gain', '.bmi-journey-bullets', '.bmi-journey-badge', '.energy-mode-badge-row'];
-  for (const selector of clinicalParts) {
-    expect(await dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road ' + selector).allTextContents()).toEqual(await frame.locator('#toNormInfo ' + selector).allTextContents());
+test('home diet: native movement projection applies once and prepares an inline report without copying', async ({ page }) => {
+  const patient = fictionalPatient({ firstName: 'Ruch', age: 14, sex: 'M', height: 165, weight: 85 });
+  const { frame, id } = await setup(page, { patient }), dialog = await show(frame);
+  const initial = await snapshot(frame, id);
+  const journey = () => frame.evaluate(() => VildaBmiJourney.getSnapshot().state);
+  const previousMoves = (await journey()).moves;
+  const comparison = impact(dialog).locator('.vhome-diet-impact-comparison');
+  await expect(comparison).toContainText('Sama dieta');
+  await expect(comparison).toContainText('Dieta i ruch');
+  const initialComparison = await comparison.innerText();
+  const nativeKcal = await frame.locator('#bmiJourneyMount .bmi-journey-kcaln').textContent();
+
+  await openMovementPicker(dialog);
+  for (const key of ['bike', 'dance']) {
+    const activity = dialog.locator(`[data-home-diet-journey="move"][data-key="${key}"]`);
+    await activity.check();
+    await expect(activity).toBeChecked();
   }
+  await expect(impact(dialog).locator('#vhomeDietImpactStatus')).toBeVisible();
+  await expect(comparison).not.toHaveText(initialComparison);
+  expect(await snapshot(frame, id)).toEqual(initial);
+  expect((await journey()).moves).toEqual(previousMoves);
+
+  await showReport(dialog);
+  await expect(prepare(dialog)).toBeDisabled();
+  await expectExportsBlocked(dialog);
+  await planTab(dialog).click();
+  await apply(dialog).click();
+  await expect.poll(async () => (await journey()).moves).toMatchObject({ walk: true, bike: true, dance: true });
+  await expect(impact(dialog).locator('#vhomeDietImpactStatus')).toBeHidden();
+  await expectNativePlan(frame, dialog);
+  expect(await frame.locator('#bmiJourneyMount .bmi-journey-kcaln').textContent()).toBe(nativeKcal);
+  await openMovementDetails(dialog);
+  const numericCells = nodes => nodes.map(row => Array.from(row.cells).slice(1).map(cell =>
+    cell.textContent.replace(/[\u202f\u00a0 ]/g, '').replace(/^≈/, '')));
+  const nativeRows = await frame.locator('#bmiJourneyMount .bmi-journey-table tbody tr').evaluateAll(numericCells);
+  const rows = await impact(dialog).locator('.vhome-diet-impact-table :is(tbody, tfoot) tr').evaluateAll(numericCells);
+  expect(rows).toEqual(nativeRows);
   await expect(dialog.locator('[data-journey], [data-diet-strategy-choice], [data-diet-goal-choice], [data-diet-copy-result], [data-diet-report-direct]')).toHaveCount(0);
-  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
-  await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
-  await expect(dialog.locator('.vhome-diet-native-energy')).toHaveCount(0);
-  const text = await frame.evaluate(() => VildaSchowek.dlaSystemuSzpitalnego(VildaDietRecommendations.getLastOutputs().energy.textOutput));
-  await expect.poll(() => frame.evaluate(() => window.__homeDietClipboard)).toEqual([text]);
   await frame.waitForFunction(() => {
     const pending = vildaGetPersistAutosaveCoalescingSnapshot();
     return !pending.hasPendingSaveTimer && !pending.hasPendingForceSaveTimer && !pending.hasPendingElementRefreshTimer;
   });
   const applied = await snapshot(frame, id);
-  await preview(dialog).scrollIntoViewIfNeeded();
-  const bounds = await dialog.boundingBox(), scrollTop = await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollTop);
-  await frame.evaluate(() => {
-    window.__homeDietPreviewEffects = { generate: 0, copy: 0, storage: [] };
-    document.getElementById('generateEnergyDietBtn').addEventListener('click', () => { window.__homeDietPreviewEffects.generate += 1; });
-    document.getElementById('dietRecommendationsContent').addEventListener('click', event => {
-      if (event.target.closest('[data-diet-copy-result]')) window.__homeDietPreviewEffects.copy += 1;
-    });
-    window.__homeDietStorageSetItem = Storage.prototype.setItem;
-    Storage.prototype.setItem = function (key, value) {
-      // Native chrome periodically refreshes account-label/has-patient/PRO
-      // presentation flags. This exact session UI cache is not an autosave.
-      if (this !== window.sessionStorage || String(key) !== 'vildaChromeUiSnapV1') {
-        window.__homeDietPreviewEffects.storage.push(String(key));
-      }
-      return window.__homeDietStorageSetItem.call(this, key, value);
-    };
-  });
-  const report = await openReport(frame, dialog);
-  await expect.poll(() => report.boundingBox()).toEqual(bounds);
-  expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
-  await report.press('Escape');
-  await expect(report).toBeHidden(); await expect(dialog).toBeVisible();
-  await expect(preview(dialog)).toBeFocused();
-  expect(await dialog.locator('.vhome-dialog-body').evaluate(node => node.scrollTop)).toBe(scrollTop);
+  expect(applied.versions).toBe(initial.versions);
+  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
+  const bounds = await dialog.boundingBox();
+  const report = await prepareReport(dialog);
+  await expect.poll(() => dialog.boundingBox()).toEqual(bounds);
+  await expectNativeReport(frame, report);
   expect(await snapshot(frame, id)).toEqual(applied);
+  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
+  const text = await frame.evaluate(() => VildaSchowek.dlaSystemuSzpitalnego(window.__homeDietPrepared.output.textOutput));
+  await copy(dialog).click();
+  await expect.poll(() => frame.evaluate(() => window.__homeDietClipboard)).toEqual([text]);
+
+  const flag = draft(dialog, 'nutritionNormsFlag');
+  await flag.setChecked(!await flag.isChecked());
+  await expectExportsBlocked(dialog);
+  await expect(prepare(dialog)).toBeEnabled();
+  await expect(report.locator('.vhome-diet-native-energy')).toBeHidden();
+  expect(await snapshot(frame, id)).toEqual(applied);
+  const selected = await flag.isChecked();
+  await prepareReport(dialog);
+  expect(await frame.evaluate(() => window.__homeDietPrepared.scope.nutritionNormsFlag)).toBe(selected);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([text]);
-  expect(await frame.evaluate(() => window.__homeDietPreviewEffects)).toEqual({ generate: 0, copy: 0, storage: [] });
-  await frame.evaluate(() => { Storage.prototype.setItem = window.__homeDietStorageSetItem; });
-  await dialog.getByRole('button', { name: 'Kopiuj zalecenia', exact: true }).click();
-  await expect.poll(() => frame.evaluate(() => window.__homeDietClipboard)).toEqual([text, text]);
+  await planTab(dialog).click();
+  await expect(apply(dialog)).toBeDisabled();
   await draft(dialog, 'palFactor').selectOption(applied.controls.palFactor.value === '1.8' ? '1.6' : '1.8');
-  await expect(preview(dialog)).toBeDisabled();
-  await expect(generate(dialog)).toBeDisabled(); await expect(pdf(dialog)).toBeDisabled();
-  await expect(frame.locator('#vhomeDietReportDialog .vhome-diet-native-energy')).toHaveCount(0);
-  await expect(dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road')).toBeHidden();
-  await expect(dialog.locator('#vhomeDietPlanSummary .bmi-journey-goalbox, #vhomeDietPlanSummary .bmi-journey-hero, #vhomeDietPlanSummary .bmi-journey-kcal, #vhomeDietPlanSummary .bmi-journey-kontrola')).toHaveCount(0);
-  await expect(dialog.locator('#vhomeDietPlanSummary [data-home-diet-projection], #vhomeDietRoadBrief [data-home-diet-projection]')).toHaveCount(0);
+  await expect(impact(dialog).locator('#vhomeDietImpactStatus')).toBeVisible();
+  await showReport(dialog);
+  await expect(prepare(dialog)).toBeDisabled();
+  await expectExportsBlocked(dialog);
+  await expect(report.locator('.vhome-diet-native-energy')).toBeHidden();
   expect(await snapshot(frame, id)).toEqual(applied);
   await expectOriginalNodes(frame);
 });
@@ -415,10 +455,7 @@ test('home diet: restoring, changing the owner and locking invalidate stale assu
     sessionStorage.setItem('vildaCurrentPatientId', original); VildaHomeDiet.refresh();
   }, id);
   await show(frame);
-  await openDocumentFlags(dialog);
-  const flag = draft(dialog, 'nutritionNormsFlag');
-  await expect(flag).toBeVisible();
-  await flag.setChecked(!await flag.isChecked());
+  await draft(dialog, 'palFactor').selectOption('1.8');
   await frame.evaluate(() => {
     const oldApply = document.querySelector('#vhomeDietDialog .vhome-dialog-apply');
     VildaVault.lock(); oldApply.click();
@@ -452,26 +489,24 @@ for (const { title, patient, ds } of [
     }));
     expect(native.available).toBe(true);
     const dialog = await show(frame);
-    await expect(dialog.locator('.vhome-diet-road')).toHaveCount(native.hasJourney ? 1 : 0);
-    await expect(dialog.locator('.vhome-diet-section-number')).toHaveText(native.hasJourney ? ['1', '2', '3', '4', '5'] : ['1', '2', '3', '4']);
     expect(await draft(dialog, 'dietLevel').isVisible()).toBe(native.hasDietChoices);
     expect(await frame.locator('#toNormInfo').textContent()).toBe(native.road);
-    if (native.hasJourney) await expect(dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road')).toHaveText(native.road);
-    await expectNativeSummary(frame, dialog);
+    await expectNativePlan(frame, dialog);
+    await expect(impact(dialog)).toBeHidden();
+    await expect(movements(dialog)).toHaveCount(0);
     if (title === 'child stabilization') {
       const nativePlan = await frame.locator('#planResults').textContent();
       expect(nativePlan.trim()).not.toBe('');
       expect(await dialog.locator('.vhome-diet-native-plan').textContent()).toBe(nativePlan);
     }
-    await expect(dialog.locator('[data-home-diet-journey="move"]')).toHaveCount(0);
-    if (native.strategyHidden) {
-      expect(await draft(dialog, 'reduceToggle').isVisible()).toBe(false);
-      expect(await draft(dialog, 'stabilizationToggle').isVisible()).toBe(false);
-    }
-    await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
-    const report = await openReport(frame, dialog);
-    expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
+    if (native.strategyHidden) await expect(draft(dialog, 'strategy')).toBeHidden();
+    const report = await prepareReport(dialog);
+    await expectNativeReport(frame, report);
     await expect(report.locator('.vhome-diet-native-energy')).not.toContainText('Musisz zredukować');
+    if (title === 'child stabilization') {
+      await expect(copy(dialog)).toBeEnabled();
+      expect(await pdf(dialog).isVisible() && await pdf(dialog).isEnabled()).toBe(false);
+    }
   });
 }
 
@@ -482,19 +517,66 @@ test('home diet: an eligible custom goal remains a draft until Apply and then us
   await draft(dialog, 'goal').selectOption('custom');
   await draft(dialog, 'customGoalKg').fill('62');
   expect(await snapshot(frame, id)).toEqual(before);
-  await expect(generate(dialog)).toBeDisabled(); await expect(pdf(dialog)).toBeDisabled();
+  await showReport(dialog);
+  await expect(prepare(dialog)).toBeDisabled();
+  await expectExportsBlocked(dialog);
+  await planTab(dialog).click();
   await apply(dialog).click();
   await expect(dialog).toBeVisible();
   await expect(frame.locator('#customGoalKg')).toHaveValue('62');
   await expect.poll(() => frame.evaluate(() => VildaDataImportExport.captureCurrentUserDataReadOnly().plan.customGoalKg)).toBe(62);
   await expect(frame.locator('#toNormInfo')).toContainText('Cel własny');
-  expect(await dialog.locator('#vhomeDietRoadResult > .vhome-diet-native-road .bmi-journey-goalbox').allTextContents()).toEqual(await frame.locator('#toNormInfo .bmi-journey-goalbox').allTextContents());
+  await expectNativePlan(frame, dialog);
+  await expect(dialog.locator('#vhomeDietPlanSummary')).toContainText(/62(?:[,.]0)?\s*kg/);
   expect((await snapshot(frame, id)).versions).toBe(before.versions);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual([]);
-  await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
-  await expectNativeSummary(frame, dialog);
-  const report = await openReport(frame, dialog);
-  expect(await report.locator('.vhome-diet-native-energy').textContent()).toBe(await frame.locator('#dietEnergyResult').textContent());
+  const report = await prepareReport(dialog);
+  await expectNativeReport(frame, report);
+
+  await planTab(dialog).click();
+  await draft(dialog, 'goal').selectOption('maintain');
+  await expect(frame.locator('#customGoalKg')).toHaveValue('62');
+  await apply(dialog).click();
+  await expect(dialog).toBeVisible();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('');
+  await expect(frame.locator('#bmiJourneyMount')).toHaveCount(0);
+  await expect(impact(dialog)).toBeHidden();
+  await expect(dialog.locator('#vhomeDietPlanEnergy')).not.toContainText('Cel własny');
+  await showReport(dialog);
+  await expectExportsBlocked(dialog);
+  await expect(reportBody(dialog).locator('.vhome-diet-native-energy')).toHaveCount(0);
+  await expectNativeReport(frame, await prepareReport(dialog));
+  expect((await snapshot(frame, id)).versions).toBe(before.versions);
+  await expectOriginalNodes(frame);
+});
+
+test('home diet: ending and reopening growth eligibility applies the adolescent goal and clears it in native state', async ({ page }) => {
+  const patient = fictionalPatient({ firstName: 'Nastolatka', age: 17, sex: 'F', height: 165, weight: 62.7 });
+  const { frame, id } = await setup(page, { patient }), dialog = await show(frame);
+  const before = await snapshot(frame, id);
+  const growth = draft(dialog, 'growthEndedFlag'), goal = draft(dialog, 'goal');
+  await expect(growth).not.toBeChecked();
+  await growth.check();
+  await goal.selectOption('custom');
+  await draft(dialog, 'customGoalKg').fill('57.7');
+  expect(await snapshot(frame, id)).toEqual(before);
+  await apply(dialog).click();
+  await expect(frame.locator('#growthEndedFlag')).toBeChecked();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('57.7');
+  await expect(frame.locator('#toNormInfo')).toContainText('Cel własny');
+  await expectNativePlan(frame, dialog);
+
+  await goal.selectOption('maintain');
+  await growth.uncheck();
+  await expect(frame.locator('#growthEndedFlag')).toBeChecked();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('57.7');
+  await apply(dialog).click();
+  await expect(dialog).toBeVisible();
+  await expect(frame.locator('#growthEndedFlag')).not.toBeChecked();
+  await expect(frame.locator('#customGoalKg')).toHaveValue('');
+  await expect(frame.locator('#bmiJourneyMount')).toHaveCount(0);
+  await expect(impact(dialog)).toBeHidden();
+  expect((await snapshot(frame, id)).versions).toBe(before.versions);
   await expectOriginalNodes(frame);
 });
 
@@ -509,8 +591,8 @@ test('home diet: resize keeps original controls stable, compact cards and reacha
     await expectOriginalNodes(frame);
     await expect(draft(dialog, 'palFactor')).toHaveCSS('font-size', '16px');
     const geometry = await dialog.evaluate(node => {
-      const box = node.getBoundingClientRect(), footer = node.querySelector('.vhome-dialog-footer').getBoundingClientRect();
-      const button = node.querySelector('.vhome-dialog-cancel'), r = button.getBoundingClientRect();
+      const box = node.getBoundingClientRect();
+      const button = node.querySelector('.vhome-dialog-close'), r = button.getBoundingClientRect();
       const body = node.querySelector('.vhome-dialog-body'), b = body.getBoundingClientRect();
       return { bodyFits: body.scrollWidth <= body.clientWidth + 1, bodyWidth: body.clientWidth, scrollWidth: body.scrollWidth,
         overflowing: Array.from(body.querySelectorAll('*')).filter(child => {
@@ -519,20 +601,21 @@ test('home diet: resize keeps original controls stable, compact cards and reacha
         intrinsicOverflow: Array.from(body.querySelectorAll('*')).filter(child => child.getBoundingClientRect().width
           && child.scrollWidth > child.clientWidth + 1).slice(-20).map(child => ({ tag: child.tagName, cls: child.className,
           client: child.clientWidth, scroll: child.scrollWidth, overflow: getComputedStyle(child).overflowX, text: child.textContent.slice(0, 70) })),
-        footerInside: footer.bottom <= box.bottom + 1,
-        cancelReachable: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') === button };
+        closeInside: r.top >= box.top - 1 && r.bottom <= box.bottom + 1,
+        closeReachable: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') === button };
     });
     expect(geometry.bodyFits, JSON.stringify({ width, ...geometry })).toBe(true);
-    expect(geometry.footerInside).toBe(true); expect(geometry.cancelReachable).toBe(true);
+    expect(geometry.closeInside).toBe(true); expect(geometry.closeReachable).toBe(true);
   }
-  await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await close(dialog);
   await expect(page.locator('#mobileBottomDock')).toHaveCSS('visibility', 'visible');
   const card = frame.locator('#vhomeDietCard');
   const geometry = await card.evaluate(node => {
     const css = getComputedStyle(node), height = node.getBoundingClientRect().height;
     const content = Array.from(node.children).reduce((sum, child) => {
       const c = getComputedStyle(child); return sum + child.getBoundingClientRect().height + parseFloat(c.marginTop) + parseFloat(c.marginBottom);
-    }, 0) + parseFloat(css.paddingTop) + parseFloat(css.paddingBottom) + parseFloat(css.borderTopWidth) + parseFloat(css.borderBottomWidth);
+    }, 0) + (Number.parseFloat(css.rowGap) || 0) * (node.children.length - 1)
+      + parseFloat(css.paddingTop) + parseFloat(css.paddingBottom) + parseFloat(css.borderTopWidth) + parseFloat(css.borderBottomWidth);
     return { height, content };
   });
   expect(Math.abs(geometry.height - geometry.content)).toBeLessThan(2);
@@ -540,7 +623,7 @@ test('home diet: resize keeps original controls stable, compact cards and reacha
 
 test('home diet: the PDF actor receives a guard bound to this editor and invalidates it on close, reopen and changed intake', async ({ page }) => {
   const { frame, id } = await setup(page), before = await snapshot(frame, id), dialog = await show(frame);
-  await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
+  await prepareReport(dialog);
   await expect(pdf(dialog)).toBeEnabled();
   // The native PDF actor's asynchronous cancellation points have their own
   // production tests. Stub only that existing boundary here to inspect the
@@ -558,14 +641,14 @@ test('home diet: the PDF actor receives a guard bound to this editor and invalid
     ownButton: window.__homeDietPdfTasks[0].button === document.querySelector('#vhomeDietDialog [data-home-diet-action="pdf"]'),
     guarded: typeof window.__homeDietPdfTasks[0].options?.isCurrent === 'function',
     current: window.__homeDietPdfTasks[0].options?.isCurrent?.() }))).toEqual({ mode: 'classic', ownButton: true, guarded: true, current: true });
-  await dialog.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  await close(dialog);
   await expect(dialog).toBeHidden();
   expect(await frame.evaluate(() => window.__homeDietPdfTasks[0].options.isCurrent())).toBe(false);
   await frame.waitForFunction(() => !String(history.state?.vildaHomeDialog || '').startsWith('diet-'));
   await show(frame);
   // The patient and inputs are identical, but this is a new editor instance.
   expect(await frame.evaluate(() => window.__homeDietPdfTasks[0].options.isCurrent())).toBe(false);
-  await expect(generate(dialog)).toBeEnabled(); await generate(dialog).click();
+  await prepareReport(dialog);
   await expect(pdf(dialog)).toBeEnabled(); await pdf(dialog).click();
   await expect.poll(() => frame.evaluate(() => window.__homeDietPdfTasks.length)).toBe(2);
   expect(await frame.evaluate(() => window.__homeDietPdfTasks[1].options.isCurrent())).toBe(true);
@@ -605,14 +688,14 @@ test('home diet: the existing card visibility preference closes and hides the ed
   expect(await snapshot(frame, id)).toEqual(before);
 });
 
-test('home diet: restore, owner changes and lock close both dialogs and discard the previous report', async ({ page }) => {
+test('home diet: restore, owner changes and lock close the editor and discard the inline report', async ({ page }) => {
   const { frame, id, ids } = await setup(page);
   const pal = await frame.locator('#palFactor').inputValue();
   for (const reason of ['restore', 'owner', 'lock']) {
     const dialog = await show(frame);
-    await expect(preview(dialog)).toBeDisabled();
-    await generate(dialog).click();
-    const report = await openReport(frame, dialog);
+    await showReport(dialog);
+    await expectExportsBlocked(dialog);
+    const report = await prepareReport(dialog);
     const clipboard = await frame.evaluate(() => window.__homeDietClipboard);
     if (reason === 'restore') {
       await frame.evaluate(() => VildaDataImportExport.applyLoadedData(VildaPersistence.readMainSession(), { isSessionRestore: true }));
@@ -622,7 +705,7 @@ test('home diet: restore, owner changes and lock close both dialogs and discard 
       await frame.evaluate(() => VildaVault.lock());
     }
     await expect(report).toBeHidden(); await expect(dialog).toBeHidden();
-    await expect(frame.locator('#vhomeDietReportDialog .vhome-diet-native-energy')).toHaveCount(0);
+    await expect(frame.locator('#vhomeDietEnergy .vhome-diet-native-energy')).toHaveCount(0);
     await expect(frame.locator('#palFactor')).toHaveValue(reason === 'lock' ? '' : pal);
     expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual(clipboard);
     await expectOriginalNodes(frame);
@@ -635,31 +718,40 @@ test('home diet: restore, owner changes and lock close both dialogs and discard 
   expect(await frame.evaluate(() => VildaVault.isUnlocked())).toBe(false);
 });
 
-test('home diet: history Back returns from preview, leaving the editor closes both dialogs, and reload restores no report', async ({ page }) => {
-  const { frame, id } = await setup(page), before = await snapshot(frame, id), dialog = await show(frame);
-  await generate(dialog).click();
-  const report = await openReport(frame, dialog);
+test('home diet: Back closes the editor with its inline report, and reload discards prepared content', async ({ page }) => {
+  const { frame, id } = await setup(page), before = await snapshot(frame, id), dialog = await show(frame, 'report');
+  await expect(reportTab(dialog)).toHaveAttribute('aria-selected', 'true');
+  const report = await prepareReport(dialog);
   const clipboard = await frame.evaluate(() => window.__homeDietClipboard);
+  expect(clipboard).toEqual([]);
+  await reportTab(dialog).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(planTab(dialog)).toBeFocused();
+  await expect(planTab(dialog)).toHaveAttribute('aria-selected', 'true');
+  await expect(report).toBeHidden();
+  await page.keyboard.press('ArrowRight');
+  await expect(reportTab(dialog)).toBeFocused();
+  await expect(reportTab(dialog)).toHaveAttribute('aria-selected', 'true');
+  await expect(report).toBeVisible();
   await frame.evaluate(() => history.back());
-  await expect(report).toBeHidden(); await expect(dialog).toBeVisible();
-  await expect(preview(dialog)).toBeFocused();
+  await expect(report).toBeHidden();
+  await expect(dialog).toBeHidden();
+  expect(await frame.evaluate(() => {
+    const card = document.getElementById('vhomeDietCard');
+    return card.contains(document.activeElement);
+  })).toBe(true);
+  await expect(frame.locator('#vhomeDietEnergy .vhome-diet-native-energy')).toHaveCount(0);
   expect(await snapshot(frame, id)).toEqual(before);
   expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual(clipboard);
-  await openReport(frame, dialog);
-  await frame.evaluate(() => history.go(-2));
-  await expect(report).toBeHidden(); await expect(dialog).toBeHidden();
-  await expect(frame.locator('#vhomeDietExpand')).toBeFocused();
-  await expect(frame.locator('#vhomeDietReportDialog .vhome-diet-native-energy')).toHaveCount(0);
-  expect(await snapshot(frame, id)).toEqual(before);
-  expect(await frame.evaluate(() => window.__homeDietClipboard)).toEqual(clipboard);
+
   await show(frame);
-  await generate(dialog).click(); await openReport(frame, dialog);
+  await prepareReport(dialog);
   await page.reload({ waitUntil: 'load' }); await readyForPatient(page); await settled(page);
   await page.evaluate(() => VildaPatientReportLoader.ensure());
   await expect(page.getByRole('dialog', { name: 'Zalecenia dietetyczne', exact: true })).toBeHidden();
-  await expect(page.getByRole('dialog', { name: 'Podgląd zaleceń', exact: true })).toBeHidden();
-  const restored = await show(page);
-  await expect(preview(restored)).toBeDisabled();
+  const restored = await show(page, 'report');
+  await expectExportsBlocked(restored);
+  await expect(reportBody(restored).locator('.vhome-diet-native-energy')).toHaveCount(0);
   expect(await snapshot(page, id)).toEqual(before);
   expect(await page.evaluate(() => window.__homeDietClipboard)).toEqual([]);
 });

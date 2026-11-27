@@ -112,7 +112,7 @@ function harness({ dependencyWait, canvasWait, downloadWait, layoutWaitAt, exter
     layoutCalls++;
     if (layoutCalls === layoutWaitAt) { layoutStarted.resolve(); await layoutRelease.promise; }
   });
-  const actors = namedFunctions('vilda_diet_recommendations.js', ['ve', 'dietPdfGuard', 'di', 'ri', 'Le']);
+  const actors = namedFunctions('vilda_diet_recommendations.js', ['ve', 'dietPdfGuard', 'dietPdfPreflightError', 'di', 'ri', 'Le']);
   const runner = externalTask
     ? namedFunctions('vilda_patient_report.js', ['patientReportRunExternalPdfTask'])
     : 'var patientReportRunExternalPdfTask;';
