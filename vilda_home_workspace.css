@@ -574,7 +574,7 @@ html.vilda-home-workspace .vhome-perinatal-clear { width: auto; margin: var(--sp
 .vilda-home-workspace .vhome-growth-heading h2 { min-width: 0; margin: 0; color: var(--growth-card-ink); font-size: 18px; font-weight: 650; line-height: 1.35; text-align: left; overflow-wrap: anywhere; }
 html.vilda-home-workspace .vhome-growth-expand { display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; border: 0 !important; border-radius: 7px !important; background: transparent !important; color: var(--growth-card-accent) !important; box-shadow: none !important; }
 .vilda-home-workspace .vhome-growth-expand svg { display: block; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.vilda-home-workspace .vhome-growth-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto auto auto; gap: 4px var(--space-8px); }
+.vilda-home-workspace .vhome-growth-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: auto auto auto; gap: var(--space-4px) var(--space-8px); }
 .vilda-home-workspace .vhome-growth-summary > div {
   display: grid;
   grid-row: span 3;
@@ -582,7 +582,7 @@ html.vilda-home-workspace .vhome-growth-expand { display: inline-flex; flex: 0 0
   grid-template-rows: subgrid;
   align-content: start;
   min-width: 0;
-  gap: 4px;
+  gap: var(--space-4px);
   padding: var(--space-10px);
   border: var(--border-hairline) solid var(--growth-card-line);
   border-radius: 7px;
@@ -612,7 +612,7 @@ html.vilda-home-workspace .vhome-growth-entry-actions [data-growth-open="data"] 
   background: var(--growth-card-accent) !important;
   color: #fff !important;
 }
-html.vilda-home-workspace .vhome-growth-card button:focus-visible { outline: 2px solid var(--growth-card-accent); outline-offset: 2px; }
+html.vilda-home-workspace .vhome-growth-card button:focus-visible { outline: var(--border-emphasis) solid var(--growth-card-accent); outline-offset: 2px; }
 @container growth-summary (max-width: 400px) {
   .vilda-home-workspace .vhome-growth-summary { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; row-gap: var(--space-8px); }
   .vilda-home-workspace .vhome-growth-summary > div { grid-row: auto; grid-template-columns: minmax(0, 1fr) max-content; grid-template-rows: auto; align-items: baseline; gap: 2px var(--space-10px); }
