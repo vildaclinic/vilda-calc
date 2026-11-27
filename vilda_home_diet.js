@@ -668,7 +668,7 @@
     if (draft.goal === 'custom' && projection && !projection.customGoalActive) {
       setText(status, projection.customGoalHint || 'Sprawdź masę docelową w założeniach planu.'); return;
     }
-    var item = draft, values = { ...item.values }, desiredGoal = item.goal, moves = { ...item.moves };
+    var item = draft, values = { ...item.values }, desiredGoal = item.goal, moves = { ...item.moves }, intakePal = value('intakePal');
     if (projection?.dietKey) values.dietLevel = projection.dietKey;
     var changedStrategy = values.reduceToggle !== item.baseValues.reduceToggle || values.stabilizationToggle !== item.baseValues.stabilizationToggle;
     if (changedStrategy && projection?.strategy) {
@@ -707,6 +707,11 @@
       if (changed.includes('palFactor')) w.__vildaPlanPalTouched = true;
       if (changedStrategy) w.__vildaDietStrategyTouched = true;
       inputs.forEach(notify); update(); if (!valid()) return;
+      // An untouched intake PAL follows the plan PAL even when its card is closed.
+      // Use freshly calculated intake for the native goal and the saved plan.
+      if (value('intakePal') !== intakePal && typeof w.calcEstimatedIntake === 'function') {
+        w.calcEstimatedIntake(); update(); if (!valid()) return;
+      }
       // Growth status can unlock a previously disabled native custom-goal actor.
       if (desiredGoal === 'custom') {
         if (!selectNativeGoal('custom')) return;

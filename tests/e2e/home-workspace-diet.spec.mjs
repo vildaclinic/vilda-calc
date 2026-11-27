@@ -54,7 +54,7 @@ function maintenanceReference(kcal) {
 }
 
 async function showReport(dialog) {
-  await reportTab(dialog).click({ timeout: 8_000 });
+  await reportTab(dialog).click();
   await expect(reportTab(dialog)).toHaveAttribute('aria-selected', 'true');
 }
 
@@ -67,7 +67,7 @@ async function expectExportsBlocked(dialog) {
 async function prepareReport(dialog) {
   await showReport(dialog);
   await expect(prepare(dialog)).toBeEnabled();
-  await prepare(dialog).click({ timeout: 8_000 });
+  await prepare(dialog).click();
   const report = reportBody(dialog);
   await expect(report).toBeVisible();
   await expect(report.locator('.vhome-diet-native-energy')).toBeVisible();
@@ -148,47 +148,6 @@ async function setup(page, { shell = false, patient, ds = false } = {}) {
   await page.addInitScript(() => { window.__VILDA_HOME_WORKSPACE_PREVIEW__ = true; });
   await watchClipboard(page);
   await page.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
-  if (process.env.CI && /normal adult retains|an eligible custom goal/u.test(test.info().title)) {
-    page.on('console', message => {
-      if (message.text().startsWith('[diet state]')) console.log(message.text());
-    });
-    await page.route('**/vilda_home_diet.js?*', async route => {
-      const response = await route.fetch(), source = await response.text();
-      const instrumented = source.replace(
-        'function stillOwned() { return !!(draft && ownerValid(draft) && (draft.applying || JSON.stringify(snapshot()) === draft.fingerprint)); }',
-        `function stillOwned() { return logDietOwnership(); }
-        function logDietOwnership() {
-          if (!draft) return false;
-          if (!ownerValid(draft)) {
-            var currentOwner = owner(), expectedOwner = JSON.parse(draft.ownerKey);
-            var changedOwner = Object.keys(expectedOwner).filter(key => JSON.stringify(expectedOwner[key]) !== JSON.stringify(currentOwner?.[key]));
-            console.log('[diet state] owner ' + JSON.stringify({ present: !!currentOwner, changedOwner,
-              unlocked: w.VildaVault?.isUnlocked(), boot: w.VildaAuthUI?.isBootReady(), access: w.VildaProAccess?.hasAccess(),
-              restoring: !!w.__vildaPersistRestoring, mirroring: !!w.__vildaLustroWpis,
-              mainRestore: w.VildaDataImportExport?.isMainSessionRestorePending(),
-              autosaveSuppressed: w.VildaPersistence?.isAutosaveSuppressed(),
-              clearing: w.VildaPersistence?.isClearInProgress?.() || Number(w.__vildaPersistClearUntil || 0) > Date.now(),
-              stale: w.VildaPanelPacjent?.nieaktualny() }));
-            return false;
-          }
-          if (draft.applying) return true;
-          var current = snapshot(), expected = JSON.parse(draft.fingerprint);
-          if (JSON.stringify(current) === draft.fingerprint) return true;
-          var changed = {};
-          Object.keys(expected).filter(key => JSON.stringify(expected[key]) !== JSON.stringify(current?.[key])).forEach(key => {
-            if (['fields', 'inputs', 'fieldState', 'history'].includes(key)) {
-              var original = new Map(expected[key].map(entry => [entry[0], JSON.stringify(entry)]));
-              changed[key] = current[key].filter(entry => original.get(entry[0]) !== JSON.stringify(entry)).map(entry => entry[0]);
-            } else changed[key] = true;
-          });
-          console.log('[diet state] fingerprint ' + JSON.stringify(changed));
-          return false;
-        }`,
-      ).replace('var old = draft; draft = null;', "console.log('[diet state] close ' + force + ' ' + new Error().stack.split('\\n').slice(1, 5).join(' ')); var old = draft; draft = null;");
-      if (instrumented === source) throw new Error('Diet dialog diagnostic did not attach.');
-      await route.fulfill({ response, body: instrumented });
-    });
-  }
   const fixture = await createFictionalVault(page, { shell, waitForAccountReadyBeforeReload: true });
   const payload = patient || fictionalPatient({ firstName: 'Dietetyczny', age: 13, sex: 'M', height: 155, weight: 75 });
   if (ds) payload.clinical = { downSyndrome: true };
@@ -600,7 +559,16 @@ for (const { title, patient, ds } of [
       await expect(prepare(dialog)).toBeDisabled();
       await expectExportsBlocked(dialog);
       await planTab(dialog).click();
-      await apply(dialog).click();
+      // Make the native intake calculation pending during Apply, with real historical rows.
+      const intakeRowsAfterApply = await apply(dialog).evaluate(button => {
+        document.getElementById('palFactor').addEventListener('change', () => {
+          VildaEstimatedIntakeRuntime.clearEstimatedIntakeWindowState();
+          debouncedIntakeCalc();
+        }, { once: true });
+        button.click();
+        return window.intakeHistory?.length ?? 0;
+      });
+      expect(intakeRowsAfterApply).toBeGreaterThan(1);
       await expect(dialog).toBeVisible();
       await expect(frame.locator('#palFactor')).toHaveValue(changedPal);
       await expectDailyEnergy(energy, changed.estimate);
