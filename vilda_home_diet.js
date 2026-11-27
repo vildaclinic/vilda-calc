@@ -5,6 +5,7 @@
   'use strict';
   if (!w || w.__VILDA_HOME_WORKSPACE_PREVIEW__ !== true || w.VildaHomeDiet) return;
   var d = w.document, card, dialog, planActions, draft, started = false, frame = 0, sequence = 0, loading = null, readinessTimer;
+  var savedHomeVisit = null;
   var planFields = ['palFactor', 'dietLevel', 'reduceToggle', 'stabilizationToggle', 'growthEndedFlag', 'customGoalKg'];
   var documentFields = ['nutritionNormsFlag', 'vitDSuppFlag', 'hydrationFlag', 'journeyFlag', 'peerMassFlag', 'alcoholFlag'];
   var fields = planFields.concat(documentFields);
@@ -89,6 +90,19 @@
     var movement = hasRoad() && journeyState()?.moves;
     return !movement || (movement.walk === true && Object.keys(movement).every(key => key === 'walk' || !movement[key]));
   }
+  function savedHomeReady(who) {
+    var key = JSON.stringify(who);
+    if (savedHomeVisit?.ownerKey === key && ownerValid(savedHomeVisit)) return savedReportReady(savedHomeVisit);
+    var vault = w.VildaVault;
+    var item = { vault, token: vault.captureSyncOperationSession(), ownerKey: key, readOnly: true, saved: null };
+    savedHomeVisit = item;
+    savedVisitSource(item, who).then(saved => {
+      if (savedHomeVisit !== item || !ownerValid(item)) return;
+      item.saved = saved;
+      schedule();
+    });
+    return false;
+  }
   function goalStrategy() { return value('stabilizationToggle') && !value('reduceToggle') ? 'stabilization' : 'reduction'; }
   function stillOwned() { return !!(draft && ownerValid(draft) && (draft.applying || JSON.stringify(snapshot()) === draft.fingerprint)); }
   function dirty() { return !!(draft && JSON.stringify([draft.values, draft.goal, draft.moves]) !== draft.initial); }
@@ -147,6 +161,35 @@
     return { amount, unit, limit, caption, label: limit ? 'Górny limit energii'
       : caption.startsWith('zalecana') ? 'Zalecana kaloryczność' : 'Kaloryczność diety' };
   }
+  function normalNutrition(values, selectedGoal) {
+    return w.VildaBmiJourney?.previewNormalNutrition?.({
+      pal: values.palFactor,
+      goal: selectedGoal,
+      customGoalKg: values.customGoalKg,
+      growthEnded: values.growthEndedFlag
+    }) || null;
+  }
+  function normalStrategy(nutrition) {
+    if (nutrition.customEnergy) return 'Cel uzgodniony z pacjentem';
+    return nutrition.pediatric ? 'Żywienie wspierające wzrastanie' : 'Utrzymanie masy ciała';
+  }
+  function normalBmiLabel(nutrition) {
+    if (nutrition.upperNormal) return 'BMI w górnym zakresie normy';
+    return nutrition.ageAdjustedBmi ? 'BMI w normie dla wieku i płci' : 'BMI w normie';
+  }
+  var kcalFormat = new Intl.NumberFormat('pl-PL', { useGrouping: 'always', maximumFractionDigits: 0 });
+  var planDecimal = new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  function normalEnergy(nutrition) {
+    // Match the approximate baseline used in the native recommendations.
+    var baseline = 'ok. ' + kcalFormat.format(Math.round(nutrition.baselineKcal / 100) * 100);
+    var custom = nutrition.customEnergy;
+    if (custom) {
+      var amount = (custom.limit ? '≤ ' : 'ok. ') + kcalFormat.format(custom.kcal);
+      return { label: 'Kaloryczność dla celu własnego', amount, unit: 'kcal/dzień',
+        caption: 'Na utrzymanie ' + baseline + ' kcal/dzień' };
+    }
+    return { label: 'Szacowane zapotrzebowanie', amount: baseline, unit: 'kcal/dzień', caption: 'Przy przyjętej aktywności' };
+  }
   function energyNumber(result) {
     var row = el('span', 'vhome-diet-energy-number');
     row.append(el('strong', '', result.amount), ' ', el('span', '', result.unit));
@@ -185,14 +228,25 @@
       draft.projection = w.VildaBmiJourney?.previewPlan?.({ pal: values.palFactor, dietKey: values.dietLevel,
         strategy: values.stabilizationToggle && !values.reduceToggle ? 'stabilization' : 'reduction',
         goal: draft.goal, customGoalKg: values.customGoalKg, growthEnded: values.growthEndedFlag, moves: draft.moves }) || null;
+      draft.nutrition = available() ? normalNutrition(values, draft.goal) : null;
     }
     return draft.projection;
   }
   function renderEnergy() {
     var host = byId('vhomeDietPlanEnergy');
-    var pending = dirty(), result = pending ? null : nativeEnergy();
+    var pending = dirty(), nutrition = draft.nutrition;
+    var result = nutrition ? normalEnergy(nutrition) : pending ? null : nativeEnergy();
     host.dataset.state = pending ? 'pending' : result ? 'ready' : 'empty';
-    if (result) {
+    if (nutrition) {
+      var status = el('p', 'vhome-diet-bmi-status', normalBmiLabel(nutrition));
+      var invalidGoal = pending && draft.goal === 'custom' && !nutrition.customEnergy;
+      if (invalidGoal) {
+        host.replaceChildren(status, el('h4', '', 'Podgląd · Cel własny'), note('Podaj dopuszczalną masę docelową.'));
+      } else {
+        host.replaceChildren(status, el('h4', '', pending ? 'Podgląd · ' + result.label : result.label),
+          energyNumber(result), note(result.caption));
+      }
+    } else if (result) {
       host.replaceChildren(el('h4', '', result.label), energyNumber(result), note(result.caption));
     } else if (pending) {
       host.replaceChildren(el('h4', '', 'Niezastosowane założenia'), note('Zastosuj zmiany, aby zobaczyć aktualny plan i przygotować zalecenia.'));
@@ -271,6 +325,7 @@
       }
       road.querySelectorAll('.energy-mode-badge-row, .bmi-journey-growth').forEach(node => appendProjected(notices, node, 'qualification'));
       var copy = readonlyCopy(byId('toNormInfo'), 'vhome-diet-native-road');
+      if (draft.nutrition) copy.querySelector('.bmi-journey-kcal')?.remove();
       copy.querySelectorAll('.bmi-journey-seg, .bmi-journey-chips').forEach(node => {
         if (node.previousElementSibling?.classList.contains('bmi-journey-lbl')) node.previousElementSibling.remove();
         node.remove();
@@ -321,9 +376,10 @@
     setChoices(strategy, strategies, strategyValue);
     setText(strategy.nextElementSibling, strategies.find(entry => entry.disabled && entry.reason)?.reason || '');
     var road = nativeRoad(), activePlan = sourceVisible(byId('planCard'));
-    var palChoices = activePlan || road || projection?.diets.length ? Array.from(byId('palFactor').options).filter(entry => !entry.hidden)
+    var palChoices = draft.nutrition || activePlan || road || projection?.diets.length ? Array.from(byId('palFactor').options).filter(entry => !entry.hidden)
       .map(entry => ({ key: entry.value, label: entry.textContent, disabled: entry.disabled })) : [];
-    setChoices(pal, palChoices, draft.values.palFactor);
+    var selectedPal = draft.values.palFactor || (draft.nutrition ? String(draft.nutrition.pal) : '');
+    setChoices(pal, palChoices, selectedPal);
     setText(pal.nextElementSibling, draft.values.palFactor !== draft.baseValues.palFactor ? 'Zmiana niezastosowana'
       : w.__vildaPlanPalTouched === true ? 'Wybrany przez lekarza' : 'Wartość domyślna');
     var diets = projection?.diets;
@@ -342,17 +398,29 @@
     var goalWrap = byId('customGoalWrap');
     var goalChoices = sourceVisible(goalWrap) ? Array.from(goalWrap.querySelectorAll('[data-cel-wlasny-choice]')).map(node => ({ key: node.dataset.celWlasnyChoice, label: node.textContent.trim(), disabled: node.disabled })) : [];
     if (projection) goalChoices = projection.customGoalVisible
-      ? [{ key: 'maintain', label: 'Utrzymanie' }, { key: 'custom', label: 'Cel własny', disabled: !projection.customGoalAvailable }] : [];
+      ? [{ key: 'maintain', label: draft.nutrition && !draft.nutrition.pediatric ? 'Utrzymanie masy ciała' : 'Utrzymanie' },
+        { key: 'custom', label: 'Cel własny', disabled: !projection.customGoalAvailable }] : [];
+    var aimLabel = draft.nutrition ? 'Cel planu' : 'Cel';
+    setText(aim.parentElement.firstChild, aimLabel); aim.setAttribute('aria-label', aimLabel);
     setChoices(aim, goalChoices, draft.goal);
-    setText(aim.nextElementSibling, projection?.customGoalHint || (sourceVisible(goalWrap) ? byId('customGoalHint')?.textContent || '' : ''));
+    var goalHint = projection?.customGoalHint || (sourceVisible(goalWrap) ? byId('customGoalHint')?.textContent || '' : '');
+    setText(aim.nextElementSibling, draft.nutrition && draft.goal === 'custom' ? '' : goalHint);
+    var fixedGoal = byId('vhomeDietFixedGoal');
+    fixedGoal.hidden = !draft.nutrition || !!goalChoices.length;
+    if (!fixedGoal.hidden) fixedGoal.replaceChildren(fact('Cel planu', normalStrategy(draft.nutrition)));
     var targetAvailable = draft.goal === 'custom' && goalChoices.some(entry => entry.key === 'custom' && !entry.disabled);
     target.parentElement.hidden = !targetAvailable;
     target.disabled = draft.readOnly || !targetAvailable;
     target.required = targetAvailable;
-    if (projection?.customGoalMinKg != null) target.min = String(projection.customGoalMinKg);
-    if (projection?.customGoalMaxKg != null) target.max = String(projection.customGoalMaxKg);
+    var min = projection?.customGoalMinKg, max = projection?.customGoalMaxKg;
+    target.min = min == null ? byId('customGoalKg').min : String(min);
+    target.max = max == null ? byId('customGoalKg').max : String(max);
     if (target.value !== draft.values.customGoalKg) target.value = draft.values.customGoalKg ?? '';
-    setText(target.nextElementSibling, targetAvailable ? projection?.customGoalHint || '' : '');
+    var range = byId('vhomeDietTargetRange');
+    range.hidden = !targetAvailable || !draft.nutrition || min == null || max == null;
+    if (!range.hidden) setText(range, 'Dopuszczalny zakres ' + planDecimal.format(min) + '–' + planDecimal.format(max) + ' kg');
+    setText(byId('vhomeDietTargetHint'), targetAvailable ? goalHint : '');
+    target.setAttribute('aria-invalid', String(targetAvailable && !!target.value && (!target.checkValidity() || !projection?.customGoalActive)));
     var growth = setting('growthEndedFlag'), growthOriginal = byId('growthEndedFlag');
     growth.parentElement.hidden = !withinVisible(growthOriginal, context);
     growth.disabled = draft.readOnly || growthOriginal.disabled; growth.checked = !!draft.values.growthEndedFlag;
@@ -415,12 +483,21 @@
       draft.goal = 'maintain'; projection = draftProjection();
     }
     var changed = dirty(), applyButton = planActions.querySelector('.vhome-dialog-apply');
+    var normal = !!draft.nutrition;
+    dialog.toggleAttribute('data-bmi-normal', normal);
+    setText(applyButton, normal ? 'Zastosuj dane' : 'Zastosuj założenia');
     planActions.hidden = draft.readOnly;
     applyButton.disabled = !changed || draft.readOnly;
     planActions.querySelector('.vhome-dialog-cancel').hidden = !changed;
     if (!draft.readOnly || draft.canReport) {
       var impact = projection?.impact;
       renderEnergy(); renderSettings(projection); renderImpact(impact); renderFollowup(impact);
+      if (normal) {
+        var target = setting('customGoalKg'), status = byId('vhomeDietDraftStatus');
+        if (changed) setText(status, 'Niezastosowane założenia');
+        else if (status.textContent === 'Niezastosowane założenia') setText(status, '');
+        if (draft.goal === 'custom' && (!projection?.customGoalActive || !target.checkValidity() || !draft.nutrition.customEnergy)) applyButton.disabled = true;
+      }
     }
     refreshReport();
   }
@@ -490,7 +567,7 @@
   function renderPlanGrid(host) {
     var grid = el('div', 'vhome-diet-grid'); host.appendChild(grid);
     var outcome = section('Wynik energetyczny', 'vhome-diet-outcome', grid), energy = el('div', 'vhome-diet-energy-result');
-    energy.id = 'vhomeDietPlanEnergy'; outcome.appendChild(energy);
+    energy.id = 'vhomeDietPlanEnergy'; energy.setAttribute('aria-live', 'polite'); outcome.appendChild(energy);
     var assumptions = section('Założenia planu', 'vhome-diet-assumptions', grid);
     if (draft.readOnly && !draft.canReport) {
       outcome.appendChild(note('Dla tej wizyty brakuje potwierdzonych danych do obliczeń.'));
@@ -513,7 +590,11 @@
     addSetting(controls, 'palFactor', 'Poziom aktywności (PAL)', v => { draft.values.palFactor = v; });
     addSetting(controls, 'dietLevel', 'Wariant diety', v => { draft.values.dietLevel = v; });
     addSetting(controls, 'goal', 'Cel', v => { draft.goal = v; });
-    var target = field('customGoalKg', 'Masa docelowa (kg)', controls); target?.parentElement.appendChild(el('small', 'vhome-diet-note'));
+    var fixedGoal = el('dl', 'vhome-diet-fixed-goal'); fixedGoal.id = 'vhomeDietFixedGoal'; fixedGoal.hidden = true; controls.appendChild(fixedGoal);
+    var target = field('customGoalKg', 'Masa docelowa (kg)', controls);
+    var range = el('small', 'vhome-diet-target-range'); range.id = 'vhomeDietTargetRange'; range.hidden = true;
+    var targetHint = el('small', 'vhome-diet-note'); targetHint.id = 'vhomeDietTargetHint';
+    if (target) { target.parentElement.append(range, targetHint); target.setAttribute('aria-describedby', range.id + ' ' + targetHint.id); }
     var growth = checkbox(assumptions, 'growthEndedFlag', byId('growthEndedLabel')?.textContent.trim() || 'Wzrost zakończony', value => { draft.values.growthEndedFlag = value; });
     growth.parentElement.lastElementChild.appendChild(el('small', 'vhome-diet-note'));
     var movement = el('details', 'vhome-diet-movement'), title = el('summary', '', 'Ruch w planie ');
@@ -650,6 +731,7 @@
       item.applying = false;
       if (!rebase()) return;
       setText(status, ''); refreshFooter(); schedule();
+      if (draft?.nutrition) setText(status, 'Dane zastosowane');
       byId('vhomeDietPlanEnergy').scrollIntoView({ block: 'nearest' });
     } finally { if (draft === item) { item.applying = false; if (!ownerValid(item)) close(true); } }
   }
@@ -708,6 +790,10 @@
     if (!ownerValid(pending) || dialog?.open) return false;
     var saved = await savedVisitSource(pending, who);
     if (!ownerValid(pending) || dialog?.open) return false;
+    if (who.readOnly && saved) {
+      savedHomeVisit = { ...pending, readOnly: true, saved };
+      schedule();
+    }
     if (!dialog) createWorkspace();
     draft = { ...pending, opener, tab, historyToken: 'diet-' + Date.now(), applying: false, readOnly: who.readOnly, saved,
       scope: Object.fromEntries(documentFields.map(id => [id, withinVisible(byId(id), byId('dietRecommendationsContent')) && value(id) === true])) };
@@ -720,9 +806,30 @@
     else selectTab(tab, true);
     return true;
   }
+  function renderNormalHome(host, nutrition) {
+    var result = normalEnergy(nutrition);
+    var metrics = el('div', 'vhome-diet-home-result vhome-diet-normal-home');
+    var energy = el('dl', 'vhome-diet-home-energy'), entry = el('div'), heading = el('dt');
+    heading.append(el('span', 'vhome-diet-bmi-status', normalBmiLabel(nutrition)), el('span', '', result.label));
+    var content = el('dd'); content.append(energyNumber(result), el('small', '', result.caption));
+    entry.append(heading, content); energy.appendChild(entry);
+    var facts = el('dl', 'vhome-diet-normal-facts');
+    facts.append(fact('Cel planu', normalStrategy(nutrition)),
+      fact('Aktywność (PAL)', 'PAL ' + planDecimal.format(nutrition.pal),
+        w.__vildaPlanPalTouched === true ? 'Wybrany przez lekarza' : 'Wartość domyślna'));
+    metrics.append(energy, facts);
+    host.appendChild(metrics);
+  }
   function renderHome(ready, reportReady) {
-    var result = reportReady && !readOnlyVisit() ? nativeEnergy() : null;
+    var who = ready && reportReady ? owner() : null;
+    if (!who?.readOnly) savedHomeVisit = null;
+    var nutrition = who && (!who.readOnly || savedHomeReady(who))
+      ? normalNutrition({ palFactor: value('palFactor'), growthEndedFlag: value('growthEndedFlag'),
+        customGoalKg: value('customGoalKg') }, goal()) : null;
     var host = byId('vhomeDietHomeSummary'); host.replaceChildren();
+    card.toggleAttribute('data-bmi-normal', !!nutrition);
+    if (nutrition) { renderNormalHome(host, nutrition); return; }
+    var result = reportReady && !readOnlyVisit() ? nativeEnergy() : null;
     if (!result) {
       var empty = el('div', 'vhome-diet-home-empty');
       var text = readOnlyVisit() && ready ? 'Zobacz plan i zalecenia z zapisanej wizyty.'
@@ -780,14 +887,19 @@
       if (!dialog?.open || !dialog.contains(event.target)) return;
       event.stopImmediatePropagation();
       if (!stillOwned()) { close(true); return; }
-      var read = valueChanges.get(event.target); if (read && !draft.readOnly) { read(); refreshFooter(); }
+      var read = valueChanges.get(event.target);
+      if (!read || draft.readOnly) return;
+      read(); refreshFooter();
+      if (name === 'change' && event.target.dataset.homeDietField === 'goal' && draft?.nutrition && draft.goal === 'custom') {
+        setting('customGoalKg').focus({ preventScroll: true });
+      }
     }, true));
     w.addEventListener('popstate', function () {
       if (dialog?.open && w.history.state?.vildaHomeDialog !== draft.historyToken && !close(false, true, true)) {
         w.history.pushState(Object.assign({}, w.history.state, { vildaHomeDialog: draft.historyToken }), '', w.location.href);
       }
     });
-    ['input', 'change', 'vilda:data-applied', 'vilda:user-state-cleared', 'vilda:session-changed', 'vilda:professional-summary-updated', 'vilda:state-restored', 'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled', 'vilda:auth-boot-settled', 'vildaProAccessChanged', 'vildaResultsModeChanged'].forEach(name => d.addEventListener(name, schedule));
+    ['input', 'change', 'vilda:data-applied', 'vilda:user-state-cleared', 'vilda:session-changed', 'vilda:professional-summary-updated', 'vilda:state-restored', 'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled', 'vilda:auth-boot-settled', 'vilda:ds-source-state', 'vildaProAccessChanged', 'vildaResultsModeChanged'].forEach(name => d.addEventListener(name, schedule));
     var observer = new w.MutationObserver(schedule);
     ['toNormInfo', 'planResults'].forEach(id => { var node = byId(id); if (node) observer.observe(node, { childList: true, subtree: true }); });
     ['metabolicSummarySection', 'dietRecommendationsBtn', 'toNormCard', 'planCard'].forEach(id => {

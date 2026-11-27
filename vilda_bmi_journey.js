@@ -755,6 +755,59 @@
     return !w.isStabilizationPossibleForCurrentData() && !w.vildaTekstAlarmuTempaStabilizacji(growth);
   }
 
+  function currentBmiPopulationReady() {
+    try {
+      var patient = w.sessionStorage?.getItem('vildaCurrentPatientId') || w._vildaCurrentPatientId;
+      if (!patient) return true;
+      var source = w.VildaDsSource?.getState?.();
+      return source?.patientId === patient && source.status === 'ready';
+    } catch (err) { return false; }
+  }
+
+  function previewNormalNutrition(options) {
+    if (!currentBmiPopulationReady() || (typeof w.anorexiaRiskAdjust === 'function'
+      && typeof w.VildaAnorexiaRisk?.previewRiskAdjustment !== 'function')) return null;
+    var measurements = w.vildaGetMainAnthroValidationSnapshot?.();
+    var sex = d.getElementById('sex')?.value;
+    if (!measurements?.complete || (sex !== 'M' && sex !== 'F')) return null;
+
+    var ageMonthsOpt = parseFloat(d.getElementById('ageMonths')?.value) || 0;
+    var ageYears = measurements.age.value;
+    var ctx = { ageYears: ageYears, ageMonthsOpt: ageMonthsOpt, sex: sex,
+      weightKg: measurements.weight.value, heightCm: measurements.height.value };
+    var classification = w.energyChildBmiClass?.(ctx);
+    if (classification?.categoryKey !== 'prawidlowe' || (!classification.celDorosly && !classification.source)) return null;
+
+    var draft = options || {};
+    var enteredTarget = draft.customGoalKg === undefined ? d.getElementById('customGoalKg')?.value : draft.customGoalKg;
+    var targetKg = draft.goal === 'maintain' ? null : Number(String(enteredTarget ?? '').replace(',', '.'));
+    var engine = resolvePlan(ctx, {
+      ageMonthsOpt: ageMonthsOpt, palInput: draft.pal ?? d.getElementById('palFactor')?.value,
+      customGoalKg: fin(targetKg) && targetKg > 0 ? targetKg : null,
+      growthEnded: journeyGrowthEnded(ageYears, draft.growthEnded),
+      history: w.intakeHistory || null, intakeKcalPerDay: w.intakeEstimatedKcalPerDay || null, renderRisk: false
+    });
+    if (!engine || engine.isInfantPlanUnavailable || engine.childObesityPlan || engine.gainPlan?.available
+      || !fin(engine.teeBaselineKcal) || engine.teeBaselineKcal <= 0 || !fin(engine.palUsed) || engine.palUsed <= 0
+      || !Array.isArray(engine.diets)) return null;
+    var custom = engine.customGoal, active = custom?.active === true;
+    if (engine.diets.length && (!active || engine.diets.some(diet => diet?.customGoal !== true))) return null;
+
+    var pediatric = engine.isChild === true, customEnergy = null;
+    if (active && engine.diets.length === 1) {
+      var diet = engine.diets[0];
+      if (diet.key === custom.dietKey && fin(diet.intake) && diet.intake > 0 && fin(diet.deficit) && diet.deficit > 0) {
+        var limit = diet.gornaGranica === true;
+        var kcal = limit ? diet.gornaKcal : Math.round(diet.intake / 100) * 100;
+        if (fin(kcal) && kcal > 0) customEnergy = { kcal: kcal, limit: limit };
+      }
+    }
+    var upperNormal = !pediatric && classification.celDorosly
+      && w.patientReportGetAdultBmiAssessment?.(classification.bmi)?.state === 'upper-normal';
+    return { baselineKcal: engine.teeBaselineKcal, pal: engine.palUsed, pediatric: pediatric,
+      ageAdjustedBmi: !classification.celDorosly, upperNormal: upperNormal, customEnergy: customEnergy };
+  }
+
   function previewPlan(options) {
     var result = {
       strategy: null, dietKey: null, diets: [], moves: [], impact: null,
@@ -861,6 +914,7 @@
     refresh: rerender,
     getPdfModel: getPdfModel,
     getSnapshot: getSnapshot,
-    previewPlan: previewPlan
+    previewPlan: previewPlan,
+    previewNormalNutrition: previewNormalNutrition
   };
 })(typeof window !== 'undefined' ? window : globalThis, typeof document !== 'undefined' ? document : null);

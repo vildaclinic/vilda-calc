@@ -1226,3 +1226,159 @@ html.vilda-home-workspace #vhomeDietCard .vhome-diet-action:disabled {
     border-radius: 0;
   }
 }
+
+/* Energy and plan assumptions for a confirmed normal BMI. */
+#vhomeDietCard[data-bmi-normal] .vhome-diet-normal-home {
+  grid-template-columns: minmax(0, 1.18fr) minmax(0, .82fr);
+  grid-template-rows: auto;
+  gap: var(--space-12px);
+  padding: 0;
+  border: 0;
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-normal-home > dl {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-9);
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-normal-home > .vhome-diet-home-energy {
+  border-inline-start: var(--border-pro) solid var(--vhome-diet-accent);
+  background: var(--vhome-diet-teal-pale);
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-home-energy :is(dt, dd) {
+  display: grid;
+  gap: var(--space-4px);
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-home-energy dd {
+  margin-top: var(--space-4px);
+}
+
+:is(#vhomeDietCard, #vhomeDietDialog)[data-bmi-normal] .vhome-diet-bmi-status {
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 2px;
+  padding: var(--space-4px) var(--space-8px);
+  border-radius: var(--radius-6);
+  background: #e5f3ec;
+  color: #17634e;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-normal-facts {
+  gap: var(--space-8px);
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-normal-facts > div + div {
+  padding-block-start: var(--space-8px);
+  border-block-start: var(--border-hairline) solid var(--vhome-diet-line);
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-normal-facts dt {
+  color: var(--vhome-diet-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+#vhomeDietCard[data-bmi-normal] .vhome-diet-normal-facts dd {
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+#vhomeDietDialog[data-bmi-normal] #vhomeDietPanel0 .vhome-diet-grid {
+  align-items: start;
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-outcome:has(.vhome-diet-measurements) {
+  padding: 0;
+  border: 0;
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-outcome:has(.vhome-diet-measurements) > h3 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-energy-result {
+  border-block: var(--border-hairline) solid var(--vhome-diet-line);
+  border-inline-end: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-9);
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-energy-result[data-state=ready] {
+  border-inline-start-color: var(--vhome-diet-accent);
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-measurements {
+  margin-top: var(--space-12px);
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--vhome-diet-line);
+  border-radius: var(--radius-9);
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-measurements dl {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 68px), 1fr));
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-measurements dl > div {
+  padding: 0;
+  border: 0;
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-fields {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-fixed-goal {
+  margin: 0;
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-fixed-goal dt {
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-fixed-goal dd {
+  margin: var(--space-4px) 0 0;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+#vhomeDietDialog[data-bmi-normal] .vhome-diet-target-range {
+  color: var(--vhome-diet-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@container (max-width: 380px) {
+  #vhomeDietCard[data-bmi-normal] .vhome-diet-normal-home {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8px);
+  }
+
+  #vhomeDietCard[data-bmi-normal] .vhome-diet-normal-home > .vhome-diet-normal-facts {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr);
+    align-items: start;
+  }
+
+  #vhomeDietCard[data-bmi-normal] .vhome-diet-normal-facts > div + div {
+    padding-block-start: 0;
+    padding-inline-start: var(--space-8px);
+    border-block-start: 0;
+    border-inline-start: var(--border-hairline) solid var(--vhome-diet-line);
+  }
+}
