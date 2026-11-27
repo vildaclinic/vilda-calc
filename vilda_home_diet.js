@@ -589,6 +589,11 @@
     }
     var item = draft, values = { ...item.values }, desiredGoal = item.goal, moves = { ...item.moves };
     if (projection?.dietKey) values.dietLevel = projection.dietKey;
+    var changedStrategy = values.reduceToggle !== item.baseValues.reduceToggle || values.stabilizationToggle !== item.baseValues.stabilizationToggle;
+    if (changedStrategy && projection?.strategy) {
+      values.reduceToggle = projection.strategy === 'reduction';
+      values.stabilizationToggle = projection.strategy === 'stabilization';
+    }
     var changed = planFields.filter(id => values[id] !== item.baseValues[id]);
     item.applying = true; item.report = null;
     function valid() { return draft === item && ownerValid(item); }
@@ -613,10 +618,13 @@
       // Utrzymanie clears the native target. Take that route while the goal
       // is still eligible, before changing the growth flag may hide its actor.
       if (desiredGoal === 'maintain' && !selectNativeGoal('maintain')) return;
-      var inputs = changed.filter(id => id !== 'customGoalKg' && id !== 'dietLevel');
+      if (changed.includes('growthEndedFlag')) {
+        write('growthEndedFlag'); notify('growthEndedFlag'); update(); if (!valid()) return;
+      }
+      var inputs = changed.filter(id => id !== 'customGoalKg' && id !== 'dietLevel' && id !== 'growthEndedFlag');
       inputs.forEach(write);
       if (changed.includes('palFactor')) w.__vildaPlanPalTouched = true;
-      if (changed.includes('reduceToggle') || changed.includes('stabilizationToggle')) w.__vildaDietStrategyTouched = true;
+      if (changedStrategy) w.__vildaDietStrategyTouched = true;
       inputs.forEach(notify); update(); if (!valid()) return;
       // Growth status can unlock a previously disabled native custom-goal actor.
       if (desiredGoal === 'custom') {
