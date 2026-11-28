@@ -7,6 +7,7 @@
   var d = w.document, started = false, frame = 0;
   var dateLabel, historyButton, copyButton, copySource, actions, referenceSection, referenceToggle;
   var referenceSelect, referenceChoices = [];
+  var referenceLabel, referenceStatus, referenceStatusValue, referenceStatusNote;
   var deviceResizeParent = null, deviceFrameObserver = null;
 
   function element(tag, className, text) {
@@ -161,15 +162,31 @@
     if (!referenceSection || !referenceToggle) return;
     // Native eligibility owns inline display and disabled. Reading computed
     // display below our hidden carrier would keep the visible selector closed.
-    var hidden = referenceToggle.hidden || referenceToggle.style.display === 'none';
+    var nativeHidden = referenceToggle.hidden || referenceToggle.style.display === 'none';
+    var patientId = currentPatientId();
+    var source = w.__VILDA_HOME_GABINET_PREVIEW__ === true ? w.VildaDsSource?.getState?.() : null;
+    var samePatient = !!source && source.patientId === patientId;
+    var zemel = samePatient && source.status === 'ready' && source.population === 'DS';
+    var loading = !!(source && patientId && (!samePatient || source.status !== 'ready'));
+    var showStatus = zemel || loading && !nativeHidden;
+    var hidden = nativeHidden && !showStatus;
     if (referenceSection.hidden !== hidden) referenceSection.hidden = hidden;
+    referenceLabel.hidden = showStatus;
+    referenceStatus.hidden = !showStatus;
+    if (showStatus) {
+      var value = zemel ? 'Zemel 2015' : source.status === 'error' ? 'Źródło siatek niedostępne' : 'Odczytywanie źródła siatek…';
+      var note = zemel ? source.diagnosisCode ? 'Z rozpoznania ' + source.diagnosisCode : 'Źródło zapisane w danych pacjenta' : '';
+      if (referenceStatusValue.textContent !== value) referenceStatusValue.textContent = value;
+      if (referenceStatusNote.textContent !== note) referenceStatusNote.textContent = note;
+      referenceStatusNote.hidden = !note;
+    }
     var selected = '', available = false;
     referenceChoices.forEach(function (choice) {
       choice.option.disabled = choice.radio.disabled;
       if (!choice.radio.disabled) available = true;
       if (choice.radio.checked) selected = choice.radio.value;
     });
-    referenceSelect.disabled = hidden || !available;
+    referenceSelect.disabled = hidden || showStatus || !available;
     if (referenceSelect.value !== selected) referenceSelect.value = selected;
   }
   function referenceInput(event) {
@@ -546,7 +563,7 @@
     referenceToggle = byId('dataToggleContainer');
     if (referenceToggle) {
       referenceSection = element('div', 'vhome-reference');
-      var referenceLabel = element('label', 'vhome-reference-label');
+      referenceLabel = element('label', 'vhome-reference-label');
       referenceLabel.appendChild(element('span', 'vhome-reference-full', 'Siatki referencyjne'));
       referenceLabel.appendChild(element('span', 'vhome-reference-compact', 'Siatki'));
       // No id/name: the persisted source remains the original radio group.
@@ -562,6 +579,14 @@
       });
       referenceLabel.appendChild(referenceSelect);
       referenceSection.appendChild(referenceLabel);
+      referenceStatus = element('div', 'vhome-reference-effective');
+      referenceStatus.hidden = true;
+      referenceStatus.setAttribute('role', 'status');
+      referenceStatus.appendChild(element('span', 'vhome-reference-effective-label', 'Siatki referencyjne'));
+      referenceStatusValue = element('strong', '');
+      referenceStatusNote = element('small', '');
+      referenceStatus.append(referenceStatusValue, referenceStatusNote);
+      referenceSection.appendChild(referenceStatus);
       var nativeReference = element('div', 'vhome-reference-native');
       nativeReference.hidden = true;
       nativeReference.appendChild(referenceToggle);
@@ -606,7 +631,7 @@
 
     ['input', 'change', 'vilda:data-applied', 'vilda:dob-restored', 'vilda:user-state-cleared',
       'vilda:session-changed', 'vilda:professional-summary-updated', 'vilda:state-restored',
-      'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled',
+      'vilda:main-session-restored', 'vilda:initial-main-session-restore-settled', 'vilda:ds-source-state',
       'vilda:auth-boot-settled', 'vildaProAccessChanged', 'vildaResultsModeChanged'].forEach(function (name) {
       d.addEventListener(name, schedule);
     });

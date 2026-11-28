@@ -61,7 +61,7 @@
   function withUnit(item) { return item.value === null ? missing : item.display + ' ' + item.unit; }
 
   function reference(payload) {
-    if (payload.clinical?.downSyndrome === true) return 'DS';
+    if (w.VildaDsSource?.usesZemel?.(payload) ?? payload.clinical?.downSyndrome === true) return 'DS';
     const source = String(payload.zscore?.dataSource || '').trim().toUpperCase();
     return Object.hasOwn(sources, source) ? source : '';
   }
@@ -77,6 +77,7 @@
       ordinal: context.ordinal || '', ageLabel: age.label, ageMonths: age.months, exactAgeMonths: age.exact,
       heightLabel: withUnit(metrics[0]), weightLabel: withUnit(metrics[1]), bmiLabel: withUnit(metrics[2]),
       referenceLabel: sources[source] || '',
+      referenceDiagnosisCode: w.VildaDsSource?.diagnosisCode?.(payload) || null,
       description: typeof payload.visitTitle === 'string' ? payload.visitTitle : '', metrics};
   }
 

@@ -171,6 +171,19 @@
   background: var(--disabled-bg);
   cursor: not-allowed;
 }
+.vilda-home-workspace .vhome-reference-effective {
+  display: grid;
+  gap: 2px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.vilda-home-workspace .vhome-reference-effective strong {
+  color: var(--text);
+  font-size: 16px;
+}
+.vilda-home-workspace .vhome-reference-effective[hidden],
+.vilda-home-workspace .vhome-reference-label[hidden] { display: none; }
 .vilda-home-workspace .vhome-extra-data {
   margin-top: var(--space-18px);
 }

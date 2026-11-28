@@ -50,8 +50,11 @@
           (saved || encounter.snapshotId || encounter.mode === 'edit') && !exact) return empty;
       const visit = currentPayload?.visit;
       if (!visit || visit.patientId !== patientId || visit.visitId !== encounter.visitId) return empty;
-      const payload = currentPayload.clinical ? currentPayload :
-        {...currentPayload, clinical: {downSyndrome: encounter.sourceDownSyndrome === true}};
+      const payload = currentPayload.clinical ? currentPayload : {...currentPayload,
+        clinical: {downSyndrome: encounter.sourceDownSyndrome === true}};
+      if (!currentPayload.clinical && encounter.sourceDiagnosisCode) {
+        w.VildaDsSource?.applyDiagnosisToVisit?.(payload, encounter.sourceDiagnosisCode);
+      }
       current = {...saved, ...visit, clinicalDateISO: encounter.date, payload};
     }
     const clinical = w.VildaHomeComparisonClinical;

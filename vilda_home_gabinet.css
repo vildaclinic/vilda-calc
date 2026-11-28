@@ -327,6 +327,7 @@ html.vilda-home-workspace #vhomeVisitTrashConfirm .vhome-dialog-apply { backgrou
 [data-rapid-receipt] h3 { margin-top: var(--space-16px); font-size: 1.08rem; }
 [data-rapid-receipt] p { margin: var(--space-6px) 0; }
 [data-rapid-receipt] dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--space-12px); padding-block: var(--space-14px); border-block: var(--border-hairline) solid var(--line); }
+[data-rapid-receipt] dl > div:has([data-rapid-diagnosis]) { grid-column: 1 / -1; }
 [data-rapid-receipt] dt { color: var(--text-muted); }
 [data-rapid-receipt] dd { font-size: 1.13rem; font-weight: 650; }
 .gb-receipt-actions, .gb-match-actions { display: flex; flex-wrap: wrap; gap: var(--space-8px); }

@@ -210,7 +210,7 @@
 
   // ── Statystyka punktu — wspólna ścieżka aplikacji (jak tabStatsAt panelu, v386) ──
 
-  function statFor(param, value, sex, ageYears, source) {
+  function statFor(param, value, sex, ageYears, source, population) {
     try {
       var v = num(value);
       if (v == null || v <= 0) return null;
@@ -218,7 +218,7 @@
       var src = source != null && String(source).trim() !== '' ? String(source).toUpperCase() : null;
       var st = null, siatka = null;
       if (typeof w.advHistoryResolveMetric === 'function') {
-        var r = w.advHistoryResolveMetric(param, v, g, ageYears, src || 'OLAF');
+        var r = w.advHistoryResolveMetric(param, v, g, ageYears, src || 'OLAF', population);
         if (r && r.result && typeof r.result.percentile === 'number' && isFinite(r.result.percentile)) {
           st = r.result;
           siatka = r.source != null && String(r.source).trim() !== '' ? String(r.source).toUpperCase() : null;
@@ -273,14 +273,14 @@
   // Wskaźnik Cole'a liczy WYŁĄCZNIE silnik BMI (VildaBmi.cole, P-BMI): ten moduł podaje mu
   // wartość BMI i wiek punktu, a sam wzoru nie zna. Brak silnika albo brak danych = null,
   // czyli ramię Cole'a milczy; ramię centyla działa dalej.
-  function poziomBmiPunktu(pt, sex, source) {
+  function poziomBmiPunktu(pt, sex, source, population) {
     if (!pt) return null;
     var centyl = typeof pt.c === 'number' && isFinite(pt.c) ? pt.c : null;
     var cole = null;
     try {
       var B = w.VildaBmi;
       if (B && typeof B.cole === 'function' && typeof pt.value === 'number' && isFinite(pt.value)) {
-        var r = B.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source });
+        var r = B.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source, populacja: population });
         if (r && typeof r.cole === 'number' && isFinite(r.cole)) cole = r.cole;
       }
     } catch (e) { cole = null; }
@@ -301,7 +301,7 @@
   // granic; po zmianach przeliczany jest najpoważniejszy odcinek wagi (ta sama reguła co
   // w analyzeMetric). Od raty 6 werdyktów także okno chipu leczenia masy przechodzi przez nakładkę
   // (audyt 2, A7: chip masy brzmiał „stabilnie" przy BMI 95c, bo omijał regułę poziomu z raty 5).
-  function applyWeightBmiConsistency(metrics, sex, source, ctx) {
+  function applyWeightBmiConsistency(metrics, sex, source, ctx, population) {
     var wt = null, bm = null;
     metrics.forEach(function (m) {
       if (m.metric === 'weight') wt = m;
@@ -321,7 +321,7 @@
       var bs = bmiSegFor(s.a.ageMonths, s.b.ageMonths);
       if (!bs || !bs.verdict) return;
       var nv = weightBmiOverlayVerdict(s.verdict, s.dSds, bs.verdict, bs.dSds,
-        poziomBmiPunktu(bs.b, sex, source));
+        poziomBmiPunktu(bs.b, sex, source, population));
       if (nv !== s.verdict) { s.verdict = nv; changed = true; }
     });
     if (wt.total && bm.total
@@ -329,7 +329,7 @@
       var dW = Math.round(100 * (wt.last.sd - wt.first.sd)) / 100;
       var dB = Math.round(100 * (bm.last.sd - bm.first.sd)) / 100;
       wt.total = weightBmiOverlayVerdict(wt.total, dW, bm.total, dB,
-        poziomBmiPunktu(bm.last, sex, source));
+        poziomBmiPunktu(bm.last, sex, source, population));
     }
     // P-WERDYKT rata 5: ta sama nakładka dla okien fazy masy (faza i „wcześniej”) — werdykt BMI liczony dla
     // tego samego okna tą samą ścieżką (kontekst + nakładka prędkości), bez zgadywania, gdy BMI nie ma punktu.
@@ -345,7 +345,7 @@
       var dB2 = Math.round(100 * (bb.sd - ba.sd)) / 100;
       var vB = r && r.v ? bmiSpeedOverlayVerdict(r.v, dB2, bb.ageMonths - ba.ageMonths) : null;
       if (!vB) return;
-      okno.verdict = weightBmiOverlayVerdict(okno.verdict, okno.dSds, vB, dB2, poziomBmiPunktu(bb, sex, source));
+      okno.verdict = weightBmiOverlayVerdict(okno.verdict, okno.dSds, vB, dB2, poziomBmiPunktu(bb, sex, source, population));
     }
     if (wt.faza && !wt.faza.zaKrotka) { nalozNaOkno(wt.faza); nalozNaOkno(wt.faza.wczesniej); }
     if (wt.treatment) nalozNaOkno(wt.treatment);
@@ -654,7 +654,7 @@
     if (m == null || f == null || !g) return null;
     return g === 'F' ? (f - 13 + m) / 2 : (m + 13 + f) / 2;
   }
-  function mphStats(mph, sex, source) {
+  function mphStats(mph, sex, source, population) {
     var v = num(mph);
     if (v == null || v <= 0) return null;
     var g = sexFM(sex) || 'F';
@@ -664,12 +664,12 @@
     // „hSDS − mpSDS" i targetStats karty). Jej wynik jest OSTATECZNY — takze null (P-OSTATNI-2d:
     // brak mpSDS u pacjenta z zespolem Downa); starsze drogi to zapas tylko na stronach bez app.js.
     if (typeof w.vildaMpSdsStats === 'function') {
-      try { st = w.vildaMpSdsStats(v, g, src); } catch (e) { st = null; }
+      try { st = w.vildaMpSdsStats(v, g, src, population); } catch (e) { st = null; }
     } else {
       try {
         if (typeof w.advHistoryCalcAnthroStatsForSource === 'function') st = w.advHistoryCalcAnthroStatsForSource(v, g, 18, 'HT', src || 'OLAF');
       } catch (e2) { st = null; }
-      if (!st) st = statFor('HT', v, g, 18, src);
+      if (!st) st = statFor('HT', v, g, 18, src, population);
     }
     if (!st || typeof st.sd !== 'number' || !isFinite(st.sd)) return null;
     return { sd: st.sd, c: typeof st.percentile === 'number' && isFinite(st.percentile) ? st.percentile : null };
@@ -693,12 +693,12 @@
       out.redKursy = rdK.map(function (k) { return { a: k.a, b: k.b, label: k.label || 'otyłość' }; });
     }
     var mp = num(inp.mpSds);
-    if (mp != null) out.mpSds = mp;
+    if (mp != null && inp.population !== 'DS') out.mpSds = mp;
     else {
       var mph = mphFromParents(inp.motherHeightCm, inp.fatherHeightCm, inp.sex);
       if (mph != null) {
         out.mph = mph;
-        var st = mphStats(mph, inp.sex, inp.source);
+        var st = inp.population === 'DS' ? null : mphStats(mph, inp.sex, inp.source, inp.population);
         if (st) { out.mpSds = st.sd; out.mphC = st.c; }
       }
     }
@@ -955,12 +955,12 @@
     return m.total;
   }
 
-  function analyzeMetric(met, pts, sex, source, ctx) {
+  function analyzeMetric(met, pts, sex, source, ctx, population) {
     var series = [];
     pts.forEach(function (p) {
       var v = p[met.key];
       if (v == null) return;
-      var st = statFor(met.param, v, sex, p.ageYears, source);
+      var st = statFor(met.param, v, sex, p.ageYears, source, population);
       if (!st) return;
       series.push({ ageMonths: p.ageMonths, ageYears: p.ageYears, value: v, c: st.percentile, sd: st.sd, siatka: st.siatka || null, isCurrent: p.isCurrent, odPacjenta: odPacjenta(met.key, p) });
     });
@@ -1173,7 +1173,15 @@
     if (!input || typeof input !== 'object') return null;
     var sex = sexMK(input.sex);
     var source = input.source != null ? input.source : (typeof w.bmiSource !== 'undefined' ? w.bmiSource : null);
+    var population = input.population;
+    if (!population && w.__VILDA_HOME_GABINET_PREVIEW__ === true) {
+      var captured = w.VildaDsSource?.getState?.();
+      if (captured?.status === 'ready') population = captured.population;
+      else if (captured?.patientId) return null;
+    }
+    if (population === 'DS') source = 'DS';
     var ctx = normalizeContext(input.context, input.sex);
+    if (population === 'DS' && ctx) ctx.mpSds = null;
     var pts = buildPoints(input.dziennikStrony ? zDziennikiemStrony(input) : input);
     if (pts.length < 2) return null;
     // Świeżość etapu Tannera z rekordu pacjenta: starszy niż TANNER_FRESH_M — pomijany w ocenie
@@ -1189,11 +1197,11 @@
     }
     var metrics = [];
     METRICS.forEach(function (met) {
-      var m = analyzeMetric(met, pts, sex, source, ctx);
+      var m = analyzeMetric(met, pts, sex, source, ctx, population);
       if (m) metrics.push(m);
     });
     if (!metrics.length) return null;
-    applyWeightBmiConsistency(metrics, sex, source, ctx);
+    applyWeightBmiConsistency(metrics, sex, source, ctx, population);
     // P-WERDYKT rata 6: dopisek okna mieszanego („w tym N mies. na GH / leczenia") po wszystkich nakładkach.
     metrics.forEach(dopiszMieszane);
     // P-WERDYKT rata 5: nagłówek wiersza (chip leczenia > ostatnia faza > całość) — jedno pole dla wszystkich konsumentów.
@@ -1896,7 +1904,7 @@
       items.push('<span class="vtap-mchip vtap-pac" title="masa lub wzrost z „Wpisy leczenia”, podane przez pacjenta">w tym '
         + nPac + ' od pacjenta</span>');
     }
-    if (model.source) items.push(mchip('źródło', model.source));
+    if (model.source) items.push(mchip('źródło', model.source === 'DS' ? 'Zemel 2015' : model.source));
     var ctx = model.context;
     if (ctx) {
       if (typeof ctx.mpSds === 'number' && isFinite(ctx.mpSds)) items.push(mchip('🧬 MPH', 'SDS ' + fmtP(ctx.mpSds), 'kanał rodzicielski (MPH)'));

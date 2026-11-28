@@ -103,6 +103,8 @@
         add('Data pomiaru', [date[3], date[2], date[1]].join('.'));
     }
     add('Płeć', { M: 'Chłopiec / mężczyzna', F: 'Dziewczynka / kobieta' }[user.sex]);
+    const reference = row.referenceDiagnosisCode ? row.referenceLabel + ' · z rozpoznania ' + row.referenceDiagnosisCode : row.referenceLabel;
+    add('Siatki referencyjne', reference);
     add('Obwód talii', user.waist, 'cm');
     add('Obwód bioder', user.hip, 'cm');
     add('Stopień Tannera', user.tannerStage);

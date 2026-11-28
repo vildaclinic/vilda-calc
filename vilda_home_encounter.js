@@ -40,6 +40,7 @@
       date: item.date || null, dateCertain: item.dateCertain === true, revision: item.revision ?? null,
       sourceSnapshotId: item.sourceSnapshotId || null, sourceMeasurementDate: item.sourceMeasurementDate || null,
       sourceDownSyndrome: item.sourceDownSyndrome === true,
+      sourceDiagnosisCode: item.sourceDiagnosisCode || null,
       busy: !!(loading || saving || trashChange),
       requiresLatest: !item.mode && selected() === patientId && w.sessionStorage.getItem(historicalFlag) === '1'};
   }
@@ -176,6 +177,16 @@
           return false;
         }
         payload = profileDraft(payload, profile.data);
+        const references = w.VildaDsSource;
+        let diagnosisCode;
+        try {
+          diagnosisCode = await references.readDiagnosisCode({vault: scope.vault, patientId, isCurrent: allowed});
+        } catch (_) {
+          if (allowed()) w.VildaDymek?.pokaz('Nie można potwierdzić siatek dla nowej wizyty. Spróbuj ponownie.', {ton: 'info'});
+          return false;
+        }
+        if (!allowed() || afterOwnSave && !afterOwnSave()) return false;
+        references.applyDiagnosisToVisit(payload, diagnosisCode);
       }
       if (transition?.beforeApply) {
         if (!transition.beforeApply()) {
@@ -225,6 +236,7 @@
         dateCertain: choice === 'new' || !!model.clinicalDate(row),
         sourceSnapshotId: identityOnly ? null : row.snapshotId, sourceMeasurementDate: model.measurementDate(row),
         sourceDownSyndrome: payload.clinical?.downSyndrome === true,
+        sourceDiagnosisCode: w.VildaDsSource?.diagnosisCode?.(payload),
         revision: choice === 'new' || empty ? null : row.rev || 0});
       return true;
     } catch (_) { return false; }
@@ -405,7 +417,8 @@
         if (latest?.snapshotId === scope.snapshotId && latest.visitId === scope.visitId && latest.rev === scope.revision) {
           Object.assign(scope, {mode: 'browse', date: latest.clinicalDateISO, dateCertain: !!model.clinicalDate(latest),
             sourceSnapshotId: latest.snapshotId, sourceMeasurementDate: model.measurementDate(latest),
-            sourceDownSyndrome: latest.payload.clinical?.downSyndrome === true});
+            sourceDownSyndrome: latest.payload.clinical?.downSyndrome === true,
+            sourceDiagnosisCode: w.VildaDsSource?.diagnosisCode?.(latest.payload)});
           return true;
         }
       }
@@ -599,9 +612,30 @@
       data.measurements = entered.concat(prior.filter(row => !entered.some(item => same(item, row))));
     }
   }
-  async function persist(options, state, vault, assertCurrent) {
-    const {visit, choice} = options;
+  async function complete(state, vault, assertCurrent) {
+    const {receipt, diagnosis, visitContext} = state.committed;
     assertCurrent();
+    if (diagnosis) {
+      try {
+        receipt.diagnosis = await w.VildaICD10Picker.persistDiagnosis({vault, patientId:receipt.patientId,
+          diagnosis, id:'tmt-rapid-' + visitContext.visitId, dateISO:visitContext.clinicalDateISO,
+          visitContext, isCurrent:() => { assertCurrent(); return true; }});
+      } catch (_) {
+        assertCurrent();
+        // Retain the native measurement receipt. A retry uses the same visit,
+        // patient and note identity even if the first note acknowledgement was lost.
+        return {status:'diagnosisPending'};
+      }
+    }
+    assertCurrent();
+    state.receipt = receipt;
+    return receipt;
+  }
+  async function persist(options, state, vault, assertCurrent) {
+    const {visit, choice, diagnosis} = options;
+    assertCurrent();
+    if (state.committed) return complete(state, vault, assertCurrent);
+    if (diagnosis && !w.VildaICD10Picker?.persistDiagnosis) throw new Error('Rozpoznanie nie jest dostępne. Otwórz Szybką ścieżkę ponownie.');
     const payload = read(visit);
     // Resolve identity from a complete decrypted directory. A failed read must
     // never masquerade as zero matching people and create a duplicate.
@@ -613,6 +647,8 @@
     if (candidate?.mismatch) return {status:'mismatch', candidate};
     const rapidVisit = {assertCurrent, explicitNew: choice?.newPatient === true};
     const saveOptions = {rapidVisit, dedup:false, forceNew:!candidate};
+    const sourceResolver = w.VildaDsSource;
+    let referenceCode = sourceResolver.canonicalDiagnosisCode(diagnosis?.code);
     if (candidate) {
       // The latest write guards this patient record; the latest clinical visit
       // supplies its longitudinal facts even when an older visit was saved later.
@@ -641,12 +677,21 @@
       saveOptions.skipAdvancedAntiClobber = true;
       Object.assign(rapidVisit, {patientId:candidate.patientId,snapshotId:latest.snapshotId,revision:latest.rev || 0});
       saveOptions.patientId = candidate.patientId;
+      if (!referenceCode) referenceCode = await sourceResolver.readDiagnosisCode({vault, patientId:candidate.patientId,
+        isCurrent:() => { assertCurrent(); return true; }});
     }
+    sourceResolver.applyDiagnosisToVisit(payload, referenceCode);
     assertCurrent();
     const result = await vault.savePatient(payload, saveOptions);
-    assertCurrent();
-    state.receipt = {status:'saved',patientId:result.patientId,snapshotId:result.snapshotId};
-    return state.receipt;
+    if (!result?.patientId || !result.snapshotId || candidate && result.patientId !== candidate.patientId) {
+      throw new Error('Nie udało się potwierdzić zapisu wizyty.');
+    }
+    state.committed = {
+      receipt:{status:'saved', patientId:result.patientId, snapshotId:result.snapshotId, referenceCode},
+      diagnosis:diagnosis && {code:diagnosis.code, name:diagnosis.name},
+      visitContext:{version:1, visitId:visit.visitId, clinicalDateISO:visit.clinicalDateISO}
+    };
+    return complete(state, vault, assertCurrent);
   }
   function save(options) {
     const vault = w.VildaVault, visit = options?.visit;
