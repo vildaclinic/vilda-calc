@@ -408,6 +408,12 @@ html.vilda-home-workspace #vhomeVisitComparisonDialog .vhome-dialog-close {
   overflow-wrap: anywhere;
 }
 
+#vhomeVisitComparisonDialog .vcomp-context {
+  margin-top: 15px;
+  padding-top: var(--space-4px);
+  border-top: var(--border-hairline) solid var(--vcomp-line);
+}
+
 #vhomeVisitComparisonDialog .vhome-dialog-footer {
   display: flex;
   justify-content: flex-end;

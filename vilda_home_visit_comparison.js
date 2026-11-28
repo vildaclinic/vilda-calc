@@ -124,6 +124,7 @@
   function setClinicalTone(element, tone) {
     if (['ok', 'warn', 'alert'].includes(tone)) element.dataset.tone = tone;
   }
+  function isCaution(tone) { return tone === 'warn' || tone === 'alert'; }
   function deltaUnit(row) {
     return row.unit === '%' ? 'p.p.' : row.unit;
   }
@@ -224,13 +225,18 @@
     detailInterval.textContent = intervalLabel(pair.elapsedDays);
     const content = d.createDocumentFragment();
     content.append(sources, comparisonTable(result.rows), ...result.rows.map(detailMetric).filter(Boolean));
+    const notes = node('div', 'vcomp-context');
     if (result.velocity?.text) {
-      const tempo = node('p', 'vcomp-note vcomp-interpretation', result.velocity.text);
-      setClinicalTone(tempo, result.velocity.tone);
-      content.append(tempo);
+      const tempo = node('p', 'vcomp-note', result.velocity.text);
+      if (isCaution(result.velocity.tone)) {
+        tempo.classList.add('vcomp-interpretation');
+        setClinicalTone(tempo, result.velocity.tone);
+      }
+      notes.append(tempo);
     }
-    if (result.referenceNote) content.append(node('p', 'vcomp-note', result.referenceNote));
-    for (const text of result.context || []) content.append(node('p', 'vcomp-note', text));
+    if (result.referenceNote) notes.append(node('p', 'vcomp-note', result.referenceNote));
+    for (const text of result.context || []) notes.append(node('p', 'vcomp-note', text));
+    if (notes.hasChildNodes()) content.append(notes);
     body.replaceChildren(content);
   }
   function openDetails() {
@@ -283,7 +289,7 @@
     if (result.velocity?.value) {
       velocity.append('Tempo wzrastania · ', node('strong', '', result.velocity.value));
       if (result.velocity.period) velocity.append(' (' + result.velocity.period + ')');
-      if (result.velocity.assessment && ['warn', 'alert'].includes(result.velocity.tone)) {
+      if (result.velocity.assessment && isCaution(result.velocity.tone)) {
         const label = node('span', 'vcomp-interpretation', result.velocity.assessment);
         setClinicalTone(label, result.velocity.tone);
         velocity.append(' ', label);
