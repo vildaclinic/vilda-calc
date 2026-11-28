@@ -29,11 +29,70 @@
 
   /* ── czyste funkcje (mierzalne bez przeglądarki) ─────────────────────────────── */
 
+  var kodyZemel = new Set(['Q90', 'Q90.0', 'Q90.1', 'Q90.2', 'Q90.9']);
+
+  function canonicalDiagnosisCode(code) {
+    return kodyZemel.has(code) ? code : null;
+  }
+
+  function diagnosisCode(payload) {
+    return canonicalDiagnosisCode(payload?.clinical?.growthReferenceIcd10);
+  }
+
+  function applyDiagnosisToVisit(payload, code) {
+    var clinical = Object.assign({}, payload.clinical);
+    var selected = canonicalDiagnosisCode(code);
+    if (selected) clinical.growthReferenceIcd10 = selected;
+    else delete clinical.growthReferenceIcd10;
+    if (Object.keys(clinical).length) payload.clinical = clinical;
+    else delete payload.clinical;
+    return payload;
+  }
+
+  function diagnosisCodeFromNotes(notes, patientId) {
+    var model = w.VildaPatientTreatmentModel;
+    if (!model || !Array.isArray(notes)) throw new Error('Nie można odczytać rozpoznań pacjenta.');
+    var candidates = [];
+    for (var note of notes) {
+      if (note?.patientId !== patientId) continue;
+      var decoded = model.decode(note), context = decoded.context;
+      if (decoded.kind === 'diagnosis' && canonicalDiagnosisCode(context.code)) candidates.push(context);
+    }
+    // Zamknięcie wpisu pozostawia zapisane rozpoznanie cechy wrodzonej.
+    candidates.sort(function (a, b) { return b.dateISO.localeCompare(a.dateISO) || a.code.localeCompare(b.code); });
+    return candidates[0]?.code || null;
+  }
+
+  async function readDiagnosisCode({vault, patientId, isCurrent}) {
+    var userId = vault?.getCurrentUser()?.userId;
+    if (!userId || !patientId || typeof isCurrent !== 'function' || typeof vault.listPatientNotesForPatient !== 'function') {
+      throw new Error('Nie można odczytać rozpoznań pacjenta.');
+    }
+    var session = vault.captureSyncOperationSession();
+    function check() {
+      if (w.VildaVault !== vault || !vault.isUnlocked() || vault.getCurrentUser()?.userId !== userId ||
+          !vault.assertSyncOperationSession(session) || isCurrent() !== true) {
+        throw new Error('Zmieniono kontekst odczytu rozpoznania.');
+      }
+    }
+    check();
+    var notes = await vault.listPatientNotesForPatient(patientId);
+    check();
+    if (!Array.isArray(notes) || notes.some(function (note) { return note?.patientId !== patientId; })) {
+      throw new Error('Nie można potwierdzić rozpoznań pacjenta.');
+    }
+    return diagnosisCodeFromNotes(notes, patientId);
+  }
+
   // Rozpoznanie z payloadu rekordu. Cokolwiek innego niż jawne `true` znaczy „nie".
   function zRekordu(payload) {
     if (!payload || typeof payload !== 'object') return false;
     var k = payload.clinical;
     return !!(k && typeof k === 'object' && k.downSyndrome === true);
+  }
+
+  function usesZemel(payload) {
+    return zRekordu(payload) || !!diagnosisCode(payload);
   }
 
   /* Pierwszeństwo źródeł. `maRekord` mówi, czy w ogóle jest wczytany pacjent; bez rekordu
@@ -65,8 +124,12 @@
     if (source) {
       var id = wybranyPacjent(), payload = activeVisitPayload(source, id);
       var unlocked = w.VildaVault && w.VildaVault.isUnlocked();
-      return { patientId: unlocked ? id : null, status: payload ? 'ready' : id && unlocked ? 'pending' : 'idle',
-        population: populacjaZFlagi(zRekordu(payload)) };
+      var code = id ? diagnosisCode(payload) : rapidDiagnosis();
+      var state = { patientId: unlocked ? id : null,
+        status: payload || code ? 'ready' : id && unlocked ? 'pending' : 'idle',
+        population: populacjaZFlagi(zRekordu(payload) || !!code) };
+      if (code) state.diagnosisCode = code;
+      return state;
     }
     return { patientId: oczekiwanyPacjent, status: statusOdczytu, population: populacja() };
   }
@@ -84,6 +147,27 @@
       if (!patientId || !vault || !vault.isUnlocked() || wybranyPacjent() !== patientId) return null;
       return source.visitPayload(patientId);
     } catch (_) { return null; }
+  }
+
+  function rapidDiagnosis() {
+    if (!visitSource() || !w.VildaVault?.isUnlocked()) return null;
+    return canonicalDiagnosisCode(w.VildaHomeGabinet?.rapidDiagnosis?.());
+  }
+
+  // The normal and partial-page native collectors may carry only the active
+  // accepted visit's reference. Rapid intake pins its choices when it saves.
+  function carryVisitReference(payload, base) {
+    var reader = visitSource();
+    if (!reader) return;
+    var patientId = wybranyPacjent();
+    var source = base || activeVisitPayload(reader, patientId);
+    if (!source) return;
+    applyDiagnosisToVisit(payload, diagnosisCode(source));
+    if (zRekordu(source)) payload.clinical = Object.assign({}, payload.clinical, { downSyndrome: true });
+    else if (payload.clinical && typeof payload.clinical === 'object') {
+      delete payload.clinical.downSyndrome;
+      if (!Object.keys(payload.clinical).length) delete payload.clinical;
+    }
   }
 
   function oglosStan() {
@@ -116,7 +200,7 @@
 
   function zapamietaj(payload) {
     zapamietane = payload && typeof payload === 'object'
-      ? { maRekord: true, ds: zRekordu(payload) }
+      ? { maRekord: true, ds: visitSource() ? usesZemel(payload) : zRekordu(payload) }
       : null;
     oglos();
     return zapamietane;
@@ -133,7 +217,10 @@
   // Odpowiedź dla reszty aplikacji.
   function maFlage() {
     var source = visitSource();
-    if (source) return zRekordu(activeVisitPayload(source, wybranyPacjent()));
+    if (source) {
+      var patientId = wybranyPacjent();
+      return patientId ? usesZemel(activeVisitPayload(source, patientId)) : !!rapidDiagnosis();
+    }
     return wybierz({
       maRekord: !!zapamietane,
       rekord: !!(zapamietane && zapamietane.ds)
@@ -154,6 +241,7 @@
   function wybranyPacjent() {
     var id = null;
     try { if (w.sessionStorage) id = w.sessionStorage.getItem('vildaCurrentPatientId'); } catch (_) { /* legacy frame */ }
+    if (visitSource()) return id || null;
     return id || w._vildaCurrentPatientId || null;
   }
 
@@ -204,6 +292,14 @@
     } catch (e) {
       if (generacja === generacjaOdczytu && !zachowaj) ustawStan(patientId, 'error');
     }
+  }
+
+  function draftChanged() {
+    if (!visitSource() || wybranyPacjent()) return;
+    var code = rapidDiagnosis();
+    zapamietane = code ? { maRekord: false, ds: true } : null;
+    oglos();
+    oglosStan();
   }
 
   function podepnij() {
@@ -268,6 +364,14 @@
     zapomnij: zapomnij,
     maFlage: maFlage,
     populacja: populacja,
+    canonicalDiagnosisCode: canonicalDiagnosisCode,
+    diagnosisCodeFromNotes: diagnosisCodeFromNotes,
+    readDiagnosisCode: readDiagnosisCode,
+    diagnosisCode: diagnosisCode,
+    usesZemel: usesZemel,
+    applyDiagnosisToVisit: applyDiagnosisToVisit,
+    carryVisitReference: carryVisitReference,
+    draftChanged: draftChanged,
     getState: getState,
     retry: function () { if (typeof odswiez === 'function') odswiez(); }
   };

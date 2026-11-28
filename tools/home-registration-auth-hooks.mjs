@@ -1,6 +1,7 @@
 // This layer replays only the optional return path within the native registration
 // form. The original patient database actions and the protected clinical editors
 // must round-trip byte for byte.
+// The later Zemel registration changes are replayed by the final AuthUI delta.
 const formStart = 'function ss(t,a,n){';
 const formEnd = 'function ds(t,a,n){';
 const opener = `// The start screen and patient database share this exact registration form.

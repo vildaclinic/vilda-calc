@@ -321,12 +321,6 @@
     if (!scope.rows) return;
     try {
       const draft = now.encounter.mode !== 'browse' ? w.VildaDataImportExport.captureCurrentUserDataReadOnly() : null;
-      if (draft && now.encounter.mode === 'new') {
-        const population = w.VildaDsSource?.getState();
-        if (population?.patientId === now.patientId && population.status === 'ready') {
-          draft.clinical = {...draft.clinical, downSyndrome: population.population === 'DS'};
-        }
-      }
       const pair = dates.select(now.patientId, scope.rows, now.encounter, draft, earlierId);
       if (!pair.current) { status('Nie można ustalić wizyty do porównania.', true); return; }
       const result = pair.reference ? clinical.compare(pair.reference, pair.current) : {rows: []};

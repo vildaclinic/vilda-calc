@@ -480,7 +480,12 @@
     context.appendChild(el('span', '', date ? 'Wizyta · ' + dateLabel(date) : 'Dokumentacja pacjenta'));
     host.appendChild(context);
     var payload = model?.patient?.snapshots?.[0]?.payload;
-    if (payload?.clinical?.downSyndrome === true) host.appendChild(el('span', 'vhome-patient-badge', 'Zespół Downa · cecha Karty pacjenta'));
+    var source = w.VildaDsSource?.getState?.();
+    if (source?.status === 'ready' && source.patientId === active?.owner.patientId && source.diagnosisCode) {
+      host.appendChild(el('span', 'vhome-patient-badge', 'Zemel 2015 · z rozpoznania ' + source.diagnosisCode));
+    } else if (payload?.clinical?.downSyndrome === true) {
+      host.appendChild(el('span', 'vhome-patient-badge', 'Zespół Downa · cecha Karty pacjenta'));
+    }
   }
   function renderOverview() {
     if (!dialog?.open || !modal || !current(active)) return;

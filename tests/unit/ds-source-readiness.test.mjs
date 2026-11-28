@@ -186,3 +186,49 @@ describe('DS source — owned asynchronous readiness', () => {
     expect(e.source.getState()).toEqual({patientId:'fictional-a', status:'ready', population:'DS'});
   });
 });
+
+describe('DS source from coded diagnoses', () => {
+  const owner = 'fictional-a';
+  const coded = (code, extra = {}) => ({ id: `${code}:${extra.dateISO || ''}`, patientId: owner,
+    treatmentContext: { schemaVersion: 1, kind: 'diagnosis', name: 'Fikcyjne rozpoznanie',
+      code, status: 'active', dateISO: '2026-11-28', ...extra } });
+
+  it.each(['Q90', 'Q90.0', 'Q90.1', 'Q90.2', 'Q90.9'])('accepts canonical %s and pins it without changing the manual flag', code => {
+    const { win, source } = setup();
+    loadBrowserScript('runtime/patient-treatment-v1/model.js', win);
+    expect(source.diagnosisCodeFromNotes([coded(code)], owner)).toBe(code);
+    const visit = { clinical: { downSyndrome: false } };
+    source.applyDiagnosisToVisit(visit, code);
+    expect(source.usesZemel(visit)).toBe(true);
+    expect(visit.clinical.downSyndrome).toBe(false);
+    const next = { ...visit };
+    source.applyDiagnosisToVisit(next, null);
+    expect(source.usesZemel(next)).toBe(false);
+    expect(source.diagnosisCode(visit)).toBe(code);
+    expect(source.usesZemel({ clinical: { downSyndrome: true } })).toBe(true);
+  });
+
+  it('retains a closed diagnosis and rejects family lookalikes, free text, and another patient', () => {
+    const { win, source } = setup();
+    loadBrowserScript('runtime/patient-treatment-v1/model.js', win);
+    const unrelated = [coded('Q90.3'), coded('Q90.90'), coded('Q91'), coded('Q900'),
+      coded('', { name: 'Zespół Downa' }), { ...coded('Q90'), patientId: 'fictional-b' }];
+    expect(source.diagnosisCodeFromNotes(unrelated, owner)).toBeNull();
+    expect(source.diagnosisCodeFromNotes([...unrelated, coded('Q90.2', { status: 'closed' })], owner)).toBe('Q90.2');
+  });
+
+  it('reads a pinned ICD diagnosis only from the accepted visit of the current patient', () => {
+    const e = setup({ optIn: true, visitSource: true });
+    e.win.VildaPanelPacjent = { nieaktualny: () => false, wlasciciel: () => owner };
+    const generalVisit = { visit: { patientId: owner, visitId: 'fictional-old' } };
+    const codedVisit = { visit: { patientId: owner, visitId: 'fictional-new' },
+      clinical: { growthReferenceIcd10: 'Q90.9' } };
+    e.win.lastLoadedData = codedVisit;
+    e.load(owner);
+    expect(e.source.getState()).toMatchObject({ patientId: owner, status: 'ready', population: 'DS' });
+    e.win.lastLoadedData = generalVisit;
+    e.win.document.dispatchEvent(new Event('vilda:data-applied'));
+    expect(e.source.getState()).toEqual({ patientId: owner, status: 'ready', population: 'OGOLNA' });
+    expect(e.requests).toHaveLength(0);
+  });
+});

@@ -158,6 +158,29 @@ html.vilda-home-workspace :is(.vhome-treatment, .vhome-treatment-editor) .vpt-bu
 .vhome-treatment .vpt-diagnosis-row:last-child { padding-bottom: 0; border-bottom: 0; }
 .vhome-treatment .vpt-diagnosis-row strong { font-size: 16px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
 .vhome-treatment .vpt-diagnosis-row p { margin-top: var(--space-4px); }
+.vhome-treatment .vpt-growth-reference,
+.vhome-treatment-editor .vpt-growth-reference-preview {
+  min-width: 0;
+  padding: var(--space-10px) var(--space-12px);
+  border: var(--border-hairline) solid var(--vpt-line);
+  border-radius: var(--radius-8);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.vhome-treatment .vpt-growth-reference {
+  display: grid;
+  gap: var(--space-4px);
+  margin-top: var(--space-16px);
+  background: #fff;
+}
+.vhome-treatment .vpt-growth-reference h5 { margin: 0; color: var(--vpt-ink); font-size: 15px; font-weight: 600; }
+.vhome-treatment .vpt-growth-reference[data-zemel] {
+  border-inline-start: 3px solid var(--vpt-accent);
+  background: var(--tint-teal, #eaf5f5);
+}
+.vhome-treatment .vpt-growth-reference[data-zemel] strong { color: var(--vpt-accent); }
+.vhome-treatment-editor .vpt-growth-reference-preview { margin: 0; background: var(--tint-teal, #eaf5f5); }
 .vhome-treatment .vpt-episode-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-16px); min-width: 0; }
 .vhome-treatment .vpt-episode-card { display: flex; flex-direction: column; gap: var(--space-14px); }
 .vhome-treatment .vpt-episode-card .vpt-heading { align-items: flex-start; flex-wrap: wrap; gap: var(--space-8px) var(--space-12px); margin: 0; }

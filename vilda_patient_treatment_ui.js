@@ -89,6 +89,25 @@
   }
   function blank(text) { return node('p', 'vpt-empty', text); }
   function diagnosisLabel(dto) { return (dto.context.code ? dto.context.code + ' — ' : '') + dto.context.name; }
+  function growthReference() {
+    var source = w.VildaDsSource;
+    return w.__VILDA_HOME_GABINET_PREVIEW__ === true && source?.diagnosisCodeFromNotes ? source : null;
+  }
+  function growthDiagnosisCode(view, exceptId) {
+    return growthReference()?.diagnosisCodeFromNotes(view.data.diagnoses.filter(function (entry) {
+      return entry.id !== exceptId;
+    }).map(function (entry) { return entry.baseNote; }), view.patientId) || null;
+  }
+  function renderGrowthReference(view) {
+    var code = growthDiagnosisCode(view), section = node('section', 'vpt-growth-reference');
+    section.dataset.treatmentGrowthReference = '';
+    if (code) section.dataset.zemel = '';
+    section.append(node('h5', '', 'Siatki referencyjne'), node('p', 'vpt-meta', 'Nowe wizyty'),
+      node('strong', '', code ? 'Zemel 2015' : 'Ustawienia kartoteki i gabinetu'));
+    if (code) section.appendChild(node('p', 'vpt-meta', 'Z rozpoznania ' + code));
+    section.appendChild(node('p', 'vpt-meta', 'Zapisane wizyty zachowają swoje siatki.'));
+    return section;
+  }
   function indication(view, episode) {
     var ids = episode.context.diagnosisIds;
     if (!ids.length) return 'Rozpoznania nie uzupełniono';
@@ -122,6 +141,7 @@
       });
       section.appendChild(list);
     }
+    if (growthReference()) section.appendChild(renderGrowthReference(view));
     return section;
   }
   function renderEpisode(view, dto) {
@@ -347,6 +367,19 @@
   }
   function syncEditor(view) {
     if (!editorCurrent(view) || !view.form) return;
+    if (view.growthReferencePreview) {
+      var source = growthReference(), committed = view.picker?.getCommittedCode?.();
+      var priorCode = source?.canonicalDiagnosisCode(view.dto?.context.code);
+      var text = '';
+      if (source?.canonicalDiagnosisCode(committed)) text = 'Po zapisie nowe wizyty będą korzystać z siatek Zemel 2015.';
+      else if (priorCode && committed != null) {
+        text = growthDiagnosisCode(view.owner, view.dto.id)
+          ? 'Nowe wizyty nadal będą korzystać z siatek Zemel 2015.'
+          : 'Po zapisie to rozpoznanie przestanie wyznaczać siatki dla nowych wizyt.';
+      }
+      view.growthReferencePreview.hidden = !text;
+      if (view.growthReferencePreview.textContent !== text) view.growthReferencePreview.textContent = text;
+    }
     if (view.kind !== 'therapy') return;
     var method = view.form.elements.namedItem('method').value;
     view.form.querySelector('[data-treatment-medication-fields]').hidden = method !== 'pharmacological';
@@ -361,11 +394,20 @@
       owner.restoreHint = removing ? { action: 'new-diagnosis' } : view.hint;
       owner.pendingRefresh = false;
       if (view.kind === 'therapy' || view.kind === 'followup') owner.selected = result.id;
+      var source = view.kind === 'diagnosis' ? growthReference() : null;
+      var affectsGrowthReference = source && (source.canonicalDiagnosisCode(view.dto?.context.code) || source.canonicalDiagnosisCode(result.context?.code));
       closeEditor(view, true, false);
       if (!current(owner)) return;
-      await refresh(owner);
+      var refreshed = await refresh(owner);
       if (!current(owner)) return;
-      status(owner, removing ? 'Usunięto rozpoznanie.' : 'Zapisano dokumentację leczenia.'); changed(owner);
+      var receipt = removing ? 'Usunięto rozpoznanie.' : source ? 'Zapisano rozpoznanie.' : 'Zapisano dokumentację leczenia.';
+      if (refreshed && affectsGrowthReference) {
+        receipt += growthDiagnosisCode(owner)
+          ? ' Siatki dla nowych wizyt: Zemel 2015.'
+          : ' Siatki dla nowych wizyt wynikają z ustawień kartoteki i gabinetu.';
+        receipt += ' Zapisane wizyty zachowają swoje siatki.';
+      }
+      status(owner, receipt); changed(owner);
     } catch (error) {
       if (!editorCurrent(view)) { if (activeEditor === view) closeEditor(view, true, false); return; }
       // A failed post-write reread can leave an unknown outcome. Repeated
@@ -387,6 +429,9 @@
     var question = view.dto.baseNote.visitContext ? 'Usunąć to rozpoznanie z dokumentacji wizyty?' : 'Usunąć to rozpoznanie z kartoteki pacjenta?';
     if (view.owner.data.episodes.some(function (entry) { return entry.context.diagnosisIds.includes(view.dto.id); })) {
       question += ' W powiązanym leczeniu pojawi się informacja „Rozpoznanie niedostępne”.';
+    }
+    if (growthReference()?.canonicalDiagnosisCode(view.dto.context.code) && !growthDiagnosisCode(view.owner, view.dto.id)) {
+      question += ' To rozpoznanie przestanie wyznaczać siatki dla nowych wizyt. Zapisane wizyty zachowają swoje siatki.';
     }
     if (view.dirty) question += ' Zmiany w formularzu zostaną odrzucone.';
     if (!w.confirm(question) || !editorCurrent(view)) return;
@@ -483,6 +528,13 @@
           editor.picker = w.VildaICD10Picker.mount({ host: code, nameInput: name.querySelector('input'), code: context.code, compact: view.options.compact,
             isCurrent: function () { return editorCurrent(editor) && !editor.saving && !editor.uncertain; },
             onCommit: function () { if (editorCurrent(editor) && !editor.saving && !editor.uncertain) { editor.dirty = true; syncEditor(editor); } } });
+          if (growthReference()) {
+            editor.growthReferencePreview = node('p', 'vpt-growth-reference-preview');
+            editor.growthReferencePreview.dataset.treatmentGrowthReferencePreview = '';
+            editor.growthReferencePreview.setAttribute('role', 'status');
+            editor.growthReferencePreview.hidden = true;
+            form.appendChild(editor.growthReferencePreview);
+          }
         }
         if (dto) {
           editor.removeButton = node('button', 'vpt-button vpt-remove', 'Usuń rozpoznanie');
@@ -537,7 +589,7 @@
     if (!view || !view.form || !view.form.contains(event.target)) return;
     event.stopImmediatePropagation();
     if (!editorCurrent(view) || view.readOnly || view.saving) return;
-    if (view.picker && view.picker.handleInput(event)) return;
+    if (view.picker && view.picker.handleInput(event)) { if (view.growthReferencePreview) syncEditor(view); return; }
     view.dirty = true; syncEditor(view);
   }
   w.addEventListener('input', editorInput, true); w.addEventListener('change', editorInput, true);

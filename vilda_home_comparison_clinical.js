@@ -37,7 +37,8 @@
     const measured = w.VildaHomeVisitComparisonModel.measurementDate(row);
     const age = w.VildaHomeVisitProjection.project({...row, clinicalDateISO: measured});
     const sex = user.sex === 'K' ? 'F' : user.sex === 'F' || user.sex === 'M' ? user.sex : null;
-    const source = payload.clinical?.downSyndrome === true ? 'DS' : String(payload.zscore?.dataSource || '').trim().toUpperCase();
+    const zemel = w.VildaDsSource?.usesZemel?.(payload) ?? payload.clinical?.downSyndrome === true;
+    const source = zemel ? 'DS' : String(payload.zscore?.dataSource || '').trim().toUpperCase();
     const population = source === 'DS' ? 'DS' : 'OGOLNA';
     const full = age.ageMonths;
     const precise = age.exactAgeMonths ?? full;
