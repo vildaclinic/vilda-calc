@@ -1775,13 +1775,17 @@
   "v": 5,
   "sha256": "5bfb8185f9fb5280b7a9a0afa5e1ce292c9e53f35e1222aa2cc2b66832e70a7e"
  },
+ "vilda_icd10_favorites.js": {
+  "v": 1,
+  "sha256": "bc1bba099d35e8e8743811f7528beba9be0311ca4436ea1162aacf2df326826a"
+ },
  "vilda_icd10_picker.css": {
-  "v": 3,
-  "sha256": "155c69c74c8c4dfe3e99c114d03e24fb1dab7f55d07bec4258d3a0184d9abcf5"
+  "v": 4,
+  "sha256": "ce783943ffaae29e319a477ef7cbe2163827f644b3ddc2fc5149b70a08496275"
  },
  "vilda_icd10_picker.js": {
-  "v": 3,
-  "sha256": "927299a52b76041489e5bc09e6c100e9f9fe243bf4c1b5444a8aa10421ed99d7"
+  "v": 4,
+  "sha256": "8f78beab0d9f2a888ab6dca2f902b49bc8b6a0988c2a9be3524cfcff07f2ce5d"
  },
  "vilda_icd10_pl_data.js": {
   "v": 1,
@@ -2008,8 +2012,8 @@
   "sha256": "22ce9f454acac1f458b4e32a1f824142430590d319264352e76cf299591799f8"
  },
  "vilda_patient_treatment_ui.js": {
-  "v": 7,
-  "sha256": "5031381c921560ffe04a4507b070273df7d7b1483c70685deb98f8f9975fdbf0"
+  "v": 8,
+  "sha256": "b875cd7342b26d0f0ba54473c1e87510845910f5a118bb5d1e7c59d0b81b1801"
  },
  "vilda_patients_list.css": {
   "v": 10,
@@ -2028,8 +2032,8 @@
   "sha256": "57c71db1e453f00b26a3829aa673cf0c414d14385eeb8d347d9ec4ef0e8fb052"
  },
  "vilda_persistence_adapter.js": {
-  "v": 41,
-  "sha256": "82f9f39b5aed3eedafb0cbda007ba10e85cf85e9b1515ed87f1ef3c1d5864ad5"
+  "v": 42,
+  "sha256": "840e103e68b289bc8d3cd61851dcff51fba91f5772d8c6c452ee93fa2b823fe0"
  },
  "vilda_phone_landscape.css": {
   "v": 2,

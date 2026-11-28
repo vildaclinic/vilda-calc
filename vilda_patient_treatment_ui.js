@@ -6,6 +6,7 @@
   if (!w || w.VildaPatientTreatment) return;
   var d = w.document, instances = new Set(), watchedVaults = new WeakSet();
   var editorDialog = null, activeEditor = null, observer = null;
+  var zemelAfterSave = 'Po zapisie nowe wizyty będą korzystać z siatek Zemel 2015.';
   var methodNames = { pharmacological: 'Farmakoterapia', nonpharmacological: 'Postępowanie niefarmakologiczne', other: 'Inne' };
   var lifetimeEvents = ['vilda:user-state-cleared', 'vilda:patient-loaded', 'vilda:auth-loaded',
     'vilda:session-changed', 'vilda:data-applied', 'vilda:main-session-restored'];
@@ -331,6 +332,7 @@
     view.saving = value;
     if (view.picker) view.picker.setWorking(value || view.uncertain);
     view.dialog.querySelectorAll('input,select,textarea,button').forEach(function (field) { field.disabled = value; });
+    view.catalogue?.setDisabled(value || view.uncertain);
     view.dialog.setAttribute('aria-busy', String(value));
     if (!value) {
       view.dialog.querySelector('.vhome-dialog-apply').disabled = view.uncertain;
@@ -342,6 +344,7 @@
     if (!view || view.closed || activeEditor !== view) return true;
     if (!force && editorCurrent(view)) {
       if (view.saving) return false;
+      if (view.catalogue?.close()) return false;
       if (view.dirty && !w.confirm('Masz niezapisane zmiany. Odrzucić je i zamknąć formularz?')) return false;
     }
     view.closed = true; activeEditor = null;
@@ -349,6 +352,7 @@
     if (view.releaseBack) { try { view.releaseBack(); } catch (_) { /* Continue wiping a disposed editor. */ } view.releaseBack = null; }
     if (view.releaseDialog) { try { view.releaseDialog(); } catch (_) { /* Continue wiping a disposed editor. */ } view.releaseDialog = null; }
     if (view.history) { view.history.release(); view.history = null; }
+    if (view.catalogue) { view.catalogue.dispose(); view.catalogue = null; }
     if (view.picker) { view.picker.destroy(); view.picker = null; }
     if (view.dialog.open) view.dialog.close();
     view.dialog.removeAttribute('aria-busy'); view.dialog.removeAttribute('aria-modal');
@@ -371,7 +375,7 @@
       var source = growthReference(), committed = view.picker?.getCommittedCode?.();
       var priorCode = source?.canonicalDiagnosisCode(view.dto?.context.code);
       var text = '';
-      if (source?.canonicalDiagnosisCode(committed)) text = 'Po zapisie nowe wizyty będą korzystać z siatek Zemel 2015.';
+      if (source?.canonicalDiagnosisCode(committed)) text = zemelAfterSave;
       else if (priorCode && committed != null) {
         text = growthDiagnosisCode(view.owner, view.dto.id)
           ? 'Nowe wizyty nadal będą korzystać z siatek Zemel 2015.'
@@ -418,7 +422,7 @@
   }
   async function submitEditor() {
     var view = activeEditor;
-    if (!editorCurrent(view) || view.readOnly || view.saving || view.uncertain || !view.form.reportValidity()) return;
+    if (!editorCurrent(view) || view.readOnly || view.saving || view.uncertain || view.catalogue?.isOpen() || !view.form.reportValidity()) return;
     var values;
     try { values = view.read(new w.FormData(view.form)); }
     catch (_) { editorError(view, 'Sprawdź pola formularza.'); return; }
@@ -525,10 +529,16 @@
         form.appendChild(grid);
         if (!editor.readOnly) {
           if (!view.options.compact) form.appendChild(node('p', 'vpt-meta', 'Rozpoznanie i kod wybiera lekarz. Rozpoznanie można zapisać bez kodu ICD-10.'));
+          function canEdit() { return editorCurrent(editor) && !editor.saving && !editor.uncertain; }
           editor.picker = w.VildaICD10Picker.mount({ host: code, nameInput: name.querySelector('input'), code: context.code, compact: view.options.compact,
-            isCurrent: function () { return editorCurrent(editor) && !editor.saving && !editor.uncertain; },
-            onCommit: function () { if (editorCurrent(editor) && !editor.saving && !editor.uncertain) { editor.dirty = true; syncEditor(editor); } } });
-          if (growthReference()) {
+            isCurrent: canEdit, onCommit: function () { if (canEdit()) { editor.dirty = true; syncEditor(editor); } } });
+          var source = growthReference();
+          if (w.__VILDA_HOME_GABINET_PREVIEW__ === true && editor.picker.commitCatalogueSelection) {
+            editor.catalogue = w.VildaICD10Picker.mountDiagnosisField?.({ host: code, context: destination, catalogueOnly: true, isCurrent: canEdit,
+              ownerDialog: function () { return view.root.closest('dialog[open]'); }, notice: source ? zemelAfterSave : '',
+              onChange: function (choice) { if (canEdit() && choice) editor.picker.commitCatalogueSelection(choice); } });
+          }
+          if (source) {
             editor.growthReferencePreview = node('p', 'vpt-growth-reference-preview');
             editor.growthReferencePreview.dataset.treatmentGrowthReferencePreview = '';
             editor.growthReferencePreview.setAttribute('role', 'status');
@@ -586,7 +596,9 @@
   // document capture and run its local dirty/visibility updates explicitly.
   function editorInput(event) {
     var view = activeEditor;
-    if (!view || !view.form || !view.form.contains(event.target)) return;
+    if (!view || !view.form) return;
+    if (view.catalogue?.handleInput(event)) { event.stopImmediatePropagation(); return; }
+    if (!view.form.contains(event.target)) return;
     event.stopImmediatePropagation();
     if (!editorCurrent(view) || view.readOnly || view.saving) return;
     if (view.picker && view.picker.handleInput(event)) { if (view.growthReferencePreview) syncEditor(view); return; }

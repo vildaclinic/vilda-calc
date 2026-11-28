@@ -54,8 +54,8 @@
       useName.hidden = !selectedEntry || nameInput.value === selectedEntry.name;
       selected.hidden = compact ? useName.hidden : !code.value;
     }
-    function commit(entry, manual) {
-      if (!current()) return;
+    function commit(entry, manual, restoreFocus) {
+      if (!current()) return false;
       var beforeCode = code.value, beforeName = nameInput.value, beforeChoice = catalogueChoice?.code;
       catalogueChoice = manual == null ? entry : null;
       code.value = manual == null ? entry.code : manual;
@@ -66,7 +66,8 @@
       close(); validate(); showSelected();
       live.textContent = manual == null ? 'Wybrano ' + entry.code + ' — ' + entry.name + '.' : 'Zatwierdzono kod ręczny: ' + manual + '.';
       if (beforeCode !== code.value || beforeName !== nameInput.value || beforeChoice !== catalogueChoice?.code) options.onCommit();
-      query.focus({ preventScroll: true });
+      if (restoreFocus !== false) query.focus({ preventScroll: true });
+      return true;
     }
     function addRow(entry, manual) {
       var row = node('button', 'vpt-button vpt-text vpt-icd10-option'); row.type = 'button'; row.tabIndex = -1; row.id = id + '-option-' + rows.length;
@@ -151,6 +152,10 @@
       },
       getCommittedCode: function () { return disposed || pending() ? null : code.value; },
       getCatalogueSelection: function () { return !disposed && !pending() && catalogueChoice ? { code: catalogueChoice.code, name: catalogueChoice.name } : null; },
+      commitCatalogueSelection: function (choice) {
+        var entry = engine?.lookup(choice?.code);
+        return !!entry && entry.code === choice.code && entry.name === choice.name && commit(entry, null, false);
+      },
       setWorking: function (value) { if (disposed) return; working = !!value; if (working) close(); },
       destroy: function () {
         if (disposed) return;
@@ -161,8 +166,9 @@
   }
   function mountDiagnosisField(options) {
     const host = options.host, d = host.ownerDocument;
+    const catalogueOnly = options.catalogueOnly === true;
     const id = 'vpt-intake-diagnosis-' + (++serial);
-    let selection = null, candidate = null, disposed = false;
+    let selection = null, candidate = null, disposed = false, unsubscribe = null;
     function node(tag, className, text) {
       const element = d.createElement(tag);
       if (className) element.className = className;
@@ -174,21 +180,26 @@
       element.type = 'button';
       return element;
     }
-    const field = node('section', 'vpt-optional-diagnosis');
+    const field = node(catalogueOnly ? 'div' : 'section', 'vpt-optional-diagnosis');
     const row = node('div', 'vpt-optional-diagnosis-row');
     const summary = node('div', 'vpt-optional-diagnosis-summary');
     const label = node('strong', '', 'Rozpoznanie');
     label.id = id;
-    field.setAttribute('aria-labelledby', id);
     const optional = node('small', '', 'opcjonalnie');
     const value = node('p', 'vpt-optional-diagnosis-value');
     value.setAttribute('aria-live', 'polite');
     const pick = button('Wybierz z ICD-10', 'vpt-intake-diagnosis-button');
     pick.setAttribute('aria-haspopup', 'dialog');
     const notice = node('p', 'vpt-optional-diagnosis-note');
-    summary.append(label, ' ', optional, value);
-    row.append(summary, pick);
-    field.append(row, notice);
+    if (catalogueOnly) {
+      field.classList.add('vpt-icd-catalogue-launcher');
+      field.append(pick);
+    } else {
+      field.setAttribute('aria-labelledby', id);
+      summary.append(label, ' ', optional, value);
+      row.append(summary, pick);
+      field.append(row, notice);
+    }
     host.append(field);
 
     const dialog = node('dialog', 'vpt-intake-diagnosis-dialog');
@@ -201,6 +212,10 @@
     dialog.setAttribute('aria-labelledby', title.id);
     const context = node('p', 'vpt-optional-diagnosis-note', options.context || '');
     context.hidden = !options.context;
+    if (options.context) {
+      context.id = id + '-context';
+      dialog.setAttribute('aria-describedby', context.id);
+    }
     intro.append(title, context);
     const x = button('×', 'vpt-intake-diagnosis-button vpt-intake-diagnosis-close');
     x.setAttribute('aria-label', 'Zamknij wybór rozpoznania');
@@ -212,12 +227,28 @@
     const query = node('input');
     query.type = 'search'; query.id = id + '-query'; queryLabel.htmlFor = query.id;
     query.autocomplete = 'off'; query.maxLength = 256; query.spellcheck = false;
-    query.placeholder = 'np. Q90 albo zespół Downa';
-    const catalogueStatus = node('p', 'vpt-optional-diagnosis-note');
-    catalogueStatus.setAttribute('role', 'status');
+    query.placeholder = 'Wpisz kod lub nazwę rozpoznania';
+    const searchField = node('div', 'vpt-icd-search-field');
+    const clearSearch = button('×', 'vpt-icd-search-clear');
+    clearSearch.setAttribute('aria-label', 'Wyczyść wyszukiwanie');
+    searchField.append(query, clearSearch);
+    const results = node('section', 'vpt-icd-favorites');
+    const listHeading = node('div', 'vpt-icd-favorites-heading');
+    const listTitle = node('h3', '', 'Ulubione');
+    listTitle.id = id + '-list-title';
+    const back = button('Pokaż ulubione', 'vpt-icd-favorites-back');
+    listHeading.append(listTitle, back);
+    const catalogueStatus = node('p', 'vpt-icd-favorites-empty');
     const list = node('ul', 'vpt-diagnosis-catalog');
-    list.setAttribute('aria-label', 'Kody ICD-10');
-    catalogueView.append(queryLabel, query, catalogueStatus, list);
+    list.setAttribute('aria-labelledby', listTitle.id);
+    const limit = node('p', 'vpt-icd-favorites-limit', 'Zawęź wyszukiwanie, aby zobaczyć kolejne dopasowania.');
+    const favoriteError = node('p', 'vpt-icd-favorite-error');
+    favoriteError.setAttribute('role', 'alert');
+    favoriteError.hidden = true;
+    const announcement = node('p', 'vpt-icd-favorite-announcement');
+    announcement.setAttribute('role', 'status');
+    results.append(listHeading, list, catalogueStatus, limit);
+    catalogueView.append(queryLabel, searchField, favoriteError, results);
 
     const selected = node('div', 'vpt-intake-diagnosis-selected');
     const selectedCopy = node('div');
@@ -234,7 +265,7 @@
     const cancel = button('Anuluj', 'vpt-intake-diagnosis-button');
     const apply = button('Dodaj do formularza', 'vpt-intake-diagnosis-button vpt-intake-diagnosis-apply');
     footer.append(remove, cancel, apply);
-    dialog.append(heading, body, footer);
+    dialog.append(heading, body, footer, announcement);
     d.body.append(dialog);
 
     function current() { return !disposed && options.isCurrent() === true; }
@@ -246,6 +277,7 @@
       element.hidden = !applies;
     }
     function renderField() {
+      if (catalogueOnly) return;
       value.textContent = format(selection);
       value.hidden = !selection;
       optional.hidden = !!selection;
@@ -257,31 +289,78 @@
       selected.hidden = !candidate;
       selectedName.textContent = format(candidate);
       showNotice(selectedNotice, candidate);
-      remove.hidden = !selection;
+      remove.hidden = catalogueOnly || !selection;
       apply.disabled = !candidate;
     }
     function renderCatalogue() {
+      if (!current()) return;
       const text = query.value.trim();
       const engine = getCatalogue();
-      const result = engine?.search(text || 'Q90', { limit: 12 });
-      const entries = result?.items || [];
-      const example = !text && engine?.lookup('J45.9');
-      catalogueStatus.textContent = !result ? 'Katalog ICD-10 jest chwilowo niedostępny.' : !result.items.length
-        ? 'Brak pasujących kodów. Zmień wyszukiwanie.' : text ? 'Znaleziono kodów: ' + result.total + '.' : 'Przykładowe rozpoznania z katalogu ICD-10';
-      list.replaceChildren(...(example ? [...entries, example] : entries).map(function (entry) {
-        const item = node('li');
+      const favorites = w.VildaICD10Favorites;
+      const available = !!(engine && favorites?.canUse());
+      const codes = new Set(available ? favorites.getCodes(engine) : []);
+      const result = text && engine ? engine.search(text, { limit: 12 }) : null;
+      const entries = result ? result.items : Array.from(codes, code => engine.lookup(code)).filter(Boolean);
+      const focused = list.contains(d.activeElement) ? d.activeElement : null;
+      const previousIndex = focused ? Array.from(list.children).indexOf(focused.closest('li')) : -1;
+      const previousScroll = list.scrollTop;
+      listTitle.textContent = text ? 'Wyniki wyszukiwania' : 'Ulubione';
+      clearSearch.hidden = back.hidden = !text;
+      catalogueStatus.hidden = false;
+      if (!engine) catalogueStatus.textContent = 'Katalog ICD-10 jest chwilowo niedostępny.';
+      else if (entries.length) catalogueStatus.hidden = true;
+      else if (text) catalogueStatus.textContent = 'Brak wyników. Spróbuj wpisać inny kod lub nazwę.';
+      else catalogueStatus.textContent = available ? 'Brak ulubionych rozpoznań. Użyj gwiazdki przy kodzie w wynikach wyszukiwania.'
+        : 'Ulubione są dostępne po odblokowaniu konta.';
+      list.hidden = !entries.length;
+      limit.hidden = !result || result.total <= entries.length;
+      list.replaceChildren(...entries.map(function (entry) {
+        const item = node('li', 'vpt-icd-result-row');
         const option = button('', 'vpt-intake-diagnosis-option');
         option.dataset.icd10Code = entry.code;
         option.append(node('strong', '', entry.code), ' ', node('span', '', entry.name));
         option.onclick = function () {
-          if (!current()) return;
+          if (!current() || !dialog.open || !list.contains(option)) return;
           candidate = copy(entry);
           renderEditor();
-          apply.focus();
+          apply.focus({ preventScroll: true });
         };
         item.append(option);
+        if (available) {
+          const star = button('', 'vpt-icd-favorite-toggle');
+          const icon = node('span', 'vpt-icd-favorite-icon');
+          icon.setAttribute('aria-hidden', 'true');
+          star.dataset.icd10FavoriteCode = entry.code;
+          star.setAttribute('aria-label', 'Ulubione, ' + entry.code + ' ' + entry.name);
+          star.setAttribute('aria-pressed', String(codes.has(entry.code)));
+          star.title = codes.has(entry.code) ? 'Usuń z ulubionych' : 'Dodaj do ulubionych';
+          star.append(icon);
+          star.onclick = function () {
+            if (!current() || !dialog.open || !list.contains(star)) return;
+            const updated = favorites.toggle(entry.code, engine, () => current() && dialog.open);
+            if (!current() || !dialog.open) return;
+            favoriteError.hidden = !!updated;
+            favoriteError.textContent = updated ? '' : 'Nie udało się zapisać ulubionych. Spróbuj ponownie.';
+            if (updated) announcement.textContent = (updated.includes(entry.code) ? 'Dodano do ulubionych: ' : 'Usunięto z ulubionych: ') + entry.code;
+          };
+          item.append(star);
+        }
         return item;
       }));
+      list.scrollTop = previousScroll;
+      if (focused) {
+        const key = focused.dataset.icd10FavoriteCode ? 'icd10FavoriteCode' : 'icd10Code';
+        const selector = key === 'icd10FavoriteCode' ? '[data-icd10-favorite-code]' : '[data-icd10-code]';
+        const buttons = Array.from(list.querySelectorAll(selector));
+        const match = buttons.find(option => option.dataset[key] === focused.dataset[key]);
+        const next = match || buttons[Math.min(previousIndex, buttons.length - 1)] || query;
+        next.focus({ preventScroll: true });
+        if (next !== query) {
+          const row = next.getBoundingClientRect(), bounds = list.getBoundingClientRect();
+          if (row.top < bounds.top) list.scrollTop += row.top - bounds.top;
+          else if (row.bottom > bounds.bottom) list.scrollTop += row.bottom - bounds.bottom;
+        }
+      }
     }
     function select(choice) {
       selection = copy(choice);
@@ -290,42 +369,73 @@
     }
     function close() {
       if (!dialog.open) return false;
+      unsubscribe?.(); unsubscribe = null;
       dialog.close();
       return true;
     }
     pick.onclick = function () {
-      if (!current() || d.querySelector('dialog[open]')) return;
-      candidate = copy(selection);
+      const owner = catalogueOnly ? host.closest('dialog[open]') : null;
+      const parentOwner = catalogueOnly ? options.ownerDialog?.() : null;
+      if (!current() || Array.from(d.querySelectorAll('dialog[open]')).some(open => open !== owner && open !== parentOwner)) return;
+      unsubscribe?.(); unsubscribe = null;
+      candidate = null;
       query.value = '';
       renderCatalogue(); renderEditor();
       dialog.showModal();
+      unsubscribe = w.VildaICD10Favorites?.subscribe(function () {
+        if (!dialog.open) return;
+        if (!current()) { close(); return; }
+        if (!candidate) renderCatalogue();
+      });
     };
-    query.addEventListener('input', renderCatalogue);
+    function handleInput(event) {
+      if (event.target !== query || disposed) return false;
+      if (current() && dialog.open && event.type === 'input') {
+        list.scrollTop = 0;
+        favoriteError.hidden = true;
+        renderCatalogue();
+      }
+      return true;
+    }
+    query.addEventListener('input', handleInput);
     query.addEventListener('keydown', function (event) { if (event.key === 'Enter' && !event.isComposing) event.preventDefault(); });
+    back.onclick = clearSearch.onclick = function () {
+      if (!current() || !dialog.open) return;
+      query.value = '';
+      query.focus({ preventScroll: true });
+      list.scrollTop = 0;
+      favoriteError.hidden = true;
+      renderCatalogue();
+    };
     x.onclick = cancel.onclick = close;
     change.onclick = function () {
+      if (!current() || !dialog.open) return;
       candidate = null;
-      query.value = '';
       renderCatalogue(); renderEditor();
       query.focus();
     };
-    remove.onclick = function () { if (current()) { select(null); close(); } };
-    apply.onclick = function () { if (current() && candidate) { select(candidate); close(); } };
+    remove.onclick = function () { if (current() && dialog.open && !catalogueOnly) { select(null); close(); } };
+    apply.onclick = function () { if (current() && dialog.open && candidate) { select(candidate); close(); } };
     dialog.addEventListener('close', function () {
+      if (dialog.open) return;
+      unsubscribe?.(); unsubscribe = null;
       candidate = null;
       query.value = '';
       list.replaceChildren();
+      favoriteError.hidden = true;
+      announcement.textContent = '';
       if (current() && !pick.disabled) pick.focus({ preventScroll: true });
     });
     renderField();
     return {
       element: field,
       getSelection: function () { return copy(selection); },
+      handleInput: handleInput,
       reset: function () { close(); if (selection) select(null); },
       setDisabled: function (value) { pick.disabled = !!value; if (value) close(); },
       isOpen: function () { return dialog.open; },
       close: close,
-      dispose: function () { disposed = true; selection = candidate = null; close(); field.remove(); dialog.remove(); }
+      dispose: function () { disposed = true; selection = candidate = null; unsubscribe?.(); unsubscribe = null; close(); field.remove(); dialog.remove(); }
     };
   }
   async function persistDiagnosis({ vault, patientId, diagnosis, id, dateISO, visitContext, isCurrent }) {

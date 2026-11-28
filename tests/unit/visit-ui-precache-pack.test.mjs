@@ -38,7 +38,7 @@ describe('independent visit UI resources in one verified transport', () => {
   it.each(['/', '/vilda-calc/'])('caches every original body and MIME under its own offline URL in %s', async scope => {
     const w = worker({ scope }); await w.installUI();
     expect(w.api.VISIT_UI_PRECACHE_PACK).toEqual(config);
-    expect(urls).toHaveLength(56);
+    expect(urls).toHaveLength(57);
     expect(urls).toContain('/vilda_docpro_visit_guard.js?v=2');
     expect(urls).toContain('/vilda_home_gabinet.css?v=14');
     expect(urls).toContain('/vilda_home_gabinet_start.css?v=7');
@@ -74,13 +74,14 @@ describe('independent visit UI resources in one verified transport', () => {
     expect(urls).toContain('/vilda_home_patient.css?v=2');
     expect(urls).toContain('/vilda_home_patient_native.js?v=18');
     expect(urls).toContain('/vilda_home_patient_native.css?v=12');
-    expect(urls).toContain('/vilda_patient_treatment_ui.js?v=7');
+    expect(urls).toContain('/vilda_patient_treatment_ui.js?v=8');
     expect(urls).toContain('/vilda_patient_treatment_ui.css?v=4');
     expect(urls).toContain('/vilda_home_patient_native_note.js?v=2');
     expect(urls).toContain('/vilda_icd10_pl_data.js?v=1');
     expect(urls).toContain('/vilda_icd10_search.js?v=1');
-    expect(urls).toContain('/vilda_icd10_picker.js?v=3');
-    expect(urls).toContain('/vilda_icd10_picker.css?v=3');
+    expect(urls).toContain('/vilda_icd10_favorites.js?v=1');
+    expect(urls).toContain('/vilda_icd10_picker.js?v=4');
+    expect(urls).toContain('/vilda_icd10_picker.css?v=4');
     expect(urls).toContain('/vilda_home_reminders.js?v=5');
     expect(urls).toContain('/vilda_home_reminders.css?v=4');
     expect(urls).toContain('/vilda_home_reminders_runtime.js?v=3');

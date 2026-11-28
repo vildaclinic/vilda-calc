@@ -123,8 +123,8 @@
       "sha256": "b00e7b71f7f05015f4734ca581cc1f4c7bd644262141b9ce1543446d68bc1b9a"
     },
     {
-      "path": "vilda_patient_treatment_ui.js?v=7",
-      "sha256": "5031381c921560ffe04a4507b070273df7d7b1483c70685deb98f8f9975fdbf0"
+      "path": "vilda_patient_treatment_ui.js?v=8",
+      "sha256": "b875cd7342b26d0f0ba54473c1e87510845910f5a118bb5d1e7c59d0b81b1801"
     },
     {
       "path": "vilda_patient_treatment_ui.css?v=4",
@@ -143,12 +143,16 @@
       "sha256": "cd85613a0f94a64bbae44d75f1d29d42fa73a81d2b0f69886fa2c6069bafe11c"
     },
     {
-      "path": "vilda_icd10_picker.js?v=3",
-      "sha256": "927299a52b76041489e5bc09e6c100e9f9fe243bf4c1b5444a8aa10421ed99d7"
+      "path": "vilda_icd10_favorites.js?v=1",
+      "sha256": "bc1bba099d35e8e8743811f7528beba9be0311ca4436ea1162aacf2df326826a"
     },
     {
-      "path": "vilda_icd10_picker.css?v=3",
-      "sha256": "155c69c74c8c4dfe3e99c114d03e24fb1dab7f55d07bec4258d3a0184d9abcf5"
+      "path": "vilda_icd10_picker.js?v=4",
+      "sha256": "8f78beab0d9f2a888ab6dca2f902b49bc8b6a0988c2a9be3524cfcff07f2ce5d"
+    },
+    {
+      "path": "vilda_icd10_picker.css?v=4",
+      "sha256": "ce783943ffaae29e319a477ef7cbe2163827f644b3ddc2fc5149b70a08496275"
     },
     {
       "path": "vilda_home_reminders.js?v=5",
@@ -228,9 +232,9 @@
     }
   ],
   "pack": {
-    "path": "runtime/visit-ui-precache/precache-7f1d2120990d.json",
-    "sha256": "7f1d2120990d0097ba188a212beb03dd691ff22b16785436c3ec0e7f4320ce63",
-    "byteLength": 2272597
+    "path": "runtime/visit-ui-precache/precache-375d688c9895.json",
+    "sha256": "375d688c9895a9c6e635c6c20fedab672c194d7243547b46300146940cd6d45d",
+    "byteLength": 2292910
   },
   "historicalPacks": [
     {
@@ -797,6 +801,11 @@
       "path": "runtime/visit-ui-precache/precache-862da02eab02.json",
       "sha256": "862da02eab02a90d7ae09f85bc5f51ddd95f3d4cbb7657b1f6921fb6ff1a169d",
       "byteLength": 2242888
+    },
+    {
+      "path": "runtime/visit-ui-precache/precache-7f1d2120990d.json",
+      "sha256": "7f1d2120990d0097ba188a212beb03dd691ff22b16785436c3ec0e7f4320ce63",
+      "byteLength": 2272597
     }
   ]
 }
