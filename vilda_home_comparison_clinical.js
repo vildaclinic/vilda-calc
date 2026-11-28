@@ -96,12 +96,15 @@
     });
     const formatted = engine.formatuj(assessment);
     if (!formatted) return null;
+    const value = formatted.wartosc;
     // The native tempo engine has general-population screening standards only.
     if (a.population === 'DS' || b.population === 'DS' || !references.includes(a.source) || !references.includes(b.source)) {
-      return {text: 'Tempo wzrastania · ' + formatted.wartosc, tone: null};
+      return {text: 'Tempo wzrastania · ' + value, value, tone: null};
     }
     const cls = formatted.ocena?.cls;
-    return {text: formatted.zdanie, tone: cls === 'stable' ? null : tones[cls] || null};
+    const period = [formatted.odstep, formatted.pozaOknem ? 'poza oknem oceny normy' : ''].filter(Boolean).join(', ');
+    return {text: formatted.zdanie, value, period, assessment: formatted.ocena?.short,
+      tone: cls === 'stable' ? null : tones[cls] || null};
   }
 
   function visitContext(p, familyEligible) {
