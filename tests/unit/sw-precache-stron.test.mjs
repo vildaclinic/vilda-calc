@@ -366,8 +366,8 @@ describe('P-SW-PRECACHE: instalacja bez historii, kopia z poprzedniej pamięci, 
       '/vilda_home_gabinet_start.js?v=8', '/vilda_home_encounter.js?v=10', '/vilda_home_gabinet.js?v=21',
       '/vilda_home_visit_scene.css?v=3', '/vilda_home_visit_detail.css?v=2', '/vilda_home_visit_projection.js?v=2',
       '/vilda_home_visit_scene.js?v=3', '/vilda_home_visit_detail.js?v=4', '/vilda_home_visit_history.js?v=6',
-      '/vilda_home_visit_comparison_model.js?v=1', '/vilda_home_comparison_clinical.js?v=1',
-      '/vilda_home_visit_comparison.js?v=1', '/vilda_home_visit_comparison.css?v=1']) {
+      '/vilda_home_visit_comparison_model.js?v=1', '/vilda_home_comparison_clinical.js?v=2',
+      '/vilda_home_visit_comparison.js?v=2', '/vilda_home_visit_comparison.css?v=2']) {
       expect(ZASOBY_WIZYT.has(resource)).toBe(true);
       expect(wpisy.has(resource)).toBe(true);
     }

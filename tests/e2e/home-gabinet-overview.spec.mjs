@@ -1300,6 +1300,89 @@ test('comparison follows clinical visit dates, offers an explicit measured basel
   expect(values[1].measured).toBeNull();
 });
 
+test('visit comparison shows the native clinical tones on the tiles and only in the change column of details', async ({ page }) => {
+  const { frame } = await prepare(page);
+  const patientId = await frame.evaluate(async () => {
+    const patientId = crypto.randomUUID();
+    for (const [day, age, height, weight] of [['2024-03-12', 10, 137.5, 30.4], ['2025-03-12', 11, 143, 28.9]]) {
+      await window.VildaVault.savePatient({
+        version: 1,
+        name: 'Klara Fikcyjna',
+        user: { firstName: 'Klara', lastName: 'Fikcyjna', sex: 'F', dobISO: '2014-03-12',
+          age, ageMonths: 0, measuredAtISO: day, height, weight },
+        visit: window.VildaVisitContext.create({ patientId, clinicalDateISO: day }),
+        zscore: { resultsMode: true, dataSource: 'OLAF' },
+      }, { patientId, dedup: false });
+    }
+    return patientId;
+  });
+  const savedVisits = () => frame.evaluate(async id => (await window.VildaVault.getPatientVisits(id))
+    .map(({ visitId, snapshotId, rev, payload }) => [visitId, snapshotId, rev, payload.user.height, payload.user.weight]), patientId);
+  const saved = await savedVisits();
+  await choosePatient(frame, 'Klara');
+  await frame.locator('#vhomeGabinetHeader').getByRole('tab', { name: 'Analiza', exact: true }).click();
+  await expect(frame.locator('#height')).toHaveValue('143');
+  await expect(frame.locator('#height')).not.toBeEditable();
+  await expect(frame.locator('#weight')).toHaveValue('28.9');
+  await expect(frame.locator('#weight')).not.toBeEditable();
+
+  const card = frame.locator('#vhomeVisitComparison');
+  const tiles = card.locator('.vcomp-metrics .vcomp-metric');
+  const details = card.getByRole('button', { name: 'Szczegóły porównania', exact: true });
+  const modal = frame.locator('#vhomeVisitComparisonDialog');
+  const table = modal.locator('table.vcomp-table');
+  const assessments = [
+    { key: 'height', tone: 'ok', verdict: 'stabilny tor wzrastania', delta: /^\+5,5\s*cm$/u, tableDelta: '+5,5',
+      stripe: 'rgb(0, 176, 166)', ink: 'rgb(20, 57, 61)', tint: 'rgba(0, 131, 141, 0.08)' },
+    { key: 'weight', tone: 'warn', verdict: 'istotne przesunięcie centylowe w dół', delta: /^[−-]1,5\s*kg$/u, tableDelta: /^[−-]1,5$/u,
+      stripe: 'rgb(199, 93, 0)', ink: 'rgb(180, 83, 9)', tint: 'rgb(255, 243, 224)' },
+    { key: 'bmi', tone: 'alert', verdict: 'przekroczenie progu niedowagi (<5c)', delta: /^[−-]1,9\s*kg\/m²$/u, tableDelta: /^[−-]1,9$/u,
+      stripe: 'rgb(198, 40, 40)', ink: 'rgb(176, 0, 32)', tint: 'rgb(253, 236, 236)' },
+  ];
+
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await expect(card).toContainText('12.03.2024');
+    await expect(card).toContainText('12.03.2025');
+    await expect(tiles).toHaveCount(3);
+    await expect.poll(() => card.evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    await details.press('Enter');
+    await expect(table.getByRole('columnheader', { name: 'Zmiana', exact: true })).toBeVisible();
+    await expect(table.locator('tbody tr')).toHaveCount(4);
+
+    for (const { key, tone, verdict, delta, tableDelta, stripe, ink, tint } of assessments) {
+      const tile = card.locator(`.vcomp-metric[data-comparison-metric="${key}"]`);
+      const change = table.locator(`tr[data-comparison-metric="${key}"] td.vcomp-table-delta:last-child`);
+      await expect(tile).toHaveAttribute('data-tone', tone);
+      await expect(tile).toHaveCSS('border-inline-start-color', stripe);
+      await expect(tile.locator('.vcomp-delta')).toHaveText(delta);
+      await expect(tile.locator('.vcomp-delta')).toHaveCSS('color', ink);
+      await expect(tile.locator('.vcomp-verdict')).toHaveText(verdict);
+      await expect(tile.locator('.vcomp-verdict')).toHaveCSS('background-color', tint);
+      await expect(change).toHaveAttribute('data-tone', tone);
+      await expect(change).toHaveText(tableDelta);
+      await expect(change).toHaveCSS('color', ink);
+      await expect(change).toHaveCSS('background-color', tint);
+    }
+    await expect(table.locator('tbody td[data-tone]')).toHaveCount(3);
+    const cole = table.locator('tr[data-comparison-metric="cole"] td.vcomp-table-delta:last-child');
+    await expect(cole).toContainText('p.p.');
+    await expect(cole).not.toHaveAttribute('data-tone', /.+/);
+    const neutralCells = table.locator('tbody td:not(:last-child)').or(cole);
+    expect(await neutralCells.evaluateAll(cells => cells.every(cell => {
+      const { color, backgroundColor } = getComputedStyle(cell);
+      return color === 'rgb(37, 71, 82)' && backgroundColor === 'rgba(0, 0, 0, 0)';
+    }))).toBe(true);
+    expect(await table.locator('th, td').evaluateAll(cells =>
+      cells.every(cell => cell.scrollWidth <= cell.clientWidth + 1))).toBe(true);
+    await expect.poll(() => modal.locator('.vhome-dialog-body').evaluate(node => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    await page.keyboard.press('Escape');
+    await expect(modal).toBeHidden();
+    await expect(details).toBeFocused();
+  }
+  expect(await savedVisits()).toEqual(saved);
+});
+
 test('browsing visit history from Analysis on a phone preserves the open visit and its unsaved measurements', { tag: '@gabinet-webkit' }, async ({ page }) => {
   const { frame, ids } = await prepare(page);
   const notes = { archived: 'Notatka z fikcyjnej wizyty', general: 'Notatka ogólna Antoniego', other: 'Notatka ogólna Beaty' };

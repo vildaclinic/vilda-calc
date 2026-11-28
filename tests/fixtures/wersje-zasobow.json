@@ -1180,8 +1180,8 @@
   "sha256": "b902988fe29903ec61e7e0944138ea9f0af1bf02711a83cdcbfc7348689df0e5"
  },
  "vilda_baseline_pacjenta.js": {
-  "v": 5,
-  "sha256": "8df6c708d1b4d3053e079d527d31381bd1f01a909ec9e659ba50bd53c2cb5871"
+  "v": 6,
+  "sha256": "084dbfd6a1c5dc13dda1b8d06c2bd0d72f56f836ebcdcacd62c5bae84b41a66e"
  },
  "vilda_birth_assessment.js": {
   "v": 1,
@@ -1564,8 +1564,8 @@
   "sha256": "07ef21a4b000b01ed6173c4915b80deaf5397947fb4bdc299ba3ead619cda99f"
  },
  "vilda_home_comparison_clinical.js": {
-  "v": 1,
-  "sha256": "82c52b0d1ccc1d6e7f6417f5297c2c808ecde53c126a3d965634d3d4ed7410e0"
+  "v": 2,
+  "sha256": "e30d496e1b3d92d0460467dded43227b23e93b5a83ac3398f6b034cd195c7050"
  },
  "vilda_home_dialog_history.js": {
   "v": 1,
@@ -1696,12 +1696,12 @@
   "sha256": "387c52e57108e5feae1cdb4462f656ea4b27aa2b32f1a61627fff92bf1c50589"
  },
  "vilda_home_visit_comparison.css": {
-  "v": 1,
-  "sha256": "42aef78eac87acc57d271e6390729dcf5d18a0d7c99bc6a2e19f1b0287812b8f"
+  "v": 2,
+  "sha256": "9a63d25b88dc51d6dbec8d9d1c06a2bd0007f4209377978a2045105fadf08dde"
  },
  "vilda_home_visit_comparison.js": {
-  "v": 1,
-  "sha256": "3115681e33d89a319ea8f0e4cd34442767953083b5fcd2ef93b75607049efbf7"
+  "v": 2,
+  "sha256": "2e9149f52c05c48140cda94fc88d9021c852a8f91d465cb2b77f55cd60474338"
  },
  "vilda_home_visit_comparison_model.js": {
   "v": 1,

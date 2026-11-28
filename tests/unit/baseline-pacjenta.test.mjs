@@ -76,6 +76,28 @@ describe('Linia bazowa podąża za rekordem', () => {
     expect(s.win.lastLoadedData).toEqual(older);
   });
 
+  it.each([
+    [{ mode: 'edit' }, { mode: 'browse', busy: false }],
+    [{ mode: 'browse', busy: false }, { mode: 'browse', busy: true }],
+  ])('chroni bazę wizyty podczas przejścia z %j do %j', async (start, end) => {
+    const corrected = { name: 'Fikcyjna Ola', user: { weight: 92.5 }, visit: { visitId: 'october' } };
+    const latest = { name: 'Fikcyjna Ola', user: { weight: 91.5 }, visit: { visitId: 'november' } };
+    const s = srodowisko({ pid: 'p1', name: 'Fikcyjna Ola', baza: corrected });
+    s.win.__VILDA_HOME_GABINET_PREVIEW__ = true;
+    let state = start;
+    s.win.VildaHomeEncounter = { state: () => state };
+    let resolveHead;
+    const head = new Promise(resolve => { resolveHead = resolve; });
+    s.win.VildaVault.getPatient = () => head;
+    const refresh = s.win.VildaBaselinePacjenta.refreshFromHead('p1', { isUpdate: true });
+    state = end;
+    s.win.lastLoadedData = latest;
+    resolveHead(REKORD(corrected));
+    expect(await refresh).toBe(false);
+    expect(s.win.lastLoadedData).toBe(latest);
+    expect(s.win.flushe).toBe(0);
+  });
+
   it('nie reaguje na zmianę INNEGO pacjenta niż wczytany', async () => {
     const s = srodowisko({ pid: 'p1', baza: { name: 'A' }, rekordy: { p2: REKORD({ name: 'B', user: { dobISO: '2020-01-01' } }) } });
     await s.powiadom({ patientId: 'p2', snapshotId: 's2', isUpdate: true });

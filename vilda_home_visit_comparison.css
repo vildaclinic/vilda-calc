@@ -1,127 +1,481 @@
 /* The comparison occupies the full content track after the visit form. */
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) {
+  --vcomp-ink: #254752;
+  --vcomp-muted: #536a70;
+  --vcomp-accent: #006b73;
+  --vcomp-tile: #f3f9f9;
+  --vcomp-line: #d4e5e5;
+  --vcomp-line-strong: #bdd6d7;
+  color: var(--vcomp-ink);
+  background: #fff;
+}
+
 #vhomeVisitComparison {
   box-sizing: border-box;
-  min-width: 0;
   width: 100%;
+  min-width: 0;
   margin: var(--space-16px) 0;
-  padding: clamp(1rem, 2.2vw, 1.5rem);
-  background: var(--bg);
-  border: var(--border-hairline) solid var(--line);
+  padding: clamp(15px, 3vw, 28px);
+  border: var(--border-hairline) solid var(--vcomp-line-strong);
   border-radius: var(--radius-14);
-  color: var(--text-strong);
+  container: vcomp-card / inline-size;
 }
+
 #vhomeVisitComparison[hidden],
 #vhomeVisitComparison [hidden],
+#vhomeVisitComparisonDialog [hidden],
 [data-vhome-screen="analysis"]:has(#vhomeVisitComparison:not([hidden])) #prevSummaryWrap { display: none !important; }
+
 #vhomeVisitComparison .vcomp-heading {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-8px) var(--space-16px);
+  gap: var(--space-4px) var(--space-16px);
+  margin-bottom: var(--space-18px);
 }
-#vhomeVisitComparison h2 {
+
+#vhomeVisitComparison .vcomp-heading h2,
+#vhomeVisitComparisonDialog .vhome-dialog-heading h2 {
   margin: 0;
-  color: var(--text-heading);
-  font-size: 1.15rem;
-  line-height: 1.42;
+  color: var(--vcomp-ink);
+  font-size: clamp(1.1rem, 2.3vw, 1.36rem);
+  line-height: 1.23;
+  letter-spacing: -.015em;
   text-align: start;
+  overflow-wrap: anywhere;
 }
-#vhomeVisitComparison :is(.vcomp-subtitle,.vcomp-state),
-#vhomeVisitComparisonDialog .vcomp-note {
-  margin: var(--space-6px) 0 0;
-  color: var(--text-muted);
-  font-size: .95rem;
-  line-height: 1.5;
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-interval {
+  margin: 0;
+  color: var(--vcomp-muted);
+  font-size: .84rem;
+  font-weight: 530;
+  line-height: 1.4;
 }
-#vhomeVisitComparison :is(.vcomp-subtitle,.vcomp-state,.vcomp-metrics,.vcomp-velocity):empty { display: none; }
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-sources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-10px) var(--space-14px);
+  margin: 0;
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-sources:has(> :only-child) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-source {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-inline-start: var(--space-10px);
+  border-inline-start: var(--border-emphasis) solid var(--vcomp-line);
+  overflow-wrap: anywhere;
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-source:last-child {
+  border-inline-start-color: #79b8b4;
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-source dt {
+  flex: 1;
+  margin-bottom: var(--space-4px);
+  color: var(--vcomp-muted);
+  font-size: .8rem;
+  line-height: 1.27;
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-source dd {
+  margin: 0;
+  color: var(--vcomp-ink);
+  font-size: .98rem;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-source .vcomp-muted {
+  color: var(--vcomp-muted);
+  font-size: .76rem;
+  font-weight: 500;
+}
+
+#vhomeVisitComparison .vcomp-state {
+  margin: var(--space-16px) 0 0;
+  padding: var(--space-10px) 13px;
+  border: var(--border-hairline) solid var(--vcomp-line);
+  border-radius: var(--radius-8);
+  background: var(--vcomp-tile);
+  color: var(--vcomp-ink);
+  font-size: .91rem;
+  line-height: 1.45;
+}
+
+#vhomeVisitComparison :is(.vcomp-interval, .vcomp-sources, .vcomp-state, .vcomp-metrics, .vcomp-velocity):empty {
+  display: none;
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) [data-tone="ok"] {
+  --vcomp-verdict-accent: var(--secondary);
+  --vcomp-verdict-text: var(--text-heading);
+  --vcomp-verdict-fill: var(--tint-teal);
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) [data-tone="warn"] {
+  --vcomp-verdict-accent: #c75d00;
+  --vcomp-verdict-text: var(--warning);
+  --vcomp-verdict-fill: var(--warning-bg);
+}
+
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) [data-tone="alert"] {
+  --vcomp-verdict-accent: var(--danger);
+  --vcomp-verdict-text: var(--danger-strong);
+  --vcomp-verdict-fill: var(--danger-bg);
+}
+
+#vhomeVisitComparison .vcomp-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--space-10px);
+  margin: var(--space-18px) 0 0;
+}
+
+#vhomeVisitComparison .vcomp-metric {
+  min-width: 0;
+  padding: 13px 15px var(--space-12px) var(--space-12px);
+  border: var(--border-hairline) solid var(--vcomp-line);
+  border-inline-start: 4px solid var(--vcomp-verdict-accent, var(--vcomp-line));
+  border-radius: var(--radius-9);
+  background: #fff;
+}
+
+#vhomeVisitComparison .vcomp-metric dt {
+  color: var(--vcomp-ink);
+  font-size: .9rem;
+  font-weight: 655;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#vhomeVisitComparison .vcomp-metric dd {
+  min-width: 0;
+  margin: 0;
+}
+
+#vhomeVisitComparison .vcomp-metric .vcomp-delta {
+  margin-block: var(--space-6px) 3px;
+  color: var(--vcomp-verdict-text, var(--vcomp-ink));
+  font-size: clamp(1.45rem, 3.5vw, 1.87rem);
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  letter-spacing: -.026em;
+}
+
+#vhomeVisitComparison .vcomp-unit {
+  font-size: .51em;
+  font-weight: 650;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+#vhomeVisitComparison .vcomp-values {
+  color: var(--vcomp-muted);
+  font-size: .83rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#vhomeVisitComparison .vcomp-values strong {
+  color: var(--vcomp-ink);
+  font-weight: 660;
+}
+
+#vhomeVisitComparison .vcomp-metric .vcomp-verdict,
+:is(#vhomeVisitComparison, #vhomeVisitComparisonDialog) .vcomp-interpretation[data-tone] {
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px var(--space-6px);
+  border-radius: var(--radius-4);
+  background: var(--vcomp-verdict-fill, transparent);
+  color: var(--vcomp-verdict-text, var(--vcomp-muted));
+  font-size: .78rem;
+  font-weight: 610;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+#vhomeVisitComparison .vcomp-metric .vcomp-verdict {
+  margin-top: var(--space-8px);
+}
+
+#vhomeVisitComparison .vcomp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px var(--space-12px);
+  margin-top: var(--space-16px);
+}
+
+#vhomeVisitComparison .vcomp-actions:not(:has(> button:not([hidden]), > .vcomp-velocity:not(:empty))) {
+  display: none;
+}
+
+#vhomeVisitComparison .vcomp-velocity {
+  min-width: 0;
+  color: var(--vcomp-muted);
+  font-size: .86rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+#vhomeVisitComparison .vcomp-velocity strong {
+  color: var(--vcomp-ink);
+  font-weight: 660;
+}
+
+#vhomeVisitComparison .vcomp-velocity .vcomp-interpretation {
+  display: inline-block;
+}
+
 #vhomeVisitComparison .vcomp-action {
+  min-width: 0;
   min-height: 44px;
   width: auto;
   max-width: 100%;
   margin: 0;
-  padding: var(--space-8px) var(--space-12px);
-  border: var(--border-hairline) solid var(--line) !important;
+  padding: 7px var(--space-12px);
+  border: var(--border-hairline) solid var(--vcomp-line-strong) !important;
   border-radius: var(--radius-8) !important;
-  background: var(--bg) !important;
+  background: #fff !important;
   box-shadow: none !important;
-  color: var(--text-heading) !important;
+  color: var(--vcomp-accent) !important;
   font: inherit;
-  font-weight: 600;
-  line-height: 1.45;
+  font-size: .9rem;
+  font-weight: 650;
+  line-height: 1.33;
   text-align: start;
+  overflow-wrap: anywhere;
 }
-#vhomeVisitComparison .vcomp-action:is(:hover,:focus-visible) { border-color: var(--primary) !important; }
-#vhomeVisitComparison .vcomp-action:focus-visible {
-  outline: var(--border-pro) solid var(--primary);
+
+#vhomeVisitComparison #vhomeVisitComparisonDetails {
+  margin-inline-start: auto;
+  background: var(--vcomp-tile) !important;
+}
+
+#vhomeVisitComparison .vcomp-actions:has(#vhomeVisitComparisonDetails[hidden]) #vhomeVisitComparisonEarlier {
+  border-color: var(--vcomp-accent) !important;
+  background: var(--vcomp-accent) !important;
+  color: #fff !important;
+}
+
+#vhomeVisitComparison .vcomp-action:is(:hover, :focus-visible) {
+  border-color: var(--vcomp-accent) !important;
+}
+
+#vhomeVisitComparison .vcomp-action:focus-visible,
+#vhomeVisitComparisonDialog :is(.vhome-dialog-close, .vhome-dialog-apply):focus-visible {
+  outline: var(--border-emphasis) solid var(--vcomp-accent);
   outline-offset: 2px;
 }
-#vhomeVisitComparison > .vcomp-action { margin-top: var(--space-12px); }
-.vcomp-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
-  gap: var(--space-12px);
-  margin: var(--space-16px) 0 0;
+
+#vhomeVisitComparisonDialog {
+  width: min(680px, calc(100vw - 24px));
+  border-color: var(--vcomp-line-strong);
+  border-radius: var(--radius-13);
 }
-.vcomp-metric {
+
+#vhomeVisitComparisonDialog :is(.vhome-dialog-heading, .vhome-dialog-footer) {
+  background: #fff;
+  border-color: var(--vcomp-line);
+}
+
+#vhomeVisitComparisonDialog .vhome-dialog-heading {
+  align-items: flex-start;
+  padding: 13px var(--space-16px);
+}
+
+#vhomeVisitComparisonDialog .vhome-dialog-heading > div {
   min-width: 0;
-  padding: var(--space-12px) var(--space-14px);
-  border: var(--border-hairline) solid var(--line);
-  border-radius: var(--radius-8);
 }
-.vcomp-metric dt,.vcomp-source dt,.vcomp-detail-values dt {
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: .95rem;
-  line-height: 1.45;
+
+#vhomeVisitComparisonDialog .vhome-dialog-heading .vcomp-interval {
+  margin-top: 5px;
 }
-.vcomp-metric dd,.vcomp-sources dd,.vcomp-detail-values dd {
-  margin: var(--space-4px) 0 0;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.45;
+
+html.vilda-home-workspace #vhomeVisitComparisonDialog .vhome-dialog-close {
+  flex-basis: 44px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  border: 0 !important;
+  border-radius: var(--radius-6) !important;
+  background: var(--vcomp-tile) !important;
+  color: var(--vcomp-accent) !important;
 }
-.vcomp-metric .vcomp-values { font-size: 1.12rem; }
-.vcomp-arrow,.vcomp-delta,.vcomp-muted { color: var(--text-muted); }
-.vcomp-delta { font-size: .93rem; }
-.vcomp-interpretation { display: inline-block; margin: var(--space-8px) var(--space-6px) 0 0; line-height: 1.5; }
-.vcomp-interpretation[data-tone] { padding: var(--space-4px) var(--space-10px); border-radius: var(--radius-8); font-weight: 600; }
-.vcomp-interpretation[data-tone="ok"] { background: var(--tint-teal); color: var(--text-heading); }
-.vcomp-interpretation[data-tone="warn"] { background: var(--warning-bg); color: var(--warning); }
-.vcomp-interpretation[data-tone="alert"] { background: var(--danger-bg); color: var(--danger-strong); }
-#vhomeVisitComparisonDialog .vhome-dialog-footer { display: flex; justify-content: flex-end; }
-#vhomeVisitComparisonDialog .vhome-dialog-footer > button { width: auto; min-width: 9rem; }
-.vcomp-sources,.vcomp-detail-values {
-  display: grid;
-  gap: var(--space-8px) var(--space-16px);
+
+#vhomeVisitComparisonDialog .vhome-dialog-body {
+  container: vcomp-details / inline-size;
+  padding: 15px var(--space-16px);
+}
+
+#vhomeVisitComparisonDialog .vcomp-table-wrap {
+  min-width: 0;
+  margin-top: var(--space-14px);
+  border: var(--border-hairline) solid var(--vcomp-line);
+  border-radius: var(--radius-9);
+  overflow: hidden;
+}
+
+#vhomeVisitComparisonDialog .vcomp-table {
+  width: 100%;
   margin: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--vcomp-ink);
+  font-size: .92rem;
+  font-variant-numeric: tabular-nums;
 }
-.vcomp-sources {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: var(--space-14px);
-  border: var(--border-hairline) solid var(--line);
-  border-radius: var(--radius-8);
+
+#vhomeVisitComparisonDialog .vcomp-table :is(th, td) {
+  padding: var(--space-10px) var(--space-12px);
+  border: 0;
+  border-bottom: var(--border-hairline) solid var(--vcomp-line);
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1.35;
+  text-align: end;
+  overflow-wrap: anywhere;
 }
-.vcomp-source dd:not(.vcomp-muted) { color: var(--text-strong); font-size: 1.05rem; font-weight: 650; }
-.vcomp-detail-metric { padding: var(--space-16px) 0; border-bottom: var(--border-hairline) solid var(--line); }
-.vcomp-detail-metric h3 { margin: 0 0 var(--space-8px); font-size: 1.03rem; text-align: start; }
-.vcomp-detail-values { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.vcomp-detail-values dd { color: var(--text-strong); overflow-wrap: break-word; }
-@media (max-width: 600px) {
-  .vcomp-metrics { grid-template-columns: 1fr; gap: 0; }
-  .vcomp-metric {
+
+#vhomeVisitComparisonDialog .vcomp-table th:first-child {
+  width: 32%;
+  text-align: start;
+}
+
+#vhomeVisitComparisonDialog .vcomp-table th:last-child {
+  width: 19%;
+}
+
+#vhomeVisitComparisonDialog .vcomp-table thead {
+  background: var(--vcomp-tile);
+  color: var(--vcomp-muted);
+}
+
+#vhomeVisitComparisonDialog .vcomp-table thead th { font-weight: 660; }
+#vhomeVisitComparisonDialog .vcomp-table tbody th { font-weight: 635; }
+#vhomeVisitComparisonDialog .vcomp-table tbody tr { background: transparent; }
+#vhomeVisitComparisonDialog .vcomp-table tbody tr:last-child > * { border-bottom: 0; }
+
+#vhomeVisitComparisonDialog .vcomp-table .vcomp-table-delta {
+  background: var(--vcomp-verdict-fill, transparent);
+  color: var(--vcomp-verdict-text, var(--vcomp-ink));
+  font-weight: 700;
+}
+
+#vhomeVisitComparisonDialog .vcomp-table-unit {
+  color: var(--vcomp-muted);
+  font-size: .78em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#vhomeVisitComparisonDialog .vcomp-short-label { display: none; }
+
+#vhomeVisitComparisonDialog .vcomp-detail-metric {
+  margin-top: 15px;
+  padding-top: var(--space-12px);
+  border-top: var(--border-hairline) solid var(--vcomp-line);
+}
+
+#vhomeVisitComparisonDialog .vcomp-detail-metric h3 {
+  margin: 0;
+  color: var(--vcomp-ink);
+  font-size: .94rem;
+  line-height: 1.35;
+  text-align: start;
+}
+
+#vhomeVisitComparisonDialog .vcomp-note,
+#vhomeVisitComparisonDialog .vcomp-interpretation {
+  margin: var(--space-6px) 0 0;
+  color: var(--vcomp-muted);
+  font-size: .83rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+#vhomeVisitComparisonDialog .vcomp-context {
+  margin-top: 15px;
+  padding-top: var(--space-4px);
+  border-top: var(--border-hairline) solid var(--vcomp-line);
+}
+
+#vhomeVisitComparisonDialog .vhome-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 13px var(--space-16px);
+}
+
+html.vilda-home-workspace #vhomeVisitComparisonDialog .vhome-dialog-footer .vhome-dialog-apply {
+  width: auto;
+  min-height: 44px;
+  padding: 7px var(--space-12px);
+  border: var(--border-hairline) solid var(--vcomp-line-strong) !important;
+  background: #fff !important;
+  color: var(--vcomp-accent) !important;
+  font-size: .9rem;
+  font-weight: 650;
+}
+
+@container vcomp-card (max-width: 550px) {
+  #vhomeVisitComparison .vcomp-heading { margin-bottom: var(--space-12px); }
+  #vhomeVisitComparison .vcomp-metrics { grid-template-columns: minmax(0, 1fr); gap: var(--space-6px); }
+  #vhomeVisitComparison .vcomp-metric {
     display: grid;
-    grid-template-columns: minmax(5rem, 1fr) minmax(0, auto);
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
     align-items: baseline;
-    gap: var(--space-4px) var(--space-8px);
-    padding: var(--space-10px) 0;
-    border: 0;
-    border-top: var(--border-hairline) solid var(--line);
-    border-radius: 0;
+    gap: 3px var(--space-8px);
+    padding: var(--space-8px) var(--space-10px) var(--space-8px) 7px;
   }
-  .vcomp-metric dd { margin: 0; text-align: end; }
-  .vcomp-metric .vcomp-delta { grid-column: 1 / -1; }
-  #vhomeVisitComparisonDialog .vhome-dialog-footer > button { width: 100%; }
+  #vhomeVisitComparison .vcomp-metric .vcomp-delta {
+    grid-column: 2;
+    justify-self: end;
+    margin: 0;
+    font-size: 1.18rem;
+    white-space: nowrap;
+  }
+  #vhomeVisitComparison .vcomp-metric:not(:has(.vcomp-verdict)) .vcomp-delta {
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+  #vhomeVisitComparison .vcomp-unit { font-size: .7em; }
+  #vhomeVisitComparison .vcomp-metric .vcomp-verdict { justify-self: end; margin: 0; text-align: end; }
+  #vhomeVisitComparison .vcomp-velocity { flex-basis: 100%; }
+  #vhomeVisitComparison .vcomp-actions:has(#vhomeVisitComparisonEarlier:not([hidden])):has(#vhomeVisitComparisonDetails:not([hidden])) > button {
+    flex: 1 1 0;
+    align-self: stretch;
+  }
 }
+
+@container vcomp-details (max-width: 550px) {
+  #vhomeVisitComparisonDialog .vcomp-table :is(th, td) { padding: var(--space-8px) 5px; font-size: .79rem; }
+  #vhomeVisitComparisonDialog .vcomp-table th:last-child { width: 22%; }
+  #vhomeVisitComparisonDialog .vcomp-long-label { display: none; }
+  #vhomeVisitComparisonDialog .vcomp-short-label { display: inline; }
+}
+
+@container vcomp-details (max-width: 300px) {
+  #vhomeVisitComparisonDialog .vcomp-table thead th { padding-inline: var(--space-4px); }
+}
+
+@media (max-width: 600px) {
+  #vhomeVisitComparison { padding: 13px; }
+}
+
 .vilda-home-workspace #vhomeVisitComparisonDialog[open] { animation-duration: 300ms; }
 @media (prefers-reduced-motion: reduce) {
   .vilda-home-workspace #vhomeVisitComparisonDialog[open],

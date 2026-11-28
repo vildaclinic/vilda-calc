@@ -6,8 +6,9 @@
   const dates = w.VildaHomeVisitComparisonModel;
   const clinical = w.VildaHomeComparisonClinical;
   const subscribed = new WeakSet();
-  let card, subtitle, stateText, metrics, velocity, fallback, expand, retry;
-  let dialog, historyHandle, scope, earlierId, shown, renderFrame = 0;
+  const defaultTitle = 'Zmiana od poprzedniej wizyty';
+  let card, title, visitInterval, visitSources, stateText, metrics, velocity, fallback, expand, retry;
+  let dialog, detailInterval, historyHandle, scope, earlierId, shown, renderFrame = 0;
 
   function node(tag, className, text) {
     const result = d.createElement(tag);
@@ -35,10 +36,9 @@
     if (days === 0) return 'Tego samego dnia';
     return days === 1 ? '1 dzień' : days + ' dni';
   }
-  function datedSource(label, row) {
-    const clinicalDay = dates.clinicalDate(row), measuredDay = dates.measurementDate(row);
-    const measurement = measuredDay && measuredDay !== clinicalDay ? ' (pomiar ' + day(measuredDay) + ')' : '';
-    return label + ' · ' + visitDay(row) + measurement;
+  function intervalLabel(days) {
+    const duration = interval(days);
+    return duration ? 'Odstęp wizyt · ' + duration : '';
   }
   function currentLabel(mode) {
     return mode === 'browse' ? 'Oglądana wizyta' : mode === 'edit' ? 'Korekta w formularzu' : 'Nowa wizyta';
@@ -46,6 +46,7 @@
   function closeDetails(restoreFocus = true) {
     if (!dialog?.open) return true;
     dialog.close();
+    detailInterval.textContent = '';
     dialog.querySelector('.vhome-dialog-body').replaceChildren();
     historyHandle?.release();
     historyHandle = null;
@@ -59,9 +60,8 @@
     closeDetails(false);
     if (card) {
       card.hidden = true;
-      subtitle.textContent = stateText.textContent = fallback.textContent = '';
-      metrics.replaceChildren();
-      velocity.replaceChildren();
+      clearComparison();
+      stateText.textContent = fallback.textContent = '';
     }
   }
   function active() {
@@ -98,10 +98,8 @@
   function status(text, allowRetry = false) {
     shown = null;
     closeDetails(false);
-    subtitle.textContent = '';
+    clearComparison();
     stateText.textContent = text;
-    metrics.replaceChildren();
-    velocity.replaceChildren();
     fallback.hidden = expand.hidden = true;
     retry.hidden = !allowRetry;
     card.hidden = false;
@@ -116,50 +114,91 @@
       if (matches(owner, active())) status('Nie udało się odczytać poprzednich wizyt.', true);
     }
   }
-  function clinicalLabel(value) {
-    const item = node('span', 'vcomp-interpretation', value.text);
-    if (['ok', 'warn', 'alert'].includes(value.tone)) item.dataset.tone = value.tone;
-    return item;
+  function clearComparison() {
+    title.textContent = defaultTitle;
+    visitInterval.textContent = '';
+    visitSources.replaceChildren();
+    metrics.replaceChildren();
+    velocity.replaceChildren();
   }
-  function signed(value, digits, unit) {
-    return formatted(value, digits, true) + (unit ? ' ' + unit : '');
+  function setClinicalTone(element, tone) {
+    if (['ok', 'warn', 'alert'].includes(tone)) element.dataset.tone = tone;
   }
-  function change(row) {
-    return signed(row.delta, row.digits, row.unit === '%' ? 'p.p.' : row.unit);
+  function isCaution(tone) { return tone === 'warn' || tone === 'alert'; }
+  function deltaUnit(row) {
+    return row.unit === '%' ? 'p.p.' : row.unit;
   }
   function compactMetric(row) {
     const item = node('div', 'vcomp-metric');
     item.dataset.comparisonMetric = row.key;
-    item.append(node('dt', '', row.label));
+    const delta = node('dd', 'vcomp-delta', formatted(row.delta, row.digits, true));
+    const unit = deltaUnit(row);
+    if (unit) delta.append(' ', node('span', 'vcomp-unit', unit));
     const values = node('dd', 'vcomp-values');
     values.append(node('span', 'vcomp-before', formatted(row.before, row.digits)),
-      node('span', 'vcomp-arrow', ' → '), node('strong', '', formatted(row.after, row.digits)), ' ' + row.unit);
-    const delta = node('dd', 'vcomp-delta', 'Zmiana ' + change(row));
-    if (Number.isFinite(row.deltaSds)) delta.append(' · ΔSDS ' + formatted(row.deltaSds, 2, true));
-    item.append(values, delta);
+      node('span', 'vcomp-arrow', ' → '), node('strong', '', formatted(row.after, row.digits)));
+    if (row.unit) values.append(' ' + row.unit);
+    item.append(node('dt', '', row.label), delta, values);
+    if (row.interpretation?.text) {
+      setClinicalTone(item, row.interpretation.tone);
+      item.append(node('dd', 'vcomp-verdict', row.interpretation.text));
+    }
     return item;
+  }
+  function visitTime(iso) {
+    const time = node('time', '', day(iso));
+    time.dateTime = iso;
+    return time;
   }
   function addSource(body, label, row) {
     const box = node('div', 'vcomp-source');
     const clinicalDay = dates.clinicalDate(row), measuredDay = dates.measurementDate(row);
-    box.append(node('dt', '', label), node('dd', '', visitDay(row)));
-    if (measuredDay && measuredDay !== clinicalDay) box.append(node('dd', 'vcomp-muted', 'Pomiar · ' + day(measuredDay)));
+    const date = node('dd');
+    date.append(clinicalDay ? visitTime(clinicalDay) : visitDay(row));
+    box.append(node('dt', '', label), date);
+    if (measuredDay && measuredDay !== clinicalDay) {
+      const measurement = node('dd', 'vcomp-muted', 'Pomiar · ');
+      measurement.append(visitTime(measuredDay));
+      box.append(measurement);
+    }
     body.append(box);
   }
-  function detailMetric(row, result) {
+  function renderSources(target, pair, mode) {
+    target.replaceChildren();
+    if (pair.reference) addSource(target, pair.reference === pair.previous ? 'Poprzednia wizyta' : 'Wcześniejsza wizyta', pair.reference);
+    addSource(target, currentLabel(mode), pair.current);
+  }
+  function comparisonTable(rows) {
+    const wrap = node('div', 'vcomp-table-wrap');
+    const table = node('table', 'vcomp-table');
+    table.setAttribute('aria-label', 'Porównanie pomiarów');
+    const heading = table.createTHead().insertRow();
+    for (const label of ['Pomiar', 'Poprzednio', 'Obecnie', 'Zmiana']) {
+      const cell = node('th', '', label);
+      cell.scope = 'col';
+      if (label === 'Poprzednio') {
+        cell.setAttribute('aria-label', label);
+        cell.replaceChildren(node('span', 'vcomp-long-label', label), node('span', 'vcomp-short-label', 'Poprz.'));
+      }
+      heading.append(cell);
+    }
+    const body = table.createTBody();
+    for (const row of rows) {
+      const line = body.insertRow();
+      line.dataset.comparisonMetric = row.key;
+      const label = node('th', '', row.label);
+      label.scope = 'row';
+      if (row.unit) label.append(' ', node('span', 'vcomp-table-unit', row.unit));
+      const delta = formatted(row.delta, row.digits, true) + (row.unit === '%' ? ' p.p.' : '');
+      const change = node('td', 'vcomp-table-delta', delta);
+      setClinicalTone(change, row.interpretation?.tone);
+      line.append(label, node('td', '', formatted(row.before, row.digits)), node('td', '', formatted(row.after, row.digits)), change);
+    }
+    wrap.append(table);
+    return wrap;
+  }
+  function detailMetric(row) {
     const item = node('section', 'vcomp-detail-metric');
-    item.dataset.comparisonMetric = row.key;
-    item.append(node('h3', '', row.label));
-    const values = node('dl', 'vcomp-detail-values');
-    const unit = row.unit ? ' ' + row.unit : '';
-    const entries = [['Poprzednio', formatted(row.before, row.digits) + unit], ['Obecnie', formatted(row.after, row.digits) + unit],
-      ['Zmiana', change(row)]];
-    entries.forEach(([label, value]) => {
-      const box = node('div');
-      box.append(node('dt', '', label), node('dd', '', value));
-      values.append(box);
-    });
-    item.append(values);
     if (Number.isFinite(row.deltaSds)) {
       const source = row.reference ? ' · ' + row.reference : '';
       item.append(node('p', 'vcomp-note', 'SDS ' + formatted(row.sdsBefore, 2) + ' → ' + formatted(row.sdsAfter, 2) +
@@ -169,23 +208,35 @@
       item.append(node('p', 'vcomp-note', 'Centyl ' + formatted(row.percentileBefore, 1) + ' → ' + formatted(row.percentileAfter, 1)));
     }
     if (row.detail) item.append(node('p', 'vcomp-note', row.detail));
-    if (row.interpretation?.text) item.append(clinicalLabel(row.interpretation));
-    if (row.key === 'height' && result.velocity?.text) item.append(' ', clinicalLabel(result.velocity));
+    if (row.interpretation?.text) {
+      const label = node('p', 'vcomp-interpretation', row.interpretation.text);
+      setClinicalTone(label, row.interpretation.tone);
+      item.append(label);
+    }
+    if (!item.hasChildNodes()) return null;
+    item.prepend(node('h3', '', row.label));
     return item;
   }
   function renderDetails(view) {
     const {pair, result, mode} = view;
     const body = dialog.querySelector('.vhome-dialog-body');
     const sources = node('dl', 'vcomp-sources');
-    addSource(sources, pair.reference === pair.previous ? 'Poprzednia wizyta' : 'Wybrana wcześniejsza wizyta', pair.reference);
-    addSource(sources, currentLabel(mode), pair.current);
+    renderSources(sources, pair, mode);
+    detailInterval.textContent = intervalLabel(pair.elapsedDays);
     const content = d.createDocumentFragment();
-    content.append(sources);
-    const duration = interval(pair.elapsedDays);
-    if (duration) content.append(node('p', 'vcomp-note', 'Odstęp między wizytami · ' + duration));
-    result.rows.forEach(row => content.append(detailMetric(row, result)));
-    if (result.referenceNote) content.append(node('p', 'vcomp-note', result.referenceNote));
-    for (const text of result.context || []) content.append(node('p', 'vcomp-note', text));
+    content.append(sources, comparisonTable(result.rows), ...result.rows.map(detailMetric).filter(Boolean));
+    const notes = node('div', 'vcomp-context');
+    if (result.velocity?.text) {
+      const tempo = node('p', 'vcomp-note', result.velocity.text);
+      if (isCaution(result.velocity.tone)) {
+        tempo.classList.add('vcomp-interpretation');
+        setClinicalTone(tempo, result.velocity.tone);
+      }
+      notes.append(tempo);
+    }
+    if (result.referenceNote) notes.append(node('p', 'vcomp-note', result.referenceNote));
+    for (const text of result.context || []) notes.append(node('p', 'vcomp-note', text));
+    if (notes.hasChildNodes()) content.append(notes);
     body.replaceChildren(content);
   }
   function openDetails() {
@@ -194,6 +245,10 @@
       const close = () => closeDetails();
       dialog = w.VildaHomeWorkspace.createDialog({id: 'vhomeVisitComparisonDialog', titleId: 'vhomeVisitComparisonDialogTitle',
         title: 'Szczegóły porównania', applyLabel: 'Zamknij', onApply: close, onClose: close});
+      const heading = dialog.querySelector('.vhome-dialog-heading'), intro = node('div');
+      detailInterval = node('p', 'vcomp-interval');
+      intro.append(heading.querySelector('h2'), detailInterval);
+      heading.prepend(intro);
       dialog.querySelector('.vhome-dialog-cancel').remove();
       dialog.setAttribute('aria-modal', 'true');
     }
@@ -207,16 +262,15 @@
   function render(pair, result, mode) {
     const {current, previous, reference, earlierMeasured} = pair;
     const changedBaseline = reference?.visitId !== previous?.visitId;
-    const sourceLabel = changedBaseline ? 'Wcześniejsza wizyta' : 'Poprzednia wizyta';
-    const duration = interval(pair.elapsedDays);
-    const parts = [reference && datedSource(sourceLabel, reference), datedSource(currentLabel(mode), current),
-      duration && 'Odstęp wizyt · ' + duration];
+    const sourceDates = [reference, current].map(row => [dates.clinicalDate(row), dates.measurementDate(row)]);
     const earlierDay = earlierMeasured && dates.measurementDate(earlierMeasured);
-    const signature = JSON.stringify([parts, mode, result, current.visitId, previous?.visitId, reference?.visitId,
+    const signature = JSON.stringify([sourceDates, pair.elapsedDays, mode, result, current.visitId, previous?.visitId, reference?.visitId,
       earlierMeasured?.visitId, earlierDay, earlierMeasured && visitDay(earlierMeasured),
       pair.hasCurrentMeasurements, pair.hasReferenceMeasurements]);
     if (shown?.signature === signature) return;
-    subtitle.textContent = parts.filter(Boolean).join('  /  ');
+    title.textContent = changedBaseline ? 'Zmiana od wcześniejszej wizyty' : defaultTitle;
+    visitInterval.textContent = intervalLabel(pair.elapsedDays);
+    renderSources(visitSources, pair, mode);
     let message = '';
     if (!pair.hasCurrentMeasurements) {
       message = mode === 'browse' ? 'Brak pomiarów na tej wizycie.' : 'Wpisz pomiar, aby zobaczyć zmianę.';
@@ -232,7 +286,15 @@
     const primary = result.rows.filter(row => ['height', 'weight', 'bmi'].includes(row.key));
     metrics.replaceChildren(...(primary.length ? primary : result.rows.slice(0, 3)).map(compactMetric));
     velocity.replaceChildren();
-    if (result.velocity?.text) velocity.append(clinicalLabel(result.velocity));
+    if (result.velocity?.value) {
+      velocity.append('Tempo wzrastania · ', node('strong', '', result.velocity.value));
+      if (result.velocity.period) velocity.append(' (' + result.velocity.period + ')');
+      if (result.velocity.assessment && isCaution(result.velocity.tone)) {
+        const label = node('span', 'vcomp-interpretation', result.velocity.assessment);
+        setClinicalTone(label, result.velocity.tone);
+        velocity.append(' ', label);
+      }
+    }
     const offered = pair.hasCurrentMeasurements && earlierMeasured && earlierMeasured.visitId !== previous?.visitId;
     fallback.hidden = !offered && !changedBaseline;
     if (!fallback.hidden) fallback.textContent = changedBaseline ? 'Wróć do poprzedniej wizyty' :
@@ -280,15 +342,15 @@
     card.id = 'vhomeVisitComparison';
     card.hidden = true;
     card.setAttribute('aria-labelledby', 'vhomeVisitComparisonTitle');
-    const header = node('div', 'vcomp-heading'), intro = node('div');
-    const title = node('h2', '', 'Zmiana od poprzedniej wizyty');
+    const header = node('div', 'vcomp-heading');
+    title = node('h2', '', defaultTitle);
     title.id = 'vhomeVisitComparisonTitle';
-    subtitle = node('p', 'vcomp-subtitle');
+    visitInterval = node('p', 'vcomp-interval');
+    visitSources = node('dl', 'vcomp-sources');
     expand = button('Szczegóły porównania', 'vhomeVisitComparisonDetails', openDetails);
     expand.hidden = true;
     expand.setAttribute('aria-haspopup', 'dialog');
-    intro.append(title, subtitle);
-    header.append(intro, expand);
+    header.append(title, visitInterval);
     stateText = node('p', 'vcomp-state');
     metrics = node('dl', 'vcomp-metrics');
     velocity = node('div', 'vcomp-velocity');
@@ -299,7 +361,9 @@
     });
     retry = button('Spróbuj ponownie', 'vhomeVisitComparisonRetry', invalidate);
     retry.hidden = fallback.hidden = true;
-    card.append(header, stateText, metrics, velocity, fallback, retry);
+    const actions = node('div', 'vcomp-actions');
+    actions.append(velocity, fallback, retry, expand);
+    card.append(header, visitSources, stateText, metrics, actions);
     form.after(card);
     const host = form.closest('.container')?.parentElement;
     if (host) new w.MutationObserver(schedule).observe(host, {attributes: true, attributeFilter: ['data-vhome-screen']});
