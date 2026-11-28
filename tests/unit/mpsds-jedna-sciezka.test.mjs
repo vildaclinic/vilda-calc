@@ -80,8 +80,10 @@ describe('P-OSTATNI-2d: u pacjenta z zespołem Downa mpSDS nie jest podawany (de
     const { R } = rdzen('OLAF', null, true);
     expect(R.vildaMpSdsStats(171.5, 'M', 'OLAF')).toBeNull();
     expect(R.vildaMpSdsStats(158.5, 'F', null)).toBeNull();
+    expect(R.vildaMpSdsStats(171.5, 'M', 'OLAF', 'OGOLNA')).not.toBeNull();
     const { R: R0 } = rdzen('OLAF', null, false);
     expect(R0.vildaMpSdsStats(171.5, 'M', 'OLAF')).not.toBeNull();
+    expect(R0.vildaMpSdsStats(171.5, 'M', 'OLAF', 'DS')).toBeNull();
   });
 
   it('budowniczy kontekstu nie obchodzi tej reguły zapasem: null z rdzenia = brak kanału rodzicielskiego', () => {
@@ -129,8 +131,8 @@ describe('budowniczy kontekstu (Karta pacjenta, karta porównania, trajektoria) 
 
 describe('strażnik: każdy konsument mpSDS woła vildaMpSdsStats (zapas tylko bez rdzenia)', () => {
   it('karta zaawansowana (targetStats + kolumna hSDS − mpSDS), Podsumowanie, epikryza, monitor GH ×2, schowek Karty, trajektoria', () => {
-    expect(appSrc).toContain('function vildaMpSdsStats(e,t,n){');
-    expect(appSrc).toContain('advHistoryResolveMetric("HT",e,t,18,a)');
+    expect(appSrc).toContain('function vildaMpSdsStats(e,t,n,population){');
+    expect(appSrc).toContain('advHistoryResolveMetric("HT",e,t,18,a,population)');
     const adv = zrodlo('vilda_advanced_growth.js');
     expect(adv).toContain('vildaMpSdsStats(Me,ae,typeof tt<"u"?tt:null)');
     expect(adv).toContain('vildaMpSdsStats(a,n,t)');
@@ -142,7 +144,7 @@ describe('strażnik: każdy konsument mpSDS woła vildaMpSdsStats (zapas tylko b
     expect(gh).toContain('vildaMpSdsStats(b,t,null)');
     expect(zrodlo('vilda_patient_summary_copy.js')).toContain('t.vildaMpSdsStats(M(n.targetHeight),p,u)');
     const traj = zrodlo('vilda_trajectory_analysis.js');
-    expect(traj).toContain("try { st = w.vildaMpSdsStats(v, g, src); } catch (e) { st = null; }");
-    expect(appSrc).toContain('if(typeof vildaPopulacjaDs=="function"&&vildaPopulacjaDs())return null');
+    expect(traj).toContain("try { st = w.vildaMpSdsStats(v, g, src, population); } catch (e) { st = null; }");
+    expect(appSrc).toContain('if(population!=null?population==="DS":typeof vildaPopulacjaDs=="function"&&vildaPopulacjaDs())return null');
   });
 });

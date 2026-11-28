@@ -418,7 +418,7 @@ describe('P-WERDYKT rata 3 — hamulec catch-upu masy', () => {
   it('moduł trajektorii podaje ten sam wsad i też nie liczy Cole’a sam', () => {
     expect(TRAJ).toContain('poziomBmiPunktu(bs.b, sex, source, population)');
     expect(TRAJ).toContain('poziomBmiPunktu(bm.last, sex, source, population)');
-    expect(TRAJ, 'Cole z silnika BMI').toContain('B.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source })');
+    expect(TRAJ, 'Cole z silnika BMI').toContain('B.cole({ bmi: pt.value, wiekMies: pt.ageMonths, plec: sex, zrodlo: source, populacja: population })');
   });
 });
 

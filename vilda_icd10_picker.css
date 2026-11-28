@@ -242,7 +242,7 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
   color: var(--bg, #fff) !important;
 }
 .vpt-intake-diagnosis-dialog button:disabled { opacity: .5; cursor: default; }
-@media (max-width: 400px) {
+@media (max-width: 420px) {
   .vpt-intake-diagnosis-heading,
   .vpt-intake-diagnosis-body,
   .vpt-intake-diagnosis-actions { padding: var(--space-12px); }
