@@ -4864,6 +4864,7 @@ const OPTIONAL_ASSETS = [
   '/vilda_baseline_pacjenta.js?v=3',
   '/vilda_baseline_pacjenta.js?v=4',
   '/vilda_baseline_pacjenta.js?v=5',
+  '/vilda_baseline_pacjenta.js?v=6',
   '/vilda_pola_tozsamosci.js?v=1',
   '/vilda_pola_tozsamosci.js?v=2',
   '/vilda_pola_tozsamosci.js?v=3',

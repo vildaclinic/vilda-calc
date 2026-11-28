@@ -366,18 +366,21 @@
     return pola.slice();
   }
 
+  function trwaObslugaWizyty(patientId) {
+    if (w.__VILDA_HOME_GABINET_PREVIEW__ !== true || !w.VildaHomeEncounter) return false;
+    var wizyta = w.VildaHomeEncounter.state(patientId);
+    return wizyta.mode === 'edit' || wizyta.busy;
+  }
+
   function odswiezZGlowy(patientId, info) {
     var v = w.VildaVault;
-    if (!v || typeof v.getPatient !== 'function' || !patientId) return Promise.resolve(false);
+    // Zapis korekty i otwarcie kolejnej wizyty same ustalają własną bazę.
+    if (!v || typeof v.getPatient !== 'function' || !patientId || trwaObslugaWizyty(patientId)) return Promise.resolve(false);
     return Promise.resolve(v.getPatient(patientId)).then(function (rec) {
       var snap = rec && Array.isArray(rec.snapshots) && rec.snapshots.length ? rec.snapshots[0] : null;
       var payload = snap && snap.payload;
       if (!payload || typeof payload !== 'object') return false;
-      if (biezacyPacjent() !== patientId) return false;
-      // The canonical head belongs to the latest visit. An explicitly selected
-      // historical editor keeps its own baseline through native vault events.
-      if (w.__VILDA_HOME_GABINET_PREVIEW__ === true && w.VildaHomeEncounter &&
-          w.VildaHomeEncounter.state(patientId).mode === 'edit') return false;
+      if (biezacyPacjent() !== patientId || trwaObslugaWizyty(patientId)) return false;
 
       var stara = w.lastLoadedData;
       var tenSam = formularzOpisujeTegoPacjenta(stara);
