@@ -14,7 +14,7 @@ async function device() {
     setTimeout, clearTimeout, addEventListener() {}, removeEventListener() {}, document:doc, __VILDA_HOME_GABINET_PREVIEW__:true};
   win.window = win; win.self = win; win.top = win;
   win.localStorage.setItem('vildaRetention','0');
-  for (const script of ['vilda_crypto.js','vilda_retention.js','vilda_vault.js','vilda_visit_context.js','vilda_home_visit_comparison_model.js','vilda_bone_age.js']) loadBrowserScript(script, win);
+  for (const script of ['vilda_crypto.js','vilda_retention.js','vilda_vault.js','vilda_visit_context.js','vilda_ds_source.js','vilda_home_visit_comparison_model.js','vilda_bone_age.js']) loadBrowserScript(script, win);
   const vault = win.VildaVault, adapter = vault.createInMemoryAdapter(); vault.setStorageAdapter(adapter);
   await vault.createUser('Fictional#Visits!2026Aa', {label:'Fictional rapid intake',iterations:10000});
   let fieldSex = '';

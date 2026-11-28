@@ -1,6 +1,7 @@
 // This layer replays only the optional return path within the native registration
 // form. The original patient database actions and the protected clinical editors
 // must round-trip byte for byte.
+// The later Zemel registration changes are replayed by the final AuthUI delta.
 const formStart = 'function ss(t,a,n){';
 const formEnd = 'function ds(t,a,n){';
 const opener = `// The start screen and patient database share this exact registration form.
@@ -156,70 +157,14 @@ const inlineOpener = `function homeRegistrationForm(home, controls) {
       updateSexSuggestion(false);
     });
   }
-  const diagnosisHost = e('div',{class:'gb-registration-wide'});
-  const picker = i.VildaICD10Picker;
-  const diagnosis = picker?.mountDiagnosisField({host:diagnosisHost,isCurrent:home.current,
-    context:'Dodaj pacjenta',notice:'Po zapisie nowe wizyty będą korzystać z siatek Zemel 2015.'});
-  home.closeDiagnosis = () => !!diagnosis?.close();
-  const typeLine = e('div',{class:'gb-registration-type-line'},[choice('Rodzaj kartoteki',[base,external]),typeHint]);
-  const grid = e('div',{class:'gb-registration-grid'},[
-    card('Tożsamość',false,[fields([field('Nazwisko',last),field('Imię',first),sexChoice])]),
-    card('Data urodzenia',false,[dobGroup,yearGroup]),diagnosisHost,
-    card('Kontakt / opiekun',true,[guardians,outsideContact],'gb-registration-contact'),family
-  ]);
   const form = e('form',{class:'gb-registration-form','aria-label':'Formularz dodawania pacjenta',autocomplete:'off'},[
-    typeLine,grid,error,e('div',{class:'gb-registration-actions'},[cancel,submit])
+    e('div',{class:'gb-registration-type-line'},[choice('Rodzaj kartoteki',[base,external]),typeHint]),
+    e('div',{class:'gb-registration-grid'},[
+      card('Tożsamość',false,[fields([field('Nazwisko',last),field('Imię',first),sexChoice])]),
+      card('Data urodzenia',false,[dobGroup,yearGroup]),
+      card('Kontakt / opiekun',true,[guardians,outsideContact],'gb-registration-contact'),family
+    ]),error,e('div',{class:'gb-registration-actions'},[cancel,submit])
   ]);
-  let pendingDiagnosis = null;
-  async function savePendingDiagnosis() {
-    submit.disabled = true;
-    error.textContent = '';
-    try {
-      await picker.persistDiagnosis(pendingDiagnosis);
-      if (home.current()) home.finish(pendingDiagnosis.patientId);
-    } catch {
-      if (!home.current()) return;
-      typeLine.inert = grid.inert = true;
-      submit.textContent = 'Ponów zapis rozpoznania';
-      cancel.textContent = 'Otwórz kartotekę';
-      error.textContent = 'Kartoteka jest zapisana. Nie udało się potwierdzić zapisu rozpoznania. Ponów zapis lub otwórz kartotekę.';
-      submit.disabled = false;
-      form.inert = false;
-      submit.focus({preventScroll:true});
-    }
-  }
-  home.retryDiagnosis = function() {
-    if (!pendingDiagnosis) return false;
-    void savePendingDiagnosis();
-    return true;
-  };
-  home.saveWithDiagnosis = function(patient, vault) {
-    const selection = diagnosis?.getSelection();
-    if (!selection) return false;
-    void (async function() {
-      try {
-        const now = new Date(patient.timestampISO);
-        const dateISO = [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
-        const bytes = i.crypto.getRandomValues(new Uint8Array(16));
-        const id = 'tmt-' + Array.from(bytes,byte => byte.toString(16).padStart(2,'0')).join('');
-        const saved = await vault.savePatient(patient,{dedup:false});
-        if (!home.current()) return;
-        if (!saved?.patientId) throw new Error('Nie potwierdzono utworzenia kartoteki.');
-        pendingDiagnosis = {vault,patientId:saved.patientId,diagnosis:selection,id,dateISO,isCurrent:home.current};
-        await savePendingDiagnosis();
-      } catch {
-        if (!home.current()) return;
-        error.textContent = 'Nie udało się dodać pacjenta. Spróbuj ponownie.';
-        submit.disabled = false;
-      }
-    })();
-    return true;
-  };
-  cancel.addEventListener('click',event => {
-    if (!pendingDiagnosis || !home.current()) return;
-    event.stopImmediatePropagation();
-    home.finish(pendingDiagnosis.patientId);
-  },{capture:true});
   // A real submit button keeps Enter and assistive-technology submit actions
   // on the same native click path as the pointer.
   submit.type = 'submit';
@@ -233,7 +178,7 @@ const inlineOpener = `function homeRegistrationForm(home, controls) {
   });
   const busy = new MutationObserver(() => { form.inert = submit.disabled; });
   busy.observe(submit,{attributeFilter:['disabled']});
-  home.disconnect = () => { busy.disconnect(); diagnosis?.dispose(); };
+  home.disconnect = () => busy.disconnect();
   function clearNameError() {
     if (last.hasAttribute('aria-invalid') && (last.value.trim() || first.value.trim())) {
       last.removeAttribute('aria-invalid');
@@ -255,7 +200,6 @@ const inlineOpener = `function homeRegistrationForm(home, controls) {
     female.setAttribute('aria-pressed',String(sex === 'K'));
     typeHint.textContent = outside ? 'Osoba do umawiania wizyt w Terminarzu.' : 'Pełna kartoteka z pomiarami i siatkami centylowymi.';
     dobGroup.hidden = guardians.hidden = family.hidden = outside;
-    diagnosisHost.hidden = outside || !diagnosis;
     yearGroup.hidden = outsideContact.hidden = !outside;
     for (const control of [dob,guardian,phone,guardianNote,mother,father]) control.disabled = outside;
     year.disabled = contact.disabled = !outside;
@@ -288,20 +232,18 @@ function showGabinetNewPatient(options) {
     home.closeDuplicate?.();
     root.remove();
   }
-  cleanup.closeDuplicate = () => !!home.closeDuplicate?.() || !!home.closeDiagnosis?.();
+  cleanup.closeDuplicate = () => !!home.closeDuplicate?.();
   root.querySelector('input')?.focus({preventScroll:true});
   return cleanup;
 }
 `;
 const inlinePairs = [
   [opener, inlineOpener],
-  ['Object.keys(Wt).length&&(Y.guardian=Wt),H.disabled=!0,Promise.resolve(r.savePatient(Y,{dedup:!1}))',
-   'Object.keys(Wt).length&&(Y.guardian=Wt);H.disabled=!0;if(home?.saveWithDiagnosis?.(Y,r))return;Promise.resolve(r.savePatient(Y,{dedup:!1}))'],
   ['m.addEventListener("click",function(){v=v==="M"?null:"M",x(),N()}),y.addEventListener("click",function(){v=v==="K"?null:"K",x(),N()});',
    'function setRegistrationSex(sex){v=sex;x();N()}if(!home){m.addEventListener("click",function(){setRegistrationSex(v==="M"?null:"M")});y.addEventListener("click",function(){setRegistrationSex(v==="K"?null:"K")})}'],
   ['H.disabled=!st,W.textContent=', 'if(!home)H.disabled=!st;W.textContent='],
   ['}else H.disabled=!1;N()}function L(st)', '}else if(!home)H.disabled=!1;N()}function L(st)'],
-  ['H.addEventListener("click",function(){var st=(u.value', 'H.addEventListener("click",function(){if(home&&(!home.current()||home.closeDuplicate))return;if(home?.retryDiagnosis?.())return;var st=(u.value'],
+  ['H.addEventListener("click",function(){var st=(u.value', 'H.addEventListener("click",function(){if(home&&(!home.current()||home.closeDuplicate))return;var st=(u.value'],
   ['if(!st&&!rt){Z.textContent="Podaj nazwisko.",u.focus();return}',
    'if(!st&&!rt){if(home)u.setAttribute("aria-invalid","true");Z.textContent=home?"Wpisz nazwisko lub imię pacjenta.":"Podaj nazwisko.";u.focus();return}'],
   ['if(!vt){W.textContent=', 'if(!vt){if(home)w.setAttribute("aria-invalid","true");W.textContent='],

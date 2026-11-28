@@ -24,8 +24,13 @@ async function patientId(frame, firstName) {
 
 async function expectPopulation(frame, expected) {
   await expect.poll(() => population(frame), { timeout: 15_000 }).toBe(expected);
-  if (expected === 'DS') await expect(reference(frame)).toContainText('Zemel 2015');
-  else await expect(reference(frame).locator('.vhome-reference-select')).toHaveValue('OLAF');
+  if (expected === 'DS') {
+    await expect(reference(frame).locator('.vhome-reference-effective')).toBeVisible();
+    await expect(reference(frame).locator('.vhome-reference-effective')).toContainText('Zemel 2015');
+  } else {
+    await expect(reference(frame).locator('.vhome-reference-select')).toBeVisible();
+    await expect(reference(frame).locator('.vhome-reference-select')).toHaveValue('OLAF');
+  }
 }
 
 async function openDraftPicker(frame, scope) {
@@ -95,7 +100,11 @@ test('Dodaj pacjenta writes the selected Q90 diagnosis only when registering the
   await expect.poll(() => diagnoses(frame, created)).toMatchObject([
     { treatmentContext: { code: 'Q90.9', codingSystem: 'ICD-10', status: 'active' } },
   ]);
-  expect(await visits(frame, created)).toEqual([]);
+  // The native registration can expose its identity snapshot as a legacy visit.
+  const registrationRows = await visits(frame, created);
+  expect(registrationRows.filter(row => row.origin === 'explicit')).toEqual([]);
+  expect(registrationRows.every(row => row.payload.user.height == null && row.payload.user.weight == null
+    && !row.payload.clinical?.growthReferenceIcd10)).toBe(true);
   await button(header(frame), 'Nowa wizyta').click();
   await expect(button(header(frame), 'Zapisz wizytę')).toBeVisible({ timeout: 20_000 });
   await analysis(frame).click();
@@ -105,7 +114,8 @@ test('Dodaj pacjenta writes the selected Q90 diagnosis only when registering the
 
 test('Leczenie accepts the coded diagnosis for new visits while the archived OLAF visit stays intact', async ({ page }) => {
   const { frame } = await prepareGabinet(page);
-  const input = fictionalPatient({ firstName: 'Natalia', sex: 'F', age: 10, height: 128.8, weight: 30 });
+  const { name, user, zscore } = fictionalPatient({ firstName: 'Natalia', sex: 'F', age: 10, height: 128.8, weight: 30 });
+  const input = { version: 1, name, user, zscore };
   const id = await frame.evaluate(async payload => {
     const patientId = crypto.randomUUID();
     payload.visit = window.VildaVisitContext.create({ patientId, clinicalDateISO: payload.user.measuredAtISO });
@@ -261,6 +271,12 @@ test('Szybka ścieżka previews native Zemel centiles for every accepted Q90 cod
     { treatmentContext: { code: 'Q90.9', codingSystem: 'ICD-10' }, visitContext: { visitId: saved[0].visitId } },
   ]);
   await button(frame, 'Następny pacjent').click();
-  await expect(reference(frame)).not.toContainText('Zemel 2015');
-  expect(await population(frame)).toBe('OGOLNA');
+  await expect(button(frame.locator('.vpt-optional-diagnosis'), 'Wybierz z ICD-10')).toBeVisible();
+  await expect.poll(() => population(frame)).toBe('OGOLNA');
+  for (const [field, value] of Object.entries({ age: '10', ageMonths: '0', height: '135', weight: '45' })) {
+    await frame.locator(`#${field}`).fill(value);
+  }
+  await frame.locator('#sex').selectOption('M');
+  await expectPopulation(frame, 'OGOLNA');
+  await expect(bmi).toContainText(/96\s+centyl/u);
 });

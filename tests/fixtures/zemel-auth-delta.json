@@ -1,0 +1,51 @@
+{
+  "baseSHA256": "41a284fe95f22849d5fb553109eb9446d175dc44280edf9aa0643d429ca95bb4",
+  "integratedSHA256": "0454ef3ceffe9e4c7450a7763ed797ba1455dc45c31f20c90a8cc7037bc6f2d7",
+  "changes": [
+    {
+      "offset": 631475,
+      "before": "try{var _adv=s&&s.advanced||{},_sx=s&&s.user&&s.user.sex||\"\",_csrc=i&&i.bmiSource&&/^(OLAF|WHO|PALCZEWSKA)$/.test(String(i.bmiSource).toUpperCase())?String(i.bmiSource).toUpperCase():typeof i.advHistoryGetPreferredSource==\"function\"?i.advHistoryGetPreferredSource():\"OLAF\",_J=i.VildaTrajectoryAnalysis;/* P-OSTATNI-2b: kontekst GH / MPH / redukcja buduje wspolny budowniczy w vilda_trajectory_analysis.js (te same reguly na stronie glownej i w karcie porownania z poprzednim pomiarem). */ae._vildaCmpCtx=_J&&typeof _J.buildClinicalContext==\"function\"?_J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty==\"function\"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight!=null?parseFloat(_adv.motherHeight):NaN,fatherHeightCm:_adv.fatherHeight!=null?parseFloat(_adv.fatherHeight):NaN,sex:_sx,source:_csrc",
+      "after": "\nvar _archivedPopulation=i.__VILDA_HOME_GABINET_PREVIEW__===true&&i.VildaDsSource?.usesZemel\n  ? (i.VildaDsSource.usesZemel(s)?\"DS\":\"OGOLNA\") : undefined;\nvar _savedRadioSource=_archivedPopulation&&String(s?.zscore?.dataSource||\"\").toUpperCase();\nvar _archivedSource=/^(OLAF|WHO|PALCZEWSKA)$/.test(_savedRadioSource)?_savedRadioSource:null;\ntry{var _adv=s&&s.advanced||{},_sx=s&&s.user&&s.user.sex||\"\",_csrc=_archivedSource||(i&&i.bmiSource&&/^(OLAF|WHO|PALCZEWSKA)$/.test(String(i.bmiSource).toUpperCase())?String(i.bmiSource).toUpperCase():typeof i.advHistoryGetPreferredSource==\"function\"?i.advHistoryGetPreferredSource():\"OLAF\"),_J=i.VildaTrajectoryAnalysis;/* P-OSTATNI-2b: kontekst GH / MPH / redukcja buduje wspolny budowniczy w vilda_trajectory_analysis.js (te same reguly na stronie glownej i w karcie porownania z poprzednim pomiarem). */ae._vildaCmpCtx=_J&&typeof _J.buildClinicalContext==\"function\"?_J.buildClinicalContext({ghTherapyPoints:s.ghTherapyPoints,obesityTherapyPoints:typeof Ob_dzPunkty==\"function\"?Ob_dzPunkty(s,GdNotatki):s.obesityTherapyPoints,motherHeightCm:_adv.motherHeight!=null?parseFloat(_adv.motherHeight):NaN,fatherHeightCm:_adv.fatherHeight!=null?parseFloat(_adv.fatherHeight):NaN,sex:_sx,source:_csrc,population:_archivedPopulation"
+    },
+    {
+      "offset": 635571,
+      "before": "i.bmiSource",
+      "after": "_archivedSource||i.bmiSource,population:_archivedPopulation"
+    },
+    {
+      "offset": 892815,
+      "before": "",
+      "after": "  const diagnosisHost = e('div',{class:'gb-registration-wide'});\n  const picker = i.VildaICD10Picker;\n  const diagnosis = picker?.mountDiagnosisField({host:diagnosisHost,isCurrent:home.current,\n    context:'Dodaj pacjenta',notice:'Po zapisie nowe wizyty będą korzystać z siatek Zemel 2015.'});\n  home.closeDiagnosis = () => !!diagnosis?.close();\n  const typeLine = e('div',{class:'gb-registration-type-line'},[choice('Rodzaj kartoteki',[base,external]),typeHint]);\n  const grid = e('div',{class:'gb-registration-grid'},[\n    card('Tożsamość',false,[fields([field('Nazwisko',last),field('Imię',first),sexChoice])]),\n    card('Data urodzenia',false,[dobGroup,yearGroup]),diagnosisHost,\n    card('Kontakt / opiekun',true,[guardians,outsideContact],'gb-registration-contact'),family\n  ]);\n"
+    },
+    {
+      "offset": 892939,
+      "before": "e('div',{class:'gb-registration-type-line'},[choice('Rodzaj kartoteki',[base,external]),typeHint]),\n    e('div',{class:'gb-registration-grid'},[\n      card('Tożsamość',false,[fields([field('Nazwisko',last),field('Imię',first),sexChoice])]),\n      card('Data urodzenia',false,[dobGroup,yearGroup]),\n      card('Kontakt / opiekun',true,[guardians,outsideContact],'gb-registration-contact'),family\n    ])",
+      "after": "typeLine,grid"
+    },
+    {
+      "offset": 893416,
+      "before": "",
+      "after": "  let pendingDiagnosis = null;\n  async function savePendingDiagnosis() {\n    submit.disabled = true;\n    error.textContent = '';\n    try {\n      await picker.persistDiagnosis(pendingDiagnosis);\n      if (home.current()) home.finish(pendingDiagnosis.patientId);\n    } catch {\n      if (!home.current()) return;\n      typeLine.inert = grid.inert = true;\n      submit.textContent = 'Ponów zapis rozpoznania';\n      cancel.textContent = 'Otwórz kartotekę';\n      error.textContent = 'Kartoteka jest zapisana. Nie udało się potwierdzić zapisu rozpoznania. Ponów zapis lub otwórz kartotekę.';\n      submit.disabled = false;\n      form.inert = false;\n      submit.focus({preventScroll:true});\n    }\n  }\n  home.retryDiagnosis = function() {\n    if (!pendingDiagnosis) return false;\n    void savePendingDiagnosis();\n    return true;\n  };\n  home.saveWithDiagnosis = function(patient, vault) {\n    const selection = diagnosis?.getSelection();\n    if (!selection) return false;\n    void (async function() {\n      try {\n        const now = new Date(patient.timestampISO);\n        const dateISO = [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');\n        const bytes = i.crypto.getRandomValues(new Uint8Array(16));\n        const id = 'tmt-' + Array.from(bytes,byte => byte.toString(16).padStart(2,'0')).join('');\n        const saved = await vault.savePatient(patient,{dedup:false});\n        if (!home.current()) return;\n        if (!saved?.patientId) throw new Error('Nie potwierdzono utworzenia kartoteki.');\n        pendingDiagnosis = {vault,patientId:saved.patientId,diagnosis:selection,id,dateISO,isCurrent:home.current};\n        await savePendingDiagnosis();\n      } catch {\n        if (!home.current()) return;\n        error.textContent = 'Nie udało się dodać pacjenta. Spróbuj ponownie.';\n        submit.disabled = false;\n      }\n    })();\n    return true;\n  };\n  cancel.addEventListener('click',event => {\n    if (!pendingDiagnosis || !home.current()) return;\n    event.stopImmediatePropagation();\n    home.finish(pendingDiagnosis.patientId);\n  },{capture:true});\n"
+    },
+    {
+      "offset": 894030,
+      "before": "busy.disconnect()",
+      "after": "{ busy.disconnect(); diagnosis?.dispose(); }"
+    },
+    {
+      "offset": 895044,
+      "before": "",
+      "after": "    diagnosisHost.hidden = outside || !diagnosis;\n"
+    },
+    {
+      "offset": 896410,
+      "before": "",
+      "after": " || !!home.closeDiagnosis?.()"
+    },
+    {
+      "offset": 906271,
+      "before": ",H.disabled=!0,Promise.resolve(r.savePatient(Y,{dedup:!1})).then(function(E){E&&E.patientId?openFromForm(E.patientId):returnFromForm()}).catch(function(E){H.disabled=!1,Z.textContent=\"Nie uda\\u0142o si\\u0119 doda\\u0107: \"+(E&&E.message?E.message:E)})}function lt(){var st=(u.value||\"\").trim(),rt=(h.value||\"\").trim(),vt={lastName:st,firstName:rt,sex:v,birthYear:F.value||\"\",contact:b.value||\"\"};H.disabled=!0,Promise.resolve(r.saveExternalPatient(vt)).then(returnFromForm).catch(function(dt){H.disabled=!1,Z.textContent=\"Nie uda\\u0142o si\\u0119 doda\\u0107: \"+(dt&&dt.message?dt.message:dt)})}function ft(){if(!home||home.current())l===\"base\"?X():lt()}H.addEventListener(\"click\",function(){if(home&&(!home.current()||home.closeDuplicate",
+      "after": ";H.disabled=!0;if(home?.saveWithDiagnosis?.(Y,r))return;Promise.resolve(r.savePatient(Y,{dedup:!1})).then(function(E){E&&E.patientId?openFromForm(E.patientId):returnFromForm()}).catch(function(E){H.disabled=!1,Z.textContent=\"Nie uda\\u0142o si\\u0119 doda\\u0107: \"+(E&&E.message?E.message:E)})}function lt(){var st=(u.value||\"\").trim(),rt=(h.value||\"\").trim(),vt={lastName:st,firstName:rt,sex:v,birthYear:F.value||\"\",contact:b.value||\"\"};H.disabled=!0,Promise.resolve(r.saveExternalPatient(vt)).then(returnFromForm).catch(function(dt){H.disabled=!1,Z.textContent=\"Nie uda\\u0142o si\\u0119 doda\\u0107: \"+(dt&&dt.message?dt.message:dt)})}function ft(){if(!home||home.current())l===\"base\"?X():lt()}H.addEventListener(\"click\",function(){if(home&&(!home.current()||home.closeDuplicate))return;if(home?.retryDiagnosis?.("
+    }
+  ]
+}
