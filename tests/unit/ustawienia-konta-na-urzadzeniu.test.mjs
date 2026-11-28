@@ -58,7 +58,7 @@ describe('rejestr adaptera: każda preferencja konta ma osobną kopię na konto'
   const konta = Object.keys(meta).filter((k) => meta[k].storage === 'cloud-synced').sort();
 
   it('wszystkie preferencje synchronizowane z kontem mają cechę perUser — także te, które dojdą później', () => {
-    expect(konta).toEqual([...WIDOK, ...DANE_KONTA, 'labCustomPackages'].sort());
+    expect(konta).toEqual([...WIDOK, ...DANE_KONTA, 'labCustomPackages', 'icd10Favorites'].sort());
     for (const klucz of konta) expect(meta[klucz].perUser, klucz).toBe(true);
   });
 
@@ -67,6 +67,7 @@ describe('rejestr adaptera: każda preferencja konta ma osobną kopię na konto'
     for (const klucz of DANE_KONTA) expect({ guest: meta[klucz].guest, seed: meta[klucz].seed }, klucz).toEqual({ guest: undefined, seed: 'single' });
     // Pakiety badań: bez gościa i bez przejęcia przez adapter (rozstrzyga je sejf — vilda_lab_packages.js).
     expect({ ...meta.labCustomPackages }).toEqual({ scope: 'laboratory', kind: 'preference', storage: 'cloud-synced', perUser: true });
+    expect({ ...meta.icd10Favorites }).toEqual({ scope: 'diagnosis', kind: 'preference', storage: 'cloud-synced', perUser: true });
   });
 
   it('preferencje urządzenia (local-persistent) nie mają kopii na konto', () => {
@@ -334,6 +335,151 @@ describe('synchronizacja między urządzeniami jednego konta działa jak dotąd'
     // Po wylogowaniu wpis z chmury nie ma dokąd trafić.
     await B.vault.lock();
     expect(B.prefs.applyPreferenceFromCloud('advHistoryCollapsed', '{}')).toBe(false);
+  });
+});
+
+describe('ulubione kody ICD-10 w preferencjach konta', () => {
+  function loadFavorites() {
+    const device = loadDevice(), documentEvents = new EventTarget();
+    device.okno.document.addEventListener = documentEvents.addEventListener.bind(documentEvents);
+    ['vilda_icd10_search.js', 'vilda_icd10_pl_data.js', 'vilda_icd10_favorites.js']
+      .forEach(file => loadBrowserScript(file, device.okno));
+    return { ...device, documentEvents, stars: device.okno.VildaICD10Favorites,
+      catalogue: device.okno.VildaICD10Search.create(device.okno.VildaICD10PLData) };
+  }
+  const current = () => true;
+
+  it('izoluje listę konta podczas wylogowania, zmiany konta i powrotu', async () => {
+    const A = loadFavorites(), {stars, catalogue} = A;
+    const defaults = {schemaVersion: 1, codes: ['J45.9']};
+    A.ls.setItem('icd10Favorites', JSON.stringify(defaults));
+    expect(stars.canUse()).toBe(false);
+    expect(stars.getCodes(catalogue)).toEqual([]);
+    expect(stars.toggle('J45.9', catalogue, current)).toBeNull();
+
+    const a = (await A.vault.createUser(HASLO_A, {label: 'Fikcyjny lekarz A', iterations: 10000})).userId;
+    expect(stars.canUse()).toBe(true);
+    expect(stars.getCodes(catalogue)).toEqual([]);
+    expect(stars.toggle('q909', catalogue, current)).toBeNull();
+    expect(stars.toggle('Q90.90', catalogue, current)).toBeNull();
+    expect(stars.toggle('Q90.9', catalogue, () => false)).toBeNull();
+    let ownerChecks = 0;
+    expect(stars.toggle('Q90.9', catalogue, () => ++ownerChecks === 1)).toBeNull();
+    expect(stars.getCodes(catalogue)).toEqual([]);
+    expect(stars.toggle('Q90.9', catalogue, current)).toEqual(['Q90.9']);
+    expect(stars.toggle('E66.9', catalogue, current)).toEqual(['Q90.9', 'E66.9']);
+    expect(A.prefs.readPreferenceJSON('ICD10_FAVORITES', null)).toEqual({schemaVersion: 1, codes: ['Q90.9', 'E66.9']});
+    expect(JSON.parse(A.ls.getItem('icd10Favorites'))).toEqual(defaults);
+    const seen = [];
+    const unsubscribe = stars.subscribe(() => seen.push(stars.getCodes(catalogue)));
+    await chwila();
+    expect(JSON.parse((await naKoncie(A)).icd10Favorites.value).codes).toEqual(['Q90.9', 'E66.9']);
+    await A.vault.lock();
+    expect(stars.canUse()).toBe(false);
+    // Even a stored session identifier cannot make a locked UI show favorites.
+    A.okno.sessionStorage.setItem('vilda-vault-session-v2', JSON.stringify({userId: a}));
+    expect(stars.getCodes(catalogue)).toEqual([]);
+    expect(stars.toggle('E66.9', catalogue, current)).toBeNull();
+    expect(seen.at(-1)).toEqual([]);
+    A.okno.sessionStorage.removeItem('vilda-vault-session-v2');
+    const b = (await A.vault.createUser(HASLO_B, {label: 'Fikcyjny lekarz B', iterations: 10000})).userId;
+    expect(stars.getCodes(catalogue)).toEqual([]);
+    expect(stars.toggle('J45.9', catalogue, current)).toEqual(['J45.9']);
+    await chwila();
+    expect(JSON.parse((await naKoncie(A)).icd10Favorites.value).codes).toEqual(['J45.9']);
+    await A.vault.lock();
+    await A.vault.unlockUser(a, HASLO_A);
+    expect(stars.getCodes(catalogue)).toEqual(['Q90.9', 'E66.9']);
+    expect(JSON.parse(A.ls.getItem(`icd10Favorites::${b}`))).toEqual(defaults);
+    unsubscribe();
+    const notifications = seen.length;
+    expect(stars.toggle('Q90.9', catalogue, current)).toEqual(['E66.9']);
+    await chwila();
+    expect(seen).toHaveLength(notifications);
+  });
+
+  it('przenosi dodanie i usunięcie między dwoma urządzeniami po tym samym koncie i odświeża otwarty selektor', async () => {
+    const A = loadFavorites(), B = loadFavorites();
+    const account = await A.vault.createUser(HASLO_A, {label: 'Komputer lekarza', iterations: 10000});
+    const other = await B.vault.createUser(HASLO_A, {label: 'Telefon lekarza', iterations: 10000, recoveryKey: account.recoveryKey});
+    const seen = [];
+    const unsubscribe = B.stars.subscribe(() => seen.push(B.stars.getCodes(B.catalogue)));
+    expect(A.stars.toggle('Q90.9', A.catalogue, current)).toEqual(['Q90.9']);
+    await chwila();
+    expect((await naKoncie(A)).icd10Favorites?.value).toBe(JSON.stringify({schemaVersion: 1, codes: ['Q90.9']}));
+    expect((await B.vault.mergeSyncPayload(await A.vault.exportSyncPayload())).updatedPreferenceCount).toBeGreaterThan(0);
+    B.documentEvents.dispatchEvent(new Event('vilda:sync-merged'));
+    await chwila();
+    expect(seen.at(-1)).toEqual(['Q90.9']);
+    expect(JSON.parse(B.ls.getItem(`icd10Favorites::${other.userId}`))).toEqual({schemaVersion: 1, codes: ['Q90.9']});
+    expect(B.ls.getItem('icd10Favorites')).toBeNull();
+    expect(B.stars.toggle('Q90.9', B.catalogue, current)).toEqual([]);
+    await chwila();
+    expect((await A.vault.mergeSyncPayload(await B.vault.exportSyncPayload())).updatedPreferenceCount).toBeGreaterThan(0);
+    expect(A.stars.getCodes(A.catalogue)).toEqual([]);
+    unsubscribe();
+  });
+
+  it('po wyczyszczeniu formularza pozwala zmienić ulubione tego konta, zachowując blokadę zwykłych zapisów', async () => {
+    const A = loadFavorites();
+    await A.vault.createUser(HASLO_A, {label: 'Fikcyjny lekarz', iterations: 10000});
+    expect(A.stars.toggle('J45.9', A.catalogue, current)).toEqual(['J45.9']);
+    await chwila();
+    A.prefs.markClearInProgress(2500);
+    expect(A.prefs.isClearInProgress()).toBe(true);
+    expect(A.prefs.writePreferenceRaw('PAL_PDF_LAYOUT', 'landscape')).toBe(false);
+    expect(A.stars.toggle('J45.9', A.catalogue, () => false)).toBeNull();
+    expect(A.stars.toggle('J45.9', A.catalogue, current)).toEqual([]);
+    expect(A.prefs.isClearInProgress()).toBe(true);
+    await chwila();
+    expect(JSON.parse((await naKoncie(A)).icd10Favorites.value).codes).toEqual([]);
+  });
+
+  it('ponawia przerwany przez blokadę zapis dopiero po ponownym wejściu na to samo konto', async () => {
+    const A = loadFavorites(), B = loadFavorites();
+    const account = await A.vault.createUser(HASLO_A, {label: 'Fikcyjny komputer', iterations: 10000});
+    await B.vault.createUser(HASLO_A, {label: 'Fikcyjny telefon', iterations: 10000, recoveryKey: account.recoveryKey});
+    const localKey = `vilda:icd10-favorites-pending::${account.userId}`;
+    expect(A.stars.toggle('Q90.9', A.catalogue, current)).toEqual(['Q90.9']);
+    await A.vault.lock('manual');
+    expect(A.stars.getCodes(A.catalogue)).toEqual([]);
+    expect(JSON.parse(A.ls.getItem(localKey)).codes).toEqual(['Q90.9']);
+
+    await A.vault.createUser(HASLO_B, {label: 'Inne konto', iterations: 10000});
+    expect(A.stars.getCodes(A.catalogue)).toEqual([]);
+    expect((await naKoncie(A)).icd10Favorites).toBeUndefined();
+    await A.vault.lock('manual');
+    await A.vault.unlockUser(account.userId, HASLO_A);
+    await chwila();
+    expect(A.stars.getCodes(A.catalogue)).toEqual(['Q90.9']);
+    const sync = await A.vault.exportSyncPayload();
+    expect(JSON.parse(sync.userPreferences.icd10Favorites.value).codes).toEqual(['Q90.9']);
+    expect(A.ls.getItem(localKey)).toBeNull();
+    await B.vault.mergeSyncPayload(sync);
+    expect(B.stars.getCodes(B.catalogue)).toEqual(['Q90.9']);
+  });
+
+  it('nie wznawia przerwanego zapisu, jeżeli kopię zastąpiła nowsza preferencja z chmury', async () => {
+    const A = loadFavorites(), B = loadFavorites();
+    const account = await A.vault.createUser(HASLO_A, {label: 'Fikcyjny komputer', iterations: 10000});
+    await B.vault.createUser(HASLO_A, {label: 'Fikcyjny telefon', iterations: 10000, recoveryKey: account.recoveryKey});
+    let remote = null;
+    // The native merge uses this same adapter after it accepts a newer value.
+    // Run its publication before the favorites unlock listener for this case.
+    A.vault.onUnlock(() => { if (remote) A.prefs.applyPreferenceFromCloud('icd10Favorites', remote.value); });
+    expect(A.stars.toggle('Q90.9', A.catalogue, current)).toEqual(['Q90.9']);
+    await A.vault.lock('manual');
+    expect(B.stars.toggle('E66.9', B.catalogue, current)).toEqual(['E66.9']);
+    await chwila();
+    const sync = await B.vault.exportSyncPayload();
+    remote = sync.userPreferences.icd10Favorites;
+    await A.vault.unlockUser(account.userId, HASLO_A);
+    await chwila();
+    expect(A.stars.getCodes(A.catalogue)).toEqual(['E66.9']);
+    expect((await naKoncie(A)).icd10Favorites).toBeUndefined();
+    expect(A.ls.getItem(`vilda:icd10-favorites-pending::${account.userId}`)).toBeNull();
+    await A.vault.mergeSyncPayload(sync);
+    expect((await naKoncie(A)).icd10Favorites).toEqual(remote);
   });
 });
 

@@ -79,6 +79,7 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
   border: var(--border-hairline) solid var(--vpt-intake-line);
   border-radius: var(--radius-8);
 }
+.vpt-optional-diagnosis.vpt-icd-catalogue-launcher { padding: 0; border: 0; background: transparent; }
 .vpt-optional-diagnosis[hidden],
 .vpt-optional-diagnosis [hidden],
 .vpt-intake-diagnosis-dialog [hidden] { display: none !important; }
@@ -119,10 +120,10 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
   color: var(--vpt-intake-brand);
 }
 .vpt-optional-diagnosis button.vpt-intake-diagnosis-button,
-.vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-button,
-.vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-option {
+.vpt-intake-diagnosis-dialog button:is(.vpt-intake-diagnosis-button, .vpt-intake-diagnosis-option, .vpt-icd-favorite-toggle, .vpt-icd-favorites-back, .vpt-icd-search-clear) {
   min-height: 44px;
   min-width: 0;
+  width: auto;
   margin: 0;
   padding: var(--space-8px) var(--space-12px);
   border: var(--border-hairline) solid var(--vpt-intake-line) !important;
@@ -136,8 +137,7 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
   cursor: pointer;
 }
 .vpt-optional-diagnosis button.vpt-intake-diagnosis-button:hover:not(:disabled),
-.vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-button:hover:not(:disabled),
-.vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-option:hover {
+.vpt-intake-diagnosis-dialog button:is(.vpt-intake-diagnosis-button, .vpt-intake-diagnosis-option, .vpt-icd-favorite-toggle, .vpt-icd-favorites-back, .vpt-icd-search-clear):hover:not(:disabled) {
   border-color: var(--vpt-intake-brand) !important;
   background: var(--vpt-intake-soft) !important;
 }
@@ -148,20 +148,27 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
 }
 .vpt-intake-diagnosis-dialog {
   box-sizing: border-box;
-  width: min(36rem, calc(100% - 24px));
+  width: min(36rem, calc(100% - var(--space-24px)));
   max-width: none;
-  max-height: calc(100dvh - 24px);
+  max-height: min(37.25rem, calc(100dvh - var(--space-24px)));
   margin: auto;
   padding: 0;
   border: var(--border-hairline) solid var(--vpt-intake-line);
-  border-radius: var(--radius-16);
+  border-radius: var(--radius-14);
   overflow: hidden;
   box-shadow: 0 18px 56px #17383c36;
+}
+/* The iframe's viewport also includes the space behind the shell dock. */
+html.vilda-embedded .vpt-intake-diagnosis-dialog {
+  --vpt-intake-dock-height: var(--vilda-shell-dock-h, 0px);
+  position: fixed;
+  inset-block: 0 var(--vpt-intake-dock-height);
+  max-height: min(37.25rem, calc(100dvh - var(--vpt-intake-dock-height) - var(--space-24px)));
 }
 .vpt-intake-diagnosis-dialog[open] { display: flex; flex-direction: column; }
 .vpt-intake-diagnosis-dialog::backdrop { background: #142f3880; }
 .vpt-intake-diagnosis-heading,
-.vpt-intake-diagnosis-actions { flex: 0 0 auto; padding: var(--space-12px) var(--space-16px); }
+.vpt-intake-diagnosis-actions { flex: 0 0 auto; padding: var(--space-12px) var(--space-20px); }
 .vpt-intake-diagnosis-heading {
   flex-wrap: nowrap;
   align-items: start;
@@ -170,8 +177,8 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
 .vpt-intake-diagnosis-heading h2 {
   margin: 0;
   color: var(--vpt-intake-ink);
-  font-size: 1.25rem;
-  line-height: 1.3;
+  font-size: clamp(1.075rem, 2.8vw, 1.25rem);
+  line-height: 1.25;
 }
 .vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-close {
   flex: 0 0 44px;
@@ -179,20 +186,36 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
   font-size: 1.375rem;
 }
 .vpt-intake-diagnosis-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
-  padding: var(--space-16px);
+  padding: var(--space-12px) var(--space-20px);
   overflow: auto;
   overscroll-behavior: contain;
 }
-.vpt-intake-diagnosis-search { display: grid; gap: var(--space-8px); }
+.vpt-intake-diagnosis-search,
+.vpt-icd-favorites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6px);
+  min-width: 0;
+  min-height: 0;
+}
+.vpt-intake-diagnosis-search { flex: 1 1 auto; gap: var(--space-8px); }
 .vpt-intake-diagnosis-search label {
   position: static;
+  margin: 0;
   padding: 0;
   color: var(--vpt-intake-ink);
   background: none;
+  font-size: .9rem;
   font-weight: 600;
+  line-height: 1.35;
 }
 .vpt-intake-diagnosis-search input {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -205,23 +228,148 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
   font: inherit;
   font-size: 16px;
 }
+.vpt-icd-search-field {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  border: var(--border-hairline) solid var(--vpt-intake-line);
+  border-radius: var(--radius-8);
+  background: var(--bg, #fff);
+}
+.vpt-icd-search-field:focus-within { border-color: var(--vpt-intake-brand); }
+.vpt-icd-search-field input { flex: 1 1 auto; border: 0 !important; }
+.vpt-icd-search-field input::-webkit-search-cancel-button { appearance: none; }
+.vpt-intake-diagnosis-dialog button.vpt-icd-search-clear {
+  flex: 0 0 44px;
+  width: 44px;
+  padding: 0;
+  border: 0 !important;
+  font-size: 1.25rem;
+}
+.vpt-icd-favorites-heading {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4px) var(--space-8px);
+}
+.vpt-icd-favorites-heading h3 {
+  margin: 0;
+  color: var(--vpt-intake-ink);
+  font-size: .95rem;
+  font-weight: 690;
+  line-height: 1.3;
+  text-align: start;
+}
+.vpt-intake-diagnosis-dialog button.vpt-icd-favorites-back {
+  padding-inline: var(--space-4px);
+  border-color: transparent !important;
+  font-size: .8125rem;
+}
+.vpt-icd-favorites-empty {
+  margin: 0;
+  padding: var(--space-12px);
+  border: var(--border-hairline) solid var(--vpt-intake-line);
+  border-radius: var(--radius-8);
+  background: var(--vpt-intake-soft);
+  color: var(--vpt-intake-muted);
+  font-size: .875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.vpt-icd-favorites-limit,
+.vpt-icd-favorite-error {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--vpt-intake-muted);
+  font-size: .8125rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.vpt-icd-favorite-error { color: var(--error); }
+.vpt-icd-favorite-announcement {
+  position: absolute;
+  width: var(--border-hairline);
+  height: var(--border-hairline);
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .vpt-diagnosis-catalog {
-  display: grid;
-  gap: var(--space-4px);
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  max-height: min(24.375rem, 48dvh);
   margin: 0;
   padding: 0;
+  border: var(--border-hairline) solid var(--vpt-intake-line);
+  border-radius: var(--radius-8);
   list-style: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.vpt-diagnosis-catalog:empty { display: none; }
+.vpt-icd-result-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4px);
+  min-height: 49px;
+  padding: 2px var(--space-4px);
+  background: var(--bg, #fff);
+}
+.vpt-icd-result-row + .vpt-icd-result-row { border-block-start: var(--border-hairline) solid var(--vpt-intake-line); }
+.vpt-intake-diagnosis-dialog .vpt-icd-result-row button {
+  box-sizing: border-box;
+  border-color: transparent !important;
+  border-radius: var(--radius-6) !important;
+  outline-offset: -2px;
 }
 .vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-option {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: minmax(3.6rem, max-content) minmax(0, 1fr);
   align-items: center;
   gap: var(--space-8px);
   width: 100%;
-  text-align: left;
+  padding: var(--space-6px) var(--space-8px);
+  font-size: .875rem;
+  text-align: start;
   overflow-wrap: anywhere;
 }
+.vpt-intake-diagnosis-option strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .vpt-intake-diagnosis-option span { color: var(--vpt-intake-ink); font-weight: 450; }
+.vpt-intake-diagnosis-dialog button.vpt-icd-favorite-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--primary, var(--vpt-intake-brand)) !important;
+}
+.vpt-intake-diagnosis-dialog button.vpt-icd-favorite-toggle:is([aria-pressed="true"], :focus-visible) {
+  background: var(--vpt-intake-soft) !important;
+}
+.vpt-icd-favorite-icon {
+  --vpt-star-shape: polygon(50% 2%, 64% 34%, 99% 37%, 73% 61%, 80% 97%, 50% 79%, 20% 97%, 27% 61%, 1% 37%, 36% 34%);
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+}
+.vpt-icd-favorite-icon::before,
+.vpt-icd-favorite-icon::after {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  background: currentColor;
+  clip-path: var(--vpt-star-shape);
+  content: "";
+}
+.vpt-icd-favorite-icon::after { width: 69%; height: 69%; background: var(--bg, #fff); }
+.vpt-icd-favorite-toggle:is(:hover, :focus-visible) .vpt-icd-favorite-icon::after { background: var(--vpt-intake-soft); }
+.vpt-icd-favorite-toggle[aria-pressed="true"] .vpt-icd-favorite-icon::after { display: none; }
 .vpt-intake-diagnosis-selected {
   padding: var(--space-12px);
   border: var(--border-hairline) solid var(--vpt-intake-line);
@@ -245,7 +393,28 @@ html.vilda-home-workspace .vhome-treatment-editor .vpt-icd10-use-name { justify-
 @media (max-width: 420px) {
   .vpt-intake-diagnosis-heading,
   .vpt-intake-diagnosis-body,
-  .vpt-intake-diagnosis-actions { padding: var(--space-12px); }
+  .vpt-intake-diagnosis-actions { padding: var(--space-10px) var(--space-12px); }
+  .vpt-intake-diagnosis-heading .vpt-optional-diagnosis-note { font-size: .8125rem; }
   .vpt-optional-diagnosis-row > button { flex: 1 1 100%; }
-  .vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-remove { flex-basis: 100%; }
+  .vpt-icd-favorites-heading h3 { font-size: .875rem; }
+  .vpt-icd-favorites-empty { padding-block: var(--space-8px); }
+  .vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-option {
+    grid-template-columns: minmax(3.15rem, max-content) minmax(0, 1fr);
+    gap: var(--space-4px);
+    padding-inline: var(--space-4px);
+  }
+  .vpt-intake-diagnosis-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+  .vpt-intake-diagnosis-dialog .vpt-intake-diagnosis-actions > button {
+    padding-inline: var(--space-6px);
+    font-size: .875rem;
+  }
+  .vpt-intake-diagnosis-dialog button.vpt-intake-diagnosis-remove { grid-column: 1 / -1; margin-inline-end: 0; }
+}
+@media (forced-colors: active) {
+  .vpt-icd-favorite-icon::before,
+  .vpt-icd-favorite-icon::after { forced-color-adjust: none; }
+  .vpt-icd-favorite-icon::before { background: ButtonText; }
+  .vpt-icd-favorite-icon::after,
+  .vpt-icd-favorite-toggle:is(:hover, :focus-visible) .vpt-icd-favorite-icon::after { background: ButtonFace; }
+  .vpt-intake-diagnosis-dialog .vpt-icd-result-row button.vpt-icd-favorite-toggle[aria-pressed="true"] { border-color: Highlight !important; }
 }
